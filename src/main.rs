@@ -6,17 +6,19 @@ fn main() {
     let logger = Logger::new();
 
     let logger1 = logger.clone();
-    thread::spawn(move || {
-        logger1.log("Thread 1".to_string()).unwrap();
+    let handle_1 = thread::spawn(move || {
+        logger1.log("Thread 1".to_string());
     });
     let logger2 = logger.clone();
-    thread::spawn(move || {
-        logger2.log("Thread 1".to_string()).unwrap();
+    let handle_2 = thread::spawn(move || {
+        logger2.log("Thread 2".to_string());
     });
     let logger3 = logger.clone();
-    thread::spawn(move || {
-        logger3.log("Thread 1".to_string()).unwrap();
+    let handle_3 = thread::spawn(move || {
+        logger3.log("Thread 3".to_string());
     });
 
-    thread::sleep(Duration::from_secs(2));
+    handle_1.join().unwrap();
+    handle_2.join().unwrap();
+    handle_3.join().unwrap();
 }

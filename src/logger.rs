@@ -1,41 +1,56 @@
 use std::{
     sync::{mpsc, Arc},
-    thread,
+    thread::{self, JoinHandle},
 };
-pub struct Logger {
-    tx: Option<mpsc::Sender<String>>,
-    handle: Option<thread::JoinHandle<()>>,
+
+pub enum Log {
+    Message(String),
+    End,
 }
+
+pub struct Logger {
+    tx: mpsc::Sender<Log>,
+    handle: Option<JoinHandle<()>>,
+}
+
 impl Logger {
     pub fn new() -> Arc<Logger> {
         let (tx, rx) = mpsc::channel();
 
         let handle = thread::spawn(move || {
             println!("Logger started");
-            for msg in rx {
-                println!("Log received: {}", msg);
+            loop {
+                match rx.recv() {
+                    Ok(Log::Message(msg)) => println!("{}", msg),
+                    Ok(Log::End) => break,
+                    Err(_) => break,
+                }
             }
         });
 
         Arc::new(Logger {
-            tx: Some(tx),
+            tx,
             handle: Some(handle),
         })
     }
 
-    pub fn log(&self, msg: String) -> Result<(), mpsc::SendError<String>> {
-        match self.tx {
-            Some(ref tx) => tx.send(msg),
-            None => Err(mpsc::SendError(msg)),
-        }
+    pub fn log(&self, msg: String) {
+        let log = Log::Message(msg.clone());
+        if self.tx.send(log).is_err() {
+            println!("No se pudo escribir {}", msg);
+        };
     }
 }
-// }
 
 impl Drop for Logger {
     fn drop(&mut self) {
-        self.tx.take();
-        self.handle.take().unwrap().join().unwrap();
+        if self.tx.send(Log::End).is_err() {
+            return;
+        };
+
+        if let Some(handle) = self.handle.take() {
+            let _ = handle.join();
+        }
         println!("Logger dropped");
     }
 }
