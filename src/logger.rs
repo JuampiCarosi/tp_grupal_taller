@@ -1,56 +1,34 @@
-use std::{
-    sync::{mpsc, Arc},
-    thread::{self, JoinHandle},
-};
-
-pub enum Log {
-    Message(String),
-    End,
-}
-
+use std::sync::mpsc;
+use std::fs::{OpenOptions, File};
+use std::io::prelude::*;
+use std::path::Path;
 pub struct Logger {
-    tx: mpsc::Sender<Log>,
-    handle: Option<JoinHandle<()>>,
+    rx: mpsc::Receiver<String>,
+    log_file_path: String,
 }
 
 impl Logger {
-    pub fn new() -> Arc<Logger> {
-        let (tx, rx) = mpsc::channel();
+    pub fn new(rx: mpsc::Receiver<String>) -> Logger {
+        println!("Logger started");
 
-        let handle = thread::spawn(move || {
-            println!("Logger started");
-            loop {
-                match rx.recv() {
-                    Ok(Log::Message(msg)) => println!("{}", msg),
-                    Ok(Log::End) => break,
-                    Err(_) => break,
-                }
-            }
-        });
+        let file_path = "../log.txt";
+        let path = Path::new(file_path);
 
-        Arc::new(Logger {
-            tx,
-            handle: Some(handle),
-        })
-    }
-
-    pub fn log(&self, msg: String) {
-        let log = Log::Message(msg.clone());
-        if self.tx.send(log).is_err() {
-            println!("No se pudo escribir {}", msg);
-        };
-    }
-}
-
-impl Drop for Logger {
-    fn drop(&mut self) {
-        if self.tx.send(Log::End).is_err() {
-            return;
-        };
-
-        if let Some(handle) = self.handle.take() {
-            let _ = handle.join();
+        if !path.exists() {
+            File::create(path).unwrap();
         }
-        println!("Logger dropped");
+        Logger { rx, log_file_path: file_path.to_string() }
+    }
+
+    pub fn start_logging(&self) {
+        let mut data_file = OpenOptions::new()
+            .append(true)
+            .open(&self.log_file_path)
+            .expect("cannot open file");
+
+        while let Ok(msg) = &self.rx.recv() {
+            data_file.write(format!("{}\n", msg).as_bytes()).expect("write failed");
+            println!("Escribi {}", msg);
+        }
     }
 }
