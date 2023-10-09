@@ -1,18 +1,20 @@
-use std::{thread, time::Duration};
+use std::{sync::Arc, thread};
 
 use taller::logger::Logger;
 
 fn main() {
-    let logger = Logger::new();
+    let logger = Arc::new(Logger::new().unwrap());
 
     let logger1 = logger.clone();
     let handle_1 = thread::spawn(move || {
         logger1.log("Thread 1".to_string());
     });
+
     let logger2 = logger.clone();
     let handle_2 = thread::spawn(move || {
         logger2.log("Thread 2".to_string());
     });
+
     let logger3 = logger.clone();
     let handle_3 = thread::spawn(move || {
         logger3.log("Thread 3".to_string());
