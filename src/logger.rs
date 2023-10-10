@@ -104,37 +104,3 @@ fn get_file_path() -> Option<String> {
         }
     }
 }
-// use std::sync::mpsc;
-// use std::fs::{OpenOptions, File};
-// use std::io::{prelude::*, Error};
-// use std::env;
-// pub struct Logger {
-//     rx: mpsc::Receiver<String>,
-//     log_file_path: String,
-// }
-
-// impl Logger {
-  
-//     pub fn new(rx: mpsc::Receiver<String>) -> Logger {
-//         println!("Logger started");
-//         let file_path: String;
-//         match get_file_path() { 
-//             Some(file) => file_path = file,
-//             None => file_path = "./log.txt".to_string(),
-//         }
-//         Logger { rx, log_file_path: file_path }
-//     }
-    
-//     pub fn start_logging(&self) -> Result<(), Error> {
-//         let mut data_file = OpenOptions::new()
-//             .append(true)
-//             .open(&self.log_file_path)?;
-
-//         while let Ok(msg) = &self.rx.recv() {
-//             data_file.write(format!("{}\n", msg).as_bytes())?;
-//             // println!("Escribi {}", msg);
-//         }
-//         Ok(())
-//     }
-// }
-
