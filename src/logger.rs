@@ -23,32 +23,26 @@ impl Logger {
         let (tx, rx) = mpsc::channel();
         let file_path: String;
 
-        match get_file_path() { 
+        match get_file_path() {
             Some(file) => file_path = file,
             None => file_path = "./log.txt".to_string(),
         }
-        
-        let mut data_file = OpenOptions::new()
-            .append(true)
-            .open(file_path)?;
 
+        let mut data_file = OpenOptions::new().append(true).open(file_path)?;
 
         let logger_thread = thread::Builder::new().name("Logger".to_string());
-        let handle_result = logger_thread.spawn(move || {
-            
-            loop {
-                match rx.recv() {
-                    Ok(Log::Message(msg)) => {
-                        let timestamp = Local::now().format("%Y-%m-%d %H:%M:%S");
+        let handle_result = logger_thread.spawn(move || loop {
+            match rx.recv() {
+                Ok(Log::Message(msg)) => {
+                    let timestamp = Local::now().format("%Y-%m-%d %H:%M:%S");
 
-                        data_file
-                            .write(format!("{} | {}\n", timestamp, msg).as_bytes())
-                            .expect("write failed");
-                        println!("Escribi {}", msg);
-                    }
-                    Ok(Log::End) => break,
-                    Err(_) => break,
+                    data_file
+                        .write(format!("{} | {}\n", timestamp, msg).as_bytes())
+                        .expect("write failed");
+                    println!("Escribi {}", msg);
                 }
+                Ok(Log::End) => break,
+                Err(_) => break,
             }
         });
 
@@ -62,7 +56,7 @@ impl Logger {
             Err(Box::new(std::io::Error::new(
                 std::io::ErrorKind::Other,
                 "No se pudo crear el logger",
-            )))        
+            )))
         }
     }
 
@@ -76,6 +70,7 @@ impl Logger {
 
 impl Drop for Logger {
     fn drop(&mut self) {
+        println!("Cerrando logger");
         if self.tx.send(Log::End).is_err() {
             return;
         };
@@ -83,10 +78,9 @@ impl Drop for Logger {
         if let Some(handle) = self.handle.take() {
             let _ = handle.join();
         }
-        println!("Logger dropped");
+        println!("Logger cerrado");
     }
 }
-
 
 fn get_file_path() -> Option<String> {
     let file_path;
