@@ -15,3 +15,12 @@ Repo for Rust Taller De Programacion 1 FIUBA
 
 Realizamos un documento con los comando para esta primera parte del TP, donde detallamos Nombre, Descripción, Precondiciones, Postcondiciones, Flujo, Errores, Info. Auxiliar.
 [Link](https://docs.google.com/document/d/1YQVEbZWpcTxVPtevdTQRGLZyZjCM1OuWfK9f1--xii4/edit?usp=sharing)
+
+### Cronograma planeado
+
+Realizamos un documento con el cronograma planeado para esta primera parte del TP, donde detallamos las tareas a realizar semana a semana.
+[Link](https://docs.google.com/spreadsheets/d/1zMW_DAc9MXoI6xk1ST1oP9UJRlPCdEcRXhwCicGHFXo/edit?usp=sharing)
+
+### Diagrama de infraestructura
+
+![Diagrama de infraestructura](diagrama.png)
