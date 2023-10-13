@@ -4,9 +4,8 @@ fn main() {
     let arguments = std::env::args().collect::<Vec<String>>();
     let (_, args) = arguments.split_first().unwrap();
 
-    let concatenated_arguments = args.to_vec().join("");
+    let concatenated_arguments = args.to_vec();
 
-    
     let command = command_parser(&concatenated_arguments);
     command.execute();
 }
