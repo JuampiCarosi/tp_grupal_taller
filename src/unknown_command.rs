@@ -7,7 +7,13 @@ impl Command for UnknownCommand {
         println!("Unknown command");
     }
 
-    fn with_args(_: Vec<String>) -> UnknownCommand {
+    // fn with_args(_: Vec<String>) -> UnknownCommand {
+    //     UnknownCommand {}
+    // }
+}
+
+impl From<Vec<String>>for UnknownCommand {
+    fn from(_: Vec<String>) -> Self {
         UnknownCommand {}
     }
 }

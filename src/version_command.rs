@@ -7,7 +7,13 @@ impl Command for VersionCommand {
         println!("Version 0.1.0");
     }
 
-    fn with_args(_: Vec<String>) -> VersionCommand {
+    // fn with_args(_: Vec<String>) -> VersionCommand {
+    //     VersionCommand {}
+    // }
+}
+
+impl From<Vec<String>> for VersionCommand {
+    fn from(_: Vec<String>) -> Self {
         VersionCommand {}
     }
 }
