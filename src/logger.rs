@@ -21,12 +21,11 @@ pub struct Logger {
 impl Logger {
     pub fn new() -> Result<Logger, Box<dyn std::error::Error>> {
         let (tx, rx) = mpsc::channel();
-        let file_path: String;
 
-        match get_file_path() {
-            Some(file) => file_path = file,
-            None => file_path = "./log.txt".to_string(),
-        }
+        let file_path = match get_file_path() {
+            Some(file) => file,
+            None => "./log.txt".to_string(),
+        };
 
         let mut data_file = OpenOptions::new().append(true).open(file_path)?;
 
@@ -37,7 +36,7 @@ impl Logger {
                     let timestamp = Local::now().format("%Y-%m-%d %H:%M:%S");
 
                     data_file
-                        .write(format!("{} | {}\n", timestamp, msg).as_bytes())
+                        .write_all(format!("{} | {}\n", timestamp, msg).as_bytes())
                         .expect("write failed");
                     println!("Escribi {}", msg);
                 }
@@ -47,10 +46,10 @@ impl Logger {
         });
 
         if let Ok(handle) = handle_result {
-            return Ok(Logger {
+            Ok(Logger {
                 tx,
                 handle: Some(handle),
-            });
+            })
         } else {
             // Aca podria ir un error que creamos nosotros
             Err(Box::new(std::io::Error::new(
