@@ -2,11 +2,11 @@ use crate::comando_base::ComandoBase;
 
 
 // pub trait EjecutarComando {
-//     fn ejecutar_con(&self, flags: Vec<String>, args: Vec<String>);
+    //     fn ejecutar_con(&self, flags: Vec<String>, args: Vec<String>);
 // }
 
 pub struct Comando {
-    comando_base: ComandoBase,
+    comando_base: ComandoBase, 
     flags: Vec<String>,
     args: Vec<String>,
 }

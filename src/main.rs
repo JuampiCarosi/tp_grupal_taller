@@ -1,27 +1,10 @@
 use taller::comando::Comando;
-use std::io;
 
-fn main() -> io::Result<()> {
-    loop {
-        let mut buf = String::new();
-        let _ = io::stdin().read_line(&mut buf)?;
-        let comando = match Comando::new(buf.split_whitespace().map(String::from).collect()){
-            Ok(cmd) => {cmd},
-            Err(error) => {
-                eprintln!("Error: {}", error);
-                continue;
-            }
-        };    
 
-        match comando.ejecutar() {
-            Ok(_) => {
-                println!("Se ejeciuto el comando: {}", buf);
-            }
-            Err(error) => {
-                eprintln!("Error: {}", error);
-            }
-        }
-    }
+fn main() -> Result<(), String> {
+    let comando = Comando::new(std::env::args().collect())?;
+    comando.ejecutar()?;
+    Ok(())
 }
 
 
