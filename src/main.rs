@@ -1,4 +1,4 @@
-use taller::comando::Comando;
+use taller::tipos_de_dato::comando::Comando;
 
 
 fn main() -> Result<(), String> {
