@@ -1,13 +1,13 @@
 use std::rc::Rc;
 
 use super::{
-    git_comandos::{git_init::GitInit, git_version::GitVersion},
+    comandos::{init::Init, version::Version},
     logger::Logger,
 };
 
 pub enum Comando {
-    GitInit(GitInit),
-    GitVersion(GitVersion),
+    Init(Init),
+    Version(Version),
     Unknown,
 }
 
@@ -19,8 +19,8 @@ impl Comando {
         println!("comando: {}", comando);
 
         let comando = match comando.as_str() {
-            "version" => Comando::GitVersion(GitVersion::from(Vec::from(args))?),
-            "init" => Comando::GitInit(GitInit::from(Vec::from(args), logger)?),
+            "version" => Comando::Version(Version::from(Vec::from(args))?),
+            "init" => Comando::Init(Init::from(Vec::from(args), logger)?),
             _ => Comando::Unknown,
         };
 
@@ -31,8 +31,8 @@ impl Comando {
 impl Comando {
     pub fn ejecutar(&self) -> Result<(), String> {
         match self {
-            Comando::GitInit(git_init) => git_init.ejecutar(),
-            Comando::GitVersion(git_version) => git_version.ejecutar(),
+            Comando::Init(init) => init.ejecutar(),
+            Comando::Version(version) => version.ejecutar(),
             Comando::Unknown => Err("Comando desconocido".to_string()),
         }
     }
