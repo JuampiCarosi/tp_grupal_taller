@@ -1,8 +1,8 @@
-pub struct GitVersion;
+pub struct Version;
 
-impl GitVersion {
-    pub fn from(_args: Vec<String>) -> Result<GitVersion, String> {
-        Ok(GitVersion)
+impl Version {
+    pub fn from(_args: Vec<String>) -> Result<Version, String> {
+        Ok(Version)
     }
 
     pub fn ejecutar(&self) -> Result<(), String> {

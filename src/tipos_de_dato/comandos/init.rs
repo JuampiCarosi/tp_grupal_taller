@@ -2,12 +2,12 @@ use std::{fs, path::Path, rc::Rc};
 
 use crate::tipos_de_dato::logger::Logger;
 
-pub struct GitInit {
+pub struct Init {
     path: String,
     logger: Rc<Logger>,
 }
 
-impl GitInit {
+impl Init {
     pub fn validar_argumentos(args: Vec<String>) -> Result<(), String> {
         if args.len() > 1 {
             return Err("Argumentos desconocidos\n gir init [<directory>]".to_string());
@@ -16,10 +16,10 @@ impl GitInit {
         Ok(())
     }
 
-    pub fn from(args: Vec<String>, logger: Rc<Logger>) -> Result<GitInit, String> {
+    pub fn from(args: Vec<String>, logger: Rc<Logger>) -> Result<Init, String> {
         Self::validar_argumentos(args.clone())?;
 
-        Ok(GitInit {
+        Ok(Init {
             path: Self::obtener_path(args),
             logger,
         })
