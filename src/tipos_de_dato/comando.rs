@@ -17,8 +17,6 @@ impl Comando {
         let (_, rest) = input.split_first().unwrap();
         let (comando, args) = rest.split_first().unwrap();
 
-        println!("comando: {}", comando);
-
         let mut vector_args = Vec::from(args);
 
         let comando = match comando.as_str() {
