@@ -19,10 +19,12 @@ impl Comando {
 
         println!("comando: {}", comando);
 
+        let mut vector_args = Vec::from(args);
+
         let comando = match comando.as_str() {
-            "version" => Comando::GitVersion(GitVersion::from(Vec::from(args))?),
-            "init" => Comando::GitInit(GitInit::from(Vec::from(args), logger)?),
-            "hash-object" => Comando::GitHashObject(GitHashObject::from(Vec::from(args), logger)?),
+            "version" => Comando::GitVersion(GitVersion::from(vector_args)?),
+            "init" => Comando::GitInit(GitInit::from(vector_args, logger)?),
+            "hash-object" => Comando::GitHashObject(GitHashObject::from(&mut vector_args, logger)?),
             _ => Comando::Unknown,
         };
 
