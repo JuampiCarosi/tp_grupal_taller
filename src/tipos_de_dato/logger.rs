@@ -46,7 +46,6 @@ impl Logger {
                     data_file
                         .write_all(format!("{} | {}\n", timestamp, msg).as_bytes())
                         .expect("write failed");
-                    println!("Escribi {}", msg);
                 }
                 Ok(Log::End) => break,
                 Err(_) => break,
@@ -78,7 +77,6 @@ impl Logger {
 
 impl Drop for Logger {
     fn drop(&mut self) {
-        println!("Cerrando logger");
         if self.tx.send(Log::End).is_err() {
             return;
         };
