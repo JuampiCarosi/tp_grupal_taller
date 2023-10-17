@@ -5,13 +5,13 @@ use std::str;
 use crate::err_comunicacion::ErrorDeComunicacion;
 
 
-pub fn get_refs(path: &mut PathBuf) -> Result<Vec<String>, ErrorDeComunicacion> {
+pub fn obtener_refs(path: &mut PathBuf) -> Result<Vec<String>, ErrorDeComunicacion> {
     let mut refs: Vec<String> = Vec::new();
     if !path.exists() {
         ErrorDeComunicacion::IoError(io::Error::new(io::ErrorKind::NotFound, "No existe el repositorio"));
     }
     if path.ends_with("HEAD") {
-        refs.push(get_head_ref(path.clone())?);
+        refs.push(obtener_ref_head(path.clone())?);
     }
     else {
         let head_dir = fs::read_dir(path.clone())?;
@@ -49,13 +49,11 @@ fn obtener_referencia(path: &mut PathBuf) -> Result<String, ErrorDeComunicacion>
     Ok(format!("{}{}", calcular_largo_hex(&referencia).as_str(), referencia))
 }
 
-fn get_head_ref(path: PathBuf) -> Result<String, ErrorDeComunicacion>{
+fn obtener_ref_head(path: PathBuf) -> Result<String, ErrorDeComunicacion>{
     if !path.exists() {
         return Err(ErrorDeComunicacion::IoError(io::Error::new(io::ErrorKind::NotFound, "No existe HEAD")));
     }
-    let archivo = fs::File::open(path.clone())?;
-    let mut contenido = String::new();            
-    std::io::BufReader::new(archivo).read_line(&mut contenido)?;
+    let contenido = leer_archivo(&mut path.clone())?;
     let head_ref: Vec<&str> = contenido.split_whitespace().collect();
     if let Some(ruta) = path.clone().parent(){
         return Ok(obtener_referencia(&mut ruta.join(head_ref[1]))?);

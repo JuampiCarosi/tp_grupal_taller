@@ -56,9 +56,9 @@ impl Comunicacion {
                 let args: Vec<_> = req[1].split('\0').collect();    
                 let path = PathBuf::from(self.dir.clone() + args[0]);
                 let mut refs: Vec<String> = Vec::new();
-                refs.append(&mut git_io::get_refs(&mut path.clone().join("HEAD"))?);
-                refs.append(&mut git_io::get_refs(&mut path.join("refs/heads/"))?);
-                refs.append(&mut git_io::get_refs(&mut path.join("refs/tags/"))?);
+                refs.append(&mut git_io::obtener_refs(&mut path.clone().join("HEAD"))?);
+                refs.append(&mut git_io::obtener_refs(&mut path.join("refs/heads/"))?);
+                refs.append(&mut git_io::obtener_refs(&mut path.join("refs/tags/"))?);
                 println!("refs: {:?}", refs);
                 Ok(())
             },
