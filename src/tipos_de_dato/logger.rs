@@ -38,7 +38,6 @@ impl Logger {
                     data_file
                         .write_all(format!("{} | {}\n", timestamp, msg).as_bytes())
                         .expect("write failed");
-                    println!("Escribi {}", msg);
                 }
                 Ok(Log::End) => break,
                 Err(_) => break,

@@ -29,8 +29,10 @@ impl GitInit {
         self.crear_directorio_git()
             .map_err(|err| format!("{}", err))?;
 
-        self.logger
-            .log(format!("Directorio gir creado en {}", self.path));
+        let mensaje = format!("Directorio gir creado en {}", self.path);
+
+        self.logger.log(mensaje.clone());
+        println!("{}", mensaje);
 
         Ok(())
     }
@@ -44,7 +46,12 @@ impl GitInit {
     }
 
     fn crear_directorio_git(&self) -> Result<(), std::io::Error> {
-        self.verificar_si_ya_esta_creado_directorio_git()?;
+        if self.verificar_si_ya_esta_creado_directorio_git() {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::AlreadyExists,
+                "Ya existe un repositorio en este directorio",
+            ));
+        };
 
         fs::create_dir_all(self.path.clone())?;
         fs::create_dir_all(self.path.clone() + "/objects")?;
@@ -54,14 +61,7 @@ impl GitInit {
         Ok(())
     }
 
-    fn verificar_si_ya_esta_creado_directorio_git(&self) -> Result<(), std::io::Error> {
-        if Path::new(&self.path).exists() {
-            return Err(std::io::Error::new(
-                std::io::ErrorKind::AlreadyExists,
-                "Ya existe un repositorio en este directorio",
-            ));
-        }
-
-        Ok(())
+    fn verificar_si_ya_esta_creado_directorio_git(&self) -> bool {
+        Path::new(&self.path).exists()
     }
 }

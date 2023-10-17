@@ -19,7 +19,7 @@ impl Comando {
         println!("comando: {}", comando);
 
         let comando = match comando.as_str() {
-            "version" => Comando::GitVersion(GitVersion::from(Vec::from(args))),
+            "version" => Comando::GitVersion(GitVersion::from(Vec::from(args))?),
             "init" => Comando::GitInit(GitInit::from(Vec::from(args), logger)?),
             _ => Comando::Unknown,
         };
