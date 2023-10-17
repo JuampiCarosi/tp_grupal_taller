@@ -2,23 +2,31 @@ use std::io::prelude::*;
 use std::{
     env,
     fs::{File, OpenOptions},
-    sync::mpsc,
+    sync::{mpsc, mpsc::Sender},
     thread::{self, JoinHandle},
 };
-
 use chrono::Local;
 
+
+/// Represents a log message or the end of the logger thread.
 pub enum Log {
+    /// A log message.
     Message(String),
+    /// The end of the logger thread.
     End,
 }
 
+/// A logger that writes messages to a file.
 pub struct Logger {
-    tx: mpsc::Sender<Log>,
+    tx: Sender<Log>,
     handle: Option<JoinHandle<()>>,
 }
 
 impl Logger {
+    /// Creates a new logger that writes messages to a file.
+    ///
+    /// If the current working directory cannot be obtained or the log file cannot be opened,
+    /// the logger will write messages to a file named "log.txt" in the current directory.
     pub fn new() -> Result<Logger, Box<dyn std::error::Error>> {
         let (tx, rx) = mpsc::channel();
 
@@ -58,6 +66,7 @@ impl Logger {
         }
     }
 
+    /// Writes a log message to the file.
     pub fn log(&self, msg: String) {
         let log = Log::Message(msg.clone());
         if self.tx.send(log).is_err() {
@@ -79,6 +88,10 @@ impl Drop for Logger {
     }
 }
 
+/// Returns the path to the log file.
+///
+/// If the current working directory cannot be obtained or the log file cannot be created,
+/// returns `None`.
 fn get_file_path() -> Option<String> {
     let file_path;
     match env::current_dir() {
