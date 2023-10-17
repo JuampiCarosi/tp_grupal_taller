@@ -8,6 +8,7 @@ use std::{
     thread::{self, JoinHandle},
 };
 
+//hay que mover a otro archivo 
 /// Represents a log message or the end of the logger thread.
 pub enum Log {
     /// A log message.
@@ -120,3 +121,52 @@ fn escribir_mensaje_en_archivo_log(
     Ok(())
 }
 
+#[cfg(test)]
+mod test{
+    use std::{fs, env};
+    use super::Logger;
+
+    #[test]
+    
+    fn test01_al_iniciar_si_archivo_log_no_esta_creado_se_crea(){
+
+        eliminar_archivo_log();
+
+        Logger::new().unwrap();    
+        
+        assert!(obtener_dir_archivo_log().exists());
+    }
+
+    //no entiendo porque no pasa este test, debugeando lo pasa 
+    #[test]
+    fn test02_se_escribe_correctamente_un_mensajes_archivo_log(){ 
+        
+        eliminar_archivo_log();
+        let logger = Logger::new().unwrap();    
+        
+        let archivo_log = obtener_dir_archivo_log();
+        assert!(archivo_log.exists());
+
+        let msg_test ="sipiropo fapatapalapa".to_string(); 
+
+        logger.log(msg_test.clone());
+
+        let contenido_archvo_log = fs::read_to_string(obtener_dir_archivo_log()).unwrap();
+
+        println!("{}",contenido_archvo_log);
+        let assert = contenido_archvo_log.contains(&msg_test);
+        assert!(assert);
+    }
+    
+
+    fn eliminar_archivo_log(){
+        let dir_archivo_log = obtener_dir_archivo_log();
+        if dir_archivo_log.exists() {
+            fs::remove_file(dir_archivo_log.clone()).unwrap();
+        }
+    }
+
+    fn obtener_dir_archivo_log() -> std::path::PathBuf {
+        env::current_dir().unwrap().as_path().join("log.txt")
+    }
+}
