@@ -143,7 +143,6 @@ mod test {
         assert!(obtener_dir_archivo_log().exists());
     }
 
-    //no entiendo porque no pasa este test, debugeando lo pasa
     #[test]
     fn test02_se_escribe_correctamente_un_mensajes_archivo_log() {
         eliminar_archivo_log();
@@ -155,6 +154,7 @@ mod test {
         let msg_test = "sipiropo fapatapalapa".to_string();
 
         logger.log(msg_test.clone());
+        drop(logger);
 
         let contenido_archvo_log = fs::read_to_string(obtener_dir_archivo_log()).unwrap();
 
