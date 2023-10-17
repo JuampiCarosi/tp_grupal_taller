@@ -26,7 +26,7 @@ impl Init {
     }
 
     pub fn ejecutar(&self) -> Result<(), String> {
-        self.crear_directorio_git()
+        self.crear_directorio_gir()
             .map_err(|err| format!("{}", err))?;
 
         let mensaje = format!("Directorio gir creado en {}", self.path);
@@ -45,8 +45,8 @@ impl Init {
         }
     }
 
-    fn crear_directorio_git(&self) -> Result<(), std::io::Error> {
-        if self.verificar_si_ya_esta_creado_directorio_git() {
+    fn crear_directorio_gir(&self) -> Result<(), std::io::Error> {
+        if self.verificar_si_ya_esta_creado_directorio_gir() {
             return Err(std::io::Error::new(
                 std::io::ErrorKind::AlreadyExists,
                 "Ya existe un repositorio en este directorio",
@@ -61,7 +61,7 @@ impl Init {
         Ok(())
     }
 
-    fn verificar_si_ya_esta_creado_directorio_git(&self) -> bool {
+    fn verificar_si_ya_esta_creado_directorio_gir(&self) -> bool {
         Path::new(&self.path).exists()
     }
 }
