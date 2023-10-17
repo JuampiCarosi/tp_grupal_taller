@@ -32,3 +32,12 @@ pub fn escrbir_bytes(archivo: &String, contenido: Vec<u8>) -> Result<(), String>
         Err(e) => Err(format!("Error al escribir el archivo: {}", e)),
     }
 }
+
+pub fn leer_bytes(archivo: &String) -> Result<Vec<u8>, String> {
+    match fs::read(archivo) {
+        Ok(contenido) => Ok(contenido),
+        Err(_) => {
+            return Err("No se pudo leer el archivo".to_string());
+        }
+    }
+}
