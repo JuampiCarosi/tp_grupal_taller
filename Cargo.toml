@@ -9,3 +9,6 @@ edition = "2021"
 chrono = "0.4.31"
 flate2 = "1.0.28"
 sha1 = "0.10.6"
+
+[dev-dependencies]
+serial_test = "1.0.0"

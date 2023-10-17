@@ -131,10 +131,13 @@ fn escribir_mensaje_en_archivo_log(
 #[cfg(test)]
 mod test {
     use super::Logger;
-    use std::{env, fs};
+    use std::{env, fs, sync::Arc, thread};
+    extern crate serial_test;
+
+    use serial_test::serial;
 
     #[test]
-
+    #[serial]
     fn test01_al_iniciar_si_archivo_log_no_esta_creado_se_crea() {
         eliminar_archivo_log();
 
@@ -144,23 +147,81 @@ mod test {
     }
 
     #[test]
-    fn test02_se_escribe_correctamente_un_mensajes_archivo_log() {
+    #[serial]
+    fn test02_se_escribe_correctamente_los_mensajes_archivo_log() {
         eliminar_archivo_log();
         let logger = Logger::new().unwrap();
 
-        let archivo_log = obtener_dir_archivo_log();
-        assert!(archivo_log.exists());
+        let msg_test_01 = "sipiropo fapatapalapa".to_string();
+        let msg_test_02 = "juapuanipi peperezpez".to_string();
 
-        let msg_test = "sipiropo fapatapalapa".to_string();
-
-        logger.log(msg_test.clone());
+        logger.log(msg_test_01.clone());
+        logger.log(msg_test_02.clone());
         drop(logger);
 
+        assert_el_archivo_log_contiene(vec![msg_test_01, msg_test_02])
+    }
+
+    #[test]
+    #[serial]
+    fn test03_si_se_crea_un_logger_no_se_pierden_los_mensajes_anterior() {
+        eliminar_archivo_log();
+
+        let msg_test_01 = "sipiropo fapatapalapa".to_string();
+        Logger::new().unwrap().log(msg_test_01.clone());
+
+        let msg_test_02 = "juapuanipi peperezpez".to_string();
+        Logger::new().unwrap().log(msg_test_02.clone());
+
+        assert_el_archivo_log_contiene(vec![msg_test_01, msg_test_02]);
+    }
+
+    #[test]
+    #[serial]
+    fn test04_el_logger_puede_escribir_mensajes_de_varios_threads() {
+        eliminar_archivo_log();
+
+        let logger = Arc::new(Logger::new().unwrap());
+
+        let msg_test_01 = Arc::new("Thread 1 saluda".to_string());
+        let msg_test_01_copia_para_thread = msg_test_01.clone();
+        let msg_test_02 = Arc::new("Thread 2 saluda".to_string());
+        let msg_test_02_copia_para_thread = msg_test_02.clone();
+        let msg_test_03 = Arc::new("Thread 3 saluda".to_string());
+        let msg_test_03_copia_para_thread = msg_test_03.clone();
+
+        let logger1 = logger.clone();
+        let handle_1 = thread::spawn(move || {
+            logger1.log(msg_test_01_copia_para_thread.to_string());
+        });
+
+        let logger2 = logger.clone();
+        let handle_2 = thread::spawn(move || {
+            logger2.log(msg_test_02_copia_para_thread.to_string());
+        });
+
+        let logger3 = logger.clone();
+        let handle_3 = thread::spawn(move || {
+            logger3.log(msg_test_03_copia_para_thread.to_string());
+        });
+
+        handle_1.join().unwrap();
+        handle_2.join().unwrap();
+        handle_3.join().unwrap();
+
+        assert_el_archivo_log_contiene(vec![
+            msg_test_01.to_string(),
+            msg_test_02.to_string(),
+            msg_test_03.to_string(),
+        ]);
+    }
+
+    fn assert_el_archivo_log_contiene(contenidos: Vec<String>) {
         let contenido_archvo_log = fs::read_to_string(obtener_dir_archivo_log()).unwrap();
 
-        println!("{}", contenido_archvo_log);
-        let assert = contenido_archvo_log.contains(&msg_test);
-        assert!(assert);
+        for contenido in contenidos {
+            assert!(contenido_archvo_log.contains(&contenido));
+        }
     }
 
     fn eliminar_archivo_log() {
