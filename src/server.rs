@@ -1,28 +1,30 @@
 use std::env::{self, args};
 use std::io::{BufRead, BufReader, Read, Write, Error};
 use std::net::{TcpListener, TcpStream};
-use taller::comunicacion::Comunicacion;
-static SERVER_ARGS: usize = 2;
+use crate::comunicacion::Comunicacion;
+use crate::err_comunicacion::ErrorDeComunicacion;
+// use crate::git_fs::GitFS;
 
 
 pub struct Servidor { 
     com: Comunicacion,
-    dir: String,
+    dir: String 
 }
 
 impl Servidor { 
 
     pub fn new(address: &str) -> Servidor {
         let listener = TcpListener::bind(address).unwrap();
-        let dir = match env::current_dir() {
-            Ok(current_dir) => current_dir.to_str().unwrap().to_string(),
-            Err(_) => '.'.to_string(),
-        };
-        let com = Comunicacion::new(listener);
+        let dir = env!("CARGO_MANIFEST_DIR").to_string();
+
+        let com = Comunicacion::new(listener, dir.clone());
         Servidor { com, dir }
     }
 
-    pub fn server_run(&mut self) -> std::io::Result<()> {
+    pub fn server_run(&mut self) -> Result<(),ErrorDeComunicacion> {
+        // loop {
+        //     self.com.procesar_datos()?;
+        // }
         self.com.procesar_datos()?; 
         Ok(())
     }
@@ -58,21 +60,4 @@ impl Servidor {
 //     format!("{:0>4}", largo_hex)
 // }
 
-
 }
-fn main() -> Result<(), ()> {
-    let argv = args().collect::<Vec<String>>();
-    if argv.len() != SERVER_ARGS {
-        println!("Cantidad de argumentos inválido");
-        let app_name = &argv[0];
-        println!("Usage:\n{:?} <puerto>", app_name);
-        return Err(());
-    }
-
-    let address = "127.0.0.1:".to_owned() + &argv[1];
-    let mut sv = Servidor::new(&address);
-    sv.server_run().unwrap();
-    Ok(())
-}
-
-

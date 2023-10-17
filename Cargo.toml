@@ -8,10 +8,11 @@ edition = "2021"
 [dependencies]
 chrono = "0.4.31"
 
+
 [[bin]]
 name = "client"
 path = "src/main.rs"
 
 [[bin]]
 name = "server"
-path = "src/server.rs"
+path = "src/00_server.rs"
