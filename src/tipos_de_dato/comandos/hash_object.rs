@@ -3,14 +3,14 @@ use flate2::{self, write::ZlibEncoder, Compression};
 use sha1::{Digest, Sha1};
 use std::{fs, io::Write, path, rc::Rc};
 
-pub struct GitHashObject {
+pub struct HashObject {
     logger: Rc<Logger>,
     tipo_objeto: String,
     escribir: bool,
     ruta: String,
 }
 
-impl GitHashObject {
+impl HashObject {
     fn obtener_nombre_archivo(args: &mut Vec<String>) -> Result<String, String> {
         match args.pop() {
             Some(nombre_archivo) => {
@@ -63,7 +63,7 @@ impl GitHashObject {
         Ok(())
     }
 
-    pub fn from(args: &mut Vec<String>, logger: Rc<Logger>) -> Result<GitHashObject, String> {
+    pub fn from(args: &mut Vec<String>, logger: Rc<Logger>) -> Result<HashObject, String> {
         let mut tipo_objeto = String::from("blob");
         let mut prefijo = String::from("./");
         let mut escribir = false;
@@ -83,7 +83,7 @@ impl GitHashObject {
             }
         }
         let ruta = format!("{}{}", prefijo, nombre_archivo);
-        Ok(GitHashObject {
+        Ok(HashObject {
             logger,
             tipo_objeto,
             escribir,

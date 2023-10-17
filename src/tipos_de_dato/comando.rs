@@ -1,14 +1,14 @@
 use std::rc::Rc;
 
 use super::{
-    git_comandos::{git_hash_object::GitHashObject, git_init::GitInit, git_version::GitVersion},
+    comandos::{init::Init, version::Version},
     logger::Logger,
 };
 
 pub enum Comando {
-    GitInit(GitInit),
-    GitVersion(GitVersion),
-    GitHashObject(GitHashObject),
+    Init(Init),
+    Version(Version),
+    HashObject(HashObject),
     Unknown,
 }
 
@@ -22,9 +22,9 @@ impl Comando {
         let mut vector_args = Vec::from(args);
 
         let comando = match comando.as_str() {
-            "version" => Comando::GitVersion(GitVersion::from(vector_args)?),
-            "init" => Comando::GitInit(GitInit::from(vector_args, logger)?),
-            "hash-object" => Comando::GitHashObject(GitHashObject::from(&mut vector_args, logger)?),
+            "version" => Comando::Version(Version::from(vector_args)?),
+            "init" => Comando::Init(Init::from(vector_args, logger)?),
+            "hash-object" => Comando::HashObject(HashObject::from(&mut vector_args, logger)?),
             _ => Comando::Unknown,
         };
 
@@ -35,9 +35,9 @@ impl Comando {
 impl Comando {
     pub fn ejecutar(&self) -> Result<(), String> {
         match self {
-            Comando::GitInit(git_init) => git_init.ejecutar(),
-            Comando::GitVersion(git_version) => git_version.ejecutar(),
-            Comando::GitHashObject(git_hash_object) => git_hash_object.ejecutar(),
+            Comando::Init(init) => init.ejecutar(),
+            Comando::Version(version) => version.ejecutar(),
+            Comando::HashObject(hash_object) => hash_object.ejecutar(),
             Comando::Unknown => Err("Comando desconocido".to_string()),
         }
     }

@@ -1,10 +1,10 @@
 pub mod tipos_de_dato {
     pub mod comando;
     pub mod logger;
-    pub mod git_comandos {
-        pub mod git_hash_object;
-        pub mod git_init;
-        pub mod git_version;
+    pub mod comandos {
+        pub mod hash_object;
+        pub mod init;
+        pub mod version;
     }
 }
 pub mod io;
