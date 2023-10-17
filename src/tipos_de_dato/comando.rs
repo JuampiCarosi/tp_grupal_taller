@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 use super::{
-    comandos::{init::Init, version::Version},
+    comandos::{hash_object::HashObject, init::Init, version::Version},
     logger::Logger,
 };
 
