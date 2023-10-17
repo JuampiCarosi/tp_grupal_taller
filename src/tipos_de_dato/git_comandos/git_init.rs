@@ -8,7 +8,7 @@ pub struct GitInit {
 }
 
 impl GitInit {
-    pub fn validate_args(args: Vec<String>) -> Result<(), String> {
+    pub fn validar_argumentos(args: Vec<String>) -> Result<(), String> {
         if args.len() > 1 {
             return Err("Argumentos desconocidos\n gir init [<directory>]".to_string());
         }
@@ -17,7 +17,7 @@ impl GitInit {
     }
 
     pub fn from(args: Vec<String>, logger: Rc<Logger>) -> Result<GitInit, String> {
-        Self::validate_args(args.clone())?;
+        Self::validar_argumentos(args.clone())?;
 
         Ok(GitInit {
             path: Self::obtener_path(args),
