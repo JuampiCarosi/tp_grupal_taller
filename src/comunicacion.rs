@@ -18,25 +18,21 @@ impl Comunicacion {
         let (stream, _) = listener.accept().unwrap();
         Comunicacion { listener, stream, dir }
     }
-
     
-
     pub fn procesar_datos(&mut self) -> Result<(), ErrorDeComunicacion> {
         // lee primera parte, 4 bytes en hexadecimal indican el largo del stream
-        let mut length_bytes = [0; 4];
-        self.stream.read_exact(&mut length_bytes)?;
+        let mut tamanio_bytes = [0; 4];
+        self.stream.read_exact(&mut tamanio_bytes)?;
         // largo de bytes a str
-        let length_str = str::from_utf8(&length_bytes)?;
+        let tamanio_str = str::from_utf8(&tamanio_bytes)?;
         // transforma str a u32
-        let length = u32::from_str_radix(length_str, 16).unwrap();
-        println!("length: {:?}", length);
+        let tamanio = u32::from_str_radix(tamanio_str, 16).unwrap();
 
         // lee el resto del stream
-        let mut data = vec![0; (length - 4) as usize];
+        let mut data = vec![0; (tamanio - 4) as usize];
         self.stream.read_exact(&mut data)?;
         let line = str::from_utf8(&data)?;
         println!("Received: {:?}", line);
-        // println!("length: {:?}", Self::calcular_largo_hex(&line));
         self.parse_line(&line);
     //     // stream.write(line.as_bytes())?;
         Ok(())

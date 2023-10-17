@@ -36,17 +36,22 @@ pub fn calcular_largo_hex(line: &str) -> String {
     format!("{:0>4}", largo_hex)
 }
 
+pub fn obtener_linea_con_largo_hex(line: &str) -> String {
+    let largo_hex = calcular_largo_hex(line);
+    format!("{}{}", largo_hex, line)
+}
+
 fn leer_archivo(path: &mut PathBuf) -> Result<String, ErrorDeComunicacion> {
     let archivo = fs::File::open(path.clone())?;
     let mut contenido = String::new();            
     std::io::BufReader::new(archivo).read_line(&mut contenido)?;
-    Ok(contenido)
+    Ok(contenido.trim().to_string())
 }
 
 fn obtener_referencia(path: &mut PathBuf) -> Result<String, ErrorDeComunicacion> {
     let contenido = leer_archivo(path)?;            
     let referencia = format!("{} {}", contenido.trim(), path.to_str().ok_or(std::io::Error::new(std::io::ErrorKind::NotFound, "No existe HEAD"))?);
-    Ok(format!("{}{}", calcular_largo_hex(&referencia).as_str(), referencia))
+    Ok(obtener_linea_con_largo_hex(&referencia))
 }
 
 fn obtener_ref_head(path: PathBuf) -> Result<String, ErrorDeComunicacion>{
@@ -56,7 +61,8 @@ fn obtener_ref_head(path: PathBuf) -> Result<String, ErrorDeComunicacion>{
     let contenido = leer_archivo(&mut path.clone())?;
     let head_ref: Vec<&str> = contenido.split_whitespace().collect();
     if let Some(ruta) = path.clone().parent(){
-        return Ok(obtener_referencia(&mut ruta.join(head_ref[1]))?);
+        let cont = leer_archivo(&mut ruta.join(head_ref[1]))? + " HEAD";
+        return Ok(obtener_linea_con_largo_hex(&cont));
     } else {
         return Err(ErrorDeComunicacion::IoError(io::Error::new(io::ErrorKind::NotFound, "No existe HEAD")));
     }
