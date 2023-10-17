@@ -7,3 +7,5 @@ edition = "2021"
 
 [dependencies]
 chrono = "0.4.31"
+flate2 = "1.0.28"
+sha1 = "0.10.6"
