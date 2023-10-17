@@ -69,7 +69,6 @@ impl Logger {
 
 impl Drop for Logger {
     fn drop(&mut self) {
-        println!("Cerrando logger");
         if self.tx.send(Log::End).is_err() {
             return;
         };

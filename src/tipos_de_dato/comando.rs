@@ -1,50 +1,39 @@
-use super::git_comando::GitComando;
+use std::rc::Rc;
 
-pub struct Comando {
-    git_comando: GitComando, 
-    flags: Vec<String>,
-    args: Vec<String>,
+use super::{
+    git_comandos::{git_init::GitInit, git_version::GitVersion},
+    logger::Logger,
+};
+
+pub enum Comando {
+    GitInit(GitInit),
+    GitVersion(GitVersion),
+    Unknown,
 }
 
 impl Comando {
-    pub fn new(input: Vec<String>) -> Result<Comando, String> {
-        if Self::argumentos_invalidos(&input) {
-            return Err("ERROR: cantidad de argumentos insuficientes".to_string());
-        }
+    pub fn new(input: Vec<String>, logger: Rc<Logger>) -> Result<Comando, String> {
+        let (_, rest) = input.split_first().unwrap();
+        let (comando, args) = rest.split_first().unwrap();
 
-        let git_comando = GitComando::from(&input[1].clone());
+        println!("comando: {}", comando);
 
-        let (flags, args) = Self::identificar_flags_y_arguementos(input);
+        let comando = match comando.as_str() {
+            "version" => Comando::GitVersion(GitVersion::from(Vec::from(args))),
+            "init" => Comando::GitInit(GitInit::from(Vec::from(args), logger)?),
+            _ => Comando::Unknown,
+        };
 
-        Ok(Comando {
-            git_comando,
-            flags,
-            args,
-        })
-    }
-
-    pub fn ejecutar(&self) -> Result<(), String> {
-        self.git_comando.ejecutar(&self.args, &self.flags)
-    }
-
-    fn argumentos_invalidos(input: &Vec<String>) -> bool {
-        input.len() < 2 && input[0] != "git"
-    }
-
-    fn identificar_flags_y_arguementos(input: Vec<String>) -> (Vec<String>, Vec<String>) {
-        let mut flags = Vec::new();
-        let mut args = Vec::new();
-
-        for elemento in input.iter().skip(2) {
-            if elemento.starts_with('-') {
-                flags.push(elemento.clone());
-            } else {
-                args.push(elemento.clone());
-            }
-        }
-
-        (flags, args)
+        Ok(comando)
     }
 }
 
-
+impl Comando {
+    pub fn ejecutar(&self) -> Result<(), String> {
+        match self {
+            Comando::GitInit(git_init) => git_init.ejecutar(),
+            Comando::GitVersion(git_version) => git_version.ejecutar(),
+            Comando::Unknown => Err("Comando desconocido".to_string()),
+        }
+    }
+}
