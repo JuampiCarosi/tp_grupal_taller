@@ -4,7 +4,7 @@ use std::env;
 use std::path::PathBuf;
 use std::str;
 use crate::err_comunicacion::ErrorDeComunicacion;
-use crate::io as git_io;
+use crate::{io as git_io, comunicacion};
 pub struct Servidor { 
     listener: TcpListener,
     dir: String,
@@ -30,26 +30,15 @@ impl Servidor {
     }
 
     pub fn manejar_cliente(&mut self, stream: &mut TcpStream) -> Result<(), ErrorDeComunicacion> {
-        // lee primera parte, 4 bytes en hexadecimal indican el largo del stream
-        let mut tamanio_bytes = [0; 4];
-        stream.read_exact(&mut tamanio_bytes)?;
-        // largo de bytes a str
-        let tamanio_str = str::from_utf8(&tamanio_bytes)?;
-        // transforma str a u32
-        let tamanio = u32::from_str_radix(tamanio_str, 16).unwrap();
-
-        // lee el resto del stream
-        let mut data = vec![0; (tamanio - 4) as usize];
-        stream.read_exact(&mut data)?;
-        let line = str::from_utf8(&data)?;
-        println!("Received: {:?}", line);
-        self.parse_line(&line);
-    //     // stream.write(line.as_bytes())?;
+        let pedido = comunicacion::aceptar_pedido(stream)?;
+        // let lineas = comunicacion::obtener_lineas(stream)?;
+        let respuesta = self.parse_line(&pedido)?;
+        comunicacion::responder(stream, respuesta)?;
         Ok(())
     }
 
 
-    fn parse_line(&mut self, line: &str) -> Result<(), ErrorDeComunicacion>{
+    fn parse_line(&mut self, line: &str) -> Result<Vec<String>, ErrorDeComunicacion>{
         let req: Vec<&str> = line.split_whitespace().collect();
         // veo si es un comando git
         match req[0] {
@@ -62,8 +51,8 @@ impl Servidor {
                 refs.append(&mut git_io::obtener_refs(&mut path.join("refs/heads/"))?);
                 refs.append(&mut git_io::obtener_refs(&mut path.join("refs/tags/"))?);
                 refs[0] = self.agregar_capacidades(refs[0].clone());
-                println!("refs: {:?}", refs);
-                Ok(())
+                // println!("refs: {:?}", refs);
+                Ok(refs)
             },
             _ =>    {
                 println!("No se reconoce el comando");

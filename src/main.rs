@@ -1,6 +1,6 @@
 use std::net::TcpStream;
 use std::io::{Write, Read};
-use taller::io;
+use taller::{io, comunicacion};
 fn main() -> std::io::Result<()> {
     // Configura la dirección del servidor y el puerto
     let server_address = "127.0.0.1:9418"; // Cambia la dirección IP si es necesario
@@ -15,7 +15,10 @@ fn main() -> std::io::Result<()> {
     let a = format!("{}{}", largo_hex, request_data);
     client.write_all(a.as_bytes())?;
 
-
+    let lineas_recibidas = comunicacion::obtener_lineas(&mut client).unwrap();
+    for linea in lineas_recibidas {
+        println!("{}", linea);
+    }   
     // Recibe la respuesta del servidor (ajusta el tamaño del búfer según tus necesidades)
     // let mut response = [0; 4096];
     // let bytes_read = client.read(&mut response)?;
