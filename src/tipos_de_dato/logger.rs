@@ -121,11 +121,6 @@ fn escribir_mensaje_en_archivo_log(
     Ok(())
 }
 
-
-
-
-
-
 #[cfg(test)]
 mod test {
     use super::Logger;
@@ -191,24 +186,22 @@ mod test {
         let logger1 = logger.clone();
         let handle_1 = thread::spawn(move || {
             logger1.log(msg_test_01_copia_para_thread.to_string());
-            drop(logger1);
         });
 
         let logger2 = logger.clone();
         let handle_2 = thread::spawn(move || {
             logger2.log(msg_test_02_copia_para_thread.to_string());
-            drop(logger2);
         });
 
         let logger3 = logger.clone();
         let handle_3 = thread::spawn(move || {
             logger3.log(msg_test_03_copia_para_thread.to_string());
-            drop(logger3);
         });
 
         handle_1.join().unwrap();
         handle_2.join().unwrap();
         handle_3.join().unwrap();
+        drop(logger);
 
         assert_el_archivo_log_contiene(vec![
             msg_test_01.to_string(),
@@ -221,9 +214,6 @@ mod test {
         let contenido_archvo_log = fs::read_to_string(obtener_dir_archivo_log()).unwrap();
 
         for contenido in contenidos {
-            print!("{}", contenido);
-            print!("{}", contenido_archvo_log);
-            print!("{}", contenido_archvo_log.contains(&contenido));
             assert!(contenido_archvo_log.contains(&contenido));
         }
     }
