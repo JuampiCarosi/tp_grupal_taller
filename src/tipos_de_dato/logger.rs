@@ -8,6 +8,9 @@ use std::{
     thread::{self, JoinHandle},
 };
 
+use crate::io::crear_archivo;
+
+//que use el modulo io el logger
 //hay que mover a otro archivo
 /// Represents a log message or the end of the logger thread.
 pub enum Log {
@@ -78,24 +81,14 @@ impl Logger {
             .map_err(|err| format!("{}", err))
     }
 
-    fn obtener_dir_archivo_log() -> Result<String, String> {
+    fn obtener_dir_archivo_log() -> Result<PathBuf, String> {
         let dir_actual = Self::obtener_directorio_actual()?;
 
         let dir_archivo_log = dir_actual.as_path().join("log.txt");
 
-        if !dir_archivo_log.exists() {
-            Self::crear_archivo_log(&dir_archivo_log)?;
-        }
+        crear_archivo(dir_archivo_log.clone())?;
 
-        dir_archivo_log
-            .to_str()
-            .ok_or_else(|| String::from("Error al convertir el path a String"))
-            .map(String::from)
-    }
-
-    fn crear_archivo_log(dir_archivo_log: &PathBuf) -> Result<(), String> {
-        File::create(dir_archivo_log.clone()).map_err(|err| format!("{}", err))?;
-        Ok(())
+        Ok(dir_archivo_log)
     }
 
     fn obtener_directorio_actual() -> Result<PathBuf, String> {
@@ -127,6 +120,11 @@ fn escribir_mensaje_en_archivo_log(
         .map_err(|err| format!("{}", err))?;
     Ok(())
 }
+
+
+
+
+
 
 #[cfg(test)]
 mod test {
@@ -193,16 +191,19 @@ mod test {
         let logger1 = logger.clone();
         let handle_1 = thread::spawn(move || {
             logger1.log(msg_test_01_copia_para_thread.to_string());
+            drop(logger1);
         });
 
         let logger2 = logger.clone();
         let handle_2 = thread::spawn(move || {
             logger2.log(msg_test_02_copia_para_thread.to_string());
+            drop(logger2);
         });
 
         let logger3 = logger.clone();
         let handle_3 = thread::spawn(move || {
             logger3.log(msg_test_03_copia_para_thread.to_string());
+            drop(logger3);
         });
 
         handle_1.join().unwrap();
@@ -220,6 +221,9 @@ mod test {
         let contenido_archvo_log = fs::read_to_string(obtener_dir_archivo_log()).unwrap();
 
         for contenido in contenidos {
+            print!("{}", contenido);
+            print!("{}", contenido_archvo_log);
+            print!("{}", contenido_archvo_log.contains(&contenido));
             assert!(contenido_archvo_log.contains(&contenido));
         }
     }
