@@ -31,12 +31,12 @@ impl Logger {
     ///
     /// If the current working directory cannot be obtained or the log file cannot be opened,
     /// the logger will write messages to a file named "log.txt" in the current directory.
-    pub fn new() -> Result<Logger, String> {
+    pub fn new(ubicacion_archivo: PathBuf) -> Result<Logger, String> {
         let (tx, rx) = mpsc::channel();
 
-        let archivo_log = Self::obtener_archivo_log()?;
+        let ubicacion_archivo_completa = Self::obtener_archivo_log(ubicacion_archivo)?;
 
-        let handle = Self::crear_logger_thread(rx, archivo_log)?;
+        let handle = Self::crear_logger_thread(rx, ubicacion_archivo_completa)?;
 
         Ok(Logger {
             tx,
@@ -73,20 +73,25 @@ impl Logger {
             .map_err(|err| format!("ERROR: No se pudo crear el logger.\n{}", err))
     }
 
-    fn obtener_archivo_log() -> Result<File, String> {
-        let dir_archivo_log = Self::obtener_dir_archivo_log()?;
+    fn obtener_archivo_log(ubicacion_archivo: PathBuf) -> Result<File, String> {
+        let dir_archivo_log = Self::obtener_dir_archivo_log(ubicacion_archivo)?;
         OpenOptions::new()
             .append(true)
             .open(dir_archivo_log)
             .map_err(|err| format!("{}", err))
     }
 
-    fn obtener_dir_archivo_log() -> Result<PathBuf, String> {
+    fn obtener_dir_archivo_log(ubicacion_archivo: PathBuf) -> Result<PathBuf, String> {
+        if ubicacion_archivo.is_absolute() {
+            crear_archivo(&ubicacion_archivo)?;
+            return Ok(ubicacion_archivo);
+        }
+
         let dir_actual = Self::obtener_directorio_actual()?;
 
-        let dir_archivo_log = dir_actual.as_path().join("log.txt");
+        let dir_archivo_log = dir_actual.as_path().join(ubicacion_archivo);
 
-        crear_archivo(dir_archivo_log.clone())?;
+        crear_archivo(&dir_archivo_log)?;
 
         Ok(dir_archivo_log)
     }
@@ -124,26 +129,22 @@ fn escribir_mensaje_en_archivo_log(
 #[cfg(test)]
 mod test {
     use super::Logger;
-    use std::{env, fs, sync::Arc, thread};
+    use std::{env, fs, path::PathBuf, sync::Arc, thread};
     extern crate serial_test;
 
-    use serial_test::serial;
-
     #[test]
-    #[serial]
     fn test01_al_iniciar_si_archivo_log_no_esta_creado_se_crea() {
-        eliminar_archivo_log();
+        let ubicacion_archivo = PathBuf::from("test_dir/test01.txt");
+        Logger::new(ubicacion_archivo.clone()).unwrap();
 
-        Logger::new().unwrap();
-
-        assert!(obtener_dir_archivo_log().exists());
+        assert!(obtener_dir_archivo_log(ubicacion_archivo.clone()).exists());
+        eliminar_archivo_log(ubicacion_archivo);
     }
 
     #[test]
-    #[serial]
     fn test02_se_escribe_correctamente_los_mensajes_archivo_log() {
-        eliminar_archivo_log();
-        let logger = Logger::new().unwrap();
+        let ubicacion_archivo = PathBuf::from("test_dir/test02.txt");
+        let logger = Logger::new(ubicacion_archivo.clone()).unwrap();
 
         let msg_test_01 = "sipiropo fapatapalapa".to_string();
         let msg_test_02 = "juapuanipi peperezpez".to_string();
@@ -152,29 +153,31 @@ mod test {
         logger.log(msg_test_02.clone());
         drop(logger);
 
-        assert_el_archivo_log_contiene(vec![msg_test_01, msg_test_02])
+        assert_el_archivo_log_contiene(ubicacion_archivo.clone(), vec![msg_test_01, msg_test_02]);
+        eliminar_archivo_log(ubicacion_archivo);
     }
 
     #[test]
-    #[serial]
     fn test03_si_se_crea_un_logger_no_se_pierden_los_mensajes_anterior() {
-        eliminar_archivo_log();
-
         let msg_test_01 = "sipiropo fapatapalapa".to_string();
-        Logger::new().unwrap().log(msg_test_01.clone());
+        let ubicacion_archivo = PathBuf::from("test_dir/test03.txt");
+        Logger::new(ubicacion_archivo.clone())
+            .unwrap()
+            .log(msg_test_01.clone());
 
         let msg_test_02 = "juapuanipi peperezpez".to_string();
-        Logger::new().unwrap().log(msg_test_02.clone());
+        Logger::new(ubicacion_archivo.clone())
+            .unwrap()
+            .log(msg_test_02.clone());
 
-        assert_el_archivo_log_contiene(vec![msg_test_01, msg_test_02]);
+        assert_el_archivo_log_contiene(ubicacion_archivo.clone(), vec![msg_test_01, msg_test_02]);
+        eliminar_archivo_log(ubicacion_archivo);
     }
 
     #[test]
-    #[serial]
     fn test04_el_logger_puede_escribir_mensajes_de_varios_threads() {
-        eliminar_archivo_log();
-
-        let logger = Arc::new(Logger::new().unwrap());
+        let ubicacion_archivo = PathBuf::from("test_dir/test04.txt");
+        let logger = Arc::new(Logger::new(ubicacion_archivo.clone()).unwrap());
 
         let msg_test_01 = Arc::new("Thread 1 saluda".to_string());
         let msg_test_01_copia_para_thread = msg_test_01.clone();
@@ -203,29 +206,37 @@ mod test {
         handle_3.join().unwrap();
         drop(logger);
 
-        assert_el_archivo_log_contiene(vec![
-            msg_test_01.to_string(),
-            msg_test_02.to_string(),
-            msg_test_03.to_string(),
-        ]);
+        assert_el_archivo_log_contiene(
+            ubicacion_archivo.clone(),
+            vec![
+                msg_test_01.to_string(),
+                msg_test_02.to_string(),
+                msg_test_03.to_string(),
+            ],
+        );
+        eliminar_archivo_log(ubicacion_archivo);
     }
 
-    fn assert_el_archivo_log_contiene(contenidos: Vec<String>) {
-        let contenido_archvo_log = fs::read_to_string(obtener_dir_archivo_log()).unwrap();
+    fn assert_el_archivo_log_contiene(ubicacion_archivo: PathBuf, contenidos: Vec<String>) {
+        let contenido_archvo_log =
+            fs::read_to_string(obtener_dir_archivo_log(ubicacion_archivo)).unwrap();
 
         for contenido in contenidos {
             assert!(contenido_archvo_log.contains(&contenido));
         }
     }
 
-    fn eliminar_archivo_log() {
-        let dir_archivo_log = obtener_dir_archivo_log();
+    fn eliminar_archivo_log(ubicacion_archivo: PathBuf) {
+        let dir_archivo_log = obtener_dir_archivo_log(ubicacion_archivo);
         if dir_archivo_log.exists() {
             fs::remove_file(dir_archivo_log.clone()).unwrap();
         }
     }
 
-    fn obtener_dir_archivo_log() -> std::path::PathBuf {
-        env::current_dir().unwrap().as_path().join("log.txt")
+    fn obtener_dir_archivo_log(ubicacion_archivo: PathBuf) -> std::path::PathBuf {
+        env::current_dir()
+            .unwrap()
+            .as_path()
+            .join(ubicacion_archivo)
     }
 }

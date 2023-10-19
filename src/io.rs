@@ -15,6 +15,7 @@ pub fn crear_directorio<P: AsRef<Path> + Clone>(directorio: P) -> Result<(), Str
 }
 
 pub fn crear_archivo<P: AsRef<Path> + Clone>(dir_directorio: P) -> Result<(), String> {
+    si_no_existe_directorio_de_archivo_crearlo(&dir_directorio)?;
     if !dir_directorio.as_ref().exists() {
         File::create(dir_directorio.clone()).map_err(|err| format!("{}", err))?;
     }
