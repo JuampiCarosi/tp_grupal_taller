@@ -15,6 +15,7 @@ impl Servidor {
 
     pub fn new(address: &str) -> std::io::Result<Servidor> {
         let listener = TcpListener::bind(address)?;
+        // busca la carpeta raiz del proyecto (evita hardcodear la ruta)
         let dir = env!("CARGO_MANIFEST_DIR").to_string();
         let capacidades: Vec<String> = vec!["multi_ack", "thin-pack", "side-band", "side-band-64k", "ofs-delta", "shallow", "no-progress", "include-tag"].iter().map(|x| x.to_string()).collect();
         Ok(Servidor { listener, dir, capacidades })
@@ -34,6 +35,12 @@ impl Servidor {
         // let lineas = comunicacion::obtener_lineas(stream)?;
         let respuesta = self.parse_line(&pedido)?;
         comunicacion::responder(stream, respuesta)?;
+        let wants = comunicacion::obtener_lineas(stream)?;
+        if wants.ends_with(&["0009done\n".to_string()]) {
+            let mut wants = comunicacion::obtener_obj_ids(&wants);
+            comunicacion::responder(stream, vec![git_io::obtener_linea_con_largo_hex("NAK\n")])?
+        }
+
         Ok(())
     }
 
@@ -47,7 +54,9 @@ impl Servidor {
                 let args: Vec<_> = req[1].split('\0').collect();    
                 let path = PathBuf::from(self.dir.clone() + args[0]);
                 let mut refs: Vec<String> = Vec::new();
-                refs.append(&mut git_io::obtener_refs(&mut path.join("HEAD"))?);
+                if let Ok(mut head) = git_io::obtener_refs(&mut path.join("HEAD")) {
+                    refs.append(&mut head);
+                }
                 refs.append(&mut git_io::obtener_refs(&mut path.join("refs/heads/"))?);
                 refs.append(&mut git_io::obtener_refs(&mut path.join("refs/tags/"))?);
                 refs[0] = self.agregar_capacidades(refs[0].clone());
@@ -63,10 +72,12 @@ impl Servidor {
     }
 
     fn agregar_capacidades(&self, referencia: String) -> String {
-        let mut referencia_con_capacidades = referencia + "\0"; 
+        let mut referencia_con_capacidades = referencia.split_at(4).1.to_string() + "\0";  // borro los primeros 4 caracteres que quedan del tamanio anterior
         for cap in self.capacidades.iter() {
             referencia_con_capacidades.push_str(&format!("{} ", cap));
         }
+        let mut referencia_con_capacidades = referencia_con_capacidades.trim_end().to_string();
+        referencia_con_capacidades.push_str("\n");
         git_io::obtener_linea_con_largo_hex(&referencia_con_capacidades)
     }
 

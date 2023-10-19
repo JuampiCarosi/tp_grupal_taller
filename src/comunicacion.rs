@@ -2,6 +2,8 @@ use crate::err_comunicacion::ErrorDeComunicacion;
 use std::net::TcpStream;
 use std::io::{Read, Write};
 use std::str;
+use crate::io;
+ 
 pub fn aceptar_pedido(flujo: &mut TcpStream) -> Result<String, ErrorDeComunicacion>{
     // lee primera parte, 4 bytes en hexadecimal indican el largo del stream
     let mut tamanio_bytes = [0; 4];
@@ -35,9 +37,10 @@ pub fn obtener_lineas(flujo: &mut TcpStream) -> Result<Vec<String>, ErrorDeComun
         let mut data = vec![0; (tamanio - 4) as usize];
         flujo.read_exact(&mut data)?;
         let linea = str::from_utf8(&data)?;
+        // println!("Received: {:?}", linea);
         lineas.push(linea.to_string());
     }
-    println!("Received: {:?}", lineas);
+    // println!("Received: {:?}", lineas);
     Ok(lineas)
 }
 
@@ -48,3 +51,29 @@ pub fn responder(flujo: &mut TcpStream, lineas: Vec<String>) -> Result<(), Error
     flujo.write(String::from("0000").as_bytes())?;
     Ok(())
 }
+
+
+pub fn obtener_obj_ids(lineas: &Vec<String>) -> Vec<String> {
+    let mut obj_ids: Vec<String> = Vec::new();
+    for linea in lineas {
+        obj_ids.push(linea.split_whitespace().collect::<Vec<&str>>()[0].to_string());
+    }
+    obj_ids
+}
+
+
+pub fn obtener_wants(lineas: &Vec<String>, capacidades: String) -> Result<Vec<String>, ErrorDeComunicacion> {
+    // hay que checkear que no haya repetidos, usar hashset
+    let mut lista_wants: Vec<String> = Vec::new();
+    let mut obj_ids = obtener_obj_ids(lineas);
+    obj_ids[0].push_str(&(" ".to_string() + &capacidades));
+    for linea in obj_ids {
+        lista_wants.push(io::obtener_linea_con_largo_hex(&("want".to_string() + &linea)));     
+    }
+    Ok(lista_wants)
+}
+
+// pub fn obtener_capacidades(referencias: Vec<String>) -> Vec<&'static str> {
+//     let capacidades = referencias[0].split("\0").collect::<Vec<&str>>().clone();
+    
+// }

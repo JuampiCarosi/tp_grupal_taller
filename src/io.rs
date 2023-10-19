@@ -5,6 +5,24 @@ use std::str;
 use crate::err_comunicacion::ErrorDeComunicacion;
 
 
+pub fn leer_archivos_directorio(direccion: &mut PathBuf) -> Result<Vec<String>, ErrorDeComunicacion>{
+    let mut contenidos: Vec<String> = Vec::new();
+    let head_dir = fs::read_dir(direccion.clone())?;
+    for archivo in head_dir {
+        match archivo {
+            Ok(archivo) => {
+                let path = archivo.path();
+                contenidos.push(obtener_referencia(&mut path.clone())?);
+            }
+            Err(error) => {
+                eprintln!("Error leyendo directorio: {}", error);
+            }
+        }
+    }
+    Ok(contenidos)
+}
+
+
 pub fn obtener_refs(path: &mut PathBuf) -> Result<Vec<String>, ErrorDeComunicacion> {
     let mut refs: Vec<String> = Vec::new();
     if !path.exists() {
