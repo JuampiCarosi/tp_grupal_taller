@@ -15,7 +15,7 @@ pub fn leer_a_string(path: &String) -> Result<String, String> {
     match fs::read_to_string(path) {
         Ok(contenido) => Ok(contenido),
         Err(_) => {
-            return Err("No se pudo leer el archivo".to_string());
+            Err("No se pudo leer el archivo".to_string())
         }
     }
 }

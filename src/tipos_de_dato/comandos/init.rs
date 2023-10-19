@@ -25,16 +25,15 @@ impl Init {
         })
     }
 
-    pub fn ejecutar(&self) -> Result<(), String> {
+    pub fn ejecutar(&self) -> Result<String, String> {
         self.crear_directorio_gir()
             .map_err(|err| format!("{}", err))?;
 
         let mensaje = format!("Directorio gir creado en {}", self.path);
 
         self.logger.log(mensaje.clone());
-        println!("{}", mensaje);
 
-        Ok(())
+        Ok(mensaje)
     }
 
     fn obtener_path(args: Vec<String>) -> String {

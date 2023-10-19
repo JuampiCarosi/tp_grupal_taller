@@ -13,9 +13,7 @@ impl HashObject {
     fn obtener_nombre_archivo(args: &mut Vec<String>) -> Result<String, String> {
         match args.pop() {
             Some(nombre_archivo) => Ok(nombre_archivo),
-            None => {
-                return Err(format!("No se especifico un archivo"));
-            }
+            None => Err("No se especifico un archivo".to_string()),
         }
     }
 
@@ -23,8 +21,8 @@ impl HashObject {
         let mut escribir = false;
         let nombre_archivo = Self::obtener_nombre_archivo(args)?;
 
-        let mut iterador = args.iter();
-        while let Some(arg) = iterador.next() {
+        let iterador = args.iter();
+        for arg in iterador {
             match arg.as_str() {
                 "-w" => {
                     escribir = true;
@@ -75,18 +73,18 @@ impl HashObject {
         }
     }
 
-    pub fn ejecutar(&self) -> Result<(), String> {
+    pub fn ejecutar(&self) -> Result<String, String> {
         let hash = self.hashear_objeto()?;
         println!("{}", hash);
         if self.escribir {
             let ruta = format!(".gir/objects/{}/{}", &hash[..2], &hash[2..]);
             let contenido = io::leer_a_string(&self.nombre_archivo.clone())?;
-            let header = format!("{} {}\0", self.tipo_objeto, contenido.len());
+            let header = format!("blob {}\0", contenido.len());
             let contenido_total = header + &contenido;
             io::escrbir_bytes(&ruta, self.comprimir_contenido(contenido_total)?)?;
         }
         let mensaje = format!("Objeto gir hasheado en {}", self.nombre_archivo);
         self.logger.log(mensaje);
-        Ok(())
+        Ok(hash)
     }
 }

@@ -7,9 +7,9 @@ use crate::{
 use std::{io::Read, rc::Rc};
 
 pub struct CatFile {
-    logger: Rc<Logger>,
-    visualizacion: Visualizaciones,
-    objeto: String,
+    pub logger: Rc<Logger>,
+    pub visualizacion: Visualizaciones,
+    pub objeto: String,
 }
 
 impl CatFile {
@@ -93,13 +93,13 @@ impl CatFile {
         ))
     }
 
-    pub fn ejecutar(&self) -> Result<(), String> {
+    pub fn ejecutar(&self) -> Result<String, String> {
         let mensaje = match self.visualizacion {
             Visualizaciones::TipoObjeto => self.visualizar_tipo_objeto()?,
             Visualizaciones::Tamanio => self.visualizar_tamanio()?,
             Visualizaciones::Contenido => self.visualizar_contenido()?,
         };
-        self.logger.log(mensaje);
-        Ok(())
+        self.logger.log(mensaje.clone());
+        Ok(mensaje)
     }
 }

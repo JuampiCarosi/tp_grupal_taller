@@ -33,7 +33,7 @@ impl Comando {
 }
 
 impl Comando {
-    pub fn ejecutar(&self) -> Result<(), String> {
+    pub fn ejecutar(&self) -> Result<String, String> {
         match self {
             Comando::Init(init) => init.ejecutar(),
             Comando::Version(version) => version.ejecutar(),

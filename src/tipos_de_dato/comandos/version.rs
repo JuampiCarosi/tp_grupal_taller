@@ -5,12 +5,7 @@ impl Version {
         Ok(Version)
     }
 
-    pub fn ejecutar(&self) -> Result<(), String> {
-        Self::imprimir_version();
-        Ok(())
-    }
-
-    fn imprimir_version() {
-        println!("git version 0.0.1");
+    pub fn ejecutar(&self) -> Result<String, String> {
+        Ok("git version 0.0.1".to_string())
     }
 }
