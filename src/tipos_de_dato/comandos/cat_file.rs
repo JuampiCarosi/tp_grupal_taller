@@ -73,11 +73,9 @@ impl CatFile {
             Some((_, size)) => size,
             None => return Err(format!("Objeto invalido")),
         };
+
         println!("Tamaño del objeto: {}", size);
-        Ok(format!(
-            "Visualizacion del tamaño del objeto: {}",
-            self.objeto
-        ))
+        Ok(format!("{}", size))
     }
 
     fn visualizar_tipo_objeto(&self) -> Result<String, String> {

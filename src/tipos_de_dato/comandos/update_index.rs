@@ -205,4 +205,9 @@ mod test {
             "100644 534b4ac42126f12 Readme.md\n100644 534b4ac42126f13 Cargo.toml\n"
         );
     }
+
+    #[test]
+    fn test04_editar_un_directorio_actualiza_el_hash() {
+        
+    }
 }

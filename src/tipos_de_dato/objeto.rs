@@ -7,7 +7,7 @@ use super::{
     objetos::{blob::Blob, tree::Tree},
 };
 
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Objeto {
     Tree(Tree),
     Blob(Blob),
@@ -71,10 +71,79 @@ impl Objeto {
                 Comando::HashObject(HashObject::from(&mut vec![directorio.clone()], logger)?)
                     .ejecutar()
                     .unwrap();
-            return Ok(Objeto::Blob(Blob {
-                nombre: directorio,
-                hash,
-            }));
+
+            let directorio_split = directorio.split('/').collect::<Vec<&str>>();
+            let nombre = directorio_split.last().unwrap().to_string();
+            return Ok(Objeto::Blob(Blob { nombre, hash }));
         }
+    }
+}
+
+#[cfg(test)]
+
+mod test {
+
+    use super::*;
+
+    #[test]
+    fn blob_from_index() {
+        let objeto = Objeto::from_index("100644 1234567890 hola.txt".to_string()).unwrap();
+        assert_eq!(
+            objeto,
+            Objeto::Blob(Blob {
+                nombre: "hola.txt".to_string(),
+                hash: "1234567890".to_string()
+            })
+        );
+    }
+
+    #[test]
+    fn blob_from_directorio() {
+        let objeto = Objeto::from_directorio("test_dir/objetos/archivo.txt".to_string()).unwrap();
+
+        assert_eq!(
+            objeto,
+            Objeto::Blob(Blob {
+                nombre: "archivo.txt".to_string(),
+                hash: "2b824e648965b94c6c6b3dd0702feb91f699ed62".to_string()
+            })
+        );
+    }
+
+    #[test]
+
+    fn tree_from_directorio() {
+        let objeto = Objeto::from_directorio("test_dir/objetos".to_string()).unwrap();
+
+        let hijo = Objeto::Blob(Blob {
+            nombre: "archivo.txt".to_string(),
+            hash: "2b824e648965b94c6c6b3dd0702feb91f699ed62".to_string(),
+        });
+
+        assert_eq!(
+            objeto,
+            Objeto::Tree(Tree {
+                directorio: "test_dir/objetos".to_string(),
+                objetos: vec![hijo]
+            })
+        );
+    }
+
+    #[test]
+    fn tree_from_index() {
+        let objeto = Objeto::from_index("40000 1234567890 test_dir/objetos".to_string()).unwrap();
+
+        let hijo = Objeto::Blob(Blob {
+            nombre: "archivo.txt".to_string(),
+            hash: "2b824e648965b94c6c6b3dd0702feb91f699ed62".to_string(),
+        });
+
+        assert_eq!(
+            objeto,
+            Objeto::Tree(Tree {
+                directorio: "test_dir/objetos".to_string(),
+                objetos: vec![hijo]
+            })
+        );
     }
 }
