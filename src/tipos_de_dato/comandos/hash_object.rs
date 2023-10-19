@@ -5,7 +5,6 @@ use std::{fs, io::Write, rc::Rc};
 
 pub struct HashObject {
     logger: Rc<Logger>,
-    tipo_objeto: String,
     escribir: bool,
     nombre_archivo: String,
 }
@@ -20,47 +19,28 @@ impl HashObject {
         }
     }
 
-    fn escribir_tipo<'a>(
-        siguiente: Option<&'a String>,
-        tipo: &'a mut String,
-    ) -> Result<(), String> {
-        let tipo_a_escribir = match siguiente {
-            Some(tipo) => tipo,
-            None => {
-                return Err(format!("Se esperaba un tipo de objeto luego de -t"));
-            }
-        };
-
-        match tipo_a_escribir.as_str() {
-            "blob" | "commit" | "tree" | "tag" => *tipo = tipo_a_escribir.to_owned(),
-            _ => return Err(format!("Tipo de objeto invalido {}", tipo)),
-        };
-
-        Ok(())
-    }
-
     pub fn from(args: &mut Vec<String>, logger: Rc<Logger>) -> Result<HashObject, String> {
-        let mut tipo_objeto = String::from("blob");
         let mut escribir = false;
         let nombre_archivo = Self::obtener_nombre_archivo(args)?;
 
         let mut iterador = args.iter();
         while let Some(arg) = iterador.next() {
             match arg.as_str() {
-                "-t" => Self::escribir_tipo(iterador.next(), &mut tipo_objeto)?,
                 "-w" => {
                     escribir = true;
                 }
                 _ => {
-                    return Err(format!("Opcion desconocida {}, gir hash-object [-t <type>] [-w] [--path=<file>] <file>", arg));
+                    return Err(format!(
+                        "Opcion desconocida {}\n gir hash-object [-w] <file>",
+                        arg
+                    ));
                 }
             }
         }
         Ok(HashObject {
             logger,
-            tipo_objeto,
-            escribir,
             nombre_archivo,
+            escribir,
         })
     }
 
@@ -76,7 +56,7 @@ impl HashObject {
     }
 
     fn hashear_contenido_objeto(&self, contenido: &str) -> String {
-        let header = format!("{} {}\0", self.tipo_objeto, contenido.len());
+        let header = format!("blob {}\0", contenido.len());
         let contenido_total = header + contenido;
         let mut hasher = Sha1::new();
         hasher.update(contenido_total);
