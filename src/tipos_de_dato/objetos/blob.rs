@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::{fmt::Display, rc::Rc};
 
 use crate::tipos_de_dato::{
     comandos::cat_file::CatFile, logger::Logger, visualizaciones::Visualizaciones,
@@ -26,5 +26,12 @@ impl Blob {
         let tamanio_string = cat_file.ejecutar().unwrap();
 
         tamanio_string.parse::<usize>().unwrap()
+    }
+}
+
+impl Display for Blob {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let string = format!("100644 {} {}\n", self.hash, self.nombre);
+        write!(f, "{}", string)
     }
 }

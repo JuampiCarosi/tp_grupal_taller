@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use sha1::{Digest, Sha1};
 
 use crate::tipos_de_dato::objeto::Objeto;
@@ -11,6 +13,30 @@ pub struct Tree {
 impl Tree {
     pub fn obtener_tamanio(&self) -> usize {
         return Self::mostrar_contenido(&self.objetos).len();
+    }
+
+    pub fn contiene_hijo(&self, hash_hijo: String) -> bool {
+        for objeto in &self.objetos {
+            if objeto.obtener_hash() == hash_hijo {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    pub fn actualizar_hijos(&mut self, hash_hijo: String) {
+        for objeto in &mut self.objetos {
+            if objeto.obtener_hash() == hash_hijo {
+                match objeto {
+                    Objeto::Tree(tree) => {
+                        tree.actualizar_hijos(hash_hijo.clone());
+                    }
+                    Objeto::Blob(blob) => {
+                        blob.hash = hash_hijo.clone();
+                    }
+                }
+            }
+        }
     }
 
     pub fn obtener_hash(&self) -> String {
@@ -53,6 +79,14 @@ impl Tree {
             output.push_str(&line);
         }
         return output;
+    }
+}
+
+impl Display for Tree {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let name = self.directorio.split("/").last().unwrap();
+        let string = format!("40000 {} {}\n", self.obtener_hash(), name);
+        write!(f, "{}", string)
     }
 }
 

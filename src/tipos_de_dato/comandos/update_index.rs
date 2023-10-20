@@ -1,5 +1,6 @@
 use std::{
     fs::{self, OpenOptions},
+    ops::Index,
     path::Path,
     rc::Rc,
 };
@@ -48,10 +49,8 @@ impl UpdateIndex {
 
         for objeto in &self.index {
             let line = match objeto {
-                Objeto::Blob(blob) => format!("100644 {} {}\n", blob.hash, blob.nombre),
-                Objeto::Tree(tree) => {
-                    format!("40000 {} {}\n", tree.obtener_hash(), tree.directorio)
-                }
+                Objeto::Blob(blob) => format!("{blob}"),
+                Objeto::Tree(tree) => format!("{tree}"),
             };
 
             file.write_all(line.as_bytes()).unwrap();
@@ -69,6 +68,21 @@ impl UpdateIndex {
             }
             false
         });
+
+        let trees_a_actualizar = &mut self.index.iter().filter_map(|x| {
+            if let Objeto::Tree(tree) = x {
+                if tree.contiene_hijo(self.objeto.obtener_hash()) {
+                    return Some(x.clone());
+                };
+            }
+            None
+        });
+
+        for tree in trees_a_actualizar {
+            if let Objeto::Tree(mut tree) = tree {
+                tree.actualizar_hijos(self.objeto.obtener_hash());
+            }
+        }
 
         if let Some(i) = indice {
             let _ = std::mem::replace(&mut self.index[i], self.objeto.clone());
@@ -207,7 +221,41 @@ mod test {
     }
 
     #[test]
-    fn test04_editar_un_directorio_actualiza_el_hash() {
-        
+    fn test04_agregar_un_directorio_al_index() {
+        let logger = Rc::new(Logger::new().unwrap());
+
+        let tree = Objeto::from_directorio("test_dir/objetos".to_string()).unwrap();
+        let mut update_index = UpdateIndex::from(logger.clone(), tree).unwrap();
+        update_index.ejecutar().unwrap();
+
+        let file = io::leer_a_string(&"./.gir/index".to_string()).unwrap();
+
+        assert_eq!(
+            file,
+            "100644 534b4ac42126f12 Readme.md\n100644 534b4ac42126f13 Cargo.toml\n40000 bf902127ac66b999327fba07a9f4b7a50b87922a objetos\n"
+        );
     }
+
+    // fn test05_editar_hijo_actualiza_padre() {
+    //     let logger = Rc::new(Logger::new().unwrap());
+
+    //     let tree = Objeto::from_directorio("test_dir/objetos".to_string()).unwrap();
+    //     let mut update_index = UpdateIndex::from(logger.clone(), tree).unwrap();
+    //     update_index.ejecutar().unwrap();
+
+    //     let objeto = Objeto::Blob(Blob {
+    //         nombre: "archivo.txt".to_string(),
+    //         hash: "534b4ac42126f13".to_string(),
+    //     });
+
+    //     let mut update_index = UpdateIndex::from(logger.clone(), objeto).unwrap();
+    //     update_index.ejecutar().unwrap();
+
+    //     let file = io::leer_a_string(&"./.gir/index".to_string()).unwrap();
+
+    //     assert_eq!(
+    //         file,
+    //         "100644 534b4ac42126f12 Readme.md\n100644 534b4ac42126f13 Cargo.toml\n40000 bf902127ac66b999327fba07a9f4b7a50b87922a objetos\n"
+    //     );
+    // }
 }
