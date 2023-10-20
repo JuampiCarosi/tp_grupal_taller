@@ -1,7 +1,7 @@
 use crate::{io, tipos_de_dato::logger::Logger};
 use flate2::{self, write::ZlibEncoder, Compression};
 use sha1::{Digest, Sha1};
-use std::{fs, io::Write, rc::Rc};
+use std::{io::Write, rc::Rc};
 
 pub struct HashObject {
     logger: Rc<Logger>,
@@ -15,6 +15,8 @@ impl HashObject {
             Some(nombre_archivo) => Ok(nombre_archivo),
             None => Err("No se especifico un archivo".to_string()),
         }
+
+        //args.pop().ok_or_else(|| "No se especifico un archivo".to_string())
     }
 
     pub fn from(args: &mut Vec<String>, logger: Rc<Logger>) -> Result<HashObject, String> {
@@ -42,22 +44,22 @@ impl HashObject {
         })
     }
 
-    fn hashear_objeto(&self) -> Result<String, String> {
-        let contenido = match fs::read_to_string(self.nombre_archivo.clone()) {
-            Ok(contenido) => contenido,
-            Err(_) => {
-                return Err("No se pudo leer el archivo".to_string());
-            }
-        };
-        let hash = self.hashear_contenido_objeto(&contenido);
-        Ok(hash)
+    // fn hashear_objeto(&self) -> Result<(String, String), String> {
+    //     let contenido = self.construir_contenido()?;
+    //     let hash = self.hashear_contenido_objeto(&contenido);
+    //     Ok((hash, contenido))
+    // }
+
+    fn construir_contenido(&self) -> Result<String, String> {
+        let contenido = io::leer_a_string(&self.nombre_archivo.clone())?;
+        let header = format!("blob {}\0", contenido.len());
+        let contenido_total = header + &contenido;
+        Ok(contenido_total)
     }
 
     fn hashear_contenido_objeto(&self, contenido: &str) -> String {
-        let header = format!("blob {}\0", contenido.len());
-        let contenido_total = header + contenido;
         let mut hasher = Sha1::new();
-        hasher.update(contenido_total);
+        hasher.update(contenido);
         let hash = hasher.finalize();
         format!("{:x}", hash)
     }
@@ -74,14 +76,13 @@ impl HashObject {
     }
 
     pub fn ejecutar(&self) -> Result<String, String> {
-        let hash = self.hashear_objeto()?;
+        let contenido = self.construir_contenido()?;
+        let hash = self.hashear_contenido_objeto(&contenido);
+        
         println!("{}", hash);
         if self.escribir {
             let ruta = format!(".gir/objects/{}/{}", &hash[..2], &hash[2..]);
-            let contenido = io::leer_a_string(&self.nombre_archivo.clone())?;
-            let header = format!("blob {}\0", contenido.len());
-            let contenido_total = header + &contenido;
-            io::escrbir_bytes(&ruta, self.comprimir_contenido(contenido_total)?)?;
+            io::escrbir_bytes(&ruta, self.comprimir_contenido(contenido)?)?;
         }
         let mensaje = format!("Objeto gir hasheado en {}", self.nombre_archivo);
         self.logger.log(mensaje);
