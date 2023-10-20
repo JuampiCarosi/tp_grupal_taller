@@ -26,14 +26,28 @@ impl Tree {
         format!("{:x}", hash)
     }
 
+    fn ordenar_objetos_alfabeticamente(objetos: &Vec<Objeto>) -> Vec<Objeto> {
+        let mut objetos = objetos.clone();
+        objetos.sort_by(|a, b| match (a, b) {
+            (Objeto::Blob(a), Objeto::Blob(b)) => a.nombre.cmp(&b.nombre),
+            (Objeto::Tree(a), Objeto::Tree(b)) => a.directorio.cmp(&b.directorio),
+            (Objeto::Blob(a), Objeto::Tree(b)) => a.nombre.cmp(&b.directorio),
+            (Objeto::Tree(a), Objeto::Blob(b)) => a.directorio.cmp(&b.nombre),
+        });
+        objetos
+    }
+
     fn mostrar_contenido(objetos: &Vec<Objeto>) -> String {
         let mut output = String::new();
 
-        for objeto in objetos {
+        let objetos_ordenados = Self::ordenar_objetos_alfabeticamente(objetos);
+
+        for objeto in objetos_ordenados {
             let line = match objeto {
                 Objeto::Blob(blob) => format!("100644 {}\0{}", blob.nombre, &blob.hash[..20]),
                 Objeto::Tree(tree) => {
-                    format!("40000 {}\0{}", tree.directorio, &tree.obtener_hash()[..20])
+                    let name = tree.directorio.split("/").last().unwrap();
+                    format!("40000 {}\0{}", name, &tree.obtener_hash()[..20])
                 }
             };
             output.push_str(&line);
@@ -51,7 +65,7 @@ mod test {
     fn test_obtener_hash() {
         let objeto = Objeto::from_directorio("test_dir/objetos".to_string()).unwrap();
         let hash = objeto.obtener_hash();
-        assert_eq!(hash, "1442e275fd3a2e743f6bccf3b11ab27862157179");
+        assert_eq!(hash, "bf902127ac66b999327fba07a9f4b7a50b87922a");
     }
 
     #[test]
@@ -67,9 +81,21 @@ mod test {
 
         if let Objeto::Tree(tree) = objeto {
             let contenido = Tree::mostrar_contenido(&tree.objetos);
+            assert_eq!(contenido, "100644 archivo.txt\02b824e648965b94c6c6b");
+        } else {
+            assert!(false)
+        }
+    }
+
+    #[test]
+    fn test_mostrar_contenido_recursivo() {
+        let objeto = Objeto::from_directorio("test_dir/".to_string()).unwrap();
+
+        if let Objeto::Tree(tree) = objeto {
+            let contenido = Tree::mostrar_contenido(&tree.objetos);
             assert_eq!(
                 contenido,
-                "100644 blob 2b824e648965b94c6c6b3dd0702feb91f699ed62 archivo.txt\0"
+                "40000 muchos_objetos\0748ef9d5f9df6f40b07b40000 objetos\0bf902127ac66b999327f"
             );
         } else {
             assert!(false)
