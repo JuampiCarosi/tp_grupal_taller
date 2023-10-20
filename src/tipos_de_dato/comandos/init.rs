@@ -58,14 +58,14 @@ impl Init {
 
         if let Err(msj_err) = self.crear_directorios_y_archivos_gir(){
             self.borar_directorios_y_archivos_git();
-            Err(msj_err);
+            return Err(msj_err);
         }
 
         Ok(())
     }
 
-    fn borar_directorios_y_archivos_git(){
-        
+    fn borar_directorios_y_archivos_git(&self){
+        let _ = fs::remove_dir_all(self.path.clone());
     }
 
     fn crear_directorios_y_archivos_gir(&self) -> Result<(), String> {
