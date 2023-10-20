@@ -1,6 +1,6 @@
 use std::net::TcpStream;
 use std::io::{Write, Read};
-use taller::{io, comunicacion};
+use gir::{io, comunicacion};
 fn main() -> std::io::Result<()> {
     // Configura la dirección del servidor y el puerto
     let server_address = "127.0.0.1:9418"; // Cambia la dirección IP si es necesario
