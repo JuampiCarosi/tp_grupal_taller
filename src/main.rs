@@ -1,10 +1,10 @@
-use std::rc::Rc;
+use std::{path::PathBuf, rc::Rc};
 
 use gir::tipos_de_dato::{comando::Comando, logger::Logger};
 
 fn main() -> Result<(), String> {
     let args = std::env::args().collect::<Vec<String>>();
-    let logger = Rc::new(Logger::new()?);
+    let logger = Rc::new(Logger::new(PathBuf::from("log.txt"))?);
 
     let comando = match Comando::new(args, logger.clone()) {
         Ok(comando) => comando,
@@ -19,5 +19,5 @@ fn main() -> Result<(), String> {
         return Err(mensaje.clone());
     }
 
-Ok(())
+    Ok(())
 }
