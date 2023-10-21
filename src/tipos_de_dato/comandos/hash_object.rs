@@ -1,7 +1,7 @@
 use crate::{io, tipos_de_dato::logger::Logger};
-use flate2::{self, write::ZlibEncoder, Compression};
 use sha1::{Digest, Sha1};
-use std::{io::Write, rc::Rc};
+use std::rc::Rc;
+use crate::utilidades_de_compresion::comprimir_contenido;
 
 pub struct HashObject {
     logger: Rc<Logger>,
@@ -11,12 +11,7 @@ pub struct HashObject {
 
 impl HashObject {
     fn obtener_nombre_archivo(args: &mut Vec<String>) -> Result<String, String> {
-        match args.pop() {
-            Some(nombre_archivo) => Ok(nombre_archivo),
-            None => Err("No se especifico un archivo".to_string()),
-        }
-
-        //args.pop().ok_or_else(|| "No se especifico un archivo".to_string())
+        args.pop().ok_or_else(|| "No se especifico un archivo".to_string())
     }
 
     pub fn from(args: &mut Vec<String>, logger: Rc<Logger>) -> Result<HashObject, String> {
@@ -44,12 +39,6 @@ impl HashObject {
         })
     }
 
-    // fn hashear_objeto(&self) -> Result<(String, String), String> {
-    //     let contenido = self.construir_contenido()?;
-    //     let hash = self.hashear_contenido_objeto(&contenido);
-    //     Ok((hash, contenido))
-    // }
-
     fn construir_contenido(&self) -> Result<String, String> {
         let contenido = io::leer_a_string(&self.nombre_archivo.clone())?;
         let header = format!("blob {}\0", contenido.len());
@@ -64,17 +53,6 @@ impl HashObject {
         format!("{:x}", hash)
     }
 
-    fn comprimir_contenido(&self, contenido: String) -> Result<Vec<u8>, String> {
-        let mut compresor = ZlibEncoder::new(Vec::new(), Compression::default());
-        if compresor.write_all(contenido.as_bytes()).is_err() {
-            return Err("No se pudo comprimir el contenido".to_string());
-        };
-        match compresor.finish() {
-            Ok(contenido_comprimido) => Ok(contenido_comprimido),
-            Err(_) => Err("No se pudo comprimir el contenido".to_string()),
-        }
-    }
-
     pub fn ejecutar(&self) -> Result<String, String> {
         let contenido = self.construir_contenido()?;
         let hash = self.hashear_contenido_objeto(&contenido);
@@ -82,10 +60,42 @@ impl HashObject {
         println!("{}", hash);
         if self.escribir {
             let ruta = format!(".gir/objects/{}/{}", &hash[..2], &hash[2..]);
-            io::escrbir_bytes(&ruta, self.comprimir_contenido(contenido)?)?;
+            io::escrbir_bytes(&ruta, comprimir_contenido(contenido)?)?;
         }
         let mensaje = format!("Objeto gir hasheado en {}", self.nombre_archivo);
         self.logger.log(mensaje);
         Ok(hash)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use std::{rc::Rc, io::Read};
+
+    use flate2::read::ZlibDecoder;
+
+    use crate::{tipos_de_dato::{logger::Logger, comandos::hash_object::HashObject}, io};
+
+    #[test]
+    fn test01_hash_object_de_un_blob_devuelve_el_hash_correcto() {
+        let mut args = vec!["test_dir/objetos/archivo.txt".to_string()];
+        let logger = Rc::new(Logger::new().unwrap());
+        let hash_object = HashObject::from(&mut args, logger).unwrap();
+        let hash = hash_object.ejecutar().unwrap();
+        assert_eq!(hash, "2b824e648965b94c6c6b3dd0702feb91f699ed62");
+    }
+
+    #[test]
+    fn test02_hash_object_de_un_blob_con_opcion_w_devuelve_el_hash_correcto_y_lo_escribe() {
+        let mut args = vec!["-w".to_string(), "test_dir/objetos/archivo.txt".to_string()];
+        let logger = Rc::new(Logger::new().unwrap());
+        let hash_object = HashObject::from(&mut args, logger).unwrap();
+        let hash = hash_object.ejecutar().unwrap();
+        assert_eq!(hash, "2b824e648965b94c6c6b3dd0702feb91f699ed62");
+        let contenido_leido = io::leer_bytes(&".gir/objects/2b/824e648965b94c6c6b3dd0702feb91f699ed62".to_string()).unwrap();
+        let mut descompresor = ZlibDecoder::new(contenido_leido.as_slice());
+        let mut contenido_descomprimido = String::new();
+        descompresor.read_to_string(&mut contenido_descomprimido).unwrap();
+        assert_eq!(contenido_descomprimido, "blob 23\0contenido de un arxhivo"); 
     }
 }

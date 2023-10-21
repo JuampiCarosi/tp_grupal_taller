@@ -37,7 +37,7 @@ pub fn leer_bytes(archivo: &String) -> Result<Vec<u8>, String> {
     match fs::read(archivo) {
         Ok(contenido) => Ok(contenido),
         Err(_) => {
-            return Err("No se pudo leer el archivo".to_string());
+            Err("No se pudo leer el archivo".to_string())
         }
     }
 }

@@ -16,3 +16,4 @@ pub mod tipos_de_dato {
     }
 }
 pub mod io;
+pub mod utilidades_de_compresion;

@@ -1,6 +1,5 @@
 use std::{
     fs::{self, OpenOptions},
-    ops::Index,
     path::Path,
     rc::Rc,
 };
@@ -22,21 +21,26 @@ impl UpdateIndex {
         let _ = fs::File::create("./.gir/index");
     }
 
-    fn leer_index() -> Vec<Objeto> {
-        let file = OpenOptions::new().read(true).open("./.gir/index").unwrap();
+    fn leer_index() -> Result<Vec<Objeto>, String> {
+        let file = match OpenOptions::new().read(true).open("./.gir/index") {
+            Ok(file) => file,
+            Err(_) => return Err("No se pudo abrir el archivo index".to_string()),
+        };
 
         let mut objetos: Vec<Objeto> = Vec::new();
 
         for line in std::io::BufReader::new(file).lines() {
-            let objeto = Objeto::from_index(line.unwrap()).unwrap();
-            objetos.push(objeto);
+            if let Some(line) = line.as_ref().ok() {
+                let objeto = Objeto::from_index(line.to_string())?;
+                objetos.push(objeto);
+            }
         }
-        objetos
+        Ok(objetos)
     }
 
     pub fn from(logger: Rc<Logger>, objeto: Objeto) -> Result<UpdateIndex, String> {
         Self::crear_index();
-        let index = Self::leer_index();
+        let index = Self::leer_index()?;
         Ok(UpdateIndex {
             logger,
             objeto,
@@ -44,17 +48,20 @@ impl UpdateIndex {
         })
     }
 
-    fn escribir_objetos(&self) {
-        let mut file = OpenOptions::new().write(true).open("./.gir/index").unwrap();
-
+    fn escribir_objetos(&self) -> Result<(), String>{
+        let mut file = match OpenOptions::new().write(true).open("./.gir/index") {
+            Ok(file) => file,
+            Err(_) => return Err("No se pudo escribir el archivo index".to_string()),
+        };
         for objeto in &self.index {
             let line = match objeto {
                 Objeto::Blob(blob) => format!("{blob}"),
                 Objeto::Tree(tree) => format!("{tree}"),
             };
 
-            file.write_all(line.as_bytes()).unwrap();
+            let _ = file.write_all(line.as_bytes());
         }
+        Ok(())
     }
 
     pub fn ejecutar(&mut self) -> Result<(), String> {
@@ -90,7 +97,7 @@ impl UpdateIndex {
             self.index.push(self.objeto.clone());
         }
 
-        self.escribir_objetos();
+        self.escribir_objetos()?;
         Ok(())
     }
 }
@@ -110,6 +117,7 @@ mod test {
 
     #[test]
     fn test01_archivo_vacio_se_llena_con_objeto_agregado() {
+        let _ = std::fs::remove_file("./.gir/index");
         let logger = Rc::new(Logger::new().unwrap());
         let objeto = Objeto::Blob(Blob {
             nombre: "Readme.md".to_string(),

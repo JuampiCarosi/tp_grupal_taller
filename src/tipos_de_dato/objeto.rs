@@ -13,27 +13,36 @@ pub enum Objeto {
     Blob(Blob),
 }
 
+pub fn flag_es_un_objeto_(flag: &String) -> bool {
+    flag == "blob" || flag == "tree" || flag == "commit" || flag == "tag"
+}
+
 impl Objeto {
     pub fn obtener_hash(&self) -> String {
         match self {
-            Objeto::Tree(tree) => tree.obtener_hash(),
+            Objeto::Tree(tree) => {
+                match tree.obtener_hash() {
+                    Ok(hash) => hash,
+                    Err(err) => err.to_string(),
+                }
+            }
             Objeto::Blob(blob) => blob.obtener_hash(),
         }
     }
 
-    pub fn obtener_tamanio(&self) -> usize {
+    pub fn obtener_tamanio(&self) -> Result<usize, String> {
         match self {
-            Objeto::Tree(tree) => tree.obtener_tamanio(),
-            Objeto::Blob(blob) => blob.obtener_tamanio(),
+            Objeto::Tree(tree) => Ok(tree.obtener_tamanio()?),
+            Objeto::Blob(blob) => Ok(blob.obtener_tamanio()?),
         }
     }
 
     pub fn from_index(linea_index: String) -> Result<Objeto, String> {
         let mut line = linea_index.split_whitespace();
 
-        let modo = line.next().unwrap();
-        let hash = line.next().unwrap();
-        let nombre = line.next().unwrap();
+        let modo = line.next().unwrap_or_else(|| "Error al leer el modo");
+        let hash = line.next().unwrap_or_else(|| "Error al leer el nombre del hash");
+        let nombre = line.next().unwrap_or_else(|| "Error al leer el nombre del archivo");
 
         match modo {
             "100644" => Ok(Objeto::Blob(Blob {
@@ -61,10 +70,10 @@ impl Objeto {
                 objetos.push(objeto);
             }
 
-            return Ok(Objeto::Tree(Tree {
+            Ok(Objeto::Tree(Tree {
                 directorio,
                 objetos,
-            }));
+            }))
         } else {
             let logger = Rc::new(logger::Logger::new()?);
             let hash =
@@ -74,7 +83,7 @@ impl Objeto {
 
             let directorio_split = directorio.split('/').collect::<Vec<&str>>();
             let nombre = directorio_split.last().unwrap().to_string();
-            return Ok(Objeto::Blob(Blob { nombre, hash }));
+            Ok(Objeto::Blob(Blob { nombre, hash }))
         }
     }
 }
@@ -86,7 +95,7 @@ mod test {
     use super::*;
 
     #[test]
-    fn blob_from_index() {
+    fn test01_blob_from_index() {
         let objeto = Objeto::from_index("100644 1234567890 hola.txt".to_string()).unwrap();
         assert_eq!(
             objeto,
@@ -98,7 +107,7 @@ mod test {
     }
 
     #[test]
-    fn blob_from_directorio() {
+    fn test02_blob_from_directorio() {
         let objeto = Objeto::from_directorio("test_dir/objetos/archivo.txt".to_string()).unwrap();
 
         assert_eq!(
@@ -112,7 +121,7 @@ mod test {
 
     #[test]
 
-    fn tree_from_directorio() {
+    fn test03_tree_from_directorio() {
         let objeto = Objeto::from_directorio("test_dir/objetos".to_string()).unwrap();
 
         let hijo = Objeto::Blob(Blob {
@@ -130,7 +139,7 @@ mod test {
     }
 
     #[test]
-    fn tree_from_index() {
+    fn test04_tree_from_index() {
         let objeto = Objeto::from_index("40000 1234567890 test_dir/objetos".to_string()).unwrap();
 
         let hijo = Objeto::Blob(Blob {
