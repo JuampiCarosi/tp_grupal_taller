@@ -4,7 +4,7 @@ use std::{
     rc::Rc,
 };
 
-use crate::tipos_de_dato::{logger::Logger, objeto::Objeto};
+use crate::tipos_de_dato::{logger::Logger, objeto::Objeto, objetos::blob};
 use std::io::prelude::*;
 
 pub struct UpdateIndex {
@@ -48,12 +48,46 @@ impl UpdateIndex {
         })
     }
 
+    fn obtener_objetos_raiz(&self) -> Vec<Objeto> {
+        self.index
+            .iter()
+            .filter_map(|x| match x {
+                Objeto::Tree(tree) => {
+                    let directorio_split: Vec<&str> = tree.directorio.split("/").collect();
+                    println!("{:?}", directorio_split);
+                    return if directorio_split.len() == 1 {
+                        Some(Objeto::Tree(tree.clone()))
+                    } else {
+                        None
+                    };
+                }
+                Objeto::Blob(blob) => {
+                    let directorio_split: Vec<&str> = blob
+                        .ubicacion
+                        .into_iter()
+                        .map(|x| x.to_str().unwrap())
+                        .collect();
+                    println!("{:?}", directorio_split);
+
+                    return if directorio_split.len() == 1 {
+                        Some(Objeto::Blob(blob.clone()))
+                    } else {
+                        None
+                    };
+                }
+            })
+            .collect()
+    }
+
     fn escribir_objetos(&self) -> Result<(), String> {
         let mut file = match OpenOptions::new().write(true).open("./.gir/index") {
             Ok(file) => file,
             Err(_) => return Err("No se pudo escribir el archivo index".to_string()),
         };
-        for objeto in &self.index {
+
+        let objetos_raiz = self.obtener_objetos_raiz();
+
+        for objeto in self.index.iter() {
             let line = match objeto {
                 Objeto::Blob(blob) => format!("{blob}"),
                 Objeto::Tree(tree) => format!("{tree}"),
@@ -132,9 +166,13 @@ mod test {
         let _ = file.write_all(b"test file modified");
     }
 
+    fn clear_index() {
+        let _ = std::fs::remove_file("./.gir/index");
+    }
+
     #[test]
     fn test01_archivo_vacio_se_llena_con_objeto_agregado() {
-        let _ = std::fs::remove_file("./.gir/index");
+        clear_index();
         create_test_file();
         let logger = Rc::new(Logger::new().unwrap());
         let ubicacion = PathBuf::from("test_file.txt");
@@ -219,43 +257,61 @@ mod test {
         );
     }
 
-    // #[test]
-    // fn test04_agregar_un_directorio_al_index() {
-    //     let logger = Rc::new(Logger::new().unwrap());
+    #[test]
+    fn test04_agregar_un_directorio_al_index() {
+        clear_index();
+        let logger = Rc::new(Logger::new().unwrap());
 
-    //     let tree = Objeto::from_directorio("test_dir/objetos".to_string()).unwrap();
-    //     let mut update_index = UpdateIndex::from(logger.clone(), tree).unwrap();
-    //     update_index.ejecutar().unwrap();
+        let path = PathBuf::from("test_dir/objetos");
+        let mut update_index = UpdateIndex::from(logger.clone(), path).unwrap();
+        update_index.ejecutar().unwrap();
 
-    //     let file = io::leer_a_string(&"./.gir/index".to_string()).unwrap();
+        let file = io::leer_a_string(&"./.gir/index".to_string()).unwrap();
 
-    //     assert_eq!(
-    //         file,
-    //         "100644 534b4ac42126f12 Readme.md\n100644 534b4ac42126f13 Cargo.toml\n40000 bf902127ac66b999327fba07a9f4b7a50b87922a objetos\n"
-    //     );
-    // }
+        assert_eq!(
+            file,
+            "40000 bf902127ac66b999327fba07a9f4b7a50b87922a objetos\n"
+        );
+    }
 
-    // #[test]
-    // fn test05_editar_hijo_actualiza_padre() {
-    //     // let logger = Rc::new(Logger::new().unwrap());
+    #[test]
+    fn test05_agregar_un_objeto_en_un_directorio() {
+        clear_index();
 
-    //     // let tree = Objeto::from_directorio("test_dir/objetos".to_string()).unwrap();
-    //     // let mut update_index = UpdateIndex::from(logger.clone(), tree).unwrap();
-    //     // update_index.ejecutar().unwrap();
+        let logger = Rc::new(Logger::new().unwrap());
 
-    //     // let objeto = Objeto::Blob(Blob {
-    //     //     nombre: "archivo.txt".to_string(),
-    //     //     hash: "534b4ac42126f13".to_string(),
-    //     // });
+        let path = PathBuf::from("test_dir/objetos/archivo.txt");
+        let mut update_index = UpdateIndex::from(logger.clone(), path).unwrap();
+        update_index.ejecutar().unwrap();
 
-    //     // let mut update_index = UpdateIndex::from(logger.clone(), objeto).unwrap();
-    //     // update_index.ejecutar().unwrap();
+        let file = io::leer_a_string(&"./.gir/index".to_string()).unwrap();
 
-    //     // let file = io::leer_a_string(&"./.gir/index".to_string()).unwrap();
+        assert_eq!(
+            file,
+            "40000 bf902127ac66b999327fba07a9f4b7a50b87922a test_dir\n"
+        );
+    }
 
-    //     // assert_eq!(
-    //     //     file,
-    //     //     "100644 534b4ac42126f12 Readme.md\n100644 534b4ac42126f13 Cargo.toml\n40000 bf902127ac66b999327fba07a9f4b7a50b87922a objetos\n"
-    //     // );
-    // }
+    #[test]
+    fn test06_editar_hijo_actualiza_padre() {
+        clear_index();
+
+        let logger = Rc::new(Logger::new().unwrap());
+
+        let tree_path = PathBuf::from("test_dir/muchos_objetos/archivo.txt");
+        let mut update_index = UpdateIndex::from(logger.clone(), tree_path).unwrap();
+        update_index.ejecutar().unwrap();
+
+        let blob_path = PathBuf::from("test_dir/muchos_objetos/archivo copy.txt");
+
+        let mut update_index = UpdateIndex::from(logger.clone(), blob_path).unwrap();
+        update_index.ejecutar().unwrap();
+
+        let file = io::leer_a_string(&"./.gir/index".to_string()).unwrap();
+
+        assert_eq!(
+            file,
+            "100644 534b4ac42126f12 Readme.md\n100644 534b4ac42126f13 Cargo.toml\n40000 bf902127ac66b999327fba07a9f4b7a50b87922a objetos\n"
+        );
+    }
 }
