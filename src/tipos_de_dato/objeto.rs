@@ -20,12 +20,10 @@ pub fn flag_es_un_objeto_(flag: &String) -> bool {
 impl Objeto {
     pub fn obtener_hash(&self) -> String {
         match self {
-            Objeto::Tree(tree) => {
-                match tree.obtener_hash() {
-                    Ok(hash) => hash,
-                    Err(err) => err.to_string(),
-                }
-            }
+            Objeto::Tree(tree) => match tree.obtener_hash() {
+                Ok(hash) => hash,
+                Err(err) => err.to_string(),
+            },
             Objeto::Blob(blob) => blob.obtener_hash(),
         }
     }
@@ -41,8 +39,12 @@ impl Objeto {
         let mut line = linea_index.split_whitespace();
 
         let modo = line.next().unwrap_or_else(|| "Error al leer el modo");
-        let hash = line.next().unwrap_or_else(|| "Error al leer el nombre del hash");
-        let nombre = line.next().unwrap_or_else(|| "Error al leer el nombre del archivo");
+        let hash = line
+            .next()
+            .unwrap_or_else(|| "Error al leer el nombre del hash");
+        let nombre = line
+            .next()
+            .unwrap_or_else(|| "Error al leer el nombre del archivo");
 
         match modo {
             "100644" => Ok(Objeto::Blob(Blob {

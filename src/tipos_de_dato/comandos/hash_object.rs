@@ -1,7 +1,7 @@
+use crate::utilidades_de_compresion::comprimir_contenido;
 use crate::{io, tipos_de_dato::logger::Logger};
 use sha1::{Digest, Sha1};
 use std::rc::Rc;
-use crate::utilidades_de_compresion::comprimir_contenido;
 
 pub struct HashObject {
     logger: Rc<Logger>,
@@ -11,7 +11,8 @@ pub struct HashObject {
 
 impl HashObject {
     fn obtener_nombre_archivo(args: &mut Vec<String>) -> Result<String, String> {
-        args.pop().ok_or_else(|| "No se especifico un archivo".to_string())
+        args.pop()
+            .ok_or_else(|| "No se especifico un archivo".to_string())
     }
 
     pub fn from(args: &mut Vec<String>, logger: Rc<Logger>) -> Result<HashObject, String> {
@@ -56,7 +57,7 @@ impl HashObject {
     pub fn ejecutar(&self) -> Result<String, String> {
         let contenido = self.construir_contenido()?;
         let hash = self.hashear_contenido_objeto(&contenido);
-        
+
         println!("{}", hash);
         if self.escribir {
             let ruta = format!(".gir/objects/{}/{}", &hash[..2], &hash[2..]);
@@ -70,11 +71,14 @@ impl HashObject {
 
 #[cfg(test)]
 mod test {
-    use std::{rc::Rc, io::Read};
+    use std::{io::Read, rc::Rc};
 
     use flate2::read::ZlibDecoder;
 
-    use crate::{tipos_de_dato::{logger::Logger, comandos::hash_object::HashObject}, io};
+    use crate::{
+        io,
+        tipos_de_dato::{comandos::hash_object::HashObject, logger::Logger},
+    };
 
     #[test]
     fn test01_hash_object_de_un_blob_devuelve_el_hash_correcto() {
@@ -92,10 +96,14 @@ mod test {
         let hash_object = HashObject::from(&mut args, logger).unwrap();
         let hash = hash_object.ejecutar().unwrap();
         assert_eq!(hash, "2b824e648965b94c6c6b3dd0702feb91f699ed62");
-        let contenido_leido = io::leer_bytes(&".gir/objects/2b/824e648965b94c6c6b3dd0702feb91f699ed62".to_string()).unwrap();
+        let contenido_leido =
+            io::leer_bytes(&".gir/objects/2b/824e648965b94c6c6b3dd0702feb91f699ed62".to_string())
+                .unwrap();
         let mut descompresor = ZlibDecoder::new(contenido_leido.as_slice());
         let mut contenido_descomprimido = String::new();
-        descompresor.read_to_string(&mut contenido_descomprimido).unwrap();
-        assert_eq!(contenido_descomprimido, "blob 23\0contenido de un arxhivo"); 
+        descompresor
+            .read_to_string(&mut contenido_descomprimido)
+            .unwrap();
+        assert_eq!(contenido_descomprimido, "blob 23\0contenido de un arxhivo");
     }
 }

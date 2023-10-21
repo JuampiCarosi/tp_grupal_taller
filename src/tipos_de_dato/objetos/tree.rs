@@ -48,7 +48,6 @@ impl Tree {
         let header = format!("tree {}\0", contenido.len());
 
         let contenido_total = format!("{}{}", header, contenido);
-        println!("{}", contenido_total);
 
         let mut hasher = Sha1::new();
         hasher.update(contenido_total);
@@ -81,7 +80,7 @@ impl Tree {
                         None => return Err("Error al obtener el nombre del directorio".to_string()),
                     };
                     let hash = tree.obtener_hash()?;
-                    format!("40000 {}\0{}", name, hash)
+                    format!("40000 {}\0{}", name, &hash[..20])
                 }
             };
             output.push_str(&line);

@@ -48,7 +48,7 @@ impl UpdateIndex {
         })
     }
 
-    fn escribir_objetos(&self) -> Result<(), String>{
+    fn escribir_objetos(&self) -> Result<(), String> {
         let mut file = match OpenOptions::new().write(true).open("./.gir/index") {
             Ok(file) => file,
             Err(_) => return Err("No se pudo escribir el archivo index".to_string()),

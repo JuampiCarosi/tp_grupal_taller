@@ -1,6 +1,6 @@
-use std::io::{Read, Write};
-use flate2::{read::ZlibDecoder, write::ZlibEncoder, Compression};
 use crate::io;
+use flate2::{read::ZlibDecoder, write::ZlibEncoder, Compression};
+use std::io::{Read, Write};
 
 pub fn descomprimir_objeto(hash: String) -> Result<String, String> {
     let ruta_objeto = format!(".gir/objects/{}/{}", &hash[..2], &hash[2..]);

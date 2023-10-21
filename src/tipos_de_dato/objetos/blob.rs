@@ -1,5 +1,5 @@
-use std::fmt::Display;
 use crate::tipos_de_dato::comandos::cat_file::conseguir_tamanio;
+use std::fmt::Display;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Blob {
