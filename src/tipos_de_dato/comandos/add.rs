@@ -1,51 +1,97 @@
-use std::{fs, path::PathBuf, rc::Rc};
+use std::{collections::HashMap, fs, path::PathBuf, rc::Rc};
 
-use crate::tipos_de_dato::{logger::Logger, objeto::Objeto};
+use crate::tipos_de_dato::{
+    logger::Logger,
+    objeto::{self, Objeto},
+    objetos::tree::Tree,
+};
 
 use super::{hash_object::HashObject, update_index::UpdateIndex};
 
 pub struct Add {
     logger: Rc<Logger>,
-    objetos_con_ubicacion: Vec<(Objeto, PathBuf)>,
+    objetos_con_ubicacion: HashMap<PathBuf, Objeto>,
 }
 
 impl Add {
-    fn obtener_hijos(path: String) -> Vec<(Objeto, PathBuf)> {
-        let mut hijos: Vec<(Objeto, PathBuf)> = Vec::new();
+    fn obtener_hijos(path: String) -> HashMap<PathBuf, Objeto> {
+        let mut hijos: HashMap<PathBuf, Objeto> = HashMap::new();
         let mut iterador = std::fs::read_dir(path).unwrap();
         while let Some(entrada) = iterador.next() {
             let entrada = entrada.unwrap();
             let path = entrada.path();
-            if path.file_name().unwrap() == ".DS_Store" {
+            if path.file_name().unwrap() == ".DS_Store" || path.file_name().unwrap() == "" {
                 continue;
             }
 
+            if fs::metadata(path.clone()).unwrap().is_dir() {
+                let hijos_anidados = Self::obtener_hijos(path.to_str().unwrap().to_string());
+                hijos.extend(hijos_anidados);
+            }
+
             let objeto = Objeto::from_directorio(path.to_str().unwrap().to_string()).unwrap();
-            hijos.push((objeto, path));
+            hijos.insert(path, objeto);
         }
         hijos
     }
-    pub fn from(args: &mut Vec<String>, logger: Rc<Logger>) -> Result<Add, String> {
-        let iterador = args.iter();
-        let mut objetos: Vec<(Objeto, PathBuf)> = Vec::new();
-        for arg in iterador {
-            if fs::metadata(arg).unwrap().is_dir() {
-                let mut hijos = Self::obtener_hijos(arg.to_string());
-                objetos.append(&mut hijos);
+
+    fn obtener_padres(
+        objetos: &mut HashMap<PathBuf, Objeto>,
+        ubicacion: &PathBuf,
+        objeto: &Objeto,
+    ) -> HashMap<PathBuf, Objeto> {
+        let mut padres: HashMap<PathBuf, Objeto> = HashMap::new();
+        let directorio_padre = ubicacion.parent().unwrap();
+
+        if objetos.contains_key(&PathBuf::from(directorio_padre)) {
+            let objeto_padre = objetos.get_mut(&PathBuf::from(directorio_padre)).unwrap();
+            if let Objeto::Tree(ref mut tree) = objeto_padre {
+                tree.agregar_hijo(objeto.clone());
+                padres.insert(PathBuf::from(directorio_padre), Objeto::Tree(tree.clone()));
             }
-            let objeto = Objeto::from_directorio(arg.to_string())?;
-            objetos.push((objeto, PathBuf::from(arg)));
+        } else {
+            let mut objetos: Vec<Objeto> = Vec::new();
+            objetos.push(objeto.clone());
+            let objeto_padre = Objeto::Tree(Tree {
+                directorio: directorio_padre.to_str().unwrap().to_string(),
+                objetos,
+            });
+            padres.insert(PathBuf::from(directorio_padre), objeto_padre);
         }
 
-        Ok(Add {
+        padres
+    }
+    pub fn from(args: &mut Vec<String>, logger: Rc<Logger>) -> Result<Add, String> {
+        let iterador = args.iter();
+        let mut objetos: HashMap<PathBuf, Objeto> = HashMap::new();
+        for arg in iterador.clone() {
+            if fs::metadata(arg).unwrap().is_dir() {
+                let hijos = Self::obtener_hijos(arg.to_string());
+                objetos.extend(hijos);
+            }
+
+            let objeto = Objeto::from_directorio(arg.to_string())?;
+            objetos.insert(PathBuf::from(arg), objeto);
+        }
+
+        comando
+            .objetos_con_ubicacion
+            .iter()
+            .for_each(|(ubicacion, objeto)| {
+                Self::obtener_padres(&mut objetos, ubicacion, &objeto);
+            });
+
+        let mut comando = Add {
             logger,
-            objetos_con_ubicacion: objetos,
-        })
+            objetos_con_ubicacion: objetos.clone(),
+        };
+
+        Ok(comando)
     }
 
     pub fn execute(&self) -> Result<(), String> {
         self.logger.log("Ejecutando add".to_string());
-        for (objeto, ubicacion) in &self.objetos_con_ubicacion {
+        for (ubicacion, objeto) in &self.objetos_con_ubicacion {
             match objeto {
                 Objeto::Blob(_) => {
                     HashObject {
@@ -54,29 +100,15 @@ impl Add {
                         nombre_archivo: ubicacion.to_str().unwrap().to_string(),
                     }
                     .ejecutar()?;
-
-                    let directorios_padre = ubicacion.parent().unwrap();
-                    for directorio in directorios_padre.ancestors() {
-                        if directorio.to_str().unwrap() == "" {
-                            break;
-                        }
-                        let tree =
-                            Objeto::from_directorio(directorio.to_str().unwrap().to_string());
-                        if let Ok(Objeto::Tree(tree)) = tree {
-                            tree.escribir_en_base()?;
-                        } else {
-                            Err("No se pudo escribir el arbol")?;
-                        }
-                    }
                 }
 
                 Objeto::Tree(tree) => tree.escribir_en_base()?,
             }
         }
 
-        for objeto in &self.objetos_con_ubicacion {
-            let objeto = objeto.0.clone();
-            UpdateIndex::from(self.logger.clone(), objeto)
+        for (_, objeto) in &self.objetos_con_ubicacion {
+            println!("{:?}", objeto);
+            UpdateIndex::from(self.logger.clone(), objeto.clone())
                 .unwrap()
                 .ejecutar()?;
         }
@@ -132,6 +164,7 @@ mod test {
         let contenido = io::leer_a_string(&".gir/index".to_string()).unwrap();
         assert!(contenido.contains("archivo.txt"));
         assert!(contenido.contains("objetos"));
+        assert!(contenido.contains("test_dir"));
     }
 
     #[test]

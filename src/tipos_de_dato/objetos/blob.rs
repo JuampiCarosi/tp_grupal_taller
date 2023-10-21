@@ -1,10 +1,11 @@
 use crate::tipos_de_dato::comandos::cat_file::conseguir_tamanio;
-use std::fmt::Display;
+use std::{fmt::Display, path::PathBuf};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Blob {
-    pub nombre: String,
     pub hash: String,
+    pub ubicacion: PathBuf,
+    pub nombre: String,
 }
 
 impl Blob {

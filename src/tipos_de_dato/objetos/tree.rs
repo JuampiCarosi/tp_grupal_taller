@@ -1,13 +1,10 @@
-use std::{fmt::Display, io::Write, rc::Rc};
+use std::{fmt::Display, io::Write};
 
 use flate2::{self, write::ZlibEncoder, Compression};
 
 use sha1::{Digest, Sha1};
 
-use crate::{
-    io,
-    tipos_de_dato::{comandos::hash_object::HashObject, logger, objeto::Objeto},
-};
+use crate::{io, tipos_de_dato::objeto::Objeto};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 
@@ -31,6 +28,10 @@ impl Tree {
             }
         }
         false
+    }
+
+    pub fn agregar_hijo(&mut self, objeto: Objeto) {
+        self.objetos.push(objeto);
     }
 
     pub fn actualizar_hijos(&mut self, hash_hijo: String) {

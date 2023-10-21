@@ -58,7 +58,6 @@ impl HashObject {
         let contenido = self.construir_contenido()?;
         let hash = self.hashear_contenido_objeto(&contenido);
 
-        println!("{}", hash);
         if self.escribir {
             let ruta = format!(".gir/objects/{}/{}", &hash[..2], &hash[2..]);
             io::escrbir_bytes(&ruta, comprimir_contenido(contenido)?)?;

@@ -66,7 +66,6 @@ impl CatFile {
             Visualizaciones::Tamanio => conseguir_tamanio(self.hash_objeto.clone())?,
             Visualizaciones::Contenido => conseguir_contenido(self.hash_objeto.clone())?,
         };
-        println!("{}", mensaje);
         self.logger.log(mensaje.clone());
         Ok(mensaje)
     }

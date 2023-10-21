@@ -1,4 +1,4 @@
-use std::{fs, rc::Rc};
+use std::{fs, path::PathBuf, rc::Rc};
 
 use super::{
     comandos::hash_object::HashObject,
@@ -41,16 +41,22 @@ impl Objeto {
         let hash = line
             .next()
             .unwrap_or_else(|| "Error al leer el nombre del hash");
-        let nombre = line
+        let ubicacion_string = line
             .next()
+            .unwrap_or_else(|| "Error al leer el nombre del archivo");
+        let ubicacion = PathBuf::from(ubicacion_string);
+        let nombre = ubicacion_string
+            .split('/')
+            .last()
             .unwrap_or_else(|| "Error al leer el nombre del archivo");
 
         match modo {
             "100644" => Ok(Objeto::Blob(Blob {
                 nombre: nombre.to_string(),
+                ubicacion,
                 hash: hash.to_string(),
             })),
-            "40000" => Ok(Self::from_directorio(nombre.to_string())?),
+            "40000" => Ok(Self::from_directorio(ubicacion_string.to_string())?),
             _ => Err("Modo no soportado".to_string()),
         }
     }
@@ -58,7 +64,12 @@ impl Objeto {
     pub fn from_directorio(directorio: String) -> Result<Objeto, String> {
         let mut objetos: Vec<Objeto> = Vec::new();
 
-        if fs::metadata(&directorio).unwrap().is_dir() {
+        let metadata = match fs::metadata(&directorio) {
+            Ok(metadata) => metadata,
+            Err(_) => Err(format!("No se pudo leer el directorio {directorio}"))?,
+        };
+
+        if metadata.is_dir() {
             for entrada in fs::read_dir(&directorio).unwrap() {
                 let entrada = entrada.unwrap();
                 let path = entrada.path();
@@ -91,7 +102,11 @@ impl Objeto {
 
             let directorio_split = directorio.split('/').collect::<Vec<&str>>();
             let nombre = directorio_split.last().unwrap().to_string();
-            Ok(Objeto::Blob(Blob { nombre, hash }))
+            Ok(Objeto::Blob(Blob {
+                nombre,
+                hash,
+                ubicacion: PathBuf::from(directorio),
+            }))
         } else {
             Err("No se pudo leer el directorio".to_string())
         }
@@ -106,12 +121,13 @@ mod test {
 
     #[test]
     fn test01_blob_from_index() {
-        let objeto = Objeto::from_index("100644 1234567890 hola.txt".to_string()).unwrap();
+        let objeto = Objeto::from_index("100644 1234567890 ./hola.txt".to_string()).unwrap();
         assert_eq!(
             objeto,
             Objeto::Blob(Blob {
                 nombre: "hola.txt".to_string(),
-                hash: "1234567890".to_string()
+                hash: "1234567890".to_string(),
+                ubicacion: PathBuf::from("./hola.txt"),
             })
         );
     }
@@ -124,7 +140,8 @@ mod test {
             objeto,
             Objeto::Blob(Blob {
                 nombre: "archivo.txt".to_string(),
-                hash: "2b824e648965b94c6c6b3dd0702feb91f699ed62".to_string()
+                hash: "2b824e648965b94c6c6b3dd0702feb91f699ed62".to_string(),
+                ubicacion: PathBuf::from("test_dir/objetos/archivo.txt"),
             })
         );
     }
@@ -137,6 +154,7 @@ mod test {
         let hijo = Objeto::Blob(Blob {
             nombre: "archivo.txt".to_string(),
             hash: "2b824e648965b94c6c6b3dd0702feb91f699ed62".to_string(),
+            ubicacion: PathBuf::from("test_dir/objetos/archivo.txt"),
         });
 
         assert_eq!(
@@ -155,6 +173,7 @@ mod test {
         let hijo = Objeto::Blob(Blob {
             nombre: "archivo.txt".to_string(),
             hash: "2b824e648965b94c6c6b3dd0702feb91f699ed62".to_string(),
+            ubicacion: PathBuf::from("test_dir/objetos/archivo.txt"),
         });
 
         assert_eq!(
