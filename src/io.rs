@@ -22,6 +22,47 @@ pub fn leer_archivos_directorio(direccion: &mut PathBuf) -> Result<Vec<String>, 
     Ok(contenidos)
 }
 
+pub fn obtener_objetos_directorio(dir: String) -> Result<Vec<String>, ErrorDeComunicacion>{
+    let path = PathBuf::from(dir);
+    println!("path: {:?}", path);
+    let mut objetos: Vec<String> = Vec::new();
+    
+    let dir_abierto = fs::read_dir(path.clone())?;
+    
+    for archivo in  dir_abierto {
+        match archivo {
+            Ok(archivo) => {
+                if archivo.file_type().unwrap().is_dir() && archivo.file_name().into_string().unwrap() != "info" && archivo.file_name().into_string().unwrap() != "pack"{
+                    let path = archivo.path();
+                    let nombre_carpeta = archivo.file_name().into_string().unwrap();
+                    objetos.push(format!("{}{}", nombre_carpeta, obtener_objeto(path.clone())?));
+                }
+            }
+            Err(error) => {
+                eprintln!("Error leyendo directorio: {}", error);
+            }
+        }
+    }
+    Ok(objetos)
+}
+
+// dado un directorio devuelve el nombre del archivo contenido (solo caso de objectos de git)
+pub fn obtener_objeto(dir: PathBuf) -> Result<String, ErrorDeComunicacion>{
+    let mut directorio = fs::read_dir(dir.clone())?;
+    if let Some(archivo) = directorio.next() {
+        match archivo {
+            Ok(archivo) => {
+                return Ok(archivo.file_name().to_string_lossy().to_string());
+            }
+            Err(error) => {
+                eprintln!("Error leyendo directorio: {}", error);
+            }
+        }
+    }
+    println!("no hay archivos en el directorio: {:?}", dir);
+    Err(ErrorDeComunicacion::IoError(io::Error::new(io::ErrorKind::NotFound, "Hubo un error al obtener el objeto")))
+}
+
 
 pub fn obtener_refs(path: &mut PathBuf) -> Result<Vec<String>, ErrorDeComunicacion> {
     let mut refs: Vec<String> = Vec::new();

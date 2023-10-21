@@ -31,14 +31,15 @@ impl Servidor {
     }
 
     pub fn manejar_cliente(&mut self, stream: &mut TcpStream) -> Result<(), ErrorDeComunicacion> {
-        let pedido = comunicacion::aceptar_pedido(stream)?;
-        // let lineas = comunicacion::obtener_lineas(stream)?;
-        let respuesta = self.parse_line(&pedido)?;
-        comunicacion::responder(stream, respuesta)?;
-        let wants = comunicacion::obtener_lineas(stream)?;
+        let pedido = comunicacion::aceptar_pedido(stream)?; // acepto la primera linea
+        let respuesta = self.parse_line(&pedido)?; // parse de la liena para ver que se pide
+        comunicacion::responder(stream, respuesta)?; // respondo con las refs (en caso de que sea upload-pack)
+        
+        // a partir de aca se asume que va a ser un clone porque es el caso mas sencillo, despues cambiar
+        let wants = comunicacion::obtener_lineas(stream)?; // obtengo los wants del cliente 
         if wants.ends_with(&["0009done\n".to_string()]) {
             let mut wants = comunicacion::obtener_obj_ids(&wants);
-            comunicacion::responder(stream, vec![git_io::obtener_linea_con_largo_hex("NAK\n")])?
+            comunicacion::responder(stream, vec![git_io::obtener_linea_con_largo_hex("NAK\n")])? // respondo NAK
         }
 
         Ok(())
