@@ -179,52 +179,45 @@ mod test {
         );
     }
 
-    // #[test]
-    // fn test03_archivo_con_objetos_agrega_nuevos_objetos() {
-    //     let logger = Rc::new(Logger::new().unwrap());
-    //     let objeto = Objeto::Blob(Blob {
-    //         nombre: "Readme.md".to_string(),
-    //         hash: "534b4ac42126f12".to_string(),
-    //     });
+    #[test]
+    fn test03_archivo_con_objetos_agrega_nuevos_objetos() {
+        let _ = std::fs::remove_file("./.gir/index");
+        let logger = Rc::new(Logger::new().unwrap());
+        let ubicacion = PathBuf::from("test_file.txt");
 
-    //     let mut update_index = UpdateIndex::from(logger.clone(), objeto).unwrap();
+        let mut update_index = UpdateIndex::from(logger.clone(), ubicacion).unwrap();
+        update_index.ejecutar().unwrap();
 
-    //     update_index.ejecutar().unwrap();
+        let ubicacion = PathBuf::from("test_dir/objetos/archivo.txt");
 
-    //     let objeto = Objeto::Blob(Blob {
-    //         nombre: "Cargo.toml".to_string(),
-    //         hash: "534b4ac42126f13".to_string(),
-    //     });
+        let mut update_index = UpdateIndex::from(logger.clone(), ubicacion).unwrap();
+        update_index.ejecutar().unwrap();
 
-    //     let mut update_index = UpdateIndex::from(logger.clone(), objeto).unwrap();
+        let index = update_index.index;
 
-    //     update_index.ejecutar().unwrap();
+        assert_eq!(index.len(), 2);
 
-    //     let index = update_index.index;
+        let objeto = &index[0];
 
-    //     assert_eq!(index.len(), 2);
+        if let Objeto::Blob(blob) = objeto {
+            assert_eq!(blob.nombre, "test_file.txt");
+            assert_eq!(blob.hash, "678e12dc5c03a7cf6e9f64e688868962ab5d8b65");
+        }
 
-    //     let objeto = &index[0];
+        let objeto = &index[1];
 
-    //     if let Objeto::Blob(blob) = objeto {
-    //         assert_eq!(blob.nombre, "Readme.md");
-    //         assert_eq!(blob.hash, "534b4ac42126f12");
-    //     }
+        if let Objeto::Blob(blob) = objeto {
+            assert_eq!(blob.nombre, "archivo.txt");
+            assert_eq!(blob.hash, "2b824e648965b94c6c6b3dd0702feb91f699ed62");
+        }
 
-    //     let objeto = &index[1];
+        let file = io::leer_a_string(&"./.gir/index".to_string()).unwrap();
 
-    //     if let Objeto::Blob(blob) = objeto {
-    //         assert_eq!(blob.nombre, "Cargo.toml");
-    //         assert_eq!(blob.hash, "534b4ac42126f13");
-    //     }
-
-    //     let file = io::leer_a_string(&"./.gir/index".to_string()).unwrap();
-
-    //     assert_eq!(
-    //         file,
-    //         "100644 534b4ac42126f12 Readme.md\n100644 534b4ac42126f13 Cargo.toml\n"
-    //     );
-    // }
+        assert_eq!(
+            file,
+            "100644 678e12dc5c03a7cf6e9f64e688868962ab5d8b65 test_file.txt\n100644 2b824e648965b94c6c6b3dd0702feb91f699ed62 archivo.txt\n"
+        );
+    }
 
     // #[test]
     // fn test04_agregar_un_directorio_al_index() {
