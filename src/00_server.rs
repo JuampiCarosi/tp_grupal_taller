@@ -1,4 +1,4 @@
-use taller::server::Servidor;
+use gir::server::Servidor;
 use std::env::args;
 static SERVER_ARGS: usize = 2;
 fn main() -> Result<(), ()> {
