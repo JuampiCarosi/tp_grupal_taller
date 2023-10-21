@@ -4,6 +4,7 @@ use std::env;
 use std::path::PathBuf;
 use std::str;
 use crate::err_comunicacion::ErrorDeComunicacion;
+use crate::packfile::Packfile;
 use crate::{io as git_io, comunicacion};
 pub struct Servidor { 
     listener: TcpListener,
@@ -39,8 +40,11 @@ impl Servidor {
         
         // a partir de aca se asume que va a ser un clone porque es el caso mas sencillo, despues cambiar
         if wants.ends_with(&["0009done\n".to_string()]) {
-            let mut wants = comunicacion::obtener_obj_ids(&wants);
-            comunicacion::responder(stream, vec![git_io::obtener_linea_con_largo_hex("NAK\n")])? // respondo NAK
+            let wants = comunicacion::obtener_obj_ids(&wants);
+            comunicacion::responder(stream, vec![git_io::obtener_linea_con_largo_hex("NAK\n")])?; // respondo NAK
+            let packfile = Packfile::new().obtener_packfile(self.dir.clone());
+            comunicacion::responder_con_bytes(stream, vec![packfile])?; // respondo con el packfile
+
         }
 
         Ok(())

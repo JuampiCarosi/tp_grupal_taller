@@ -3,7 +3,7 @@ use std::net::TcpStream;
 use std::io::{Read, Write};
 use std::str;
 use crate::io;
- 
+    
 pub fn aceptar_pedido(flujo: &mut TcpStream) -> Result<String, ErrorDeComunicacion>{
     // lee primera parte, 4 bytes en hexadecimal indican el largo del stream
     let mut tamanio_bytes = [0; 4];
@@ -52,6 +52,13 @@ pub fn responder(flujo: &mut TcpStream, lineas: Vec<String>) -> Result<(), Error
     Ok(())
 }
 
+pub fn responder_con_bytes(flujo: &mut TcpStream, lineas: Vec<Vec<u8>>) -> Result<(), ErrorDeComunicacion> {
+    for linea in lineas { 
+        flujo.write(&linea)?;
+    }
+    flujo.write(String::from("0000").as_bytes())?;
+    Ok(())
+}
 
 pub fn obtener_obj_ids(lineas: &Vec<String>) -> Vec<String> {
     let mut obj_ids: Vec<String> = Vec::new();

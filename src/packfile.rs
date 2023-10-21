@@ -4,8 +4,8 @@ use crate::tipos_de_dato::{
     comandos::cat_file::CatFile,
 };
 use crate::io;
-use std::net::TcpStream;
 use std::rc::Rc;
+use sha1::{Digest, Sha1};
 pub struct Packfile {
     objetos: Vec<u8>,
     cant_objetos: u32
@@ -46,7 +46,7 @@ impl Packfile {
     }
 
 
-    pub fn obtener_packfile_del_dir(&mut self, dir: String) -> Result<(), ErrorDeComunicacion> {
+    fn obtener_objetos_del_dir(&mut self, dir: String) -> Result<(), ErrorDeComunicacion> {
         // want to iterate over the directory given and add all the objects to the packfile
         let objetos = io::obtener_objetos_del_directorio(dir)?;
         for objeto in objetos {
@@ -55,21 +55,38 @@ impl Packfile {
         Ok(())
     }
 
-    pub fn to_bytes(&self) -> Vec<u8> {
-        let mut bytes = Vec::new();
+    pub fn obtener_packfile(&mut self, dir: String) -> Vec<u8> {
 
-        // Write the packfile header
-        bytes.write_all(b"PACK\0\0\0\2").unwrap();
-        bytes.write_all(&self.cant_objetos.to_be_bytes()).unwrap();
+        self.obtener_objetos_del_dir(dir).unwrap();
 
-        // Write the object data
-        bytes.extend_from_slice(&self.objetos);
+        let mut packfile = Vec::new();
+        packfile.extend("PACK".as_bytes());
+        packfile.extend(&[0, 0, 0, 2]);
+        packfile.extend(&self.cant_objetos.to_be_bytes());
+        packfile.extend(&self.objetos);
 
-        // Write the packfile checksum
-        let checksum = sha1::Sha1::from(&bytes).digest().bytes();
-        bytes.extend_from_slice(&checksum);
+        // computa el hash SHA-1 del packfile
+        let mut hasher = Sha1::new();
+        hasher.update(&packfile);
+        let hash = hasher.finalize();
 
-        bytes
+        // aniade el hash al final del packfile
+        packfile.extend(&hash);
+
+
+        packfile
     }
-}
+    
+    fn verificar_checksum(packfile: &[u8]) -> bool {
+        // Get the expected hash from the end of the packfile
+        let expected_hash = &packfile[packfile.len() - 20..];
+    
+        // Compute the SHA-1 hash of the packfile data
+        let mut hasher = Sha1::new();
+        hasher.update(&packfile[..packfile.len() - 20]);
+        let actual_hash = hasher.finalize();
+    
+        // Compare the expected hash to the actual hash
+        expected_hash == actual_hash.as_slice()
+    }
 }
