@@ -4,9 +4,9 @@ use sha1::{Digest, Sha1};
 use std::rc::Rc;
 
 pub struct HashObject {
-    logger: Rc<Logger>,
-    escribir: bool,
-    nombre_archivo: String,
+    pub logger: Rc<Logger>,
+    pub escribir: bool,
+    pub nombre_archivo: String,
 }
 
 impl HashObject {

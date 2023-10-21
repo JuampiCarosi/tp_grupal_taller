@@ -244,26 +244,27 @@ mod test {
         );
     }
 
-    // fn test05_editar_hijo_actualiza_padre() {
-    //     let logger = Rc::new(Logger::new().unwrap());
+    #[test]
+    fn test05_editar_hijo_actualiza_padre() {
+        let logger = Rc::new(Logger::new().unwrap());
 
-    //     let tree = Objeto::from_directorio("test_dir/objetos".to_string()).unwrap();
-    //     let mut update_index = UpdateIndex::from(logger.clone(), tree).unwrap();
-    //     update_index.ejecutar().unwrap();
+        let tree = Objeto::from_directorio("test_dir/objetos".to_string()).unwrap();
+        let mut update_index = UpdateIndex::from(logger.clone(), tree).unwrap();
+        // update_index.ejecutar().unwrap();
 
-    //     let objeto = Objeto::Blob(Blob {
-    //         nombre: "archivo.txt".to_string(),
-    //         hash: "534b4ac42126f13".to_string(),
-    //     });
+        // let objeto = Objeto::Blob(Blob {
+        //     nombre: "archivo.txt".to_string(),
+        //     hash: "534b4ac42126f13".to_string(),
+        // });
 
-    //     let mut update_index = UpdateIndex::from(logger.clone(), objeto).unwrap();
-    //     update_index.ejecutar().unwrap();
+        // let mut update_index = UpdateIndex::from(logger.clone(), objeto).unwrap();
+        // update_index.ejecutar().unwrap();
 
-    //     let file = io::leer_a_string(&"./.gir/index".to_string()).unwrap();
+        // let file = io::leer_a_string(&"./.gir/index".to_string()).unwrap();
 
-    //     assert_eq!(
-    //         file,
-    //         "100644 534b4ac42126f12 Readme.md\n100644 534b4ac42126f13 Cargo.toml\n40000 bf902127ac66b999327fba07a9f4b7a50b87922a objetos\n"
-    //     );
-    // }
+        // assert_eq!(
+        //     file,
+        //     "100644 534b4ac42126f12 Readme.md\n100644 534b4ac42126f13 Cargo.toml\n40000 bf902127ac66b999327fba07a9f4b7a50b87922a objetos\n"
+        // );
+    }
 }

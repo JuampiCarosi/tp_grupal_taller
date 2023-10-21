@@ -14,7 +14,7 @@ pub fn crear_directorio(directorio: &String) -> Result<(), String> {
 pub fn leer_a_string(path: &String) -> Result<String, String> {
     match fs::read_to_string(path) {
         Ok(contenido) => Ok(contenido),
-        Err(_) => Err("No se pudo leer el archivo".to_string()),
+        Err(_) => Err(format!("No se pudo leer el archivo {path}")),
     }
 }
 
@@ -34,6 +34,6 @@ pub fn escrbir_bytes(archivo: &String, contenido: Vec<u8>) -> Result<(), String>
 pub fn leer_bytes(archivo: &String) -> Result<Vec<u8>, String> {
     match fs::read(archivo) {
         Ok(contenido) => Ok(contenido),
-        Err(_) => Err("No se pudo leer el archivo".to_string()),
+        Err(_) => Err(format!("No se pudo leer el archivo {archivo}")),
     }
 }

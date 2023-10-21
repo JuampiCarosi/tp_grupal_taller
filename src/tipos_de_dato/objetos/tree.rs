@@ -1,8 +1,13 @@
-use std::fmt::Display;
+use std::{fmt::Display, io::Write, rc::Rc};
+
+use flate2::{self, write::ZlibEncoder, Compression};
 
 use sha1::{Digest, Sha1};
 
-use crate::tipos_de_dato::objeto::Objeto;
+use crate::{
+    io,
+    tipos_de_dato::{comandos::hash_object::HashObject, logger, objeto::Objeto},
+};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 
@@ -66,6 +71,29 @@ impl Tree {
         objetos
     }
 
+    pub fn escribir_en_base(&self) -> Result<(), String> {
+        let hash = self.obtener_hash()?;
+        let ruta = format!(".gir/objects/{}/{}", &hash[..2], &hash[2..]);
+
+        let contenido = Self::mostrar_contenido(&self.objetos)?;
+        let header = format!("tree {}\0", contenido.len());
+
+        let contenido_total = format!("{}{}", header, contenido);
+        io::escrbir_bytes(&ruta, self.comprimir_contenido(contenido_total)?)?;
+        Ok(())
+    }
+
+    fn comprimir_contenido(&self, contenido: String) -> Result<Vec<u8>, String> {
+        let mut compresor = ZlibEncoder::new(Vec::new(), Compression::default());
+        if compresor.write_all(contenido.as_bytes()).is_err() {
+            return Err("No se pudo comprimir el contenido".to_string());
+        };
+        match compresor.finish() {
+            Ok(contenido_comprimido) => Ok(contenido_comprimido),
+            Err(_) => Err("No se pudo comprimir el contenido".to_string()),
+        }
+    }
+
     fn mostrar_contenido(objetos: &Vec<Objeto>) -> Result<String, String> {
         let mut output = String::new();
 
@@ -107,7 +135,11 @@ impl Display for Tree {
 #[cfg(test)]
 
 mod test {
+    use flate2::read::ZlibDecoder;
+
+    use crate::io;
     use crate::tipos_de_dato::{objeto::Objeto, objetos::tree::Tree};
+    use std::io::Read;
 
     #[test]
     fn test01_test_obtener_hash() {
@@ -149,4 +181,74 @@ mod test {
             assert!(false)
         }
     }
+
+    #[test]
+    fn test05_escribir_en_base() -> Result<(), String> {
+        let objeto = Objeto::from_directorio("test_dir/objetos".to_string()).unwrap();
+        if let Objeto::Tree(tree) = objeto {
+            tree.escribir_en_base().unwrap();
+
+            let contenido_leido = io::leer_bytes(
+                &".gir/objects/bf/902127ac66b999327fba07a9f4b7a50b87922a".to_string(),
+            )?;
+            let mut descompresor = ZlibDecoder::new(contenido_leido.as_slice());
+            let mut contenido_descomprimido = String::new();
+            descompresor
+                .read_to_string(&mut contenido_descomprimido)
+                .unwrap();
+
+            assert_eq!(
+                contenido_descomprimido,
+                "tree 39\0100644 archivo.txt\02b824e648965b94c6c6b"
+            );
+
+            Ok(())
+        } else {
+            assert!(false);
+            Err("No se pudo leer el directorio".to_string())
+        }
+    }
+
+    // #[test]
+    // fn test06_escribir_en_base_con_anidados() -> Result<(), String> {
+    //     let objeto = Objeto::from_directorio("test_dir".to_string()).unwrap();
+    //     if let Objeto::Tree(tree) = objeto {
+    //         tree.escribir_en_base().unwrap();
+
+    //         let contenido_leido = io::leer_bytes(
+    //             &".gir/objects/26/ba90e36f66995c2e03aa842f3638d12675e447".to_string(),
+    //         )
+    //         .unwrap();
+    //         let mut descompresor = ZlibDecoder::new(contenido_leido.as_slice());
+    //         let mut contenido_descomprimido = String::new();
+    //         descompresor
+    //             .read_to_string(&mut contenido_descomprimido)
+    //             .unwrap();
+
+    //         assert_eq!(
+    //             contenido_descomprimido,
+    //             "tree 39\0100644 archivo.txt\02b824e648965b94c6c6b"
+    //         );
+
+    //         let contenido_leido = io::leer_bytes(
+    //             &".gir/objects/bf/902127ac66b999327fba07a9f4b7a50b87922a".to_string(),
+    //         )
+    //         .unwrap();
+    //         let mut descompresor = ZlibDecoder::new(contenido_leido.as_slice());
+    //         let mut contenido_descomprimido = String::new();
+    //         descompresor
+    //             .read_to_string(&mut contenido_descomprimido)
+    //             .unwrap();
+
+    //         assert_eq!(
+    //             contenido_descomprimido,
+    //             "tree 39\0100644 archivo.txt\02b824e648965b94c6c6b"
+    //         );
+
+    //         Ok(())
+    //     } else {
+    //         assert!(false);
+    //         Err("No se pudo leer el directorio".to_string())
+    //     }
+    // }
 }

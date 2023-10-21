@@ -3,8 +3,8 @@ use std::{fs, path::Path, rc::Rc};
 use crate::tipos_de_dato::logger::Logger;
 
 pub struct Init {
-    path: String,
-    logger: Rc<Logger>,
+    pub path: String,
+    pub logger: Rc<Logger>,
 }
 
 impl Init {

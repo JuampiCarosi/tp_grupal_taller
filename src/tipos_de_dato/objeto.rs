@@ -1,7 +1,6 @@
-use std::{fs, path::PathBuf, rc::Rc};
+use std::{fs, rc::Rc};
 
 use super::{
-    comando::Comando,
     comandos::hash_object::HashObject,
     logger,
     objetos::{blob::Blob, tree::Tree},
@@ -59,11 +58,15 @@ impl Objeto {
     pub fn from_directorio(directorio: String) -> Result<Objeto, String> {
         let mut objetos: Vec<Objeto> = Vec::new();
 
-        if PathBuf::from(&directorio).is_dir() {
+        if fs::metadata(&directorio).unwrap().is_dir() {
             for entrada in fs::read_dir(&directorio).unwrap() {
                 let entrada = entrada.unwrap();
                 let path = entrada.path();
                 let path = path.to_str().unwrap().to_string();
+
+                if path.contains(".DS_Store") {
+                    continue;
+                }
 
                 let objeto = match fs::metadata(&path) {
                     Ok(_) => Objeto::from_directorio(path)?,
@@ -76,16 +79,21 @@ impl Objeto {
                 directorio,
                 objetos,
             }))
-        } else {
+        } else if fs::metadata(&directorio).unwrap().is_file() {
             let logger = Rc::new(logger::Logger::new()?);
-            let hash =
-                Comando::HashObject(HashObject::from(&mut vec![directorio.clone()], logger)?)
-                    .ejecutar()
-                    .unwrap();
+            let hash = HashObject {
+                logger,
+                escribir: false,
+                nombre_archivo: directorio.clone(),
+            }
+            .ejecutar()
+            .unwrap();
 
             let directorio_split = directorio.split('/').collect::<Vec<&str>>();
             let nombre = directorio_split.last().unwrap().to_string();
             Ok(Objeto::Blob(Blob { nombre, hash }))
+        } else {
+            Err("No se pudo leer el directorio".to_string())
         }
     }
 }
