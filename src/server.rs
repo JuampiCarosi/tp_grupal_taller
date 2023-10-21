@@ -35,8 +35,9 @@ impl Servidor {
         let respuesta = self.parse_line(&pedido)?; // parse de la liena para ver que se pide
         comunicacion::responder(stream, respuesta)?; // respondo con las refs (en caso de que sea upload-pack)
         
-        // a partir de aca se asume que va a ser un clone porque es el caso mas sencillo, despues cambiar
         let wants = comunicacion::obtener_lineas(stream)?; // obtengo los wants del cliente 
+        
+        // a partir de aca se asume que va a ser un clone porque es el caso mas sencillo, despues cambiar
         if wants.ends_with(&["0009done\n".to_string()]) {
             let mut wants = comunicacion::obtener_obj_ids(&wants);
             comunicacion::responder(stream, vec![git_io::obtener_linea_con_largo_hex("NAK\n")])? // respondo NAK

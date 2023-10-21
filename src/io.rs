@@ -22,7 +22,7 @@ pub fn leer_archivos_directorio(direccion: &mut PathBuf) -> Result<Vec<String>, 
     Ok(contenidos)
 }
 
-pub fn obtener_objetos_directorio(dir: String) -> Result<Vec<String>, ErrorDeComunicacion>{
+pub fn obtener_objetos_del_directorio(dir: String) -> Result<Vec<String>, ErrorDeComunicacion>{
     let path = PathBuf::from(dir);
     println!("path: {:?}", path);
     let mut objetos: Vec<String> = Vec::new();
