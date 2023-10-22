@@ -135,9 +135,6 @@ impl Objeto {
     ) -> Result<Objeto, String> {
         let mut objetos: Vec<Objeto> = Vec::new();
 
-        println!("directorio: {}", directorio);
-        println!("directorios habil: {:?}", directorios_habilitados);
-
         let metadata = match fs::metadata(&directorio) {
             Ok(metadata) => metadata,
             Err(_) => Err(format!("No se pudo leer el directorio {directorio}"))?,

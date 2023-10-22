@@ -60,7 +60,6 @@ impl Tree {
         lineas.remove(0);
 
         for i in (0..lineas.len()).step_by(2) {
-            // Comprobamos que haya al menos un elemento más en el array
             if i + 1 < lineas.len() {
                 let linea = lineas[i].split_whitespace();
                 let linea_spliteada = linea.clone().collect::<Vec<&str>>();

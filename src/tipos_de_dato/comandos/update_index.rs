@@ -1,5 +1,5 @@
 use std::{
-    collections::HashMap,
+    collections::HashSet,
     fs::{self, OpenOptions},
     path::{Path, PathBuf},
     rc::Rc,
@@ -50,8 +50,8 @@ impl UpdateIndex {
     }
 
     fn generar_objetos_raiz(&self) -> Result<Vec<Objeto>, String> {
-        let mut objetos: HashMap<String, Objeto> = HashMap::new();
-        let mut directorios_raiz: HashMap<String, ()> = HashMap::new();
+        let mut objetos: Vec<Objeto> = Vec::new();
+        let mut directorios_raiz: HashSet<String> = HashSet::new();
         let mut directorios_a_tener_en_cuenta: Vec<String> = Vec::new();
         self.index.iter().for_each(|x| match x {
             Objeto::Tree(tree) => directorios_a_tener_en_cuenta.extend(tree.obtener_paths_hijos()),
@@ -69,42 +69,30 @@ impl UpdateIndex {
                         .map(|x| x.to_str().unwrap())
                         .collect();
 
-                    if directorio_split.len() < 1 {
-                        Err(format!("Directorio invalido {:?}", directorio_split))?;
-                        self.logger.log(format!("Directorio invalido al intentar obtener los directorios raiz de cada objeto {:?}, la longitud del directorio es menor a 1", directorio_split));
-                    }
-                    directorios_raiz.insert(directorio_split[0].to_string(), ());
+                    directorios_raiz.insert(directorio_split[0].to_string());
                 }
                 Objeto::Tree(tree) => {
                     let directorio_split: Vec<&str> = tree.directorio.split("/").collect();
-                    if directorio_split.len() < 1 {
-                        Err(format!("Directorio invalido {:?}", directorio_split))?;
-                        self.logger.log(format!("Directorio invalido al intentar obtener los directorios raiz de cada objeto {:?}, la longitud del directorio es menor a 1", directorio_split));
-                    }
-                    directorios_raiz.insert(directorio_split[0].to_string(), ());
+
+                    directorios_raiz.insert(directorio_split[0].to_string());
                 }
             }
         }
 
-        for directorio in directorios_raiz.keys() {
-            if objetos.contains_key(directorio) {
-                continue;
-            }
-
+        for directorio in directorios_raiz {
             let objeto_conteniendo_al_blob = Objeto::from_directorio_con_hijos_especificados(
                 directorio.clone(),
                 &directorios_a_tener_en_cuenta,
             )?;
 
-            objetos.insert(directorio.clone(), objeto_conteniendo_al_blob);
+            objetos.push(objeto_conteniendo_al_blob);
         }
 
-        let mut vector: Vec<Objeto> = objetos.values().cloned().collect();
-        vector.sort_by_key(|x| match x {
+        objetos.sort_by_key(|x| match x {
             Objeto::Blob(blob) => blob.ubicacion.clone(),
             Objeto::Tree(tree) => PathBuf::from(&tree.directorio),
         });
-        Ok(vector)
+        Ok(objetos)
     }
 
     fn escribir_objetos(&self) -> Result<(), String> {
@@ -273,7 +261,7 @@ mod test {
 
     #[test]
     fn test04_archivo_con_objetos_agrega_nuevos_objetos() {
-        let _ = std::fs::remove_file("./.gir/index");
+        clear_index();
         let logger = Rc::new(Logger::new().unwrap());
         let ubicacion = PathBuf::from("test_file.txt");
 
