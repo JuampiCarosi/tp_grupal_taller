@@ -2,3 +2,5 @@
 log.txt
 .gir
 /test_dir
+/tmp/*
+!/tmp/.gitkeep

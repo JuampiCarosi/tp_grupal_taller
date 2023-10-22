@@ -54,35 +54,40 @@ impl Add {
         })
     }
 
+    fn obtener_directorio_raiz(directorio: &PathBuf) -> Result<PathBuf, String> {
+        let directorio_split = directorio
+            .into_iter()
+            .next()
+            .ok_or_else(|| "Error al obtener el directorio raiz")?
+            .to_str()
+            .ok_or_else(|| "Error al obtener el directorio raiz")?;
+
+        Ok(PathBuf::from(directorio_split))
+    }
+
     fn generar_objetos_raiz(&self) -> Result<Vec<Objeto>, String> {
         let mut objetos: Vec<Objeto> = Vec::new();
-        let mut directorios_raiz: HashSet<String> = HashSet::new();
-        let mut directorios_a_tener_en_cuenta: Vec<String> = Vec::new();
+        let mut directorios_raiz: HashSet<PathBuf> = HashSet::new();
+        let mut directorios_a_tener_en_cuenta: Vec<PathBuf> = Vec::new();
         self.index.iter().for_each(|x| match x {
             Objeto::Tree(tree) => directorios_a_tener_en_cuenta.extend(tree.obtener_paths_hijos()),
-            Objeto::Blob(blob) => {
-                directorios_a_tener_en_cuenta.push(blob.ubicacion.to_str().unwrap().to_string())
-            }
+            Objeto::Blob(blob) => directorios_a_tener_en_cuenta.push(blob.ubicacion.clone()),
         });
 
         for objeto in self.index.iter() {
             match objeto {
                 Objeto::Blob(blob) => {
-                    let directorio_split: Vec<&str> = blob
-                        .ubicacion
-                        .into_iter()
-                        .map(|x| x.to_str().unwrap())
-                        .collect();
-
-                    directorios_raiz.insert(directorio_split[0].to_string());
+                    let padre = Self::obtener_directorio_raiz(&blob.ubicacion)?;
+                    directorios_raiz.insert(PathBuf::from(padre));
                 }
                 Objeto::Tree(tree) => {
-                    let directorio_split: Vec<&str> = tree.directorio.split("/").collect();
-
-                    directorios_raiz.insert(directorio_split[0].to_string());
+                    let padre = Self::obtener_directorio_raiz(&tree.directorio)?;
+                    directorios_raiz.insert(PathBuf::from(padre));
                 }
             }
         }
+
+        println!("DIRECTORIOS RAIZ {:?}", directorios_raiz);
 
         for directorio in directorios_raiz {
             let objeto_conteniendo_al_blob = Objeto::from_directorio_con_hijos_especificados(
@@ -112,7 +117,7 @@ impl Add {
                     HashObject {
                         logger: self.logger.clone(),
                         escribir: true,
-                        nombre_archivo: blob.ubicacion.to_str().unwrap().to_string(),
+                        ubicacion_archivo: blob.ubicacion.clone(),
                     }
                     .ejecutar()?;
                     format!("{blob}")
@@ -133,12 +138,11 @@ impl Add {
         self.logger.log("Ejecutando update-index".to_string());
 
         for ubicacion in self.ubicaciones.clone() {
-            let ubicacion_string = ubicacion.to_str().unwrap().to_string();
-            let nuevo_objeto = Objeto::from_directorio(ubicacion_string.clone())?;
+            let nuevo_objeto = Objeto::from_directorio(ubicacion.clone())?;
 
             let indice = self.index.iter().position(|x| match x {
-                Objeto::Blob(blob) => blob.ubicacion == PathBuf::from(&ubicacion_string),
-                Objeto::Tree(tree) => tree.directorio == ubicacion_string,
+                Objeto::Blob(blob) => blob.ubicacion == ubicacion,
+                Objeto::Tree(tree) => tree.directorio == ubicacion,
             });
 
             let trees_a_actualizar = &mut self.index.iter().filter_map(|x| {

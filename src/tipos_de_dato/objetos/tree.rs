@@ -15,7 +15,7 @@ use super::blob::Blob;
 #[derive(Clone, Debug, PartialEq, Eq)]
 
 pub struct Tree {
-    pub directorio: String,
+    pub directorio: PathBuf,
     pub objetos: Vec<Objeto>,
 }
 impl Tree {
@@ -38,13 +38,13 @@ impl Tree {
         Err(format!("No se econtro el objeto con hash {}", hash_20))
     }
 
-    pub fn obtener_paths_hijos(&self) -> Vec<String> {
-        let mut paths: Vec<String> = Vec::new();
+    pub fn obtener_paths_hijos(&self) -> Vec<PathBuf> {
+        let mut paths: Vec<PathBuf> = Vec::new();
         for objeto in &self.objetos {
             match objeto {
-                Objeto::Blob(blob) => paths.push(blob.ubicacion.to_str().unwrap().to_string()),
+                Objeto::Blob(blob) => paths.push(blob.ubicacion.clone()),
                 Objeto::Tree(tree) => {
-                    paths.push(tree.directorio.to_string());
+                    paths.push(tree.directorio.clone());
                     paths.extend(tree.obtener_paths_hijos());
                 }
             }
@@ -78,7 +78,7 @@ impl Tree {
         Ok(contenido_parseado)
     }
 
-    pub fn from_hash_20(hash: String, directorio: String) -> Tree {
+    pub fn from_hash_20(hash: String, directorio: PathBuf) -> Tree {
         let hash_completo = Self::obtener_hash_completo(hash).unwrap();
 
         let contenido = descomprimir_objeto(hash_completo).unwrap();
@@ -87,7 +87,7 @@ impl Tree {
         let mut objetos: Vec<Objeto> = Vec::new();
 
         for (modo, nombre, hash_hijo) in contenido_parseado {
-            let ubicacion = format!("{}/{}", directorio, nombre);
+            let ubicacion = format!("{}/{}", directorio.display(), nombre);
 
             match modo.as_str() {
                 "100644" => {
@@ -99,7 +99,7 @@ impl Tree {
                     objetos.push(blob);
                 }
                 "40000" => {
-                    let tree = Self::from_hash_20(hash_hijo, ubicacion);
+                    let tree = Self::from_hash_20(hash_hijo, PathBuf::from(ubicacion));
                     objetos.push(Objeto::Tree(tree));
                 }
                 _ => {}
@@ -162,11 +162,16 @@ impl Tree {
 
     fn ordenar_objetos_alfabeticamente(objetos: &[Objeto]) -> Vec<Objeto> {
         let mut objetos = objetos.to_owned();
-        objetos.sort_by(|a, b| match (a, b) {
-            (Objeto::Blob(a), Objeto::Blob(b)) => a.nombre.cmp(&b.nombre),
-            (Objeto::Tree(a), Objeto::Tree(b)) => a.directorio.cmp(&b.directorio),
-            (Objeto::Blob(a), Objeto::Tree(b)) => a.nombre.cmp(&b.directorio),
-            (Objeto::Tree(a), Objeto::Blob(b)) => a.directorio.cmp(&b.nombre),
+        objetos.sort_by(|a, b| {
+            let directorio_a = match a {
+                Objeto::Blob(blob) => PathBuf::from(blob.nombre.clone()),
+                Objeto::Tree(tree) => tree.directorio.clone(),
+            };
+            let directorio_b = match b {
+                Objeto::Blob(blob) => PathBuf::from(blob.nombre.clone()),
+                Objeto::Tree(tree) => tree.directorio.clone(),
+            };
+            directorio_a.cmp(&directorio_b)
         });
         objetos
     }
@@ -188,7 +193,7 @@ impl Tree {
                     HashObject {
                         logger: logger.clone(),
                         escribir: true,
-                        nombre_archivo: blob.ubicacion.to_str().unwrap().to_string(),
+                        ubicacion_archivo: blob.ubicacion.clone(),
                     }
                     .ejecutar()?;
                 }
@@ -221,12 +226,12 @@ impl Tree {
             let line = match objeto {
                 Objeto::Blob(blob) => format!("100644 {}\0{}", blob.nombre, &blob.hash[..20]),
                 Objeto::Tree(tree) => {
-                    let name = match tree.directorio.split('/').last() {
+                    let name = match tree.directorio.file_name() {
                         Some(name) => name,
                         None => return Err("Error al obtener el nombre del directorio".to_string()),
                     };
                     let hash = tree.obtener_hash()?;
-                    format!("40000 {}\0{}", name, &hash[..20])
+                    format!("40000 {}\0{}", name.to_string_lossy(), &hash[..20])
                 }
             };
             output.push_str(&line);
@@ -237,7 +242,7 @@ impl Tree {
 
 impl Display for Tree {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let name = match self.directorio.split("/").last() {
+        let name = match self.directorio.file_name() {
             Some(name) => name,
             None => return Err(std::fmt::Error),
         };
@@ -245,7 +250,7 @@ impl Display for Tree {
             Ok(hash) => hash,
             Err(_) => return Err(std::fmt::Error),
         };
-        let string = format!("40000 {} {}\n", hash, name);
+        let string = format!("40000 {} {}\n", hash, name.to_string_lossy());
         write!(f, "{}", string)
     }
 }
@@ -258,24 +263,25 @@ mod test {
     use crate::io;
     use crate::tipos_de_dato::{objeto::Objeto, objetos::tree::Tree};
     use std::io::Read;
+    use std::path::PathBuf;
 
     #[test]
     fn test01_test_obtener_hash() {
-        let objeto = Objeto::from_directorio("test_dir/objetos".to_string()).unwrap();
+        let objeto = Objeto::from_directorio(PathBuf::from("test_dir/objetos")).unwrap();
         let hash = objeto.obtener_hash();
         assert_eq!(hash, "bf902127ac66b999327fba07a9f4b7a50b87922a");
     }
 
     #[test]
     fn test02_test_obtener_tamanio() {
-        let objeto = Objeto::from_directorio("test_dir/muchos_objetos".to_string()).unwrap();
+        let objeto = Objeto::from_directorio(PathBuf::from("test_dir/muchos_objetos")).unwrap();
         let tamanio = objeto.obtener_tamanio().unwrap();
         assert_eq!(tamanio, 83);
     }
 
     #[test]
     fn test03_test_mostrar_contenido() {
-        let objeto = Objeto::from_directorio("test_dir/objetos".to_string()).unwrap();
+        let objeto = Objeto::from_directorio(PathBuf::from("test_dir/objetos")).unwrap();
 
         if let Objeto::Tree(tree) = objeto {
             let contenido = Tree::mostrar_contenido(&tree.objetos).unwrap();
@@ -287,7 +293,7 @@ mod test {
 
     #[test]
     fn test04_test_mostrar_contenido_recursivo() {
-        let objeto = Objeto::from_directorio("test_dir/".to_string()).unwrap();
+        let objeto = Objeto::from_directorio(PathBuf::from("test_dir/")).unwrap();
 
         if let Objeto::Tree(tree) = objeto {
             let contenido = Tree::mostrar_contenido(&tree.objetos).unwrap();
@@ -302,7 +308,7 @@ mod test {
 
     #[test]
     fn test05_escribir_en_base() -> Result<(), String> {
-        let objeto = Objeto::from_directorio("test_dir/objetos".to_string()).unwrap();
+        let objeto = Objeto::from_directorio(PathBuf::from("test_dir/objetos")).unwrap();
         if let Objeto::Tree(tree) = objeto {
             tree.escribir_en_base().unwrap();
 
@@ -327,46 +333,31 @@ mod test {
         }
     }
 
-    // #[test]
-    // fn test06_escribir_en_base_con_anidados() -> Result<(), String> {
-    //     let objeto = Objeto::from_directorio("test_dir".to_string()).unwrap();
-    //     if let Objeto::Tree(tree) = objeto {
-    //         tree.escribir_en_base().unwrap();
+    #[test]
+    fn test06_escribir_en_base_con_anidados() -> Result<(), String> {
+        let objeto = Objeto::from_directorio(PathBuf::from("test_dir")).unwrap();
+        if let Objeto::Tree(tree) = objeto {
+            tree.escribir_en_base().unwrap();
 
-    //         let contenido_leido = io::leer_bytes(
-    //             &".gir/objects/26/ba90e36f66995c2e03aa842f3638d12675e447".to_string(),
-    //         )
-    //         .unwrap();
-    //         let mut descompresor = ZlibDecoder::new(contenido_leido.as_slice());
-    //         let mut contenido_descomprimido = String::new();
-    //         descompresor
-    //             .read_to_string(&mut contenido_descomprimido)
-    //             .unwrap();
+            let contenido_leido = io::leer_bytes(
+                &".gir/objects/e0/46b641e27871e304ef4ce3fdf4382265d58354".to_string(),
+            )
+            .unwrap();
+            let mut descompresor = ZlibDecoder::new(contenido_leido.as_slice());
+            let mut contenido_descomprimido = String::new();
+            descompresor
+                .read_to_string(&mut contenido_descomprimido)
+                .unwrap();
 
-    //         assert_eq!(
-    //             contenido_descomprimido,
-    //             "tree 39\0100644 archivo.txt\02b824e648965b94c6c6b"
-    //         );
+            assert_eq!(
+                contenido_descomprimido,
+                "tree 75\040000 muchos_objetos\0748ef9d5f9df6f40b07b40000 objetos\0bf902127ac66b999327f"
+            );
 
-    //         let contenido_leido = io::leer_bytes(
-    //             &".gir/objects/bf/902127ac66b999327fba07a9f4b7a50b87922a".to_string(),
-    //         )
-    //         .unwrap();
-    //         let mut descompresor = ZlibDecoder::new(contenido_leido.as_slice());
-    //         let mut contenido_descomprimido = String::new();
-    //         descompresor
-    //             .read_to_string(&mut contenido_descomprimido)
-    //             .unwrap();
-
-    //         assert_eq!(
-    //             contenido_descomprimido,
-    //             "tree 39\0100644 archivo.txt\02b824e648965b94c6c6b"
-    //         );
-
-    //         Ok(())
-    //     } else {
-    //         assert!(false);
-    //         Err("No se pudo leer el directorio".to_string())
-    //     }
-    // }
+            Ok(())
+        } else {
+            assert!(false);
+            Err("No se pudo leer el directorio".to_string())
+        }
+    }
 }

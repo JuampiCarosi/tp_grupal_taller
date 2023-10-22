@@ -1,18 +1,21 @@
 use crate::utilidades_de_compresion::comprimir_contenido;
 use crate::{io, tipos_de_dato::logger::Logger};
 use sha1::{Digest, Sha1};
+use std::path::PathBuf;
 use std::rc::Rc;
 
 pub struct HashObject {
     pub logger: Rc<Logger>,
     pub escribir: bool,
-    pub nombre_archivo: String,
+    pub ubicacion_archivo: PathBuf,
 }
 
 impl HashObject {
-    fn obtener_nombre_archivo(args: &mut Vec<String>) -> Result<String, String> {
-        args.pop()
-            .ok_or_else(|| "No se especifico un archivo".to_string())
+    fn obtener_nombre_archivo(args: &mut Vec<String>) -> Result<PathBuf, String> {
+        let nombre_string = args
+            .pop()
+            .ok_or_else(|| "No se especifico un archivo".to_string());
+        Ok(PathBuf::from(nombre_string?))
     }
 
     pub fn from(args: &mut Vec<String>, logger: Rc<Logger>) -> Result<HashObject, String> {
@@ -35,13 +38,13 @@ impl HashObject {
         }
         Ok(HashObject {
             logger,
-            nombre_archivo,
+            ubicacion_archivo: nombre_archivo,
             escribir,
         })
     }
 
     fn construir_contenido(&self) -> Result<String, String> {
-        let contenido = io::leer_a_string(&self.nombre_archivo.clone())?;
+        let contenido = io::leer_a_string(&self.ubicacion_archivo.clone())?;
         let header = format!("blob {}\0", contenido.len());
         let contenido_total = header + &contenido;
 
@@ -63,7 +66,10 @@ impl HashObject {
             let ruta = format!(".gir/objects/{}/{}", &hash[..2], &hash[2..]);
             io::escribir_bytes(&ruta, comprimir_contenido(contenido)?)?;
         }
-        let mensaje = format!("Objeto gir hasheado en {}", self.nombre_archivo);
+        let mensaje = format!(
+            "Objeto gir hasheado en {}",
+            self.ubicacion_archivo.to_string_lossy()
+        );
         self.logger.log(mensaje);
         Ok(hash)
     }
