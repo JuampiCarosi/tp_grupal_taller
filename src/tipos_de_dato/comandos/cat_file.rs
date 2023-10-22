@@ -36,8 +36,8 @@ impl CatFile {
         })
     }
 
-    fn descomprimir_objeto(&self) -> Result<String, String> {
-        let ruta_objeto = format!(".gir/objects/{}/{}", &self.objeto[..2], &self.objeto[2..]);
+    fn  descomprimir_objeto(&self) -> Result<String, String> {
+        let ruta_objeto = format!("./.git/objects/{}/{}", &self.objeto[..2], &self.objeto[2..]);
         let contenido_leido = io::leer_bytes(&ruta_objeto)?;
         let mut descompresor = ZlibDecoder::new(contenido_leido.as_slice());
         let mut contenido_descomprimido = String::new();
@@ -85,10 +85,7 @@ impl CatFile {
             None => return Err(format!("Objeto invalido")),
         };
         println!("Tipo de objeto: {}", tipo_objeto);
-        Ok(format!(
-            "Visualizacion del tipo de objeto del objeto: {}",
-            self.objeto
-        ))
+        Ok(tipo_objeto.to_string())
     }
 
     pub fn ejecutar(&self) -> Result<String, String> {

@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use std::str;
 use crate::err_comunicacion::ErrorDeComunicacion;
 use crate::packfile::Packfile;
-use crate::{io as git_io, comunicacion};
+use crate::{io as git_io, comunicacion::Comunicacion};
 pub struct Servidor { 
     listener: TcpListener,
     dir: String,
@@ -19,33 +19,33 @@ impl Servidor {
         // busca la carpeta raiz del proyecto (evita hardcodear la ruta)
         let dir = env!("CARGO_MANIFEST_DIR").to_string();
         let capacidades: Vec<String> = vec!["multi_ack", "thin-pack", "side-band", "side-band-64k", "ofs-delta", "shallow", "no-progress", "include-tag"].iter().map(|x| x.to_string()).collect();
-        Ok(Servidor { listener, dir, capacidades })
+        Ok(Servidor {listener, dir, capacidades })
     }
 
     pub fn server_run(&mut self) -> Result<(),ErrorDeComunicacion> {
         // loop {
         //     self.com.procesar_datos()?;
         // }
-        let (mut stream, _) = self.listener.accept()?;
-        self.manejar_cliente(&mut stream)?; 
+        let (stream, _) = self.listener.accept()?;
+        self.manejar_cliente(&mut Comunicacion::new(stream))?; 
         Ok(())
     }
 
-    pub fn manejar_cliente(&mut self, stream: &mut TcpStream) -> Result<(), ErrorDeComunicacion> {
-        let pedido = comunicacion::aceptar_pedido(stream)?; // acepto la primera linea
+    pub fn manejar_cliente(&mut self, comunicacion: &mut Comunicacion) -> Result<(), ErrorDeComunicacion> {
+        let pedido = comunicacion.aceptar_pedido()?; // acepto la primera linea
         let respuesta = self.parse_line(&pedido)?; // parse de la liena para ver que se pide
-        comunicacion::responder(stream, respuesta)?; // respondo con las refs (en caso de que sea upload-pack)
+        comunicacion.responder(respuesta)?; // respondo con las refs (en caso de que sea upload-pack)
         
-        let wants = comunicacion::obtener_lineas(stream)?; // obtengo los wants del cliente 
-        
+        let wants = comunicacion.obtener_lineas()?; // obtengo los wants del cliente 
         // a partir de aca se asume que va a ser un clone porque es el caso mas sencillo, despues cambiar
-        if wants.ends_with(&["0009done\n".to_string()]) {
-            let wants = comunicacion::obtener_obj_ids(&wants);
-            comunicacion::responder(stream, vec![git_io::obtener_linea_con_largo_hex("NAK\n")])?; // respondo NAK
-            let packfile = Packfile::new().obtener_packfile(self.dir.clone());
-            comunicacion::responder_con_bytes(stream, vec![packfile])?; // respondo con el packfile
+        // if wants.ends_with(&["0009done\n".to_string()]) {
+        let obj_ids = comunicacion.obtener_obj_ids(&wants);
 
-        }
+        comunicacion.responder(vec![git_io::obtener_linea_con_largo_hex("NAK\n")])?; // respondo NAK
+        
+        // let packfile = Packfile::new().obtener_packfile(self.dir.clone() + "/.git/objects/"); // obtengo el packfile
+        // comunicacion.responder_con_bytes(vec![packfile])?; // respondo con el packfile
+        // }
 
         Ok(())
     }

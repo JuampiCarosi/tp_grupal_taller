@@ -24,8 +24,8 @@ impl Packfile {
     fn aniadir_objeto(&mut self, objeto: String) -> Result<(), String>{
         let logger = Rc::new(Logger::new()?);
         
-        let tamanio_objeto = CatFile::from(&mut vec![objeto.clone(), "-s".to_string()], logger.clone())?.ejecutar()?;
-        let tipo_objeto = CatFile::from(&mut vec![objeto.clone(), "-t".to_string()], logger.clone())?.ejecutar()?;
+        let tamanio_objeto = CatFile::from(&mut vec!["-s".to_string(), objeto.clone()], logger.clone())?.ejecutar()?;
+        let tipo_objeto = CatFile::from(&mut vec!["-t".to_string(), objeto.clone()], logger.clone())?.ejecutar()?;
         let tipo: u8 = match tipo_objeto.as_str() {
             "commit" => 0b0010_0000, //1
             "tree" => 0b0100_0000, // 2
@@ -33,10 +33,9 @@ impl Packfile {
             "tag" => 0b1000_0000, // 4
             _ => {return Err("Tipo de objeto invalido".to_string());}
         };
-        
-        let tamanio_bytes = (tamanio_objeto.parse::<u8>().unwrap().to_be_bytes()[0] - 1)*7 -4  & 0b0001_1111; // accedo al primer byte de la palabra y me quedo con los ultimos 5 bits
+        println!("tamanio_objeto: {}", tamanio_objeto);
+        let tamanio_bytes = (tamanio_objeto.parse::<u32>().unwrap().to_be_bytes()[0] - 1)*7 -4  & 0b0001_1111; // accedo al primer byte de la palabra y me quedo con los ultimos 5 bits
 
-        
         // el n-byte tiene en sus primeros 3 bits el tipo de objeto y en los ultimos 5 el tamanio del objeto encodeado en base 128 (creo que era asi jaja mazzeo me traumaste)
         let n_byte: u8 = tipo | tamanio_bytes;
         self.objetos.push(n_byte);
@@ -58,8 +57,8 @@ impl Packfile {
     pub fn obtener_packfile(&mut self, dir: String) -> Vec<u8> {
 
         self.obtener_objetos_del_dir(dir).unwrap();
-
         let mut packfile = Vec::new();
+        println!("cant objetos: {}", self.cant_objetos);
         packfile.extend("PACK".as_bytes());
         packfile.extend(&[0, 0, 0, 2]);
         packfile.extend(&self.cant_objetos.to_be_bytes());
