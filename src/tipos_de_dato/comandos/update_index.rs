@@ -1,10 +1,11 @@
 use std::{
+    collections::HashMap,
     fs::{self, OpenOptions},
     path::{Path, PathBuf},
     rc::Rc,
 };
 
-use crate::tipos_de_dato::{logger::Logger, objeto::Objeto, objetos::blob};
+use crate::tipos_de_dato::{comandos::hash_object::HashObject, logger::Logger, objeto::Objeto};
 use std::io::prelude::*;
 
 pub struct UpdateIndex {
@@ -48,35 +49,62 @@ impl UpdateIndex {
         })
     }
 
-    fn obtener_objetos_raiz(&self) -> Vec<Objeto> {
-        self.index
-            .iter()
-            .filter_map(|x| match x {
-                Objeto::Tree(tree) => {
-                    let directorio_split: Vec<&str> = tree.directorio.split("/").collect();
-                    println!("{:?}", directorio_split);
-                    return if directorio_split.len() == 1 {
-                        Some(Objeto::Tree(tree.clone()))
-                    } else {
-                        None
-                    };
-                }
+    fn generar_objetos_raiz(&self) -> Result<Vec<Objeto>, String> {
+        let mut objetos: HashMap<String, Objeto> = HashMap::new();
+        let mut directorios_raiz: HashMap<String, ()> = HashMap::new();
+        let mut directorios_a_tener_en_cuenta: Vec<String> = Vec::new();
+        self.index.iter().for_each(|x| match x {
+            Objeto::Tree(tree) => directorios_a_tener_en_cuenta.extend(tree.obtener_paths_hijos()),
+            Objeto::Blob(blob) => {
+                directorios_a_tener_en_cuenta.push(blob.ubicacion.to_str().unwrap().to_string())
+            }
+        });
+
+        for objeto in self.index.iter() {
+            match objeto {
                 Objeto::Blob(blob) => {
                     let directorio_split: Vec<&str> = blob
                         .ubicacion
                         .into_iter()
                         .map(|x| x.to_str().unwrap())
                         .collect();
-                    println!("{:?}", directorio_split);
 
-                    return if directorio_split.len() == 1 {
-                        Some(Objeto::Blob(blob.clone()))
-                    } else {
-                        None
-                    };
+                    if directorio_split.len() < 1 {
+                        Err(format!("Directorio invalido {:?}", directorio_split))?;
+                        self.logger.log(format!("Directorio invalido al intentar obtener los directorios raiz de cada objeto {:?}, la longitud del directorio es menor a 1", directorio_split));
+                    }
+                    directorios_raiz.insert(directorio_split[0].to_string(), ());
                 }
-            })
-            .collect()
+                Objeto::Tree(tree) => {
+                    let directorio_split: Vec<&str> = tree.directorio.split("/").collect();
+                    if directorio_split.len() < 1 {
+                        Err(format!("Directorio invalido {:?}", directorio_split))?;
+                        self.logger.log(format!("Directorio invalido al intentar obtener los directorios raiz de cada objeto {:?}, la longitud del directorio es menor a 1", directorio_split));
+                    }
+                    directorios_raiz.insert(directorio_split[0].to_string(), ());
+                }
+            }
+        }
+
+        for directorio in directorios_raiz.keys() {
+            if objetos.contains_key(directorio) {
+                continue;
+            }
+
+            let objeto_conteniendo_al_blob = Objeto::from_directorio_con_hijos_especificados(
+                directorio.clone(),
+                &directorios_a_tener_en_cuenta,
+            )?;
+
+            objetos.insert(directorio.clone(), objeto_conteniendo_al_blob);
+        }
+
+        let mut vector: Vec<Objeto> = objetos.values().cloned().collect();
+        vector.sort_by_key(|x| match x {
+            Objeto::Blob(blob) => blob.ubicacion.clone(),
+            Objeto::Tree(tree) => PathBuf::from(&tree.directorio),
+        });
+        Ok(vector)
     }
 
     fn escribir_objetos(&self) -> Result<(), String> {
@@ -85,12 +113,22 @@ impl UpdateIndex {
             Err(_) => return Err("No se pudo escribir el archivo index".to_string()),
         };
 
-        let objetos_raiz = self.obtener_objetos_raiz();
-
-        for objeto in self.index.iter() {
+        for objeto in self.generar_objetos_raiz()? {
+            println!("{:?}", objeto);
             let line = match objeto {
-                Objeto::Blob(blob) => format!("{blob}"),
-                Objeto::Tree(tree) => format!("{tree}"),
+                Objeto::Blob(blob) => {
+                    HashObject {
+                        logger: self.logger.clone(),
+                        escribir: true,
+                        nombre_archivo: blob.ubicacion.to_str().unwrap().to_string(),
+                    }
+                    .ejecutar()?;
+                    format!("{blob}")
+                }
+                Objeto::Tree(tree) => {
+                    tree.escribir_en_base()?;
+                    format!("{tree}")
+                }
             };
 
             let _ = file.write_all(b"");
@@ -112,7 +150,6 @@ impl UpdateIndex {
 
         let indice = self.index.iter().position(|x| match x {
             Objeto::Blob(blob) => blob.ubicacion == PathBuf::from(&ubicacion_string),
-
             Objeto::Tree(tree) => tree.directorio == ubicacion_string,
         });
 
@@ -218,7 +255,25 @@ mod test {
     }
 
     #[test]
-    fn test03_archivo_con_objetos_agrega_nuevos_objetos() {
+    fn test03_agregar_un_objeto_en_un_directorio() {
+        clear_index();
+
+        let logger = Rc::new(Logger::new().unwrap());
+
+        let path = PathBuf::from("test_dir/objetos/archivo.txt");
+        let mut update_index = UpdateIndex::from(logger.clone(), path).unwrap();
+        update_index.ejecutar().unwrap();
+
+        let file = io::leer_a_string(&"./.gir/index".to_string()).unwrap();
+
+        assert_eq!(
+            file,
+            "40000 59fd3de622aa800bc7e0684773ce2dc40d876377 test_dir\n"
+        );
+    }
+
+    #[test]
+    fn test04_archivo_con_objetos_agrega_nuevos_objetos() {
         let _ = std::fs::remove_file("./.gir/index");
         let logger = Rc::new(Logger::new().unwrap());
         let ubicacion = PathBuf::from("test_file.txt");
@@ -253,16 +308,16 @@ mod test {
 
         assert_eq!(
             file,
-            "100644 678e12dc5c03a7cf6e9f64e688868962ab5d8b65 test_file.txt\n100644 2b824e648965b94c6c6b3dd0702feb91f699ed62 archivo.txt\n"
+            "40000 59fd3de622aa800bc7e0684773ce2dc40d876377 test_dir\n100644 678e12dc5c03a7cf6e9f64e688868962ab5d8b65 test_file.txt\n"
         );
     }
 
     #[test]
-    fn test04_agregar_un_directorio_al_index() {
+    fn test05_agregar_un_directorio_al_index() {
         clear_index();
         let logger = Rc::new(Logger::new().unwrap());
 
-        let path = PathBuf::from("test_dir/objetos");
+        let path = PathBuf::from("test_dir/muchos_objetos");
         let mut update_index = UpdateIndex::from(logger.clone(), path).unwrap();
         update_index.ejecutar().unwrap();
 
@@ -270,25 +325,7 @@ mod test {
 
         assert_eq!(
             file,
-            "40000 bf902127ac66b999327fba07a9f4b7a50b87922a objetos\n"
-        );
-    }
-
-    #[test]
-    fn test05_agregar_un_objeto_en_un_directorio() {
-        clear_index();
-
-        let logger = Rc::new(Logger::new().unwrap());
-
-        let path = PathBuf::from("test_dir/objetos/archivo.txt");
-        let mut update_index = UpdateIndex::from(logger.clone(), path).unwrap();
-        update_index.ejecutar().unwrap();
-
-        let file = io::leer_a_string(&"./.gir/index".to_string()).unwrap();
-
-        assert_eq!(
-            file,
-            "40000 bf902127ac66b999327fba07a9f4b7a50b87922a test_dir\n"
+            "40000 9ce160c141eb52a2479bd734e54e0a64a49c5d76 test_dir\n"
         );
     }
 
@@ -298,20 +335,27 @@ mod test {
 
         let logger = Rc::new(Logger::new().unwrap());
 
-        let tree_path = PathBuf::from("test_dir/muchos_objetos/archivo.txt");
-        let mut update_index = UpdateIndex::from(logger.clone(), tree_path).unwrap();
-        update_index.ejecutar().unwrap();
-
-        let blob_path = PathBuf::from("test_dir/muchos_objetos/archivo copy.txt");
-
-        let mut update_index = UpdateIndex::from(logger.clone(), blob_path).unwrap();
+        let archivo_1 = PathBuf::from("test_dir/muchos_objetos/archivo.txt");
+        let mut update_index = UpdateIndex::from(logger.clone(), archivo_1).unwrap();
         update_index.ejecutar().unwrap();
 
         let file = io::leer_a_string(&"./.gir/index".to_string()).unwrap();
 
         assert_eq!(
             file,
-            "100644 534b4ac42126f12 Readme.md\n100644 534b4ac42126f13 Cargo.toml\n40000 bf902127ac66b999327fba07a9f4b7a50b87922a objetos\n"
+            "40000 dff341b050347f57726eb70b97addee11ea73194 test_dir\n"
+        );
+
+        let archivo_2 = PathBuf::from("test_dir/muchos_objetos/archivo copy.txt");
+
+        let mut update_index = UpdateIndex::from(logger.clone(), archivo_2).unwrap();
+        update_index.ejecutar().unwrap();
+
+        let file = io::leer_a_string(&"./.gir/index".to_string()).unwrap();
+
+        assert_eq!(
+            file,
+            "40000 9ce160c141eb52a2479bd734e54e0a64a49c5d76 test_dir\n"
         );
     }
 }
