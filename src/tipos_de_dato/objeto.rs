@@ -37,19 +37,27 @@ impl Objeto {
     pub fn from_index(linea_index: String) -> Result<Objeto, String> {
         let mut line = linea_index.split_whitespace();
 
-        let modo = line.next().unwrap_or_else(|| "Error al leer el modo");
-        let hash = line
-            .next()
-            .unwrap_or_else(|| "Error al leer el nombre del hash");
-        let ubicacion_string = line
-            .next()
-            .unwrap_or_else(|| "Error al leer el nombre del archivo");
-        let ubicacion = PathBuf::from(ubicacion_string);
-        let nombre = ubicacion_string
-            .split('/')
-            .last()
-            .unwrap_or_else(|| "Error al leer el nombre del archivo");
+        let modo = match line.next() {
+            Some(modo) => modo,
+            None => Err("Error al leer el modo")?,
+        };
+        let hash = match line.next() {
+            Some(hash) => hash,
+            None => Err("Error al leer el hash")?,
+        };
+        let ubicacion_string = match line.next() {
+            Some(ubicacion) => ubicacion,
+            None => Err("Error al leer la ubicacion")?,
+        };
 
+        let ubicacion = PathBuf::from(ubicacion_string);
+        let nombre = match ubicacion_string
+            .split('/')
+            .last() {
+                Some(nombre) => nombre,
+                None => Err("Error al leer el nombre")?,
+            };
+            
         match modo {
             "100644" => Ok(Objeto::Blob(Blob {
                 nombre: nombre.to_string(),
@@ -138,6 +146,9 @@ impl Objeto {
         directorios_habilitados: &Vec<PathBuf>,
     ) -> Result<Objeto, String> {
         let mut objetos: Vec<Objeto> = Vec::new();
+
+        println!("directorio: {}", directorio);
+        println!("directorios habil: {:?}", directorios_habilitados);
 
         let metadata = match fs::metadata(&directorio) {
             Ok(metadata) => metadata,
