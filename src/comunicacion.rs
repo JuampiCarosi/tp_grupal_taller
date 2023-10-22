@@ -58,10 +58,10 @@ impl Comunicacion {
     
     pub fn responder(&mut self, lineas: Vec<String>) -> Result<(), ErrorDeComunicacion> {
         for linea in &lineas { 
-            self.flujo.write(linea.as_bytes())?;
+            self.flujo.write_all(linea.as_bytes())?;
         }
         // if lineas[0][4..] != "NAK".to_string() {
-            self.flujo.write(String::from("0000").as_bytes())?;
+            self.flujo.write_all(String::from("0000").as_bytes())?;
         // }
         Ok(())
     }
@@ -70,9 +70,9 @@ impl Comunicacion {
         println!("Hola, entre a responderte cliente");
         println!("linea 1: {:?}", str::from_utf8(&lineas[0]));
         for linea in lineas { 
-            self.flujo.write(&linea)?;
+            self.flujo.write_all(&linea)?;
         }
-        self.flujo.write(String::from("0000").as_bytes())?;
+        self.flujo.write_all(String::from("0000").as_bytes())?;
         Ok(())
     }
     
@@ -127,8 +127,8 @@ impl Comunicacion {
         println!("obteniendo paquete");
         let mut largo = [0; 4];
         self.flujo.read_exact(&mut largo)?;
-        let largo = u32::from_be_bytes(largo);
-        let indice = 0;
+        let _largo = u32::from_be_bytes(largo);
+        // let _indice = 0;
         // loop { 
     
         // }
@@ -143,7 +143,7 @@ impl Comunicacion {
         let hash = str::from_utf8(&bytes_obj)?;
         let logger = Rc::new(logger::Logger::new().unwrap());
     
-        let cat_file = CatFile::from(&mut vec![hash.to_string(), "-p".to_string()], logger.clone()).unwrap().ejecutar();
+        let _cat_file = CatFile::from(&mut vec![hash.to_string(), "-p".to_string()], logger.clone()).unwrap().ejecutar();
         Ok(())
     }
 }   

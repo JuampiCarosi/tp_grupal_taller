@@ -1,10 +1,9 @@
-use std::net::{TcpListener, TcpStream};
-use std::io::{self, Write, Read, BufRead};
+use std::net::TcpListener;
+use std::io;
 use std::env;
 use std::path::PathBuf;
 use std::str;
 use crate::err_comunicacion::ErrorDeComunicacion;
-use crate::packfile::Packfile;
 use crate::{io as git_io, comunicacion::Comunicacion};
 pub struct Servidor { 
     listener: TcpListener,
@@ -18,7 +17,7 @@ impl Servidor {
         let listener = TcpListener::bind(address)?;
         // busca la carpeta raiz del proyecto (evita hardcodear la ruta)
         let dir = env!("CARGO_MANIFEST_DIR").to_string();
-        let capacidades: Vec<String> = vec!["multi_ack", "thin-pack", "side-band", "side-band-64k", "ofs-delta", "shallow", "no-progress", "include-tag"].iter().map(|x| x.to_string()).collect();
+        let capacidades: Vec<String> = ["multi_ack", "thin-pack", "side-band", "side-band-64k", "ofs-delta", "shallow", "no-progress", "include-tag"].iter().map(|x| x.to_string()).collect();
         Ok(Servidor {listener, dir, capacidades })
     }
 
@@ -39,7 +38,7 @@ impl Servidor {
         let wants = comunicacion.obtener_lineas()?; // obtengo los wants del cliente 
         // a partir de aca se asume que va a ser un clone porque es el caso mas sencillo, despues cambiar
         // if wants.ends_with(&["0009done\n".to_string()]) {
-        let obj_ids = comunicacion.obtener_obj_ids(&wants);
+        let _obj_ids = comunicacion.obtener_obj_ids(&wants);
 
         comunicacion.responder(vec![git_io::obtener_linea_con_largo_hex("NAK\n")])?; // respondo NAK
         
@@ -83,7 +82,7 @@ impl Servidor {
             referencia_con_capacidades.push_str(&format!("{} ", cap));
         }
         let mut referencia_con_capacidades = referencia_con_capacidades.trim_end().to_string();
-        referencia_con_capacidades.push_str("\n");
+        referencia_con_capacidades.push('\n');
         git_io::obtener_linea_con_largo_hex(&referencia_con_capacidades)
     }
 

@@ -19,7 +19,6 @@ impl Packfile {
         }
     }
 
-
     // el objeto deberia ser el hash completo (?)
     fn aniadir_objeto(&mut self, objeto: String) -> Result<(), String>{
         let logger = Rc::new(Logger::new()?);

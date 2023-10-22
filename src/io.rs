@@ -1,13 +1,13 @@
-use std::io::{self, Write, Read, BufRead};
-use std::path::PathBuf;
+use std::io::{self, BufRead};
+use std::path::{PathBuf, Path};
 use std::fs;
 use std::str;
 use crate::err_comunicacion::ErrorDeComunicacion;
 
 
-pub fn leer_archivos_directorio(direccion: &mut PathBuf) -> Result<Vec<String>, ErrorDeComunicacion>{
+pub fn leer_archivos_directorio(direccion: &mut Path) -> Result<Vec<String>, ErrorDeComunicacion>{
     let mut contenidos: Vec<String> = Vec::new();
-    let head_dir = fs::read_dir(direccion.clone())?;
+    let head_dir = fs::read_dir(&direccion)?;
     for archivo in head_dir {
         match archivo {
             Ok(archivo) => {
@@ -64,16 +64,16 @@ pub fn obtener_objeto(dir: PathBuf) -> Result<String, ErrorDeComunicacion>{
 }
 
 
-pub fn obtener_refs(path: &mut PathBuf) -> Result<Vec<String>, ErrorDeComunicacion> {
+pub fn obtener_refs(path: &mut Path) -> Result<Vec<String>, ErrorDeComunicacion> {
     let mut refs: Vec<String> = Vec::new();
     if !path.exists() {
-        ErrorDeComunicacion::IoError(io::Error::new(io::ErrorKind::NotFound, "No existe el repositorio"));
+        io::Error::new(io::ErrorKind::NotFound, "No existe el repositorio");
     }
     if path.ends_with("HEAD") {
-        refs.push(obtener_ref_head(path.clone())?);
+        refs.push(obtener_ref_head(path.to_path_buf())?);
     }
     else {
-        let head_dir = fs::read_dir(path.clone())?;
+        let head_dir = fs::read_dir(&path)?;
         for archivo in head_dir {
             match archivo {
                 Ok(archivo) => {
@@ -100,14 +100,14 @@ pub fn obtener_linea_con_largo_hex(line: &str) -> String {
     format!("{}{}", largo_hex, line)
 }
 
-fn leer_archivo(path: &mut PathBuf) -> Result<String, ErrorDeComunicacion> {
-    let archivo = fs::File::open(path.clone())?;
+fn leer_archivo(path: &mut Path) -> Result<String, ErrorDeComunicacion> {
+    let archivo = fs::File::open(path.to_path_buf())?;
     let mut contenido = String::new();            
     std::io::BufReader::new(archivo).read_line(&mut contenido)?;
     Ok(contenido.trim().to_string())
 }
 
-fn obtener_referencia(path: &mut PathBuf) -> Result<String, ErrorDeComunicacion> {
+fn obtener_referencia(path: &mut Path) -> Result<String, ErrorDeComunicacion> {
     let contenido = leer_archivo(path)?;            
     let referencia = format!("{} {}", contenido.trim(), path.to_str().ok_or(std::io::Error::new(std::io::ErrorKind::NotFound, "No existe HEAD"))?);
     Ok(obtener_linea_con_largo_hex(&referencia))
@@ -121,9 +121,9 @@ fn obtener_ref_head(path: PathBuf) -> Result<String, ErrorDeComunicacion>{
     let head_ref: Vec<&str> = contenido.split_whitespace().collect();
     if let Some(ruta) = path.clone().parent(){
         let cont = leer_archivo(&mut ruta.join(head_ref[1]))? + " HEAD";
-        return Ok(obtener_linea_con_largo_hex(&cont));
+        Ok(obtener_linea_con_largo_hex(&cont))
     } else {
-        return Err(ErrorDeComunicacion::IoError(io::Error::new(io::ErrorKind::NotFound, "No existe HEAD")));
+        Err(ErrorDeComunicacion::IoError(io::Error::new(io::ErrorKind::NotFound, "No existe HEAD")))
     }
 }
 
@@ -164,7 +164,7 @@ pub fn leer_bytes(archivo: &String) -> Result<Vec<u8>, String> {
     match fs::read(archivo) {
         Ok(contenido) => Ok(contenido),
         Err(_) => {
-            return Err("No se pudo leer el archivo".to_string());
+            Err("No se pudo leer el archivo".to_string())
         }
     }
 }
