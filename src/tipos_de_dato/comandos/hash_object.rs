@@ -129,7 +129,7 @@ impl HashObject {
             let ruta = format!(".gir/objects/{}/{}", &hash[..2], &hash[2..]);
             let contenido = io::leer_a_string(&self.ruta.clone())?;
 
-            io::escrbir_bytes(&ruta, self.comprimir_contenido(contenido)?)?;
+            io::escribir_bytes(&ruta, self.comprimir_contenido(contenido)?)?;
         }
         let mensaje = format!("Objeto gir hasheado en {}", self.ruta);
         self.logger.log(mensaje);

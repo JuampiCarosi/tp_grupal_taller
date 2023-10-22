@@ -1,6 +1,6 @@
 use std::{fs, path::Path, rc::Rc};
 
-use crate::tipos_de_dato::logger::Logger;
+use crate::{tipos_de_dato::logger::Logger, io};
 
 pub struct Init {
     path: String,
@@ -17,7 +17,11 @@ impl Init {
     }
 
     pub fn from(args: Vec<String>, logger: Rc<Logger>) -> Result<Init, String> {
+        logger.log(format!("Se intenta crear comando init con args:{:?}", args));
+
         Self::validar_argumentos(args.clone())?;
+
+        logger.log(format!("Se creo correctamente el comando init:{:?}", args));
 
         Ok(Init {
             path: Self::obtener_path(args),
@@ -26,8 +30,10 @@ impl Init {
     }
 
     pub fn ejecutar(&self) -> Result<(), String> {
-        self.crear_directorio_gir()
-            .map_err(|err| format!("{}", err))?;
+        
+        self.logger.log(format!("Se ejecuta init"));
+
+        self.crear_directorio_gir()?;
 
         let mensaje = format!("Directorio gir creado en {}", self.path);
 
@@ -45,20 +51,41 @@ impl Init {
         }
     }
 
-    fn crear_directorio_gir(&self) -> Result<(), std::io::Error> {
+    fn crear_directorio_gir(&self) -> Result<(), String> {
         if self.verificar_si_ya_esta_creado_directorio_gir() {
-            return Err(std::io::Error::new(
-                std::io::ErrorKind::AlreadyExists,
-                "Ya existe un repositorio en este directorio",
-            ));
+            return Err("Ya existe un repositorio en este directorio".to_string());
         };
 
-        fs::create_dir_all(self.path.clone())?;
-        fs::create_dir_all(self.path.clone() + "/objects")?;
-        fs::create_dir_all(self.path.clone() + "/refs/heads")?;
-        fs::create_dir_all(self.path.clone() + "/refs/tags")?;
+        if let Err(msj_err) = self.crear_directorios_y_archivos_gir(){
+            self.borar_directorios_y_archivos_git();
+            return Err(msj_err);
+        }
 
         Ok(())
+    }
+
+    fn borar_directorios_y_archivos_git(&self){
+        let _ = fs::remove_dir_all(self.path.clone());
+    }
+
+    fn crear_directorios_y_archivos_gir(&self) -> Result<(), String> {
+        io::crear_directorio(self.path.clone())?;
+        io::crear_directorio(self.path.clone() + "/objects")?;
+        io::crear_directorio(self.path.clone() + "/refs/heads")?;
+        io::crear_directorio(self.path.clone() + "/refs/tags")?;
+        io::crear_directorio(self.path.clone() + "/refs/remotes")?;
+
+        io::crear_archivo(self.path.clone() + "/CONFIG")?;
+        io::crear_archivo(self.path.clone() + "/refs/heads/master")?;
+        self.crear_archivo_head()
+    }
+
+    fn crear_archivo_head(&self) -> Result<(), String> {
+        let dir_archivo_head = self.path.clone() + "/HEAD";
+        let contenido_inicial_head ="ref: refs/heads/master";
+
+        io::crear_archivo(dir_archivo_head.clone())?;
+        io::escribir_bytes(dir_archivo_head, contenido_inicial_head)
     }
 
     fn verificar_si_ya_esta_creado_directorio_gir(&self) -> bool {
