@@ -107,7 +107,6 @@ impl Add {
         }
 
         for (_, objeto) in &self.objetos_con_ubicacion {
-            println!("{:?}", objeto);
             UpdateIndex::from(self.logger.clone(), objeto.clone())
                 .unwrap()
                 .ejecutar()?;

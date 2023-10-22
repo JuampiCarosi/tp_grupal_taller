@@ -120,13 +120,6 @@ impl Objeto {
         directorios_habilitados: &Vec<String>,
     ) -> bool {
         for directorio_habilitado in directorios_habilitados {
-            // println!("directorio habilitado: {}", directorio_habilitado);
-            // println!("directorio: {}", directorio);
-            // println!(
-            //     "esta habilitado: {}",
-            //     directorio.starts_with(directorio_habilitado)
-            // );
-
             if directorio.starts_with(directorio_habilitado)
                 || directorio_habilitado.starts_with(directorio)
             {
@@ -155,13 +148,6 @@ impl Objeto {
                 let entrada = entrada.unwrap();
                 let path = entrada.path();
                 let path = path.to_str().unwrap().to_string();
-
-                // println!(
-                //     "{},{}",
-                //     path,
-                //     path.contains(".DS_Store")
-                //         || !Self::esta_directorio_habilitado(&path, directorios_habilitados)
-                // );
 
                 if path.contains(".DS_Store")
                     || !Self::esta_directorio_habilitado(&path, directorios_habilitados)

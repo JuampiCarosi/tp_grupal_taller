@@ -114,7 +114,6 @@ impl UpdateIndex {
         };
 
         for objeto in self.generar_objetos_raiz()? {
-            println!("{:?}", objeto);
             let line = match objeto {
                 Objeto::Blob(blob) => {
                     HashObject {
