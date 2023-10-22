@@ -44,6 +44,7 @@ impl HashObject {
         let contenido = io::leer_a_string(&self.nombre_archivo.clone())?;
         let header = format!("blob {}\0", contenido.len());
         let contenido_total = header + &contenido;
+
         Ok(contenido_total)
     }
 
@@ -60,7 +61,7 @@ impl HashObject {
 
         if self.escribir {
             let ruta = format!(".gir/objects/{}/{}", &hash[..2], &hash[2..]);
-            io::escrbir_bytes(&ruta, comprimir_contenido(contenido)?)?;
+            io::escribir_bytes(&ruta, comprimir_contenido(contenido)?)?;
         }
         let mensaje = format!("Objeto gir hasheado en {}", self.nombre_archivo);
         self.logger.log(mensaje);
@@ -70,7 +71,7 @@ impl HashObject {
 
 #[cfg(test)]
 mod test {
-    use std::{io::Read, rc::Rc};
+    use std::{io::Read, path::PathBuf, rc::Rc};
 
     use flate2::read::ZlibDecoder;
 
@@ -82,7 +83,7 @@ mod test {
     #[test]
     fn test01_hash_object_de_un_blob_devuelve_el_hash_correcto() {
         let mut args = vec!["test_dir/objetos/archivo.txt".to_string()];
-        let logger = Rc::new(Logger::new().unwrap());
+        let logger = Rc::new(Logger::new(PathBuf::from("tmp/hash_object_test01")).unwrap());
         let hash_object = HashObject::from(&mut args, logger).unwrap();
         let hash = hash_object.ejecutar().unwrap();
         assert_eq!(hash, "2b824e648965b94c6c6b3dd0702feb91f699ed62");
@@ -91,7 +92,7 @@ mod test {
     #[test]
     fn test02_hash_object_de_un_blob_con_opcion_w_devuelve_el_hash_correcto_y_lo_escribe() {
         let mut args = vec!["-w".to_string(), "test_dir/objetos/archivo.txt".to_string()];
-        let logger = Rc::new(Logger::new().unwrap());
+        let logger = Rc::new(Logger::new(PathBuf::from("tmp/hash_object_test01")).unwrap());
         let hash_object = HashObject::from(&mut args, logger).unwrap();
         let hash = hash_object.ejecutar().unwrap();
         assert_eq!(hash, "2b824e648965b94c6c6b3dd0702feb91f699ed62");

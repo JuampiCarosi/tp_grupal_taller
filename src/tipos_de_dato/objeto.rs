@@ -94,7 +94,7 @@ impl Objeto {
                 objetos,
             }))
         } else if fs::metadata(&directorio).unwrap().is_file() {
-            let logger = Rc::new(logger::Logger::new()?);
+            let logger = Rc::new(logger::Logger::new(PathBuf::from("tmp/objeto"))?);
             let hash = HashObject {
                 logger,
                 escribir: false,
@@ -171,7 +171,7 @@ impl Objeto {
                 objetos,
             }))
         } else if fs::metadata(&directorio).unwrap().is_file() {
-            let logger = Rc::new(logger::Logger::new()?);
+            let logger = Rc::new(logger::Logger::new(PathBuf::from("tmp/objeto"))?);
             let hash = HashObject {
                 logger,
                 escribir: false,

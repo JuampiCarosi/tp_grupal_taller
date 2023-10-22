@@ -179,12 +179,12 @@ impl Tree {
         let header = format!("tree {}\0", contenido.len());
 
         let contenido_total = format!("{}{}", header, contenido);
-        io::escrbir_bytes(&ruta, self.comprimir_contenido(contenido_total)?)?;
+        io::escribir_bytes(&ruta, self.comprimir_contenido(contenido_total)?)?;
 
         for objeto in &self.objetos {
             match objeto {
                 Objeto::Blob(blob) => {
-                    let logger = Rc::new(logger::Logger::new()?);
+                    let logger = Rc::new(logger::Logger::new(PathBuf::from("tmp/tree"))?);
                     HashObject {
                         logger: logger.clone(),
                         escribir: true,

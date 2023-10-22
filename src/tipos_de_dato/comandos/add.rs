@@ -172,7 +172,7 @@ impl Add {
 #[cfg(test)]
 
 mod test {
-    use std::{io::Write, rc::Rc};
+    use std::{io::Write, path::PathBuf, rc::Rc};
 
     use crate::{
         io,
@@ -200,7 +200,7 @@ mod test {
     fn test01_archivo_vacio_se_llena_con_objeto_agregado() {
         clear_index();
         create_test_file();
-        let logger = Rc::new(Logger::new().unwrap());
+        let logger = Rc::new(Logger::new(PathBuf::from("tmp/add_test01")).unwrap());
         let ubicacion = "test_file.txt".to_string();
         let mut add = Add::from(vec![ubicacion], logger).unwrap();
 
@@ -218,7 +218,7 @@ mod test {
     #[test]
     fn test02_archivo_con_objeto_actualiza_el_objeto() {
         modify_test_file();
-        let logger = Rc::new(Logger::new().unwrap());
+        let logger = Rc::new(Logger::new(PathBuf::from("tmp/add_test02")).unwrap());
         let ubicacion = "test_file.txt".to_string();
         let mut add = Add::from(vec![ubicacion], logger).unwrap();
 
@@ -243,7 +243,7 @@ mod test {
     fn test03_agregar_un_objeto_en_un_directorio() {
         clear_index();
 
-        let logger = Rc::new(Logger::new().unwrap());
+        let logger = Rc::new(Logger::new(PathBuf::from("tmp/add_test03")).unwrap());
 
         let path = "test_dir/objetos/archivo.txt".to_string();
         let mut add = Add::from(vec![path], logger.clone()).unwrap();
@@ -260,7 +260,7 @@ mod test {
     #[test]
     fn test04_archivo_con_objetos_agrega_nuevos_objetos() {
         clear_index();
-        let logger = Rc::new(Logger::new().unwrap());
+        let logger = Rc::new(Logger::new(PathBuf::from("tmp/add_test04")).unwrap());
         let ubicacion = "test_file.txt".to_string();
 
         let mut add = Add::from(vec![ubicacion], logger.clone()).unwrap();
@@ -298,7 +298,7 @@ mod test {
     #[test]
     fn test05_agregar_un_directorio_al_index() {
         clear_index();
-        let logger = Rc::new(Logger::new().unwrap());
+        let logger = Rc::new(Logger::new(PathBuf::from("tmp/add_test05")).unwrap());
 
         let path = "test_dir/muchos_objetos".to_string();
         let mut add = Add::from(vec![path], logger.clone()).unwrap();
@@ -316,7 +316,7 @@ mod test {
     fn test06_editar_hijo_actualiza_padre() {
         clear_index();
 
-        let logger = Rc::new(Logger::new().unwrap());
+        let logger = Rc::new(Logger::new(PathBuf::from("tmp/add_test06")).unwrap());
 
         let archivo_1 = "test_dir/muchos_objetos/archivo.txt".to_string();
         let mut add = Add::from(vec![archivo_1], logger.clone()).unwrap();
@@ -345,7 +345,7 @@ mod test {
     #[test]
     fn test07_agregar_dos_archivos() {
         clear_index();
-        let logger = Rc::new(Logger::new().unwrap());
+        let logger = Rc::new(Logger::new(PathBuf::from("tmp/add_test07")).unwrap());
         let ubicacion = "test_file.txt".to_string();
 
         let ubicacion2 = "test_dir/objetos/archivo.txt".to_string();

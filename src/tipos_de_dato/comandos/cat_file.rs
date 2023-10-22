@@ -81,11 +81,11 @@ mod test {
             visualizaciones::Visualizaciones,
         },
     };
-    use std::rc::Rc;
+    use std::{path::PathBuf, rc::Rc};
 
     #[test]
     fn test01_cat_file_blob_para_visualizar_muestra_el_contenido_correcto() {
-        let logger = Rc::new(Logger::new().unwrap());
+        let logger = Rc::new(Logger::new(PathBuf::from("tmp/cat_file_test01")).unwrap());
         let hash_object = HashObject::from(
             &mut vec!["-w".to_string(), "test_dir/objetos/archivo.txt".to_string()],
             logger.clone(),
@@ -108,7 +108,7 @@ mod test {
 
     #[test]
     fn test02_cat_file_blob_muestra_el_tamanio_correcto() {
-        let logger = Rc::new(Logger::new().unwrap());
+        let logger = Rc::new(Logger::new(PathBuf::from("tmp/cat_file_test02")).unwrap());
         let hash_object = HashObject::from(
             &mut vec!["-w".to_string(), "test_dir/objetos/archivo.txt".to_string()],
             logger.clone(),
@@ -131,7 +131,7 @@ mod test {
 
     #[test]
     fn test03_cat_file_blob_muestra_el_tipo_de_objeto_correcto() {
-        let logger = Rc::new(Logger::new().unwrap());
+        let logger = Rc::new(Logger::new(PathBuf::from("tmp/cat_file_test03")).unwrap());
         let hash_object = HashObject::from(
             &mut vec!["-w".to_string(), "test_dir/objetos/archivo.txt".to_string()],
             logger.clone(),
