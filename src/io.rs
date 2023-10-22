@@ -23,12 +23,16 @@ pub fn crear_archivo<P: AsRef<Path> + Clone>(dir_directorio: P) -> Result<(), St
     Ok(())
 }
 
-pub fn leer_a_string(path: &String) -> Result<String, String> {
-    match fs::read_to_string(path) {
+pub fn leer_a_string<P>(path: P) -> Result<String, String>
+where
+    P: AsRef<Path>,
+{
+    match fs::read_to_string(&path) {
         Ok(contenido) => Ok(contenido),
-        Err(_) => {
-            return Err("No se pudo leer el archivo".to_string());
-        }
+        Err(_) => Err(format!(
+            "No se pudo leer el archivo {}",
+            path.as_ref().display()
+        )),
     }
 }
 
@@ -45,6 +49,18 @@ where
     }
 }
 
+pub fn leer_bytes<P>(archivo: P) -> Result<Vec<u8>, String>
+where
+    P: AsRef<Path>,
+{
+    match fs::read(&archivo) {
+        Ok(contenido) => Ok(contenido),
+        Err(_) => Err(format!(
+            "No se pudo leer el archivo {}",
+            archivo.as_ref().display()
+        )),
+    }
+}
 fn si_no_existe_directorio_de_archivo_crearlo<P>(dir_archivo: &P) -> Result<(), String>
 where
     P: AsRef<Path>,

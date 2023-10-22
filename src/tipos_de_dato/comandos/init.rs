@@ -1,10 +1,10 @@
 use std::{fs, path::Path, rc::Rc};
 
-use crate::{tipos_de_dato::logger::Logger, io};
+use crate::{io, tipos_de_dato::logger::Logger};
 
 pub struct Init {
-    path: String,
-    logger: Rc<Logger>,
+    pub path: String,
+    pub logger: Rc<Logger>,
 }
 
 impl Init {
@@ -29,8 +29,7 @@ impl Init {
         })
     }
 
-    pub fn ejecutar(&self) -> Result<(), String> {
-        
+    pub fn ejecutar(&self) -> Result<String, String> {
         self.logger.log(format!("Se ejecuta init"));
 
         self.crear_directorio_gir()?;
@@ -38,9 +37,8 @@ impl Init {
         let mensaje = format!("Directorio gir creado en {}", self.path);
 
         self.logger.log(mensaje.clone());
-        println!("{}", mensaje);
 
-        Ok(())
+        Ok(mensaje)
     }
 
     fn obtener_path(args: Vec<String>) -> String {
@@ -56,7 +54,7 @@ impl Init {
             return Err("Ya existe un repositorio en este directorio".to_string());
         };
 
-        if let Err(msj_err) = self.crear_directorios_y_archivos_gir(){
+        if let Err(msj_err) = self.crear_directorios_y_archivos_gir() {
             self.borar_directorios_y_archivos_git();
             return Err(msj_err);
         }
@@ -64,7 +62,7 @@ impl Init {
         Ok(())
     }
 
-    fn borar_directorios_y_archivos_git(&self){
+    fn borar_directorios_y_archivos_git(&self) {
         let _ = fs::remove_dir_all(self.path.clone());
     }
 
@@ -82,7 +80,7 @@ impl Init {
 
     fn crear_archivo_head(&self) -> Result<(), String> {
         let dir_archivo_head = self.path.clone() + "/HEAD";
-        let contenido_inicial_head ="ref: refs/heads/master";
+        let contenido_inicial_head = "ref: refs/heads/master";
 
         io::crear_archivo(dir_archivo_head.clone())?;
         io::escribir_bytes(dir_archivo_head, contenido_inicial_head)

@@ -111,7 +111,6 @@ impl Drop for Logger {
         if let Some(handle) = self.handle.take() {
             let _ = handle.join();
         }
-        println!("Logger cerrado");
     }
 }
 
@@ -178,15 +177,13 @@ mod test {
     fn test04_el_logger_puede_escribir_mensajes_de_varios_threads() {
         let ubicacion_archivo = PathBuf::from("test_dir/test04.txt");
         let logger = Arc::new(Logger::new(ubicacion_archivo.clone()).unwrap());
-        
         let msg_test_01 = "Thread 1 saluda".to_string();
         let msg_test_02 = "Thread 2 saluda".to_string();
         let msg_test_03 = "Thread 3 saluda".to_string();
 
-        
-        let handle_1= crear_thread_que_mande_mensaje_al_loger(&logger, msg_test_01.clone());
-        let handle_2= crear_thread_que_mande_mensaje_al_loger(&logger, msg_test_02.clone());
-        let handle_3= crear_thread_que_mande_mensaje_al_loger(&logger, msg_test_03.clone());
+        let handle_1 = crear_thread_que_mande_mensaje_al_loger(&logger, msg_test_01.clone());
+        let handle_2 = crear_thread_que_mande_mensaje_al_loger(&logger, msg_test_02.clone());
+        let handle_3 = crear_thread_que_mande_mensaje_al_loger(&logger, msg_test_03.clone());
 
         handle_1.join().unwrap();
         handle_2.join().unwrap();
@@ -195,16 +192,15 @@ mod test {
 
         assert_el_archivo_log_contiene(
             ubicacion_archivo.clone(),
-            vec![
-                msg_test_01,
-                msg_test_02,
-                msg_test_03,
-            ],
+            vec![msg_test_01, msg_test_02, msg_test_03],
         );
         eliminar_archivo_log(ubicacion_archivo);
     }
 
-    fn crear_thread_que_mande_mensaje_al_loger(logger: &Arc<Logger>, msg: String) ->thread::JoinHandle<()>{
+    fn crear_thread_que_mande_mensaje_al_loger(
+        logger: &Arc<Logger>,
+        msg: String,
+    ) -> thread::JoinHandle<()> {
         let logger1 = logger.clone();
         let handle_1 = thread::spawn(move || {
             logger1.log(msg);

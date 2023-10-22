@@ -1,138 +1,115 @@
+use crate::utilidades_de_compresion::comprimir_contenido;
 use crate::{io, tipos_de_dato::logger::Logger};
-use flate2::{self, write::ZlibEncoder, Compression};
 use sha1::{Digest, Sha1};
-use std::{fs, io::Write, path, rc::Rc};
+use std::path::PathBuf;
+use std::rc::Rc;
 
 pub struct HashObject {
-    logger: Rc<Logger>,
-    tipo_objeto: String,
-    escribir: bool,
-    ruta: String,
+    pub logger: Rc<Logger>,
+    pub escribir: bool,
+    pub ubicacion_archivo: PathBuf,
 }
 
 impl HashObject {
-    fn obtener_nombre_archivo(args: &mut Vec<String>) -> Result<String, String> {
-        match args.pop() {
-            Some(nombre_archivo) => {
-                if !path::Path::new(&nombre_archivo).exists() {
-                    return Err(format!("No existe el archivo {}", nombre_archivo));
-                }
-                if !path::Path::new(&nombre_archivo).is_file() {
-                    return Err(format!("{} no es un archivo", nombre_archivo));
-                }
-                Ok(nombre_archivo)
-            }
-            None => {
-                return Err(format!("No se especifico un archivo"));
-            }
-        }
-    }
-
-    fn escribir_tipo<'a>(
-        siguiente: Option<&'a String>,
-        tipo: &'a mut String,
-    ) -> Result<(), String> {
-        let tipo_a_escribir = match siguiente {
-            Some(tipo) => tipo,
-            None => {
-                return Err(format!("Se esperaba un tipo de objeto luego de -t"));
-            }
-        };
-
-        match tipo_a_escribir.as_str() {
-            "blob" | "commit" | "tree" | "tag" => *tipo = tipo_a_escribir.to_owned(),
-            _ => return Err(format!("Tipo de objeto invalido {}", tipo)),
-        };
-
-        Ok(())
-    }
-
-    fn escribir_path<'a>(
-        siguiente: Option<&'a String>,
-        path: &'a mut String,
-    ) -> Result<(), String> {
-        let path_a_escribir = match siguiente {
-            Some(path) => path,
-            None => {
-                return Err(format!("Se esperaba un path luego de --path"));
-            }
-        };
-
-        *path = path_a_escribir.to_owned();
-
-        Ok(())
+    fn obtener_nombre_archivo(args: &mut Vec<String>) -> Result<PathBuf, String> {
+        let nombre_string = args
+            .pop()
+            .ok_or_else(|| "No se especifico un archivo".to_string());
+        Ok(PathBuf::from(nombre_string?))
     }
 
     pub fn from(args: &mut Vec<String>, logger: Rc<Logger>) -> Result<HashObject, String> {
-        let mut tipo_objeto = String::from("blob");
-        let mut prefijo = String::from("./");
         let mut escribir = false;
         let nombre_archivo = Self::obtener_nombre_archivo(args)?;
 
-        let mut iterador = args.iter();
-        while let Some(arg) = iterador.next() {
+        let iterador = args.iter();
+        for arg in iterador {
             match arg.as_str() {
-                "-t" => Self::escribir_tipo(iterador.next(), &mut tipo_objeto)?,
                 "-w" => {
                     escribir = true;
                 }
-                "--path" => Self::escribir_path(iterador.next(), &mut prefijo)?,
                 _ => {
-                    return Err(format!("Opcion desconocida {}, gir hash-object [-t <type>] [-w] [--path=<file>] <file>", arg));
+                    return Err(format!(
+                        "Opcion desconocida {}\n gir hash-object [-w] <file>",
+                        arg
+                    ));
                 }
             }
         }
-        let ruta = format!("{}{}", prefijo, nombre_archivo);
         Ok(HashObject {
             logger,
-            tipo_objeto,
+            ubicacion_archivo: nombre_archivo,
             escribir,
-            ruta,
         })
     }
 
-    fn hashear_objeto(&self) -> Result<String, String> {
-        let contenido = match fs::read_to_string(self.ruta.clone()) {
-            Ok(contenido) => contenido,
-            Err(_) => {
-                return Err("No se pudo leer el archivo".to_string());
-            }
-        };
-        let hash = self.hashear_contenido_objeto(&contenido);
-        Ok(hash)
+    fn construir_contenido(&self) -> Result<String, String> {
+        let contenido = io::leer_a_string(&self.ubicacion_archivo.clone())?;
+        let header = format!("blob {}\0", contenido.len());
+        let contenido_total = header + &contenido;
+
+        Ok(contenido_total)
     }
 
     fn hashear_contenido_objeto(&self, contenido: &str) -> String {
-        let header = format!("{} {}\0", self.tipo_objeto, contenido.len());
-        let contenido_total = header + contenido;
         let mut hasher = Sha1::new();
-        hasher.update(contenido_total);
+        hasher.update(contenido);
         let hash = hasher.finalize();
         format!("{:x}", hash)
     }
 
-    fn comprimir_contenido(&self, contenido: String) -> Result<Vec<u8>, String> {
-        let mut compresor = ZlibEncoder::new(Vec::new(), Compression::default());
-        if compresor.write_all(contenido.as_bytes()).is_err() {
-            return Err("No se pudo comprimir el contenido".to_string());
-        };
-        match compresor.finish() {
-            Ok(contenido_comprimido) => Ok(contenido_comprimido),
-            Err(_) => Err("No se pudo comprimir el contenido".to_string()),
-        }
-    }
+    pub fn ejecutar(&self) -> Result<String, String> {
+        let contenido = self.construir_contenido()?;
+        let hash = self.hashear_contenido_objeto(&contenido);
 
-    pub fn ejecutar(&self) -> Result<(), String> {
-        let hash = self.hashear_objeto()?;
-        println!("{}", hash);
         if self.escribir {
             let ruta = format!(".gir/objects/{}/{}", &hash[..2], &hash[2..]);
-            let contenido = io::leer_a_string(&self.ruta.clone())?;
-
-            io::escribir_bytes(&ruta, self.comprimir_contenido(contenido)?)?;
+            io::escribir_bytes(&ruta, comprimir_contenido(contenido)?)?;
         }
-        let mensaje = format!("Objeto gir hasheado en {}", self.ruta);
+        let mensaje = format!(
+            "Objeto gir hasheado en {}",
+            self.ubicacion_archivo.to_string_lossy()
+        );
         self.logger.log(mensaje);
-        Ok(())
+        Ok(hash)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use std::{io::Read, path::PathBuf, rc::Rc};
+
+    use flate2::read::ZlibDecoder;
+
+    use crate::{
+        io,
+        tipos_de_dato::{comandos::hash_object::HashObject, logger::Logger},
+    };
+
+    #[test]
+    fn test01_hash_object_de_un_blob_devuelve_el_hash_correcto() {
+        let mut args = vec!["test_dir/objetos/archivo.txt".to_string()];
+        let logger = Rc::new(Logger::new(PathBuf::from("tmp/hash_object_test01")).unwrap());
+        let hash_object = HashObject::from(&mut args, logger).unwrap();
+        let hash = hash_object.ejecutar().unwrap();
+        assert_eq!(hash, "2b824e648965b94c6c6b3dd0702feb91f699ed62");
+    }
+
+    #[test]
+    fn test02_hash_object_de_un_blob_con_opcion_w_devuelve_el_hash_correcto_y_lo_escribe() {
+        let mut args = vec!["-w".to_string(), "test_dir/objetos/archivo.txt".to_string()];
+        let logger = Rc::new(Logger::new(PathBuf::from("tmp/hash_object_test01")).unwrap());
+        let hash_object = HashObject::from(&mut args, logger).unwrap();
+        let hash = hash_object.ejecutar().unwrap();
+        assert_eq!(hash, "2b824e648965b94c6c6b3dd0702feb91f699ed62");
+        let contenido_leido =
+            io::leer_bytes(&".gir/objects/2b/824e648965b94c6c6b3dd0702feb91f699ed62".to_string())
+                .unwrap();
+        let mut descompresor = ZlibDecoder::new(contenido_leido.as_slice());
+        let mut contenido_descomprimido = String::new();
+        descompresor
+            .read_to_string(&mut contenido_descomprimido)
+            .unwrap();
+        assert_eq!(contenido_descomprimido, "blob 23\0contenido de un arxhivo");
     }
 }
