@@ -6,7 +6,7 @@ fn main() -> Result<(), String> {
     let args = std::env::args().collect::<Vec<String>>();
     let logger = Rc::new(Logger::new()?);
 
-    let comando = match Comando::new(args, logger.clone()) {
+    let mut comando = match Comando::new(args, logger.clone()) {
         Ok(comando) => comando,
         Err(err) => {
             logger.log(err);
@@ -14,10 +14,15 @@ fn main() -> Result<(), String> {
         }
     };
 
-    if let Err(mensaje) = comando.ejecutar() {
-        logger.log(mensaje.clone());
-        return Err(mensaje.clone());
-    }
+    match comando.ejecutar() {
+        Ok(mensaje) => {
+            logger.log(mensaje.clone());
+            println!("{}", mensaje);
+        }
+        Err(mensaje) => {
+            logger.log(mensaje);
+        }
+    };
 
     Ok(())
 }

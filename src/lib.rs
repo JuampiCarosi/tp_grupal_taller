@@ -8,11 +8,10 @@ pub mod tipos_de_dato {
         pub mod tree;
     }
     pub mod comandos {
-        // pub mod add;
+        pub mod add;
         pub mod cat_file;
         pub mod hash_object;
         pub mod init;
-        pub mod update_index;
         pub mod version;
     }
 }
