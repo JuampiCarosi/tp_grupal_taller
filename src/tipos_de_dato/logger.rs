@@ -177,7 +177,6 @@ mod test {
     fn test04_el_logger_puede_escribir_mensajes_de_varios_threads() {
         let ubicacion_archivo = PathBuf::from("test_dir/test04.txt");
         let logger = Arc::new(Logger::new(ubicacion_archivo.clone()).unwrap());
-
         let msg_test_01 = "Thread 1 saluda".to_string();
         let msg_test_02 = "Thread 2 saluda".to_string();
         let msg_test_03 = "Thread 3 saluda".to_string();

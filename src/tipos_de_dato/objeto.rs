@@ -51,13 +51,11 @@ impl Objeto {
         };
 
         let ubicacion = PathBuf::from(ubicacion_string);
-        let nombre = match ubicacion_string
-            .split('/')
-            .last() {
-                Some(nombre) => nombre,
-                None => Err("Error al leer el nombre")?,
-            };
-            
+        let nombre = match ubicacion_string.split('/').last() {
+            Some(nombre) => nombre,
+            None => Err("Error al leer el nombre")?,
+        };
+
         match modo {
             "100644" => Ok(Objeto::Blob(Blob {
                 nombre: nombre.to_string(),
@@ -146,9 +144,6 @@ impl Objeto {
         directorios_habilitados: &Vec<PathBuf>,
     ) -> Result<Objeto, String> {
         let mut objetos: Vec<Objeto> = Vec::new();
-
-        println!("directorio: {}", directorio);
-        println!("directorios habil: {:?}", directorios_habilitados);
 
         let metadata = match fs::metadata(&directorio) {
             Ok(metadata) => metadata,
