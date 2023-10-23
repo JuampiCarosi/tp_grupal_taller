@@ -30,7 +30,7 @@ impl Init {
     }
 
     pub fn ejecutar(&self) -> Result<String, String> {
-        self.logger.log(format!("Se ejecuta init"));
+        self.logger.log("Se ejecuta init".to_string());
 
         self.crear_directorio_gir()?;
 

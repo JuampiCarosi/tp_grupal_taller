@@ -202,10 +202,10 @@ mod test {
         msg: String,
     ) -> thread::JoinHandle<()> {
         let logger1 = logger.clone();
-        let handle_1 = thread::spawn(move || {
+
+        thread::spawn(move || {
             logger1.log(msg);
-        });
-        handle_1
+        })
     }
 
     fn assert_el_archivo_log_contiene(ubicacion_archivo: PathBuf, contenidos: Vec<String>) {

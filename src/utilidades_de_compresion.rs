@@ -4,7 +4,7 @@ use std::io::{Read, Write};
 
 pub fn descomprimir_objeto(hash: String) -> Result<String, String> {
     let ruta_objeto = format!(".gir/objects/{}/{}", &hash[..2], &hash[2..]);
-    let contenido_leido = io::leer_bytes(&ruta_objeto)?;
+    let contenido_leido = io::leer_bytes(ruta_objeto)?;
     let mut descompresor = ZlibDecoder::new(contenido_leido.as_slice());
     let mut contenido_descomprimido = String::new();
     match descompresor.read_to_string(&mut contenido_descomprimido) {

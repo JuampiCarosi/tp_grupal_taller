@@ -20,7 +20,7 @@ fn obtener_contenido_objeto(hash: String) -> Result<(String, String), String> {
 
 pub fn conseguir_contenido(hash: String) -> Result<String, String> {
     let (_, contenido) = obtener_contenido_objeto(hash)?;
-    Ok(format!("{}", contenido))
+    Ok(contenido.to_string())
 }
 
 pub fn conseguir_tamanio(hash: String) -> Result<String, String> {
@@ -29,7 +29,7 @@ pub fn conseguir_tamanio(hash: String) -> Result<String, String> {
         Some((_, size)) => size,
         None => return Err("Objeto invalido".to_string()),
     };
-    Ok(format!("{}", size))
+    Ok(size.to_string())
 }
 
 pub fn conseguir_tipo_objeto(hash: String) -> Result<String, String> {
@@ -38,7 +38,7 @@ pub fn conseguir_tipo_objeto(hash: String) -> Result<String, String> {
         Some((tipo, _)) => tipo,
         None => return Err("Objeto invalido".to_string()),
     };
-    Ok(format!("{}", tipo_objeto))
+    Ok(tipo_objeto.to_string())
 }
 
 impl CatFile {
@@ -99,7 +99,7 @@ mod test {
         };
 
         let contenido = cat_file.ejecutar().unwrap();
-        let contenido_esperado = io::leer_a_string(&"test_dir/objetos/archivo.txt".to_string())
+        let contenido_esperado = io::leer_a_string("test_dir/objetos/archivo.txt")
             .unwrap()
             .trim()
             .to_string();
@@ -121,7 +121,7 @@ mod test {
             hash_objeto: hash.to_string(),
         };
         let tamanio = cat_file.ejecutar().unwrap();
-        let tamanio_esperado = io::leer_a_string(&"test_dir/objetos/archivo.txt".to_string())
+        let tamanio_esperado = io::leer_a_string("test_dir/objetos/archivo.txt")
             .unwrap()
             .trim()
             .len()

@@ -8,6 +8,7 @@ use crate::{
     io,
     tipos_de_dato::{comandos::hash_object::HashObject, logger, objeto::Objeto},
     utilidades_de_compresion::descomprimir_objeto,
+    utilidades_path_buf::esta_directorio_habilitado,
 };
 
 use super::blob::Blob;
@@ -27,15 +28,67 @@ impl Tree {
         };
 
         for candidato in candidatos {
-            let candidato_string = candidato.unwrap().path().display().to_string();
-            let candidato_hash = candidato_string.split('/').last().unwrap().to_string();
+            let candidato_string = candidato
+                .map_err(|_| format!("Error al extraer el hash {} de la carpeta padre", hash_20))?
+                .path()
+                .display()
+                .to_string();
+            let candidato_hash = candidato_string
+                .split('/')
+                .last()
+                .ok_or_else(|| {
+                    format!(
+                        "Error al extraer carpeta hijo del padre {}, existe dicho hash?",
+                        hash_20
+                    )
+                })?
+                .to_string();
             let (prefijo, hash_a_comparar) = hash_20.split_at(2);
-            if candidato_hash.starts_with(&hash_a_comparar) {
+            if candidato_hash.starts_with(hash_a_comparar) {
                 return Ok(format!("{}{}", prefijo, candidato_hash));
             }
         }
 
         Err(format!("No se econtro el objeto con hash {}", hash_20))
+    }
+
+    pub fn from_directorio(
+        directorio: PathBuf,
+        hijos_especificados: Option<&Vec<PathBuf>>,
+    ) -> Result<Tree, String> {
+        let mut objetos: Vec<Objeto> = Vec::new();
+
+        let entradas = match fs::read_dir(&directorio) {
+            Ok(entradas) => entradas,
+            Err(_) => Err(format!("Error al leer el directorio {directorio:#?}"))?,
+        };
+
+        for entrada in entradas {
+            let entrada = entrada
+                .map_err(|_| format!("Error al leer entrada el directorio {directorio:#?}"))?;
+            let path = entrada.path();
+
+            if path.ends_with(".DS_Store") {
+                continue;
+            }
+
+            if let Some(hijos_especificados) = &hijos_especificados {
+                if !esta_directorio_habilitado(&path, hijos_especificados) {
+                    continue;
+                }
+            }
+
+            let objeto = match fs::metadata(&path) {
+                Ok(_) => Objeto::from_directorio(path, hijos_especificados)?,
+                Err(_) => Err("Error al leer el archivo".to_string())?,
+            };
+            objetos.push(objeto);
+        }
+
+        Ok(Tree {
+            directorio,
+            objetos,
+        })
     }
 
     pub fn obtener_paths_hijos(&self) -> Vec<PathBuf> {
@@ -56,7 +109,7 @@ impl Tree {
         contenido: String,
     ) -> Result<Vec<(String, String, String)>, String> {
         let mut contenido_parseado: Vec<(String, String, String)> = Vec::new();
-        let mut lineas = contenido.split("\0").collect::<Vec<&str>>();
+        let mut lineas = contenido.split('\0').collect::<Vec<&str>>();
         lineas.remove(0);
 
         for i in (0..lineas.len()).step_by(2) {
@@ -78,12 +131,12 @@ impl Tree {
         Ok(contenido_parseado)
     }
 
-    pub fn from_hash_20(hash: String, directorio: PathBuf) -> Tree {
-        let hash_completo = Self::obtener_hash_completo(hash).unwrap();
+    pub fn from_hash_20(hash: String, directorio: PathBuf) -> Result<Tree, String> {
+        let hash_completo = Self::obtener_hash_completo(hash)?;
 
-        let contenido = descomprimir_objeto(hash_completo).unwrap();
+        let contenido = descomprimir_objeto(hash_completo)?;
 
-        let contenido_parseado = Self::obtener_datos_de_contenido(contenido).unwrap();
+        let contenido_parseado = Self::obtener_datos_de_contenido(contenido)?;
         let mut objetos: Vec<Objeto> = Vec::new();
 
         for (modo, nombre, hash_hijo) in contenido_parseado {
@@ -94,22 +147,22 @@ impl Tree {
                     let blob = Objeto::Blob(Blob {
                         nombre,
                         ubicacion: PathBuf::from(ubicacion),
-                        hash: Self::obtener_hash_completo(hash_hijo.to_string()).unwrap(),
+                        hash: Self::obtener_hash_completo(hash_hijo.to_string())?,
                     });
                     objetos.push(blob);
                 }
                 "40000" => {
-                    let tree = Self::from_hash_20(hash_hijo, PathBuf::from(ubicacion));
+                    let tree = Self::from_hash_20(hash_hijo, PathBuf::from(ubicacion))?;
                     objetos.push(Objeto::Tree(tree));
                 }
                 _ => {}
             }
         }
 
-        Tree {
+        Ok(Tree {
             directorio,
             objetos,
-        }
+        })
     }
 
     pub fn obtener_tamanio(&self) -> Result<usize, String> {
@@ -217,7 +270,7 @@ impl Tree {
         }
     }
 
-    fn mostrar_contenido(objetos: &Vec<Objeto>) -> Result<String, String> {
+    fn mostrar_contenido(objetos: &[Objeto]) -> Result<String, String> {
         let mut output = String::new();
 
         let objetos_ordenados = Self::ordenar_objetos_alfabeticamente(objetos);
@@ -267,21 +320,23 @@ mod test {
 
     #[test]
     fn test01_test_obtener_hash() {
-        let objeto = Objeto::from_directorio(PathBuf::from("test_dir/objetos")).unwrap();
+        let objeto = Objeto::from_directorio(PathBuf::from("test_dir/objetos"), None).unwrap();
+        println!("{:?}", objeto);
         let hash = objeto.obtener_hash();
         assert_eq!(hash, "bf902127ac66b999327fba07a9f4b7a50b87922a");
     }
 
     #[test]
     fn test02_test_obtener_tamanio() {
-        let objeto = Objeto::from_directorio(PathBuf::from("test_dir/muchos_objetos")).unwrap();
+        let objeto =
+            Objeto::from_directorio(PathBuf::from("test_dir/muchos_objetos"), None).unwrap();
         let tamanio = objeto.obtener_tamanio().unwrap();
         assert_eq!(tamanio, 83);
     }
 
     #[test]
     fn test03_test_mostrar_contenido() {
-        let objeto = Objeto::from_directorio(PathBuf::from("test_dir/objetos")).unwrap();
+        let objeto = Objeto::from_directorio(PathBuf::from("test_dir/objetos"), None).unwrap();
 
         if let Objeto::Tree(tree) = objeto {
             let contenido = Tree::mostrar_contenido(&tree.objetos).unwrap();
@@ -293,7 +348,7 @@ mod test {
 
     #[test]
     fn test04_test_mostrar_contenido_recursivo() {
-        let objeto = Objeto::from_directorio(PathBuf::from("test_dir/")).unwrap();
+        let objeto = Objeto::from_directorio(PathBuf::from("test_dir/"), None).unwrap();
 
         if let Objeto::Tree(tree) = objeto {
             let contenido = Tree::mostrar_contenido(&tree.objetos).unwrap();
@@ -308,13 +363,12 @@ mod test {
 
     #[test]
     fn test05_escribir_en_base() -> Result<(), String> {
-        let objeto = Objeto::from_directorio(PathBuf::from("test_dir/objetos")).unwrap();
+        let objeto = Objeto::from_directorio(PathBuf::from("test_dir/objetos"), None).unwrap();
         if let Objeto::Tree(tree) = objeto {
             tree.escribir_en_base().unwrap();
 
-            let contenido_leido = io::leer_bytes(
-                &".gir/objects/bf/902127ac66b999327fba07a9f4b7a50b87922a".to_string(),
-            )?;
+            let contenido_leido =
+                io::leer_bytes(".gir/objects/bf/902127ac66b999327fba07a9f4b7a50b87922a")?;
             let mut descompresor = ZlibDecoder::new(contenido_leido.as_slice());
             let mut contenido_descomprimido = String::new();
             descompresor
@@ -335,14 +389,12 @@ mod test {
 
     #[test]
     fn test06_escribir_en_base_con_anidados() -> Result<(), String> {
-        let objeto = Objeto::from_directorio(PathBuf::from("test_dir")).unwrap();
+        let objeto = Objeto::from_directorio(PathBuf::from("test_dir"), None).unwrap();
         if let Objeto::Tree(tree) = objeto {
             tree.escribir_en_base().unwrap();
 
-            let contenido_leido = io::leer_bytes(
-                &".gir/objects/e0/46b641e27871e304ef4ce3fdf4382265d58354".to_string(),
-            )
-            .unwrap();
+            let contenido_leido =
+                io::leer_bytes(".gir/objects/e0/46b641e27871e304ef4ce3fdf4382265d58354").unwrap();
             let mut descompresor = ZlibDecoder::new(contenido_leido.as_slice());
             let mut contenido_descomprimido = String::new();
             descompresor

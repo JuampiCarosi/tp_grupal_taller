@@ -5,7 +5,10 @@ use std::{
     rc::Rc,
 };
 
-use crate::tipos_de_dato::{comandos::hash_object::HashObject, logger::Logger, objeto::Objeto};
+use crate::{
+    tipos_de_dato::{comandos::hash_object::HashObject, logger::Logger, objeto::Objeto},
+    utilidades_path_buf::obtener_directorio_raiz,
+};
 use std::io::prelude::*;
 
 pub struct Add {
@@ -31,7 +34,7 @@ impl Add {
         let mut objetos: Vec<Objeto> = Vec::new();
 
         for line in std::io::BufReader::new(file).lines() {
-            if let Some(line) = line.as_ref().ok() {
+            if let Ok(line) = line.as_ref() {
                 let objeto = Objeto::from_index(line.to_string())?;
                 objetos.push(objeto);
             }
@@ -42,27 +45,13 @@ impl Add {
     pub fn from(args: Vec<String>, logger: Rc<Logger>) -> Result<Add, String> {
         Self::crear_index();
         let index = Self::leer_index()?;
-        let ubicaciones = args
-            .iter()
-            .map(|x| PathBuf::from(x))
-            .collect::<Vec<PathBuf>>();
+        let ubicaciones = args.iter().map(PathBuf::from).collect::<Vec<PathBuf>>();
 
         Ok(Add {
             logger,
             ubicaciones,
             index,
         })
-    }
-
-    fn obtener_directorio_raiz(directorio: &PathBuf) -> Result<PathBuf, String> {
-        let directorio_split = directorio
-            .into_iter()
-            .next()
-            .ok_or_else(|| "Error al obtener el directorio raiz")?
-            .to_str()
-            .ok_or_else(|| "Error al obtener el directorio raiz")?;
-
-        Ok(PathBuf::from(directorio_split))
     }
 
     fn generar_objetos_raiz(&self) -> Result<Vec<Objeto>, String> {
@@ -77,26 +66,23 @@ impl Add {
         for objeto in self.index.iter() {
             match objeto {
                 Objeto::Blob(blob) => {
-                    let padre = Self::obtener_directorio_raiz(&blob.ubicacion)?;
+                    let padre = obtener_directorio_raiz(&blob.ubicacion)?;
                     directorios_raiz.insert(PathBuf::from(padre));
                 }
                 Objeto::Tree(tree) => {
-                    let padre = Self::obtener_directorio_raiz(&tree.directorio)?;
+                    let padre = obtener_directorio_raiz(&tree.directorio)?;
                     directorios_raiz.insert(PathBuf::from(padre));
                 }
             }
         }
 
-        println!("DIRECTORIOS RAIZ {:?}", directorios_raiz);
-
         for directorio in directorios_raiz {
-            let objeto_conteniendo_al_blob = Objeto::from_directorio_con_hijos_especificados(
-                directorio.clone(),
-                &directorios_a_tener_en_cuenta,
-            )?;
+            let objeto_conteniendo_al_blob =
+                Objeto::from_directorio(directorio.clone(), Some(&directorios_a_tener_en_cuenta))?;
 
             objetos.push(objeto_conteniendo_al_blob);
         }
+        println!("OBJETO {:?}", directorios_a_tener_en_cuenta);
 
         objetos.sort_by_key(|x| match x {
             Objeto::Blob(blob) => blob.ubicacion.clone(),
@@ -138,7 +124,7 @@ impl Add {
         self.logger.log("Ejecutando update-index".to_string());
 
         for ubicacion in self.ubicaciones.clone() {
-            let nuevo_objeto = Objeto::from_directorio(ubicacion.clone())?;
+            let nuevo_objeto = Objeto::from_directorio(ubicacion.clone(), None)?;
 
             let indice = self.index.iter().position(|x| match x {
                 Objeto::Blob(blob) => blob.ubicacion == ubicacion,
@@ -212,7 +198,7 @@ mod test {
 
         assert_eq!(add.index.len(), 1);
 
-        let file = io::leer_a_string(&"./.gir/index".to_string()).unwrap();
+        let file = io::leer_a_string("./.gir/index").unwrap();
         assert_eq!(
             file,
             "100644 bdf08de0f3095da5030fecd9bafc0b00c1aced7c test_file.txt\n"
@@ -236,7 +222,7 @@ mod test {
             assert_eq!(blob.hash, "678e12dc5c03a7cf6e9f64e688868962ab5d8b65");
         }
 
-        let file = io::leer_a_string(&"./.gir/index".to_string()).unwrap();
+        let file = io::leer_a_string("./.gir/index").unwrap();
         assert_eq!(
             file,
             "100644 678e12dc5c03a7cf6e9f64e688868962ab5d8b65 test_file.txt\n"
@@ -253,7 +239,7 @@ mod test {
         let mut add = Add::from(vec![path], logger.clone()).unwrap();
         add.ejecutar().unwrap();
 
-        let file = io::leer_a_string(&"./.gir/index".to_string()).unwrap();
+        let file = io::leer_a_string("./.gir/index").unwrap();
 
         assert_eq!(
             file,
@@ -291,7 +277,7 @@ mod test {
             assert_eq!(blob.hash, "2b824e648965b94c6c6b3dd0702feb91f699ed62");
         }
 
-        let file = io::leer_a_string(&"./.gir/index".to_string()).unwrap();
+        let file = io::leer_a_string("./.gir/index").unwrap();
 
         assert_eq!(
             file,
@@ -308,7 +294,7 @@ mod test {
         let mut add = Add::from(vec![path], logger.clone()).unwrap();
         add.ejecutar().unwrap();
 
-        let file = io::leer_a_string(&"./.gir/index".to_string()).unwrap();
+        let file = io::leer_a_string("./.gir/index").unwrap();
 
         assert_eq!(
             file,
@@ -326,7 +312,7 @@ mod test {
         let mut add = Add::from(vec![archivo_1], logger.clone()).unwrap();
         add.ejecutar().unwrap();
 
-        let file = io::leer_a_string(&"./.gir/index".to_string()).unwrap();
+        let file = io::leer_a_string("./.gir/index").unwrap();
 
         assert_eq!(
             file,
@@ -338,7 +324,7 @@ mod test {
         let mut add = Add::from(vec![archivo_2], logger.clone()).unwrap();
         add.ejecutar().unwrap();
 
-        let file = io::leer_a_string(&"./.gir/index".to_string()).unwrap();
+        let file = io::leer_a_string("./.gir/index").unwrap();
 
         assert_eq!(
             file,
@@ -373,7 +359,7 @@ mod test {
             assert_eq!(blob.hash, "2b824e648965b94c6c6b3dd0702feb91f699ed62");
         }
 
-        let file = io::leer_a_string(&"./.gir/index".to_string()).unwrap();
+        let file = io::leer_a_string("./.gir/index").unwrap();
 
         assert_eq!(
             file,
