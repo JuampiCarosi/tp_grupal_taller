@@ -28,8 +28,21 @@ impl Tree {
         };
 
         for candidato in candidatos {
-            let candidato_string = candidato.unwrap().path().display().to_string();
-            let candidato_hash = candidato_string.split('/').last().unwrap().to_string();
+            let candidato_string = candidato
+                .map_err(|_| format!("Error al extraer el hash {} de la carpeta padre", hash_20))?
+                .path()
+                .display()
+                .to_string();
+            let candidato_hash = candidato_string
+                .split('/')
+                .last()
+                .ok_or_else(|| {
+                    format!(
+                        "Error al extraer carpeta hijo del padre {}, existe dicho hash?",
+                        hash_20
+                    )
+                })?
+                .to_string();
             let (prefijo, hash_a_comparar) = hash_20.split_at(2);
             if candidato_hash.starts_with(hash_a_comparar) {
                 return Ok(format!("{}{}", prefijo, candidato_hash));
@@ -45,8 +58,14 @@ impl Tree {
     ) -> Result<Tree, String> {
         let mut objetos: Vec<Objeto> = Vec::new();
 
-        for entrada in fs::read_dir(&directorio).unwrap() {
-            let entrada = entrada.unwrap();
+        let entradas = match fs::read_dir(&directorio) {
+            Ok(entradas) => entradas,
+            Err(_) => Err(format!("Error al leer el directorio {directorio:#?}"))?,
+        };
+
+        for entrada in entradas {
+            let entrada = entrada
+                .map_err(|_| format!("Error al leer entrada el directorio {directorio:#?}"))?;
             let path = entrada.path();
 
             if path.ends_with(".DS_Store") {
@@ -112,12 +131,12 @@ impl Tree {
         Ok(contenido_parseado)
     }
 
-    pub fn from_hash_20(hash: String, directorio: PathBuf) -> Tree {
-        let hash_completo = Self::obtener_hash_completo(hash).unwrap();
+    pub fn from_hash_20(hash: String, directorio: PathBuf) -> Result<Tree, String> {
+        let hash_completo = Self::obtener_hash_completo(hash)?;
 
-        let contenido = descomprimir_objeto(hash_completo).unwrap();
+        let contenido = descomprimir_objeto(hash_completo)?;
 
-        let contenido_parseado = Self::obtener_datos_de_contenido(contenido).unwrap();
+        let contenido_parseado = Self::obtener_datos_de_contenido(contenido)?;
         let mut objetos: Vec<Objeto> = Vec::new();
 
         for (modo, nombre, hash_hijo) in contenido_parseado {
@@ -128,22 +147,22 @@ impl Tree {
                     let blob = Objeto::Blob(Blob {
                         nombre,
                         ubicacion: PathBuf::from(ubicacion),
-                        hash: Self::obtener_hash_completo(hash_hijo.to_string()).unwrap(),
+                        hash: Self::obtener_hash_completo(hash_hijo.to_string())?,
                     });
                     objetos.push(blob);
                 }
                 "40000" => {
-                    let tree = Self::from_hash_20(hash_hijo, PathBuf::from(ubicacion));
+                    let tree = Self::from_hash_20(hash_hijo, PathBuf::from(ubicacion))?;
                     objetos.push(Objeto::Tree(tree));
                 }
                 _ => {}
             }
         }
 
-        Tree {
+        Ok(Tree {
             directorio,
             objetos,
-        }
+        })
     }
 
     pub fn obtener_tamanio(&self) -> Result<usize, String> {

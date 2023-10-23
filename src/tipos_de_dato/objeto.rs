@@ -1,4 +1,4 @@
-use std::{fs, path::PathBuf};
+use std::path::PathBuf;
 
 use super::objetos::{blob::Blob, tree::Tree};
 
@@ -50,7 +50,7 @@ impl Objeto {
                 hash: hash.to_string(),
             })),
             "40000" => {
-                let tree = Tree::from_hash_20(hash.to_string(), ubicacion);
+                let tree = Tree::from_hash_20(hash.to_string(), ubicacion)?;
                 Ok(Objeto::Tree(tree))
             }
             _ => Err("Modo no soportado".to_string()),
@@ -61,15 +61,10 @@ impl Objeto {
         directorio: PathBuf,
         hijos_especificados: Option<&Vec<PathBuf>>,
     ) -> Result<Objeto, String> {
-        let metadata = match fs::metadata(&directorio) {
-            Ok(metadata) => metadata,
-            Err(_) => Err(format!("No se pudo leer el directorio {directorio:?}"))?,
-        };
-
-        if metadata.is_dir() {
+        if directorio.is_dir() {
             let tree = Tree::from_directorio(directorio.clone(), hijos_especificados)?;
             Ok(Objeto::Tree(tree))
-        } else if fs::metadata(&directorio).unwrap().is_file() {
+        } else if directorio.is_file() {
             let blob = Blob::from_directorio(directorio.clone())?;
             Ok(Objeto::Blob(blob))
         } else {
