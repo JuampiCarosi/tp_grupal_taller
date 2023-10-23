@@ -16,6 +16,7 @@ pub mod tipos_de_dato {
         pub mod init;
         pub mod rm;
         pub mod version;
+        pub mod checkout;
     }
 }
 pub mod io;
