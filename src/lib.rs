@@ -10,6 +10,7 @@ pub mod tipos_de_dato {
     }
     pub mod comandos {
         pub mod add;
+        pub mod branch;
         pub mod cat_file;
         pub mod hash_object;
         pub mod init;
