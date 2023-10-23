@@ -66,11 +66,12 @@ where
     P: AsRef<Path>,
 {
     let dir = dir_archivo.as_ref().parent();
-    Ok(if let Some(parent_dir) = dir {
+    if let Some(parent_dir) = dir {
         let parent_str = parent_dir
             .to_str()
             .ok_or_else(|| String::from("Error al convertir el directorio a cadena"))?;
 
         crear_directorio(parent_str.to_owned() + "/")?;
-    })
+    };
+    Ok(())
 }

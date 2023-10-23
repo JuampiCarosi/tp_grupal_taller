@@ -33,9 +33,9 @@ impl Objeto {
     pub fn from_index(linea_index: String) -> Result<Objeto, String> {
         let mut line = linea_index.split_whitespace();
 
-        let modo = line.next().ok_or_else(|| "Error al leer el modo")?;
-        let hash = line.next().ok_or_else(|| "Error al leer el hash")?;
-        let ubicacion_string = line.next().ok_or_else(|| "Error al leer la ubicacion")?;
+        let modo = line.next().ok_or("Error al leer el modo")?;
+        let hash = line.next().ok_or("Error al leer el hash")?;
+        let ubicacion_string = line.next().ok_or("Error al leer la ubicacion")?;
 
         let ubicacion = PathBuf::from(ubicacion_string);
         let nombre = match ubicacion_string.split('/').last() {
@@ -88,7 +88,7 @@ impl Objeto {
                 return true;
             }
         }
-        return false;
+        false
     }
 }
 

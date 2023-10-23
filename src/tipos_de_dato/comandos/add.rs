@@ -34,7 +34,7 @@ impl Add {
         let mut objetos: Vec<Objeto> = Vec::new();
 
         for line in std::io::BufReader::new(file).lines() {
-            if let Some(line) = line.as_ref().ok() {
+            if let Ok(line) = line.as_ref() {
                 let objeto = Objeto::from_index(line.to_string())?;
                 objetos.push(objeto);
             }
@@ -47,7 +47,7 @@ impl Add {
         let index = Self::leer_index()?;
         let ubicaciones = args
             .iter()
-            .map(|x| PathBuf::from(x))
+            .map(PathBuf::from)
             .collect::<Vec<PathBuf>>();
 
         Ok(Add {
@@ -201,7 +201,7 @@ mod test {
 
         assert_eq!(add.index.len(), 1);
 
-        let file = io::leer_a_string(&"./.gir/index".to_string()).unwrap();
+        let file = io::leer_a_string("./.gir/index").unwrap();
         assert_eq!(
             file,
             "100644 bdf08de0f3095da5030fecd9bafc0b00c1aced7c test_file.txt\n"
@@ -225,7 +225,7 @@ mod test {
             assert_eq!(blob.hash, "678e12dc5c03a7cf6e9f64e688868962ab5d8b65");
         }
 
-        let file = io::leer_a_string(&"./.gir/index".to_string()).unwrap();
+        let file = io::leer_a_string("./.gir/index").unwrap();
         assert_eq!(
             file,
             "100644 678e12dc5c03a7cf6e9f64e688868962ab5d8b65 test_file.txt\n"
@@ -242,7 +242,7 @@ mod test {
         let mut add = Add::from(vec![path], logger.clone()).unwrap();
         add.ejecutar().unwrap();
 
-        let file = io::leer_a_string(&"./.gir/index".to_string()).unwrap();
+        let file = io::leer_a_string("./.gir/index").unwrap();
 
         assert_eq!(
             file,
@@ -280,7 +280,7 @@ mod test {
             assert_eq!(blob.hash, "2b824e648965b94c6c6b3dd0702feb91f699ed62");
         }
 
-        let file = io::leer_a_string(&"./.gir/index".to_string()).unwrap();
+        let file = io::leer_a_string("./.gir/index").unwrap();
 
         assert_eq!(
             file,
@@ -297,7 +297,7 @@ mod test {
         let mut add = Add::from(vec![path], logger.clone()).unwrap();
         add.ejecutar().unwrap();
 
-        let file = io::leer_a_string(&"./.gir/index".to_string()).unwrap();
+        let file = io::leer_a_string("./.gir/index").unwrap();
 
         assert_eq!(
             file,
@@ -315,7 +315,7 @@ mod test {
         let mut add = Add::from(vec![archivo_1], logger.clone()).unwrap();
         add.ejecutar().unwrap();
 
-        let file = io::leer_a_string(&"./.gir/index".to_string()).unwrap();
+        let file = io::leer_a_string("./.gir/index").unwrap();
 
         assert_eq!(
             file,
@@ -327,7 +327,7 @@ mod test {
         let mut add = Add::from(vec![archivo_2], logger.clone()).unwrap();
         add.ejecutar().unwrap();
 
-        let file = io::leer_a_string(&"./.gir/index".to_string()).unwrap();
+        let file = io::leer_a_string("./.gir/index").unwrap();
 
         assert_eq!(
             file,
@@ -362,7 +362,7 @@ mod test {
             assert_eq!(blob.hash, "2b824e648965b94c6c6b3dd0702feb91f699ed62");
         }
 
-        let file = io::leer_a_string(&"./.gir/index".to_string()).unwrap();
+        let file = io::leer_a_string("./.gir/index").unwrap();
 
         assert_eq!(
             file,

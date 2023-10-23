@@ -11,16 +11,16 @@ pub fn esta_directorio_habilitado(
             return true;
         }
     }
-    return false;
+    false
 }
 
 pub fn obtener_directorio_raiz(directorio: &PathBuf) -> Result<String, String> {
     let directorio_split = directorio
-        .into_iter()
+        .iter()
         .next()
-        .ok_or_else(|| "Error al obtener el directorio raiz")?
+        .ok_or("Error al obtener el directorio raiz")?
         .to_str()
-        .ok_or_else(|| "Error al obtener el directorio raiz")?;
+        .ok_or("Error al obtener el directorio raiz")?;
 
     Ok(directorio_split.to_string())
 }
@@ -28,9 +28,9 @@ pub fn obtener_directorio_raiz(directorio: &PathBuf) -> Result<String, String> {
 pub fn obtener_nombre(directorio: &PathBuf) -> Result<String, String> {
     let directorio_split = directorio
         .file_name()
-        .ok_or_else(|| "Error al obtener el directorio raiz")?
+        .ok_or("Error al obtener el directorio raiz")?
         .to_str()
-        .ok_or_else(|| "Error al obtener el directorio raiz")?;
+        .ok_or("Error al obtener el directorio raiz")?;
 
     Ok(directorio_split.to_string())
 }

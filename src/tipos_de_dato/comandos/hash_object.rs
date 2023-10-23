@@ -44,7 +44,7 @@ impl HashObject {
     }
 
     fn construir_contenido(&self) -> Result<String, String> {
-        let contenido = io::leer_a_string(&self.ubicacion_archivo.clone())?;
+        let contenido = io::leer_a_string(self.ubicacion_archivo.clone())?;
         let header = format!("blob {}\0", contenido.len());
         let contenido_total = header + &contenido;
 
@@ -64,7 +64,7 @@ impl HashObject {
 
         if self.escribir {
             let ruta = format!(".gir/objects/{}/{}", &hash[..2], &hash[2..]);
-            io::escribir_bytes(&ruta, comprimir_contenido(contenido)?)?;
+            io::escribir_bytes(ruta, comprimir_contenido(contenido)?)?;
         }
         let mensaje = format!(
             "Objeto gir hasheado en {}",
@@ -103,7 +103,7 @@ mod test {
         let hash = hash_object.ejecutar().unwrap();
         assert_eq!(hash, "2b824e648965b94c6c6b3dd0702feb91f699ed62");
         let contenido_leido =
-            io::leer_bytes(&".gir/objects/2b/824e648965b94c6c6b3dd0702feb91f699ed62".to_string())
+            io::leer_bytes(".gir/objects/2b/824e648965b94c6c6b3dd0702feb91f699ed62")
                 .unwrap();
         let mut descompresor = ZlibDecoder::new(contenido_leido.as_slice());
         let mut contenido_descomprimido = String::new();

@@ -31,7 +31,7 @@ impl Tree {
             let candidato_string = candidato.unwrap().path().display().to_string();
             let candidato_hash = candidato_string.split('/').last().unwrap().to_string();
             let (prefijo, hash_a_comparar) = hash_20.split_at(2);
-            if candidato_hash.starts_with(&hash_a_comparar) {
+            if candidato_hash.starts_with(hash_a_comparar) {
                 return Ok(format!("{}{}", prefijo, candidato_hash));
             }
         }
@@ -54,7 +54,7 @@ impl Tree {
             }
 
             if let Some(hijos_especificados) = &hijos_especificados {
-                if !esta_directorio_habilitado(&path, &hijos_especificados) {
+                if !esta_directorio_habilitado(&path, hijos_especificados) {
                     continue;
                 }
             }
@@ -90,7 +90,7 @@ impl Tree {
         contenido: String,
     ) -> Result<Vec<(String, String, String)>, String> {
         let mut contenido_parseado: Vec<(String, String, String)> = Vec::new();
-        let mut lineas = contenido.split("\0").collect::<Vec<&str>>();
+        let mut lineas = contenido.split('\0').collect::<Vec<&str>>();
         lineas.remove(0);
 
         for i in (0..lineas.len()).step_by(2) {
@@ -349,7 +349,7 @@ mod test {
             tree.escribir_en_base().unwrap();
 
             let contenido_leido = io::leer_bytes(
-                &".gir/objects/bf/902127ac66b999327fba07a9f4b7a50b87922a".to_string(),
+                ".gir/objects/bf/902127ac66b999327fba07a9f4b7a50b87922a",
             )?;
             let mut descompresor = ZlibDecoder::new(contenido_leido.as_slice());
             let mut contenido_descomprimido = String::new();
@@ -376,7 +376,7 @@ mod test {
             tree.escribir_en_base().unwrap();
 
             let contenido_leido = io::leer_bytes(
-                &".gir/objects/e0/46b641e27871e304ef4ce3fdf4382265d58354".to_string(),
+                ".gir/objects/e0/46b641e27871e304ef4ce3fdf4382265d58354",
             )
             .unwrap();
             let mut descompresor = ZlibDecoder::new(contenido_leido.as_slice());
