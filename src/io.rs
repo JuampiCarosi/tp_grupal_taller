@@ -75,3 +75,39 @@ where
     };
     Ok(())
 }
+
+pub fn rm_directorio<P>(directorio: P) -> Result<(), String>
+where
+    P: AsRef<Path>,
+{
+    let metadata = fs::metadata(&directorio).map_err(|_| {
+        format!(
+            "No se pudo borrar el directorio {}",
+            directorio.as_ref().display()
+        )
+    })?;
+
+    if metadata.is_file() {
+        return match fs::remove_file(&directorio) {
+            Ok(_) => Ok(()),
+            Err(_) => Err(format!(
+                "No se pudo borrar el directorio {}",
+                directorio.as_ref().display()
+            )),
+        };
+    }
+
+    if metadata.is_dir() {
+        return match fs::remove_dir_all(&directorio) {
+            Ok(_) => Ok(()),
+            Err(_) => Err(format!(
+                "No se pudo borrar el directorio {}",
+                directorio.as_ref().display()
+            )),
+        };
+    }
+    Err(format!(
+        "No se pudo borrar el directorio {}",
+        directorio.as_ref().display()
+    ))
+}
