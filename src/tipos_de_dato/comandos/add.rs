@@ -1,15 +1,10 @@
-use std::{
-    collections::HashSet,
-    fs::{self, OpenOptions},
-    path::{Path, PathBuf},
-    rc::Rc,
-};
+use std::{path::PathBuf, rc::Rc};
 
-use crate::{
-    tipos_de_dato::{comandos::hash_object::HashObject, logger::Logger, objeto::Objeto},
-    utilidades_path_buf::obtener_directorio_raiz,
+use crate::tipos_de_dato::{
+    logger::Logger,
+    objeto::Objeto,
+    utilidades_index::{crear_index, escribir_index, leer_index},
 };
-use std::io::prelude::*;
 
 pub struct Add {
     logger: Rc<Logger>,
@@ -18,33 +13,9 @@ pub struct Add {
 }
 
 impl Add {
-    fn crear_index() {
-        if Path::new("./.gir/index").exists() {
-            return;
-        }
-        let _ = fs::File::create("./.gir/index");
-    }
-
-    fn leer_index() -> Result<Vec<Objeto>, String> {
-        let file = match OpenOptions::new().read(true).open("./.gir/index") {
-            Ok(file) => file,
-            Err(_) => return Err("No se pudo abrir el archivo index".to_string()),
-        };
-
-        let mut objetos: Vec<Objeto> = Vec::new();
-
-        for line in std::io::BufReader::new(file).lines() {
-            if let Ok(line) = line.as_ref() {
-                let objeto = Objeto::from_index(line.to_string())?;
-                objetos.push(objeto);
-            }
-        }
-        Ok(objetos)
-    }
-
     pub fn from(args: Vec<String>, logger: Rc<Logger>) -> Result<Add, String> {
-        Self::crear_index();
-        let index = Self::leer_index()?;
+        crear_index();
+        let index = leer_index()?;
         let ubicaciones = args.iter().map(PathBuf::from).collect::<Vec<PathBuf>>();
 
         Ok(Add {
@@ -52,72 +23,6 @@ impl Add {
             ubicaciones,
             index,
         })
-    }
-
-    fn generar_objetos_raiz(&self) -> Result<Vec<Objeto>, String> {
-        let mut objetos: Vec<Objeto> = Vec::new();
-        let mut directorios_raiz: HashSet<PathBuf> = HashSet::new();
-        let mut directorios_a_tener_en_cuenta: Vec<PathBuf> = Vec::new();
-        self.index.iter().for_each(|x| match x {
-            Objeto::Tree(tree) => directorios_a_tener_en_cuenta.extend(tree.obtener_paths_hijos()),
-            Objeto::Blob(blob) => directorios_a_tener_en_cuenta.push(blob.ubicacion.clone()),
-        });
-
-        for objeto in self.index.iter() {
-            match objeto {
-                Objeto::Blob(blob) => {
-                    let padre = obtener_directorio_raiz(&blob.ubicacion)?;
-                    directorios_raiz.insert(PathBuf::from(padre));
-                }
-                Objeto::Tree(tree) => {
-                    let padre = obtener_directorio_raiz(&tree.directorio)?;
-                    directorios_raiz.insert(PathBuf::from(padre));
-                }
-            }
-        }
-
-        for directorio in directorios_raiz {
-            let objeto_conteniendo_al_blob =
-                Objeto::from_directorio(directorio.clone(), Some(&directorios_a_tener_en_cuenta))?;
-
-            objetos.push(objeto_conteniendo_al_blob);
-        }
-        println!("OBJETO {:?}", directorios_a_tener_en_cuenta);
-
-        objetos.sort_by_key(|x| match x {
-            Objeto::Blob(blob) => blob.ubicacion.clone(),
-            Objeto::Tree(tree) => PathBuf::from(&tree.directorio),
-        });
-        Ok(objetos)
-    }
-
-    fn escribir_objetos(&self) -> Result<(), String> {
-        let mut file = match OpenOptions::new().write(true).open("./.gir/index") {
-            Ok(file) => file,
-            Err(_) => return Err("No se pudo escribir el archivo index".to_string()),
-        };
-
-        for objeto in self.generar_objetos_raiz()? {
-            let line = match objeto {
-                Objeto::Blob(blob) => {
-                    HashObject {
-                        logger: self.logger.clone(),
-                        escribir: true,
-                        ubicacion_archivo: blob.ubicacion.clone(),
-                    }
-                    .ejecutar()?;
-                    format!("{blob}")
-                }
-                Objeto::Tree(tree) => {
-                    tree.escribir_en_base()?;
-                    format!("{tree}")
-                }
-            };
-
-            let _ = file.write_all(b"");
-            let _ = file.write_all(line.as_bytes());
-        }
-        Ok(())
     }
 
     pub fn ejecutar(&mut self) -> Result<String, String> {
@@ -154,7 +59,7 @@ impl Add {
             }
         }
 
-        self.escribir_objetos()?;
+        escribir_index(self.logger.clone(), &self.index)?;
         Ok("".to_string())
     }
 }

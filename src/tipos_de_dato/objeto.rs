@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{fmt::format, path::PathBuf};
 
 use super::objetos::{blob::Blob, tree::Tree};
 
@@ -68,7 +68,7 @@ impl Objeto {
             let blob = Blob::from_directorio(directorio.clone())?;
             Ok(Objeto::Blob(blob))
         } else {
-            Err("No se pudo leer el directorio".to_string())
+            Err(format!("No se pudo leer el directorio {directorio:#?}"))
         }
     }
 

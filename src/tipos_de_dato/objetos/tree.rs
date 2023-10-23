@@ -201,6 +201,31 @@ impl Tree {
         }
     }
 
+    pub fn eliminar_hijo_por_directorio(&mut self, directorio: &PathBuf) {
+        let mut i = 0;
+        while i < self.objetos.len() {
+            match &mut self.objetos[i] {
+                Objeto::Blob(blob) => {
+                    if blob.ubicacion == *directorio {
+                        self.objetos.remove(i);
+                    } else {
+                        i += 1;
+                    }
+                }
+                Objeto::Tree(ref mut tree) => {
+                    if tree.directorio == *directorio {
+                        self.objetos.remove(i);
+                    } else {
+                        if directorio.starts_with(tree.directorio.clone()) {
+                            tree.eliminar_hijo_por_directorio(directorio);
+                        }
+                        i += 1;
+                    }
+                }
+            }
+        }
+    }
+
     pub fn obtener_hash(&self) -> Result<String, String> {
         let contenido = Self::mostrar_contenido(&self.objetos)?;
         let header = format!("tree {}\0", contenido.len());
@@ -251,6 +276,9 @@ impl Tree {
                     .ejecutar()?;
                 }
                 Objeto::Tree(tree) => {
+                    if tree.es_vacio() {
+                        continue;
+                    }
                     tree.escribir_en_base()?;
                 }
             }
@@ -290,6 +318,16 @@ impl Tree {
             output.push_str(&line);
         }
         Ok(output)
+    }
+
+    pub fn es_vacio(&self) -> bool {
+        if self.objetos.len() == 0 {
+            return true;
+        }
+        self.objetos.iter().all(|objeto| match objeto {
+            Objeto::Blob(_) => false,
+            Objeto::Tree(tree) => tree.es_vacio(),
+        })
     }
 }
 

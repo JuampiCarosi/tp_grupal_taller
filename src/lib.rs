@@ -2,6 +2,7 @@ pub mod tipos_de_dato {
     pub mod comando;
     pub mod logger;
     pub mod objeto;
+    pub mod utilidades_index;
     pub mod visualizaciones;
     pub mod objetos {
         pub mod blob;
@@ -12,6 +13,7 @@ pub mod tipos_de_dato {
         pub mod cat_file;
         pub mod hash_object;
         pub mod init;
+        pub mod rm;
         pub mod version;
     }
 }
