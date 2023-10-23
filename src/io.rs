@@ -1,6 +1,6 @@
 use std::{
     fs::{self, File},
-    path::{Path, PathBuf},
+    path::Path,
 };
 
 pub fn crear_directorio<P: AsRef<Path> + Clone>(directorio: P) -> Result<(), String> {
