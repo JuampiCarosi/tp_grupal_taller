@@ -1,7 +1,7 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 pub fn esta_directorio_habilitado(
-    directorio: &PathBuf,
+    directorio: &Path,
     directorios_habilitados: &Vec<PathBuf>,
 ) -> bool {
     for directorio_habilitado in directorios_habilitados {
@@ -14,7 +14,7 @@ pub fn esta_directorio_habilitado(
     false
 }
 
-pub fn obtener_directorio_raiz(directorio: &PathBuf) -> Result<String, String> {
+pub fn obtener_directorio_raiz(directorio: &Path) -> Result<String, String> {
     let directorio_split = directorio
         .iter()
         .next()
@@ -25,7 +25,7 @@ pub fn obtener_directorio_raiz(directorio: &PathBuf) -> Result<String, String> {
     Ok(directorio_split.to_string())
 }
 
-pub fn obtener_nombre(directorio: &PathBuf) -> Result<String, String> {
+pub fn obtener_nombre(directorio: &Path) -> Result<String, String> {
     let directorio_split = directorio
         .file_name()
         .ok_or("Error al obtener el directorio raiz")?

@@ -251,7 +251,7 @@ impl Tree {
         }
     }
 
-    fn mostrar_contenido(objetos: &Vec<Objeto>) -> Result<String, String> {
+    fn mostrar_contenido(objetos: &[Objeto]) -> Result<String, String> {
         let mut output = String::new();
 
         let objetos_ordenados = Self::ordenar_objetos_alfabeticamente(objetos);
@@ -348,9 +348,8 @@ mod test {
         if let Objeto::Tree(tree) = objeto {
             tree.escribir_en_base().unwrap();
 
-            let contenido_leido = io::leer_bytes(
-                ".gir/objects/bf/902127ac66b999327fba07a9f4b7a50b87922a",
-            )?;
+            let contenido_leido =
+                io::leer_bytes(".gir/objects/bf/902127ac66b999327fba07a9f4b7a50b87922a")?;
             let mut descompresor = ZlibDecoder::new(contenido_leido.as_slice());
             let mut contenido_descomprimido = String::new();
             descompresor
@@ -375,10 +374,8 @@ mod test {
         if let Objeto::Tree(tree) = objeto {
             tree.escribir_en_base().unwrap();
 
-            let contenido_leido = io::leer_bytes(
-                ".gir/objects/e0/46b641e27871e304ef4ce3fdf4382265d58354",
-            )
-            .unwrap();
+            let contenido_leido =
+                io::leer_bytes(".gir/objects/e0/46b641e27871e304ef4ce3fdf4382265d58354").unwrap();
             let mut descompresor = ZlibDecoder::new(contenido_leido.as_slice());
             let mut contenido_descomprimido = String::new();
             descompresor
