@@ -1,10 +1,6 @@
-use std::{fs, path::PathBuf, rc::Rc};
+use std::{fs, path::PathBuf};
 
-use super::{
-    comandos::hash_object::HashObject,
-    logger,
-    objetos::{blob::Blob, tree::Tree},
-};
+use super::objetos::{blob::Blob, tree::Tree};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Objeto {
@@ -37,18 +33,9 @@ impl Objeto {
     pub fn from_index(linea_index: String) -> Result<Objeto, String> {
         let mut line = linea_index.split_whitespace();
 
-        let modo = match line.next() {
-            Some(modo) => modo,
-            None => Err("Error al leer el modo")?,
-        };
-        let hash = match line.next() {
-            Some(hash) => hash,
-            None => Err("Error al leer el hash")?,
-        };
-        let ubicacion_string = match line.next() {
-            Some(ubicacion) => ubicacion,
-            None => Err("Error al leer la ubicacion")?,
-        };
+        let modo = line.next().ok_or_else(|| "Error al leer el modo")?;
+        let hash = line.next().ok_or_else(|| "Error al leer el hash")?;
+        let ubicacion_string = line.next().ok_or_else(|| "Error al leer la ubicacion")?;
 
         let ubicacion = PathBuf::from(ubicacion_string);
         let nombre = match ubicacion_string.split('/').last() {
@@ -70,62 +57,27 @@ impl Objeto {
         }
     }
 
-    pub fn from_directorio(directorio: PathBuf) -> Result<Objeto, String> {
-        let mut objetos: Vec<Objeto> = Vec::new();
-
+    pub fn from_directorio(
+        directorio: PathBuf,
+        hijos_especificados: Option<&Vec<PathBuf>>,
+    ) -> Result<Objeto, String> {
         let metadata = match fs::metadata(&directorio) {
             Ok(metadata) => metadata,
             Err(_) => Err(format!("No se pudo leer el directorio {directorio:?}"))?,
         };
 
         if metadata.is_dir() {
-            for entrada in fs::read_dir(&directorio).unwrap() {
-                let entrada = entrada.unwrap();
-                let path = entrada.path();
-
-                if path.ends_with(".DS_Store") {
-                    continue;
-                }
-
-                let objeto = match fs::metadata(&path) {
-                    Ok(_) => Objeto::from_directorio(path)?,
-                    Err(_) => Err("Error al leer el archivo".to_string())?,
-                };
-                objetos.push(objeto);
-            }
-
-            Ok(Objeto::Tree(Tree {
-                directorio,
-                objetos,
-            }))
+            let tree = Tree::from_directorio(directorio.clone(), hijos_especificados)?;
+            Ok(Objeto::Tree(tree))
         } else if fs::metadata(&directorio).unwrap().is_file() {
-            let logger = Rc::new(logger::Logger::new(PathBuf::from("tmp/objeto"))?);
-            let hash = HashObject {
-                logger,
-                escribir: false,
-                ubicacion_archivo: directorio.clone(),
-            }
-            .ejecutar()
-            .unwrap();
-
-            let nombre = directorio
-                .file_name()
-                .ok_or_else(|| "Error al obtener el nombre del archivo")?
-                .to_str()
-                .ok_or_else(|| "Error al obtener el nombre del archivo")?
-                .to_string();
-
-            Ok(Objeto::Blob(Blob {
-                nombre,
-                hash,
-                ubicacion: directorio,
-            }))
+            let blob = Blob::from_directorio(directorio.clone())?;
+            Ok(Objeto::Blob(blob))
         } else {
             Err("No se pudo leer el directorio".to_string())
         }
     }
 
-    fn esta_directorio_habilitado(
+    pub fn esta_directorio_habilitado(
         directorio: &PathBuf,
         directorios_habilitados: &Vec<PathBuf>,
     ) -> bool {
@@ -137,73 +89,6 @@ impl Objeto {
             }
         }
         return false;
-    }
-
-    pub fn from_directorio_con_hijos_especificados(
-        directorio: PathBuf,
-        directorios_habilitados: &Vec<PathBuf>,
-    ) -> Result<Objeto, String> {
-        let mut objetos: Vec<Objeto> = Vec::new();
-
-        let metadata = match fs::metadata(&directorio) {
-            Ok(metadata) => metadata,
-            Err(_) => Err(format!("No se pudo leer el directorio {directorio:#?}"))?,
-        };
-
-        if metadata.is_dir() {
-            for entrada in fs::read_dir(&directorio).unwrap() {
-                let entrada = entrada.unwrap();
-                let path = entrada.path();
-
-                if path.ends_with(".DS_Store")
-                    || !Self::esta_directorio_habilitado(&path, directorios_habilitados)
-                {
-                    continue;
-                }
-
-                let objeto = match fs::metadata(&path) {
-                    Ok(_) => {
-                        let objt = Objeto::from_directorio_con_hijos_especificados(
-                            path,
-                            directorios_habilitados,
-                        )?;
-                        objt
-                    }
-                    Err(_) => Err("Error al leer el archivo".to_string())?,
-                };
-
-                objetos.push(objeto);
-            }
-
-            Ok(Objeto::Tree(Tree {
-                directorio,
-                objetos,
-            }))
-        } else if fs::metadata(&directorio).unwrap().is_file() {
-            let logger = Rc::new(logger::Logger::new(PathBuf::from("tmp/objeto"))?);
-            let hash = HashObject {
-                logger,
-                escribir: false,
-                ubicacion_archivo: directorio.clone(),
-            }
-            .ejecutar()
-            .unwrap();
-
-            let nombre = directorio
-                .file_name()
-                .ok_or_else(|| "Error al obtener el nombre del archivo")?
-                .to_str()
-                .ok_or_else(|| "Error al obtener el nombre del archivo")?
-                .to_string();
-
-            Ok(Objeto::Blob(Blob {
-                nombre,
-                hash,
-                ubicacion: PathBuf::from(directorio),
-            }))
-        } else {
-            Err("No se pudo leer el directorio".to_string())
-        }
     }
 }
 
@@ -229,7 +114,7 @@ mod test {
     #[test]
     fn test02_blob_from_directorio() {
         let objeto =
-            Objeto::from_directorio(PathBuf::from("test_dir/objetos/archivo.txt")).unwrap();
+            Objeto::from_directorio(PathBuf::from("test_dir/objetos/archivo.txt"), None).unwrap();
 
         assert_eq!(
             objeto,
@@ -244,7 +129,7 @@ mod test {
     #[test]
 
     fn test03_tree_from_directorio() {
-        let objeto = Objeto::from_directorio(PathBuf::from("test_dir/objetos")).unwrap();
+        let objeto = Objeto::from_directorio(PathBuf::from("test_dir/objetos"), None).unwrap();
 
         let hijo = Objeto::Blob(Blob {
             nombre: "archivo.txt".to_string(),
@@ -263,7 +148,8 @@ mod test {
 
     #[test]
     fn test04_tree_from_index() {
-        let objeto_a_escibir = Objeto::from_directorio(PathBuf::from("test_dir/objetos")).unwrap();
+        let objeto_a_escibir =
+            Objeto::from_directorio(PathBuf::from("test_dir/objetos"), None).unwrap();
 
         if let Objeto::Tree(ref tree) = objeto_a_escibir {
             tree.escribir_en_base().unwrap();

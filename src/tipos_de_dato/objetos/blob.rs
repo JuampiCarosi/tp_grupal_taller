@@ -1,5 +1,11 @@
-use crate::tipos_de_dato::comandos::cat_file::conseguir_tamanio;
-use std::{fmt::Display, path::PathBuf};
+use crate::{
+    tipos_de_dato::{
+        comandos::{cat_file::conseguir_tamanio, hash_object::HashObject},
+        logger::Logger,
+    },
+    utilidades_path_buf::obtener_nombre,
+};
+use std::{fmt::Display, path::PathBuf, rc::Rc};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Blob {
@@ -21,6 +27,24 @@ impl Blob {
             Ok(tamanio) => Ok(tamanio),
             Err(_) => Err("No se pudo parsear el tamanio del blob".to_string()),
         }
+    }
+
+    pub fn from_directorio(directorio: PathBuf) -> Result<Blob, String> {
+        let logger = Rc::new(Logger::new(PathBuf::from("tmp/objeto"))?);
+        let hash = HashObject {
+            logger,
+            escribir: false,
+            ubicacion_archivo: directorio.clone(),
+        }
+        .ejecutar()?;
+
+        let nombre = obtener_nombre(&directorio)?;
+
+        Ok(Blob {
+            nombre,
+            hash,
+            ubicacion: directorio,
+        })
     }
 }
 

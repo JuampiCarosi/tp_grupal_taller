@@ -8,6 +8,7 @@ use crate::{
     io,
     tipos_de_dato::{comandos::hash_object::HashObject, logger, objeto::Objeto},
     utilidades_de_compresion::descomprimir_objeto,
+    utilidades_path_buf::esta_directorio_habilitado,
 };
 
 use super::blob::Blob;
@@ -36,6 +37,39 @@ impl Tree {
         }
 
         Err(format!("No se econtro el objeto con hash {}", hash_20))
+    }
+
+    pub fn from_directorio(
+        directorio: PathBuf,
+        hijos_especificados: Option<&Vec<PathBuf>>,
+    ) -> Result<Tree, String> {
+        let mut objetos: Vec<Objeto> = Vec::new();
+
+        for entrada in fs::read_dir(&directorio).unwrap() {
+            let entrada = entrada.unwrap();
+            let path = entrada.path();
+
+            if path.ends_with(".DS_Store") {
+                continue;
+            }
+
+            if let Some(hijos_especificados) = &hijos_especificados {
+                if !esta_directorio_habilitado(&path, &hijos_especificados) {
+                    continue;
+                }
+            }
+
+            let objeto = match fs::metadata(&path) {
+                Ok(_) => Objeto::from_directorio(path, hijos_especificados)?,
+                Err(_) => Err("Error al leer el archivo".to_string())?,
+            };
+            objetos.push(objeto);
+        }
+
+        Ok(Tree {
+            directorio,
+            objetos,
+        })
     }
 
     pub fn obtener_paths_hijos(&self) -> Vec<PathBuf> {
@@ -267,21 +301,23 @@ mod test {
 
     #[test]
     fn test01_test_obtener_hash() {
-        let objeto = Objeto::from_directorio(PathBuf::from("test_dir/objetos")).unwrap();
+        let objeto = Objeto::from_directorio(PathBuf::from("test_dir/objetos"), None).unwrap();
+        println!("{:?}", objeto);
         let hash = objeto.obtener_hash();
         assert_eq!(hash, "bf902127ac66b999327fba07a9f4b7a50b87922a");
     }
 
     #[test]
     fn test02_test_obtener_tamanio() {
-        let objeto = Objeto::from_directorio(PathBuf::from("test_dir/muchos_objetos")).unwrap();
+        let objeto =
+            Objeto::from_directorio(PathBuf::from("test_dir/muchos_objetos"), None).unwrap();
         let tamanio = objeto.obtener_tamanio().unwrap();
         assert_eq!(tamanio, 83);
     }
 
     #[test]
     fn test03_test_mostrar_contenido() {
-        let objeto = Objeto::from_directorio(PathBuf::from("test_dir/objetos")).unwrap();
+        let objeto = Objeto::from_directorio(PathBuf::from("test_dir/objetos"), None).unwrap();
 
         if let Objeto::Tree(tree) = objeto {
             let contenido = Tree::mostrar_contenido(&tree.objetos).unwrap();
@@ -293,7 +329,7 @@ mod test {
 
     #[test]
     fn test04_test_mostrar_contenido_recursivo() {
-        let objeto = Objeto::from_directorio(PathBuf::from("test_dir/")).unwrap();
+        let objeto = Objeto::from_directorio(PathBuf::from("test_dir/"), None).unwrap();
 
         if let Objeto::Tree(tree) = objeto {
             let contenido = Tree::mostrar_contenido(&tree.objetos).unwrap();
@@ -308,7 +344,7 @@ mod test {
 
     #[test]
     fn test05_escribir_en_base() -> Result<(), String> {
-        let objeto = Objeto::from_directorio(PathBuf::from("test_dir/objetos")).unwrap();
+        let objeto = Objeto::from_directorio(PathBuf::from("test_dir/objetos"), None).unwrap();
         if let Objeto::Tree(tree) = objeto {
             tree.escribir_en_base().unwrap();
 
@@ -335,7 +371,7 @@ mod test {
 
     #[test]
     fn test06_escribir_en_base_con_anidados() -> Result<(), String> {
-        let objeto = Objeto::from_directorio(PathBuf::from("test_dir")).unwrap();
+        let objeto = Objeto::from_directorio(PathBuf::from("test_dir"), None).unwrap();
         if let Objeto::Tree(tree) = objeto {
             tree.escribir_en_base().unwrap();
 

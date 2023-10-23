@@ -5,7 +5,10 @@ use std::{
     rc::Rc,
 };
 
-use crate::tipos_de_dato::{comandos::hash_object::HashObject, logger::Logger, objeto::Objeto};
+use crate::{
+    tipos_de_dato::{comandos::hash_object::HashObject, logger::Logger, objeto::Objeto},
+    utilidades_path_buf::obtener_directorio_raiz,
+};
 use std::io::prelude::*;
 
 pub struct Add {
@@ -54,17 +57,6 @@ impl Add {
         })
     }
 
-    fn obtener_directorio_raiz(directorio: &PathBuf) -> Result<PathBuf, String> {
-        let directorio_split = directorio
-            .into_iter()
-            .next()
-            .ok_or_else(|| "Error al obtener el directorio raiz")?
-            .to_str()
-            .ok_or_else(|| "Error al obtener el directorio raiz")?;
-
-        Ok(PathBuf::from(directorio_split))
-    }
-
     fn generar_objetos_raiz(&self) -> Result<Vec<Objeto>, String> {
         let mut objetos: Vec<Objeto> = Vec::new();
         let mut directorios_raiz: HashSet<PathBuf> = HashSet::new();
@@ -77,26 +69,23 @@ impl Add {
         for objeto in self.index.iter() {
             match objeto {
                 Objeto::Blob(blob) => {
-                    let padre = Self::obtener_directorio_raiz(&blob.ubicacion)?;
+                    let padre = obtener_directorio_raiz(&blob.ubicacion)?;
                     directorios_raiz.insert(PathBuf::from(padre));
                 }
                 Objeto::Tree(tree) => {
-                    let padre = Self::obtener_directorio_raiz(&tree.directorio)?;
+                    let padre = obtener_directorio_raiz(&tree.directorio)?;
                     directorios_raiz.insert(PathBuf::from(padre));
                 }
             }
         }
 
-        println!("DIRECTORIOS RAIZ {:?}", directorios_raiz);
-
         for directorio in directorios_raiz {
-            let objeto_conteniendo_al_blob = Objeto::from_directorio_con_hijos_especificados(
-                directorio.clone(),
-                &directorios_a_tener_en_cuenta,
-            )?;
+            let objeto_conteniendo_al_blob =
+                Objeto::from_directorio(directorio.clone(), Some(&directorios_a_tener_en_cuenta))?;
 
             objetos.push(objeto_conteniendo_al_blob);
         }
+        println!("OBJETO {:?}", directorios_a_tener_en_cuenta);
 
         objetos.sort_by_key(|x| match x {
             Objeto::Blob(blob) => blob.ubicacion.clone(),
@@ -138,7 +127,7 @@ impl Add {
         self.logger.log("Ejecutando update-index".to_string());
 
         for ubicacion in self.ubicaciones.clone() {
-            let nuevo_objeto = Objeto::from_directorio(ubicacion.clone())?;
+            let nuevo_objeto = Objeto::from_directorio(ubicacion.clone(), None)?;
 
             let indice = self.index.iter().position(|x| match x {
                 Objeto::Blob(blob) => blob.ubicacion == ubicacion,
