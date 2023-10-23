@@ -45,10 +45,7 @@ impl Add {
     pub fn from(args: Vec<String>, logger: Rc<Logger>) -> Result<Add, String> {
         Self::crear_index();
         let index = Self::leer_index()?;
-        let ubicaciones = args
-            .iter()
-            .map(PathBuf::from)
-            .collect::<Vec<PathBuf>>();
+        let ubicaciones = args.iter().map(PathBuf::from).collect::<Vec<PathBuf>>();
 
         Ok(Add {
             logger,

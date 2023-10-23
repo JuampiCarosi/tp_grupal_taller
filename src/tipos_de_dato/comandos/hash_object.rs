@@ -103,8 +103,7 @@ mod test {
         let hash = hash_object.ejecutar().unwrap();
         assert_eq!(hash, "2b824e648965b94c6c6b3dd0702feb91f699ed62");
         let contenido_leido =
-            io::leer_bytes(".gir/objects/2b/824e648965b94c6c6b3dd0702feb91f699ed62")
-                .unwrap();
+            io::leer_bytes(".gir/objects/2b/824e648965b94c6c6b3dd0702feb91f699ed62").unwrap();
         let mut descompresor = ZlibDecoder::new(contenido_leido.as_slice());
         let mut contenido_descomprimido = String::new();
         descompresor

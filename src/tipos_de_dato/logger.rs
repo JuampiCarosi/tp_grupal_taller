@@ -202,7 +202,7 @@ mod test {
         msg: String,
     ) -> thread::JoinHandle<()> {
         let logger1 = logger.clone();
-        
+
         thread::spawn(move || {
             logger1.log(msg);
         })
