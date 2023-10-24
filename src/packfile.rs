@@ -1,15 +1,13 @@
 use crate::err_comunicacion::ErrorDeComunicacion;
 use crate::tipos_de_dato::{
-    logger::Logger,
     comandos::cat_file::conseguir_tamanio,
     comandos::cat_file::conseguir_tipo_objeto,
-    comandos::cat_file::conseguir_contenido,
 
 };
 use crate::io;
-use std::path::PathBuf;
-use std::rc::Rc;
+use std::net::TcpStream;
 use sha1::{Digest, Sha1};
+use std::io::Read;
 pub struct Packfile {
     objetos: Vec<u8>,
     indice: Vec<u8>,
@@ -52,7 +50,7 @@ impl Packfile {
     // funcion que recorrer el directorio y aniade los objetos al packfile junto a su indice correspondiente
     fn obtener_objetos_del_dir(&mut self, dir: String) -> Result<(), ErrorDeComunicacion> {
         // let objetos = io::obtener_objetos_del_directorio(dir)?;
-        let objetos = vec!["1f96920c3930d2086ebcc27c385d11c6284f8d4b".to_string(), "f328f3d7fdb8b7592a879b504bd637d50cbfce3c".to_string()];
+        let objetos = vec!["f3c54d13d60a7d62bdb1c816bf4117d232725152".to_string(), "ea39e024951339387d6e2011a02295aacecd2c58".to_string()];
         for objeto in objetos {
             let inicio= self.objetos.len() as u32; // obtengo el len previo a aniadir el objeto
             self.aniadir_objeto(objeto.clone()).unwrap();
@@ -156,4 +154,26 @@ pub fn decodificar_longitud(bytes: &[u8]) -> Option<(u64, u8)> {
     }
 
     None
+}
+
+
+pub fn decodificar_bytes(flujo: &mut TcpStream) {
+    let mut byte = [0; 1];
+    let mut bytes: Vec<u8> = Vec::new();
+
+    flujo.read_exact(&mut byte).unwrap();
+    let tipo = byte[0] >> 4 & 0x07; // deduzco el tipo 
+    bytes.push(byte[0] << 4); // agrego los 4 bits iniciales del numero
+    loop {
+        flujo.read_exact(&mut byte).unwrap();
+        if byte[0] & 0x80 == 0 {
+            // aca devuelvo el resultado
+            break;
+        }
+        let mut byte_completo: u8 = bytes[bytes.len() - 1] | (byte[0] & 0x7F >> 3);
+        bytes.pop();
+        bytes.push(byte_completo);
+        let mut siguiente_mitad = byte[0] << 4;
+        bytes.push(siguiente_mitad); 
+    }
 }

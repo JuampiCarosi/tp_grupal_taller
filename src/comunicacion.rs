@@ -6,6 +6,7 @@ use std::str;
 use crate::io;
 use crate::tipos_de_dato::comandos::cat_file::CatFile;
 use std::rc::Rc;
+use crate::packfile;
 
 pub struct Comunicacion {
     flujo: TcpStream,
@@ -49,8 +50,12 @@ impl Comunicacion {
             let mut data = vec![0; (tamanio - 4) as usize];
             self.flujo.read_exact(&mut data)?;
             let linea = str::from_utf8(&data)?;
-            // println!("Received: {:?}", linea);
             lineas.push(linea.to_string());
+            if linea.contains("NAK") {
+                break;
+            }
+            // println!("Received: {:?}", linea);
+            // lineas.push(linea.to_string());
         }
         println!("Received: {:?}", lineas);
         Ok(lineas)
@@ -95,23 +100,6 @@ impl Comunicacion {
     }
     
     pub fn obtener_paquete(&mut self) -> Result<(), ErrorDeComunicacion> {
-        let mut tamanio_bytes = [0; 4];
-        self.flujo.read_exact(&mut tamanio_bytes)?;
-        // largo de bytes a str
-        let tamanio_str = str::from_utf8(&tamanio_bytes)?;
-        // transforma str a u32
-        println!("tamanio: {:?}", tamanio_str);
-        let tamanio = u32::from_str_radix(tamanio_str, 16).unwrap();
-        // lee el resto del flujo
-        let mut data = vec![0; (tamanio - 4) as usize];
-        self.flujo.read_exact(&mut data)?;
-        let linea = str::from_utf8(&data)?;
-        println!("Received: {:?}", linea);
-        println!("Borrar esto de obtener_paquete");
-        self.flujo.read_exact(&mut tamanio_bytes)?;
-        println!("fin de lo random  ");
-
-
         // a partir de aca obtengo el paquete
         println!("obteniendo firma");
         let mut firma = [0; 4];
@@ -124,12 +112,13 @@ impl Comunicacion {
         println!("version: {:?}", str::from_utf8(&version)?);
         // assert_eq!("0002", str::from_utf8(&version)?);
     
-        println!("obteniendo paquete");
+        println!("obteniendo largo");
         let mut largo = [0; 4];
         self.flujo.read_exact(&mut largo)?;
         let _largo = u32::from_be_bytes(largo);
-        
+        println!("largo: {:?}", _largo);        
 
+        packfile::decodificar_bytes(&mut self.flujo);
         // let n_byte: u8 = 0;
         // self.flujo.read_exact(&mut [n_byte])?;
         

@@ -20,9 +20,8 @@ fn main() -> std::io::Result<()> {
     let capacidades = refs_recibidas[0].split("\0").collect::<Vec<&str>>()[1];
     let wants = comunicacion.obtener_wants(&refs_recibidas, capacidades.to_string()).unwrap();
     comunicacion.responder(wants.clone()).unwrap();
-    // let lineas = comunicacion.obtener_lineas().unwrap();
-
-    // println!("hola: {:?}", lineas);
+    let nak = comunicacion.obtener_lineas().unwrap();
+    println!("lineas: {:?}", nak);
 
     println!("Obteniendo paquete..");
     comunicacion.obtener_paquete().unwrap();
