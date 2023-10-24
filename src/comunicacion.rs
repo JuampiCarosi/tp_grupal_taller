@@ -67,8 +67,6 @@ impl Comunicacion {
     }
     
     pub fn responder_con_bytes(&mut self, lineas: Vec<Vec<u8>>) -> Result<(), ErrorDeComunicacion> {
-        println!("Hola, entre a responderte cliente");
-        println!("linea 1: {:?}", str::from_utf8(&lineas[0]));
         for linea in lineas { 
             self.flujo.write_all(&linea)?;
         }

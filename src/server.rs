@@ -4,6 +4,7 @@ use std::env;
 use std::path::PathBuf;
 use std::str;
 use crate::err_comunicacion::ErrorDeComunicacion;
+use crate::packfile;
 use crate::{io as git_io, comunicacion::Comunicacion};
 pub struct Servidor { 
     listener: TcpListener,
@@ -42,6 +43,7 @@ impl Servidor {
 
         comunicacion.responder(vec![git_io::obtener_linea_con_largo_hex("NAK\n")])?; // respondo NAK
         
+        let packfile = packfile::Packfile::new().obtener_packfile(self.dir.clone() + "/.git/objects/"); // obtengo el packfile
         // let packfile = Packfile::new().obtener_packfile(self.dir.clone() + "/.git/objects/"); // obtengo el packfile
         // comunicacion.responder_con_bytes(vec![packfile])?; // respondo con el packfile
         // }
