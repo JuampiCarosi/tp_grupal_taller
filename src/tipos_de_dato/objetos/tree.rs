@@ -258,6 +258,10 @@ impl Tree {
         let hash = self.obtener_hash()?;
         let ruta = format!(".gir/objects/{}/{}", &hash[..2], &hash[2..]);
 
+        if PathBuf::from(&ruta).exists() || self.es_vacio() {
+            return Ok(());
+        }
+
         let contenido = Self::mostrar_contenido(&self.objetos)?;
         let header = format!("tree {}\0", contenido.len());
 
@@ -268,6 +272,11 @@ impl Tree {
             match objeto {
                 Objeto::Blob(blob) => {
                     let logger = Rc::new(logger::Logger::new(PathBuf::from("tmp/tree"))?);
+
+                    if PathBuf::from(&blob.ubicacion).is_file() {
+                        continue;
+                    }
+
                     HashObject {
                         logger: logger.clone(),
                         escribir: true,
@@ -275,13 +284,8 @@ impl Tree {
                     }
                     .ejecutar()?;
                 }
-                Objeto::Tree(tree) => {
-                    if tree.es_vacio() {
-                        continue;
-                    }
-                    tree.escribir_en_base()?;
-                }
-            }
+                Objeto::Tree(tree) => tree.escribir_en_base()?,
+            };
         }
 
         Ok(())
