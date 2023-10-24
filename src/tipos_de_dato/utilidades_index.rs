@@ -12,15 +12,26 @@ use crate::{
 
 use super::{logger::Logger, objeto::Objeto};
 
+const PATH_INDEX:&str = "./.gir/index";
+
 pub fn crear_index() {
-    if Path::new("./.gir/index").exists() {
+    if Path::new(PATH_INDEX).exists() {
         return;
     }
-    let _ = fs::File::create("./.gir/index");
+    let _ = fs::File::create(PATH_INDEX);
+}
+
+//Devuelve true si el index esta vacio y false en caso contrario. 
+//Si falla se presupone que es porque no existe y por lo tanto esta vacio 
+pub fn esta_vacio_el_index()->bool{
+    match fs::metadata(PATH_INDEX) {
+        Ok(metadatos) => metadatos.len() > 0,
+        Err(_) => true, // Devuelve true en caso de error
+    }
 }
 
 pub fn leer_index() -> Result<Vec<Objeto>, String> {
-    let file = match OpenOptions::new().read(true).open("./.gir/index") {
+    let file = match OpenOptions::new().read(true).open(PATH_INDEX) {
         Ok(file) => file,
         Err(_) => return Err("No se pudo abrir el archivo index".to_string()),
     };
@@ -73,7 +84,7 @@ fn generar_objetos_raiz(objetos: &Vec<Objeto>) -> Result<Vec<Objeto>, String> {
 }
 
 pub fn escribir_index(logger: Rc<Logger>, objetos: &Vec<Objeto>) -> Result<(), String> {
-    let mut file = match OpenOptions::new().write(true).open("./.gir/index") {
+    let mut file = match OpenOptions::new().write(true).open(PATH_INDEX) {
         Ok(file) => file,
         Err(_) => return Err("No se pudo escribir el archivo index".to_string()),
     };
@@ -82,7 +93,7 @@ pub fn escribir_index(logger: Rc<Logger>, objetos: &Vec<Objeto>) -> Result<(), S
         OpenOptions::new()
             .write(true)
             .truncate(true)
-            .open("./.gir/index")
+            .open(PATH_INDEX)
             .unwrap();
         return Ok(());
     }
@@ -111,7 +122,7 @@ pub fn escribir_index(logger: Rc<Logger>, objetos: &Vec<Objeto>) -> Result<(), S
     OpenOptions::new()
         .write(true)
         .truncate(true)
-        .open("./.gir/index")
+        .open(PATH_INDEX)
         .unwrap();
     let _ = file.write_all(buffer.as_bytes());
     Ok(())

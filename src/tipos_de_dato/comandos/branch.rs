@@ -35,12 +35,7 @@ impl Branch {
 
     pub fn mostrar_ramas() -> Result<String, String> {
         let directorio = ".gir/refs/heads";
-        let ramas = std::fs::read_dir(directorio);
-
-        let entradas = match ramas {
-            Ok(entradas) => entradas,
-            Err(_) => Err(format!("No se pudo leer el directorio {}\n", directorio))?,
-        };
+        let entradas = std::fs::read_dir(directorio).map_err(|e|format!("No se pudo leer el directorio:{}\n {}", directorio,e))?;
 
         let mut output = String::new();
 
@@ -99,7 +94,10 @@ mod test {
     use std::rc::Rc;
 
     fn limpiar_archivo_gir() {
-        rm_directorio(".gir").unwrap();
+        if PathBuf::from("./.gir").exists(){
+            rm_directorio(".gir").unwrap();
+        }
+        
         let logger = Rc::new(Logger::new(PathBuf::from("tmp/branch_init")).unwrap());
         let init = Init {
             path: "./.gir".to_string(),
