@@ -107,57 +107,6 @@ impl Packfile {
     }
 }
 
-// pub fn codificar_longitud(tamanio: u64, bits_adicionales: u8) -> Vec<u8> {
-//     let mut resultado = Vec::new();
-//     let mut value = tamanio
-
-// ;
-
-//     // Agregar los bits adicionales
-//     let first_byte = ((bits_adicionales & 0x07) << 4) as u8;
-//     resultado.push(first_byte | 0x08); // Establecer el bit más significativo a 1
-
-//     loop {
-//         let mut byte = (value & 0x7F) as u8;
-//         value >>= 7;
-
-//         if value > 0 {
-//             byte |= 0x80;
-//         }
-
-//         resultado.push(byte);
-
-//         if value == 0 {
-//             break;
-//         }
-//     }
-
-//     resultado
-// }
-
-// pub fn decodificar_longitud(bytes: &[u8]) -> Option<(u64, u8)> {
-//     let mut tamanio = 0u64;
-//     let mut shift = 0;
-//     let mut bits_adicionales = 0u8;
-
-//     for (i, &byte) in bytes.iter().enumerate() {
-//         if i == 0 {
-//             // Decodificar los bits adicionales del primer byte
-//             bits_adicionales = (byte & 0xF0) >> 4;
-//         } else {
-//             tamanio |= ((byte & 0x7F) as u64) << shift;
-//             shift += 7;
-
-//             if (byte & 0x80) == 0 {
-//                 return Some((tamanio, bits_adicionales));
-//             }
-//         }
-//     }
-
-//     None
-// }
-
-// 
 pub fn codificar_bytes(tipo: u8, numero: u32) -> Vec<u8> {
     let mut resultado = Vec::new();
     let mut valor = numero;
@@ -168,7 +117,7 @@ pub fn codificar_bytes(tipo: u8, numero: u32) -> Vec<u8> {
         ((tipo & 0x07) << 4) as u8 | 0x80 | (numero & 0x0F) as u8
     } else {
         ((tipo & 0x07) << 4) as u8 | (numero & 0x0F) as u8
-
+        
     };
 
     resultado.push(primer_byte); // Establecer el bit más significativo a 1 y agregar los 4 bits finales 
@@ -193,7 +142,7 @@ pub fn codificar_bytes(tipo: u8, numero: u32) -> Vec<u8> {
 pub fn decodificar_bytes(flujo: &mut TcpStream) -> (u8, u32) {
     
     let mut byte = [0; 1];
-    let mut numero_decodificado: u32 = 0;
+    let mut numero_decodificado: u32;
     let mut corrimiento: u32 = 0;
     let mut continua = false;
     
@@ -201,11 +150,13 @@ pub fn decodificar_bytes(flujo: &mut TcpStream) -> (u8, u32) {
     // decodifico el primer byte que es distinto
     let tipo = byte[0] >> 4 & 0x07; // deduzco el tipo 
     numero_decodificado = (byte[0] & 0x0f) as u32; // obtengo los primeros 4 bits
+    
     if byte[0] & 0x80 != 0 {
         continua = true;
+        println!("Voy a continuar!");   
     }
     corrimiento += 4;
-    
+    let mut contador = 0;
     loop {
         if !continua {
             break;
@@ -215,9 +166,8 @@ pub fn decodificar_bytes(flujo: &mut TcpStream) -> (u8, u32) {
             continua = false;
             
         }
-        numero_decodificado = numero_decodificado << corrimiento;
+        numero_decodificado |= ((byte[0] & 0x7f) as u32) << corrimiento;
         corrimiento += 7;
-        numero_decodificado |= (byte[0] & 0x7f) as u32;
     }
     (tipo, numero_decodificado)
 }
