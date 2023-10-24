@@ -52,7 +52,7 @@ impl Comunicacion {
             // println!("Received: {:?}", linea);
             lineas.push(linea.to_string());
         }
-        // println!("Received: {:?}", lineas);
+        println!("Received: {:?}", lineas);
         Ok(lineas)
     }
     
@@ -60,15 +60,17 @@ impl Comunicacion {
         for linea in &lineas { 
             self.flujo.write_all(linea.as_bytes())?;
         }
-        // if lineas[0][4..] != "NAK".to_string() {
+        if !lineas[0].contains(&"NAK".to_string()) {
             self.flujo.write_all(String::from("0000").as_bytes())?;
-        // }
+        } 
         Ok(())
     }
     
     pub fn responder_con_bytes(&mut self, lineas: Vec<u8>) -> Result<(), ErrorDeComunicacion> {
         self.flujo.write_all(&lineas)?;
-        self.flujo.write_all(String::from("0000").as_bytes())?;
+        if !lineas.starts_with(b"PACK"){
+            self.flujo.write_all(String::from("0000").as_bytes())?;
+        }
         Ok(())
     }
     
@@ -98,6 +100,7 @@ impl Comunicacion {
         // largo de bytes a str
         let tamanio_str = str::from_utf8(&tamanio_bytes)?;
         // transforma str a u32
+        println!("tamanio: {:?}", tamanio_str);
         let tamanio = u32::from_str_radix(tamanio_str, 16).unwrap();
         // lee el resto del flujo
         let mut data = vec![0; (tamanio - 4) as usize];
@@ -110,21 +113,21 @@ impl Comunicacion {
 
 
         // a partir de aca obtengo el paquete
-        // print!("obteniendo firma");
-        // let mut firma = [0; 4];
-        // self.flujo.read_exact(&mut firma)?;
-        // println!("firma: {:?}", str::from_utf8(&firma));
+        println!("obteniendo firma");
+        let mut firma = [0; 4];
+        self.flujo.read_exact(&mut firma)?;
+        println!("firma: {:?}", str::from_utf8(&firma));
         // assert_eq!("PACK", str::from_utf8(&firma).unwrap());
         
-        // let mut version = [0; 4];
-        // self.flujo.read_exact(&mut version)?;
-        // println!("version: {:?}", str::from_utf8(&version)?);
+        let mut version = [0; 4];
+        self.flujo.read_exact(&mut version)?;
+        println!("version: {:?}", str::from_utf8(&version)?);
         // assert_eq!("0002", str::from_utf8(&version)?);
     
-        // println!("obteniendo paquete");
-        // let mut largo = [0; 4];
-        // self.flujo.read_exact(&mut largo)?;
-        // let _largo = u32::from_be_bytes(largo);
+        println!("obteniendo paquete");
+        let mut largo = [0; 4];
+        self.flujo.read_exact(&mut largo)?;
+        let _largo = u32::from_be_bytes(largo);
         
 
         // let n_byte: u8 = 0;

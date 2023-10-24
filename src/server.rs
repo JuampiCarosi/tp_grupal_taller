@@ -40,11 +40,10 @@ impl Servidor {
         // a partir de aca se asume que va a ser un clone porque es el caso mas sencillo, despues cambiar
         // if wants.ends_with(&["0009done\n".to_string()]) {
         let _obj_ids = comunicacion.obtener_obj_ids(&wants);
-
         comunicacion.responder(vec![git_io::obtener_linea_con_largo_hex("NAK\n")])?; // respondo NAK
         
         println!("Obteniendo paquete..");
-        let packfile = packfile::Packfile::new().obtener_packfile(self.dir.clone() + "/.git/objects/"); // obtengo el packfile
+        let packfile = packfile::Packfile::new().obtener_pack(self.dir.clone() + "/.git/objects/"); // obtengo el packfile
         println!("Mandando paquete..");
         comunicacion.responder_con_bytes(packfile).unwrap();
         println!("Paquete enviado");

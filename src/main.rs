@@ -11,17 +11,19 @@ fn main() -> std::io::Result<()> {
     let mut comunicacion = Comunicacion::new(client.try_clone().unwrap());
     // Envía datos al servidor (reemplaza esto por tus datos Git)
     let request_data = "git-upload-pack /.git/\0host=example.com\0\0version=1\0";
-    let largo_hex = io::calcular_largo_hex(request_data);
-    let a = format!("{}{}", largo_hex, request_data);
+    let request_data_con_largo_hex = io::obtener_linea_con_largo_hex(request_data);
     
-    client.write_all(a.as_bytes())?;
+    client.write_all(request_data_con_largo_hex.as_bytes())?;
+    
     // aca depende del comando, pero voy a hacer un clone primero (no hay have lines)
     let refs_recibidas = comunicacion.obtener_lineas().unwrap();
-    // println!("refs recibidas: {:?}", refs_recibidas);
     let capacidades = refs_recibidas[0].split("\0").collect::<Vec<&str>>()[1];
     let wants = comunicacion.obtener_wants(&refs_recibidas, capacidades.to_string()).unwrap();
     comunicacion.responder(wants.clone()).unwrap();
-    comunicacion.obtener_lineas().unwrap();
+    // let lineas = comunicacion.obtener_lineas().unwrap();
+
+    // println!("hola: {:?}", lineas);
+
     println!("Obteniendo paquete..");
     comunicacion.obtener_paquete().unwrap();
 

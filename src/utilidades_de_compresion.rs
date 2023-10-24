@@ -3,7 +3,7 @@ use flate2::{read::ZlibDecoder, write::ZlibEncoder, Compression};
 use std::io::{Read, Write};
 
 pub fn descomprimir_objeto(hash: String) -> Result<String, String> {
-    let ruta_objeto = format!(".gir/objects/{}/{}", &hash[..2], &hash[2..]);
+    let ruta_objeto = format!("./.git/objects/{}/{}", &hash[..2], &hash[2..]);
     let contenido_leido = io::leer_bytes(ruta_objeto)?;
     let mut descompresor = ZlibDecoder::new(contenido_leido.as_slice());
     let mut contenido_descomprimido = String::new();
@@ -19,7 +19,7 @@ pub fn descomprimir_objeto(hash: String) -> Result<String, String> {
 pub fn comprimir_contenido(contenido: String) -> Result<Vec<u8>, String> {
     let mut compresor = ZlibEncoder::new(Vec::new(), Compression::default());
     if compresor.write_all(contenido.as_bytes()).is_err() {
-        return Err("No se pudo comprimir el contenido".to_string());
+        return Err("No se pudo comprimir els contenido".to_string());
     };
     match compresor.finish() {
         Ok(contenido_comprimido) => Ok(contenido_comprimido),
