@@ -118,7 +118,9 @@ impl Comunicacion {
         let _largo = u32::from_be_bytes(largo);
         println!("largo: {:?}", _largo);        
 
-        packfile::decodificar_bytes(&mut self.flujo);
+        let (tipo, tamanio) = packfile::decodificar_bytes(&mut self.flujo);
+        println!("tipo: {:?}", tipo);
+        println!("tamanio: {:?}", tamanio);
         // let n_byte: u8 = 0;
         // self.flujo.read_exact(&mut [n_byte])?;
         

@@ -1,7 +1,6 @@
 use std::{net::TcpStream, char::decode_utf16};
 use std::io::Write;
-use gir::packfile::decodificar_longitud;
-use gir::{io, comunicacion::Comunicacion, packfile::{self, codificar_longitud}};
+use gir::{io, comunicacion::Comunicacion, packfile};
 fn main() -> std::io::Result<()> {
     // Configura la dirección del servidor y el puerto
     let server_address = "127.0.0.1:9418"; // Cambia la dirección IP si es necesario
@@ -21,7 +20,7 @@ fn main() -> std::io::Result<()> {
     let wants = comunicacion.obtener_wants(&refs_recibidas, capacidades.to_string()).unwrap();
     comunicacion.responder(wants.clone()).unwrap();
     let nak = comunicacion.obtener_lineas().unwrap();
-    println!("lineas: {:?}", nak);
+    println!("nak: {:?}", nak);
 
     println!("Obteniendo paquete..");
     comunicacion.obtener_paquete().unwrap();
