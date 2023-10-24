@@ -161,9 +161,10 @@ pub fn escrbir_bytes(archivo: &String, contenido: Vec<u8>) -> Result<(), String>
 }
 
 pub fn leer_bytes(archivo: &String) -> Result<Vec<u8>, String> {
-    match fs::read(archivo) {
+    match fs::read(Path::new(archivo)) {
         Ok(contenido) => Ok(contenido),
-        Err(_) => {
+        Err(err) => {
+            println!("Error al leer el archivo: {}", err);
             Err("No se pudo leer el archivo".to_string())
         }
     }

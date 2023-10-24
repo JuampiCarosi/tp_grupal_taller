@@ -66,10 +66,8 @@ impl Comunicacion {
         Ok(())
     }
     
-    pub fn responder_con_bytes(&mut self, lineas: Vec<Vec<u8>>) -> Result<(), ErrorDeComunicacion> {
-        for linea in lineas { 
-            self.flujo.write_all(&linea)?;
-        }
+    pub fn responder_con_bytes(&mut self, lineas: Vec<u8>) -> Result<(), ErrorDeComunicacion> {
+        self.flujo.write_all(&lineas)?;
         self.flujo.write_all(String::from("0000").as_bytes())?;
         Ok(())
     }
@@ -95,7 +93,6 @@ impl Comunicacion {
     }
     
     pub fn obtener_paquete(&mut self) -> Result<(), ErrorDeComunicacion> {
-    
         let mut tamanio_bytes = [0; 4];
         self.flujo.read_exact(&mut tamanio_bytes)?;
         // largo de bytes a str
@@ -109,39 +106,36 @@ impl Comunicacion {
         println!("Received: {:?}", linea);
         println!("Borrar esto de obtener_paquete");
         self.flujo.read_exact(&mut tamanio_bytes)?;
-    
-    
-        print!("obteniendo firma");
-        let mut firma = [0; 4];
-        self.flujo.read_exact(&mut firma)?;
-        println!("firma: {:?}", str::from_utf8(&firma));
+        println!("fin de lo random  ");
+
+
+        // a partir de aca obtengo el paquete
+        // print!("obteniendo firma");
+        // let mut firma = [0; 4];
+        // self.flujo.read_exact(&mut firma)?;
+        // println!("firma: {:?}", str::from_utf8(&firma));
         // assert_eq!("PACK", str::from_utf8(&firma).unwrap());
         
-        let mut version = [0; 4];
-        self.flujo.read_exact(&mut version)?;
+        // let mut version = [0; 4];
+        // self.flujo.read_exact(&mut version)?;
+        // println!("version: {:?}", str::from_utf8(&version)?);
         // assert_eq!("0002", str::from_utf8(&version)?);
     
+        // println!("obteniendo paquete");
+        // let mut largo = [0; 4];
+        // self.flujo.read_exact(&mut largo)?;
+        // let _largo = u32::from_be_bytes(largo);
+        
+
+        // let n_byte: u8 = 0;
+        // self.flujo.read_exact(&mut [n_byte])?;
+        
+        // let mut bytes_obj = [0; 20];
+        // self.flujo.read_exact(&mut bytes_obj)?;
+        // let hash = str::from_utf8(&bytes_obj)?;
+        // let logger = Rc::new(logger::Logger::new().unwrap());
     
-        println!("obteniendo paquete");
-        let mut largo = [0; 4];
-        self.flujo.read_exact(&mut largo)?;
-        let _largo = u32::from_be_bytes(largo);
-        // let _indice = 0;
-        // loop { 
-    
-        // }
-    
-        let n_byte: u8 = 0;
-        self.flujo.read_exact(&mut [n_byte])?;
-        let _tipo = n_byte & 0b1110_0000; // estas dos cosas sirven para checkear (?)
-        let _largo = n_byte & 0b0001_1111;
-    
-        let mut bytes_obj = [0; 20];
-        self.flujo.read_exact(&mut bytes_obj)?;
-        let hash = str::from_utf8(&bytes_obj)?;
-        let logger = Rc::new(logger::Logger::new().unwrap());
-    
-        let _cat_file = CatFile::from(&mut vec![hash.to_string(), "-p".to_string()], logger.clone()).unwrap().ejecutar();
+        // let _cat_file = CatFile::from(&mut vec![hash.to_string(), "-p".to_string()], logger.clone()).unwrap().ejecutar();
         Ok(())
     }
 }   

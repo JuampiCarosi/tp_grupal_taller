@@ -23,10 +23,9 @@ impl Packfile {
 
     fn aniadir_objeto(&mut self, objeto: String) -> Result<(), String>{
         let logger = Rc::new(Logger::new()?);
-        
         let tamanio_objeto = CatFile::from(&mut vec!["-s".to_string(), objeto.clone()], logger.clone())?.ejecutar()?.parse::<u64>().unwrap();
         let tipo_objeto = CatFile::from(&mut vec!["-t".to_string(), objeto.clone()], logger.clone())?.ejecutar()?;
-        
+        println!("tamanio objeto: {}", tamanio_objeto);
         // codifica el tamanio del archivo descomprimido y su tipo en un tipo variable de longitud
         let nbyte = match tipo_objeto.as_str() {
             "commit" => codificar_longitud(tamanio_objeto, 1), //1
@@ -45,13 +44,13 @@ impl Packfile {
         Ok(())
     }
 
-    // funcion que recorrer el directorio y aniade los objetos al packfile
+    // funcion que recorrer el directorio y aniade los objetos al packfile junto a su indice correspondiente
     fn obtener_objetos_del_dir(&mut self, dir: String) -> Result<(), ErrorDeComunicacion> {
         let objetos = io::obtener_objetos_del_directorio(dir)?;
-        
         for objeto in objetos {
             let inicio= self.objetos.len() as u32; // obtengo el len previo a aniadir el objeto
             self.aniadir_objeto(objeto.clone()).unwrap();
+
             let offset = self.objetos.len() as u32 - inicio; 
             self.indice.extend(&offset.to_be_bytes()); 
             self.indice.extend(objeto.as_bytes()); 
@@ -61,21 +60,27 @@ impl Packfile {
 
     pub fn obtener_packfile(&mut self, dir: String) -> Vec<u8> {
         println!("Despachando packfile");
-        
-        self.obtener_objetos_del_dir(dir).unwrap(); // obtengo los hashes de todos los objetos del repo
+        self.obtener_objetos_del_dir(dir).unwrap(); 
         let mut packfile = Vec::new();
+
+        // agrego el indice primero
+        packfile.extend(&self.indice);
+        // agrego pkt flush para separar el indice del pack
+        packfile.extend("0000".as_bytes());
+
+        // posteriormente el pack
         packfile.extend("PACK".as_bytes());
         packfile.extend(&[0, 0, 0, 2]);
         packfile.extend(&self.cant_objetos.to_be_bytes());
         packfile.extend(&self.objetos);
 
         // computa el hash SHA-1 del packfile
-        let mut hasher = Sha1::new();
-        hasher.update(&packfile);
-        let hash = hasher.finalize();
+        // let mut hasher = Sha1::new();
+        // hasher.update(&packfile);
+        // let hash = hasher.finalize();
 
-        // aniade el hash al final del packfile
-        packfile.extend(&hash);
+        // // aniade el hash al final del packfile
+        // packfile.extend(&hash);
 
         packfile
     }
