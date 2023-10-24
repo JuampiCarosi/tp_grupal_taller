@@ -1,7 +1,10 @@
 use crate::err_comunicacion::ErrorDeComunicacion;
 use crate::tipos_de_dato::{
     logger::Logger,
-    comandos::cat_file::CatFile,
+    comandos::cat_file::conseguir_tamanio,
+    comandos::cat_file::conseguir_tipo_objeto,
+    comandos::cat_file::conseguir_contenido,
+
 };
 use crate::io;
 use std::path::PathBuf;
@@ -24,8 +27,9 @@ impl Packfile {
 
     fn aniadir_objeto(&mut self, objeto: String) -> Result<(), String>{
         let logger = Rc::new(Logger::new(PathBuf::from("log.txt"))?);
-        let tamanio_objeto = CatFile::
-        let tamanio_objeto = CatFile::from(&mut vec!["-s".to_string(), objeto.clone()], logger.clone())?.ejecutar()?.parse::<u64>().unwrap();
+        let tamanio_objeto = conseguir_tamanio(objeto)?;
+        println!("tamanio objeto: {}", tamanio_objeto);
+        // let tamanio_objeto = CatFile::from(&mut vec!["-s".to_string(), objeto.clone()], logger.clone())?.ejecutar()?.parse::<u64>().unwrap();
         // let tipo_objeto = CatFile::from(&mut vec!["-t".to_string(), objeto.clone()], logger.clone())?.ejecutar()?;
         // println!("tamanio objeto: {}", tamanio_objeto);
         // // codifica el tamanio del archivo descomprimido y su tipo en un tipo variable de longitud
