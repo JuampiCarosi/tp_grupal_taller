@@ -157,23 +157,23 @@ pub fn decodificar_longitud(bytes: &[u8]) -> Option<(u64, u8)> {
 }
 
 
+
+
 pub fn decodificar_bytes(flujo: &mut TcpStream) {
     let mut byte = [0; 1];
-    let mut bytes: Vec<u8> = Vec::new();
-
+    // let mut bytes: Vec<u8> = Vec::new();
+    let mut numero_decodificado: u64 = 0;
+    let mut corrimiento: u32 = 0;
     flujo.read_exact(&mut byte).unwrap();
     let tipo = byte[0] >> 4 & 0x07; // deduzco el tipo 
-    bytes.push(byte[0] << 4); // agrego los 4 bits iniciales del numero
+    // bytes.push(byte[0] << 4); // agrego los 4 bits iniciales del numero
+    numero_decodificado |= (byte[0] & 0x0F) as u64; // agrego los 4 bits iniciales del numero 
     loop {
         flujo.read_exact(&mut byte).unwrap();
         if byte[0] & 0x80 == 0 {
             // aca devuelvo el resultado
             break;
         }
-        let mut byte_completo: u8 = bytes[bytes.len() - 1] | (byte[0] & 0x7F >> 3);
-        bytes.pop();
-        bytes.push(byte_completo);
-        let mut siguiente_mitad = byte[0] << 4;
-        bytes.push(siguiente_mitad); 
+        numero_decodificado |= (byte[0] & 0x7f) as u64 << corrimiento;
     }
 }
