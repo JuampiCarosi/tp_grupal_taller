@@ -28,7 +28,6 @@ impl Packfile {
         
         // optimizar el hecho de que pido descomprimir 2 veces un archivo
         let tamanio_objeto = conseguir_tamanio(objeto.clone())?.parse::<u32>().unwrap();
-        println!("tamanio del objeto {}: {}", objeto, tamanio_objeto);
         let tipo_objeto = conseguir_tipo_objeto(objeto.clone())?;
         // codifica el tamanio del archivo descomprimido y su tipo en un tipo variable de longitud
         let nbyte = match tipo_objeto.as_str() {
@@ -158,15 +157,21 @@ impl Packfile {
 //     None
 // }
 
-
+// 
 pub fn codificar_bytes(tipo: u8, numero: u32) -> Vec<u8> {
     let mut resultado = Vec::new();
     let mut valor = numero;
+    println!("codificando al tipo: {:?} y numero: {:?}", tipo, numero);
 
-    // Agregar el tipo
-    let primeros_4_bits = (valor | 0x0F) as u8;
-    let primer_byte = ((tipo & 0x07) << 4) as u8;
-    resultado.push((primer_byte | primeros_4_bits) | 0x80); // Establecer el bit más significativo a 1 y agregar los 4 bits finales 
+    // si lo el tamanio del numero es mayor a 4 bits, entonces tengo que poner el bit mas significativo en 1
+    let primer_byte: u8 = if valor >> 4 != 0 {
+        ((tipo & 0x07) << 4) as u8 | 0x80 | (numero & 0x0F) as u8
+    } else {
+        ((tipo & 0x07) << 4) as u8 | (numero & 0x0F) as u8
+
+    };
+
+    resultado.push(primer_byte); // Establecer el bit más significativo a 1 y agregar los 4 bits finales 
     valor >>= 4;    
     loop {
         if valor == 0 {
