@@ -6,7 +6,9 @@ use std::str;
 use crate::io;
 use crate::tipos_de_dato::comandos::cat_file::CatFile;
 use std::rc::Rc;
+use flate2::{Decompress, FlushDecompress};
 use crate::packfile;
+use std::convert::TryInto;
 
 pub struct Comunicacion {
     flujo: TcpStream,
@@ -78,6 +80,24 @@ impl Comunicacion {
         }
         Ok(())
     }
+
+    pub fn obtener_lineas_como_bytes(&mut self) -> Result<Vec<u8>, ErrorDeComunicacion> {
+        let mut buffer = Vec::new();
+        let mut temp_buffer = [0u8; 1024]; // Tamaño del búfer de lectura, ajusta según tus necesidades
+
+        loop {
+            let bytes_read = self.flujo.read(&mut temp_buffer)?;
+
+            if bytes_read == 0 {
+                break; // No hay más bytes disponibles, salir del bucle
+            }
+            // Copiar los bytes leídos al búfer principal
+            buffer.extend_from_slice(&temp_buffer[0..bytes_read]);
+        }
+
+    Ok(buffer)
+}
+
     
     pub fn obtener_obj_ids(&mut self, lineas: &Vec<String>) -> Vec<String> {
         let mut obj_ids: Vec<String> = Vec::new();
@@ -99,37 +119,47 @@ impl Comunicacion {
         Ok(lista_wants)
     }
     
-    pub fn obtener_paquete(&mut self) -> Result<(), ErrorDeComunicacion> {
+    pub fn obtener_paquete(&mut self, bytes: &mut Vec<u8>) -> Result<(), ErrorDeComunicacion> {
         // a partir de aca obtengo el paquete
+        println!("cant bytes: {:?}", bytes.len());
         println!("obteniendo firma");
-        let mut firma = [0; 4];
-        self.flujo.read_exact(&mut firma)?;
+        let firma = &bytes[0..4];
         println!("firma: {:?}", str::from_utf8(&firma));
         // assert_eq!("PACK", str::from_utf8(&firma).unwrap());
-        
-        let mut version = [0; 4];
-        self.flujo.read_exact(&mut version)?;
+        bytes.drain(0..4);
+
+        let version = &bytes[0..4];
         println!("version: {:?}", str::from_utf8(&version)?);
-        // assert_eq!("0002", str::from_utf8(&version)?);
+        // // assert_eq!("0002", str::from_utf8(&version)?);
+        bytes.drain(0..4);
     
         println!("obteniendo largo");
-        let mut largo = [0; 4];
-        self.flujo.read_exact(&mut largo)?;
-        let _largo = u32::from_be_bytes(largo);
-        println!("largo: {:?}", _largo);        
+        let largo = &bytes[0..4];
+        let largo_packfile: [u8; 4] = largo.try_into().unwrap();
+        let largo = u32::from_be_bytes(largo_packfile);
+        println!("largo: {:?}", largo);        
+        bytes.drain(0..4);
+        println!("cant bytes: {:?}", bytes.len());
 
-        let (tipo, tamanio) = packfile::decodificar_bytes(&mut self.flujo);
+        let (tipo, tamanio, bytes_leidos) = packfile::decodificar_bytes(bytes);
         println!("tipo: {:?}", tipo);
         println!("tamanio: {:?}", tamanio);
-        // let n_byte: u8 = 0;
-        // self.flujo.read_exact(&mut [n_byte])?;
+        println!("bytes leidos: {:?}", bytes_leidos);
+        let bytes = bytes.split_off((bytes_leidos - 1) as usize);
+        println!("cant bytes: {:?}", bytes.len());
+
+        // bytes.drain(0..bytes_leidos);
+        // // -- leo el contenido comprimido --
+        let mut objeto_descomprimido = vec![0; tamanio as usize];
         
-        // let mut bytes_obj = [0; 20];
-        // self.flujo.read_exact(&mut bytes_obj)?;
-        // let hash = str::from_utf8(&bytes_obj)?;
-        // let logger = Rc::new(logger::Logger::new().unwrap());
-    
-        // let _cat_file = CatFile::from(&mut vec![hash.to_string(), "-p".to_string()], logger.clone()).unwrap().ejecutar();
+        let mut descompresor = Decompress::new(true);
+
+        descompresor.decompress(&bytes, &mut objeto_descomprimido, FlushDecompress::Finish ).unwrap();
+
+        let contenido = String::from_utf8(objeto_descomprimido).unwrap();
+        println!("contenido: {:?}", contenido);
+
+        // let offset = descompresor.total_out();
         Ok(())
     }
 }   

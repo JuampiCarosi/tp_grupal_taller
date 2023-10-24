@@ -47,11 +47,14 @@ impl Packfile {
         Ok(())
     }
 
+
+    // fijarse en commit que algo se manda incompleto, creo 
     // funcion que recorrer el directorio y aniade los objetos al packfile junto a su indice correspondiente
     fn obtener_objetos_del_dir(&mut self, dir: String) -> Result<(), ErrorDeComunicacion> {
         // let objetos = io::obtener_objetos_del_directorio(dir)?;
         // commit y blob
         let objetos = vec!["8ab3bc50ab8155b55c54a2c4d75afdc910203483".to_string(), "0e0082b1300909b92177ba464ee56bd9e8abc4d3".to_string()];
+        // let objetos = vec!["9a22491ff4809b4b1e07163a7b36737831b78046".to_string()];
         for objeto in objetos {
             let inicio= self.objetos.len() as u32; // obtengo el len previo a aniadir el objeto
             self.aniadir_objeto(objeto.clone()).unwrap();
@@ -81,7 +84,6 @@ impl Packfile {
         packfile.extend(&[0, 0, 0, 2]);
         packfile.extend(&self.cant_objetos.to_be_bytes());
         packfile.extend(&self.objetos);
-
         // computa el hash SHA-1 del packfile
         // let mut hasher = Sha1::new();
         // hasher.update(&packfile);
@@ -139,35 +141,36 @@ pub fn codificar_bytes(tipo: u8, numero: u32) -> Vec<u8> {
 }
 
 // por que 32 y no 64? porque en la docu dice que no tenemos objetos de mas de 4g (2^32)
-pub fn decodificar_bytes(flujo: &mut TcpStream) -> (u8, u32) {
-    
-    let mut byte = [0; 1];
+// devuelve tipo, tamanio del objeto descomprimido y bytes leidos
+pub fn decodificar_bytes(bytes: &mut Vec<u8>) -> (u8, u32, u32) {
+    // let mut byte = [0; 1];
     let mut numero_decodificado: u32;
     let mut corrimiento: u32 = 0;
     let mut continua = false;
-    
-    flujo.read_exact(&mut byte).unwrap();
+    let mut bytes_leidos = 0;
+
     // decodifico el primer byte que es distinto
-    let tipo = byte[0] >> 4 & 0x07; // deduzco el tipo 
-    numero_decodificado = (byte[0] & 0x0f) as u32; // obtengo los primeros 4 bits
+    let tipo = bytes[0] >> 4 & 0x07; // deduzco el tipo 
+    numero_decodificado = (bytes[0] & 0x0f) as u32; // obtengo los primeros 4 bits
     
-    if byte[0] & 0x80 != 0 {
+    if bytes[0] & 0x80 != 0 {
         continua = true;
-        println!("Voy a continuar!");   
     }
     corrimiento += 4;
-    let mut contador = 0;
+    bytes_leidos += 1;
     loop {
         if !continua {
             break;
         }
-        flujo.read_exact(&mut byte).unwrap();
-        if byte[0] & 0x80 == 0 {
+        bytes.remove(0);
+        // flujo.read_exact(&mut byte).unwrap();
+        if bytes[0] & 0x80 == 0 {
             continua = false;
             
         }
-        numero_decodificado |= ((byte[0] & 0x7f) as u32) << corrimiento;
+        numero_decodificado |= ((bytes[0] & 0x7f) as u32) << corrimiento;
         corrimiento += 7;
+        bytes_leidos += 1;
     }
-    (tipo, numero_decodificado)
+    (tipo, numero_decodificado, bytes_leidos)
 }

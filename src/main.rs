@@ -23,7 +23,8 @@ fn main() -> std::io::Result<()> {
     println!("nak: {:?}", nak);
 
     println!("Obteniendo paquete..");
-    comunicacion.obtener_paquete().unwrap();
+    let mut packfile = comunicacion.obtener_lineas_como_bytes().unwrap();
+    comunicacion.obtener_paquete(&mut packfile).unwrap();
 
     Ok(())
 }
