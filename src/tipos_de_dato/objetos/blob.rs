@@ -1,31 +1,50 @@
-use std::{fmt::Display, rc::Rc};
-
-use crate::tipos_de_dato::{
-    comandos::cat_file::CatFile, logger::Logger, visualizaciones::Visualizaciones,
+use crate::{
+    tipos_de_dato::{
+        comandos::{cat_file::conseguir_tamanio, hash_object::HashObject},
+        logger::Logger,
+    },
+    utilidades_path_buf::obtener_nombre,
 };
+use std::{fmt::Display, path::PathBuf, rc::Rc};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Blob {
-    pub nombre: String,
     pub hash: String,
+    pub ubicacion: PathBuf,
+    pub nombre: String,
 }
 
 impl Blob {
     pub fn obtener_hash(&self) -> String {
         self.hash.clone()
     }
-    pub fn obtener_tamanio(&self) -> usize {
-        let logger = Rc::new(Logger::new().unwrap());
-
-        let cat_file = CatFile {
-            logger,
-            visualizacion: Visualizaciones::Tamanio,
-            objeto: self.hash.clone(),
+    pub fn obtener_tamanio(&self) -> Result<usize, String> {
+        let tamanio_blob = match conseguir_tamanio(self.hash.clone()) {
+            Ok(tamanio) => tamanio,
+            Err(_) => return Err("No se pudo obtener el tamanio del blob".to_string()),
         };
+        match tamanio_blob.parse::<usize>() {
+            Ok(tamanio) => Ok(tamanio),
+            Err(_) => Err("No se pudo parsear el tamanio del blob".to_string()),
+        }
+    }
 
-        let tamanio_string = cat_file.ejecutar().unwrap();
+    pub fn from_directorio(directorio: PathBuf) -> Result<Blob, String> {
+        let logger = Rc::new(Logger::new(PathBuf::from("tmp/objeto"))?);
+        let hash = HashObject {
+            logger,
+            escribir: false,
+            ubicacion_archivo: directorio.clone(),
+        }
+        .ejecutar()?;
 
-        tamanio_string.parse::<usize>().unwrap()
+        let nombre = obtener_nombre(&directorio)?;
+
+        Ok(Blob {
+            nombre,
+            hash,
+            ubicacion: directorio,
+        })
     }
 }
 

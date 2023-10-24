@@ -4,6 +4,7 @@ use crate::tipos_de_dato::{
     comandos::cat_file::CatFile,
 };
 use crate::io;
+use std::path::PathBuf;
 use std::rc::Rc;
 use sha1::{Digest, Sha1};
 pub struct Packfile {
@@ -22,23 +23,24 @@ impl Packfile {
     }
 
     fn aniadir_objeto(&mut self, objeto: String) -> Result<(), String>{
-        let logger = Rc::new(Logger::new()?);
+        let logger = Rc::new(Logger::new(PathBuf::from("log.txt"))?);
+        let tamanio_objeto = CatFile::
         let tamanio_objeto = CatFile::from(&mut vec!["-s".to_string(), objeto.clone()], logger.clone())?.ejecutar()?.parse::<u64>().unwrap();
-        let tipo_objeto = CatFile::from(&mut vec!["-t".to_string(), objeto.clone()], logger.clone())?.ejecutar()?;
-        println!("tamanio objeto: {}", tamanio_objeto);
-        // codifica el tamanio del archivo descomprimido y su tipo en un tipo variable de longitud
-        let nbyte = match tipo_objeto.as_str() {
-            "commit" => codificar_longitud(tamanio_objeto, 1), //1
-            "tree" => codificar_longitud(tamanio_objeto, 2), // 2
-            "blob" => codificar_longitud(tamanio_objeto, 3), // 3
-            "tag" => codificar_longitud(tamanio_objeto, 4), // 4
-            _ => {return Err("Tipo de objeto invalido".to_string());} 
-        };
+        // let tipo_objeto = CatFile::from(&mut vec!["-t".to_string(), objeto.clone()], logger.clone())?.ejecutar()?;
+        // println!("tamanio objeto: {}", tamanio_objeto);
+        // // codifica el tamanio del archivo descomprimido y su tipo en un tipo variable de longitud
+        // let nbyte = match tipo_objeto.as_str() {
+        //     "commit" => codificar_longitud(tamanio_objeto, 1), //1
+        //     "tree" => codificar_longitud(tamanio_objeto, 2), // 2
+        //     "blob" => codificar_longitud(tamanio_objeto, 3), // 3
+        //     "tag" => codificar_longitud(tamanio_objeto, 4), // 4
+        //     _ => {return Err("Tipo de objeto invalido".to_string());} 
+        // };
 
-        self.objetos.extend(nbyte); 
-        let ruta_objeto = format!("./.git/objects/{}/{}", &objeto[..2], &objeto[2..]);
-        let objeto_comprimido = io::leer_bytes(&ruta_objeto).unwrap();
-        self.objetos.extend(objeto_comprimido);
+        // self.objetos.extend(nbyte); 
+        // let ruta_objeto = format!("./.git/objects/{}/{}", &objeto[..2], &objeto[2..]);
+        // let objeto_comprimido = io::leer_bytes(&ruta_objeto).unwrap();
+        // self.objetos.extend(objeto_comprimido);
 
         self.cant_objetos += 1;
         Ok(())

@@ -1,100 +1,149 @@
-use flate2::read::ZlibDecoder;
-
 use crate::{
-    io,
-    tipos_de_dato::{logger::Logger, visualizaciones::Visualizaciones},
+    tipos_de_dato::{logger::Logger, objeto::flag_es_un_objeto_, visualizaciones::Visualizaciones},
+    utilidades_de_compresion::descomprimir_objeto,
 };
-use std::{io::Read, rc::Rc};
+use std::rc::Rc;
 
 pub struct CatFile {
     pub logger: Rc<Logger>,
     pub visualizacion: Visualizaciones,
-    pub objeto: String,
+    pub hash_objeto: String,
+}
+
+fn obtener_contenido_objeto(hash: String) -> Result<(String, String), String> {
+    let objeto = descomprimir_objeto(hash)?;
+    match objeto.split_once('\0') {
+        Some((header, contenido)) => Ok((header.to_string(), contenido.to_string())),
+        None => Err("Objeto invalido".to_string()),
+    }
+}
+
+pub fn conseguir_contenido(hash: String) -> Result<String, String> {
+    let (_, contenido) = obtener_contenido_objeto(hash)?;
+    Ok(contenido.to_string())
+}
+
+pub fn conseguir_tamanio(hash: String) -> Result<String, String> {
+    let (header, _) = obtener_contenido_objeto(hash)?;
+    let size = match header.split_once(' ') {
+        Some((_, size)) => size,
+        None => return Err("Objeto invalido".to_string()),
+    };
+    Ok(size.to_string())
+}
+
+pub fn conseguir_tipo_objeto(hash: String) -> Result<String, String> {
+    let (header, _) = obtener_contenido_objeto(hash)?;
+    let tipo_objeto = match header.split_once(' ') {
+        Some((tipo, _)) => tipo,
+        None => return Err("Objeto invalido".to_string()),
+    };
+    Ok(tipo_objeto.to_string())
 }
 
 impl CatFile {
     pub fn from(args: &mut Vec<String>, logger: Rc<Logger>) -> Result<CatFile, String> {
-        let objeto = match args.pop() {
-            Some(objeto) => objeto,
-            None => {
-                return Err(format!("No se asigno un objeto un objeto"));
-            }
+        let objeto = args
+            .pop()
+            .ok_or_else(|| "No se especifico un objeto".to_string())?;
+        let segundo_argumento = args.pop().ok_or_else(|| {
+            "No se especifico una opcion de visualizacion (-t | -s | -p)".to_string()
+        })?;
+        let visualizacion = match flag_es_un_objeto_(&segundo_argumento) {
+             true => Visualizaciones::from("-p".to_string())?,
+            false => Visualizaciones::from(segundo_argumento)?,
         };
-        let segundo_argumento = match args.pop() {
-            Some(segundo_argumento) => segundo_argumento,
-            None => {
-                return Err(format!(
-                    "Se esperaba una opcion de visualizacion (-t | -s | -p)"
-                ));
-            }
-        };
-        let visualizacion = Visualizaciones::from(segundo_argumento)?;
         Ok(CatFile {
             logger,
             visualizacion,
-            objeto,
+            hash_objeto: objeto,
         })
-    }
-
-    fn  descomprimir_objeto(&self) -> Result<String, String> {
-        let ruta_objeto = format!("./.git/objects/{}/{}", &self.objeto[..2], &self.objeto[2..]);
-        let contenido_leido = io::leer_bytes(&ruta_objeto)?;
-        let mut descompresor = ZlibDecoder::new(contenido_leido.as_slice());
-        let mut contenido_descomprimido = String::new();
-        match descompresor.read_to_string(&mut contenido_descomprimido) {
-            Ok(_) => {}
-            Err(_) => {
-                return Err(format!("No se pudo descomprimir el objeto {}", self.objeto));
-            }
-        };
-        Ok(contenido_descomprimido)
-    }
-
-    fn obtener_objeto(&self) -> Result<(String, String), String> {
-        let objeto = self.descomprimir_objeto()?;
-        match objeto.split_once("\0") {
-            Some((header, contenido)) => Ok((header.to_string(), contenido.to_string())),
-            None => Err("Objeto invalido".to_string()),
-        }
-    }
-
-    fn visualizar_contenido(&self) -> Result<String, String> {
-        let (_, contenido) = self.obtener_objeto()?;
-        println!("{}", contenido);
-        Ok(format!(
-            "Visualizacion del contenido del objeto: {}",
-            self.objeto
-        ))
-    }
-
-    fn visualizar_tamanio(&self) -> Result<String, String> {
-        let (header, _) = self.obtener_objeto()?;
-        let size = match header.split_once(" ") {
-            Some((_, size)) => size,
-            None => return Err(format!("Objeto invalido")),
-        };
-
-        println!("Tamaño del objeto: {}", size);
-        Ok(format!("{}", size))
-    }
-
-    fn visualizar_tipo_objeto(&self) -> Result<String, String> {
-        let (header, _) = self.obtener_objeto()?;
-        let tipo_objeto = match header.split_once(" ") {
-            Some((tipo, _)) => tipo,
-            None => return Err(format!("Objeto invalido")),
-        };
-        println!("Tipo de objeto: {}", tipo_objeto);
-        Ok(tipo_objeto.to_string())
     }
 
     pub fn ejecutar(&self) -> Result<String, String> {
         let mensaje = match self.visualizacion {
-            Visualizaciones::TipoObjeto => self.visualizar_tipo_objeto()?,
-            Visualizaciones::Tamanio => self.visualizar_tamanio()?,
-            Visualizaciones::Contenido => self.visualizar_contenido()?,
+            Visualizaciones::TipoObjeto => conseguir_tipo_objeto(self.hash_objeto.clone())?,
+            Visualizaciones::Tamanio => conseguir_tamanio(self.hash_objeto.clone())?,
+            Visualizaciones::Contenido => conseguir_contenido(self.hash_objeto.clone())?,
         };
         self.logger.log(mensaje.clone());
         Ok(mensaje)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::{
+        io,
+        tipos_de_dato::{
+            comandos::{cat_file::CatFile, hash_object::HashObject},
+            logger::Logger,
+            visualizaciones::Visualizaciones,
+        },
+    };
+    use std::{path::PathBuf, rc::Rc};
+
+    #[test]
+    fn test01_cat_file_blob_para_visualizar_muestra_el_contenido_correcto() {
+        let logger = Rc::new(Logger::new(PathBuf::from("tmp/cat_file_test01")).unwrap());
+        let hash_object = HashObject::from(
+            &mut vec!["-w".to_string(), "test_dir/objetos/archivo.txt".to_string()],
+            logger.clone(),
+        )
+        .unwrap();
+        let hash = hash_object.ejecutar().unwrap();
+        let cat_file = CatFile {
+            logger,
+            visualizacion: Visualizaciones::Contenido,
+            hash_objeto: hash.to_string(),
+        };
+
+        let contenido = cat_file.ejecutar().unwrap();
+        let contenido_esperado = io::leer_a_string("test_dir/objetos/archivo.txt")
+            .unwrap()
+            .trim()
+            .to_string();
+        assert_eq!(contenido, contenido_esperado);
+    }
+
+    #[test]
+    fn test02_cat_file_blob_muestra_el_tamanio_correcto() {
+        let logger = Rc::new(Logger::new(PathBuf::from("tmp/cat_file_test02")).unwrap());
+        let hash_object = HashObject::from(
+            &mut vec!["-w".to_string(), "test_dir/objetos/archivo.txt".to_string()],
+            logger.clone(),
+        )
+        .unwrap();
+        let hash = hash_object.ejecutar().unwrap();
+        let cat_file = CatFile {
+            logger,
+            visualizacion: Visualizaciones::Tamanio,
+            hash_objeto: hash.to_string(),
+        };
+        let tamanio = cat_file.ejecutar().unwrap();
+        let tamanio_esperado = io::leer_a_string("test_dir/objetos/archivo.txt")
+            .unwrap()
+            .trim()
+            .len()
+            .to_string();
+        assert_eq!(tamanio, tamanio_esperado);
+    }
+
+    #[test]
+    fn test03_cat_file_blob_muestra_el_tipo_de_objeto_correcto() {
+        let logger = Rc::new(Logger::new(PathBuf::from("tmp/cat_file_test03")).unwrap());
+        let hash_object = HashObject::from(
+            &mut vec!["-w".to_string(), "test_dir/objetos/archivo.txt".to_string()],
+            logger.clone(),
+        )
+        .unwrap();
+        let hash = hash_object.ejecutar().unwrap();
+        let cat_file = CatFile {
+            logger,
+            visualizacion: Visualizaciones::TipoObjeto,
+            hash_objeto: hash.to_string(),
+        };
+        let tipo_objeto = cat_file.ejecutar().unwrap();
+        assert_eq!(tipo_objeto, "blob");
     }
 }
