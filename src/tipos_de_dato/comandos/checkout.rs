@@ -8,11 +8,6 @@ use crate::{
 
 const PATH_HEAD: &str = "./.gir/HEAD";
 
-enum Referencia {
-    Commit(String),
-    Branch(String),
-}
-
 pub struct Checkout {
     crear_rama: bool,
     rama_a_cambiar: String,
