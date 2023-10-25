@@ -114,7 +114,7 @@ impl Commit {
         Ok(())
     }
 
-    pub fn ejecutar(&self) -> Result<(), String> {
+    pub fn ejecutar(&self) -> Result<String, String> {
         let hash_padre_commit = Self::obtener_hash_del_padre_del_commit()?;
         let (hash_arbol, contenido_total) = self.crear_contenido_commit(hash_padre_commit)?;
         match self.ejecutar_wrapper(contenido_total) {
@@ -128,7 +128,7 @@ impl Commit {
                 return Err("No se pudo ejecutar el commit".to_string());
             }
         };
-        Ok(())
+        Ok("Commit creado".to_string())
     }
 }
 

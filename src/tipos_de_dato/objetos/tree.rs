@@ -158,6 +158,12 @@ impl Tree {
     ) -> Result<Tree, String> {
         let mut objetos: Vec<Objeto> = Vec::new();
 
+        // if directorio.starts_with("./") && directorio != PathBuf::from("./") {
+        //     directorio = directorio.strip_prefix("./").unwrap().to_path_buf();
+        // }
+
+        // println!("directorio: {}", directorio.display());
+
         let entradas = match fs::read_dir(&directorio) {
             Ok(entradas) => entradas,
             Err(_) => Err(format!("Error al leer el directorio {directorio:#?}"))?,
@@ -168,9 +174,15 @@ impl Tree {
                 .map_err(|_| format!("Error al leer entrada el directorio {directorio:#?}"))?;
             let path = entrada.path();
 
-            if path.ends_with(".DS_Store") {
+            if path.ends_with(".DS_Store")
+                || path.starts_with(".gir")
+                || path.starts_with("./.gir")
+                || path == PathBuf::from("./gir")
+            {
                 continue;
             }
+
+            println!("path: {}", path.display());
 
             if let Some(hijos_especificados) = &hijos_especificados {
                 if !esta_directorio_habilitado(&path, hijos_especificados) {
@@ -251,14 +263,24 @@ impl Tree {
         let mut objetos: Vec<Objeto> = Vec::new();
 
         for (modo, nombre, hash_hijo) in contenido_parseado {
-            let ubicacion = format!("{}/{}", directorio.display(), nombre);
+            let mut ubicacion = format!("{}/{}", directorio.display(), nombre);
+
+            if directorio == PathBuf::from(".") {
+                ubicacion = nombre.clone()
+            }
+
+            println!(
+                "ubicacion: {} direcorio: {}",
+                ubicacion,
+                directorio.display()
+            );
 
             match modo.as_str() {
                 "100644" => {
                     let blob = Objeto::Blob(Blob {
                         nombre,
                         ubicacion: PathBuf::from(ubicacion),
-                        hash: Self::obtener_hash_completo(hash_hijo.to_string())?,
+                        hash: hash_hijo.to_string(),
                     });
                     objetos.push(blob);
                 }

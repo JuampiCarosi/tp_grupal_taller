@@ -125,6 +125,7 @@ impl Checkout {
     }
 
     fn comprobar_que_no_haya_contenido_index(&self) -> Result<(), String> {
+        return Ok(());
         if !utilidades_index::esta_vacio_el_index() {
             Err("Fallo, tiene contendio sin guardar. Por favor, haga commit para no perder los cambios".to_string())
         } else {
@@ -137,6 +138,8 @@ impl Checkout {
 
         if self.crear_rama {
             self.crear_rama()?;
+            self.cambiar_rama()?;
+            return Ok(format!("Cambiado a nueva rama {}", self.rama_a_cambiar));
         };
 
         self.cambiar_rama()?;
@@ -150,7 +153,7 @@ impl Checkout {
             let tree = self.deep_changes_entre_arboles(&tree_actual, &tree_padre)?;
             tree.escribir_en_directorio()?;
         };
-        Ok("".to_string())
+        Ok(format!("Cambiado a rama {}", self.rama_a_cambiar))
     }
 
     fn deep_changes_entre_arboles(&self, arbol1: &Tree, arbol2: &Tree) -> Result<Tree, String> {
