@@ -315,8 +315,19 @@ impl Tree {
     }
     pub fn contiene_hijo_por_nombre(&self, nombre_hijo: PathBuf) -> bool {
         for objeto in &self.objetos {
-            if objeto.obtener_path() == nombre_hijo {
-                return true;
+            match objeto {
+                Objeto::Blob(blob) => {
+                    if blob.ubicacion == nombre_hijo.clone() {
+                        return true;
+                    }
+                }
+                Objeto::Tree(tree) => {
+                    if tree.directorio == nombre_hijo.clone() {
+                        return true;
+                    }
+
+                    
+                }
             }
         }
         false

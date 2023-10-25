@@ -3,7 +3,9 @@ use flate2::{read::ZlibDecoder, write::ZlibEncoder, Compression};
 use std::io::{Read, Write};
 
 pub fn descomprimir_objeto(hash: String) -> Result<String, String> {
+    println!("descomprimir_objeto: {}", hash);
     let ruta_objeto = format!(".gir/objects/{}/{}", &hash[..2], &hash[2..]);
+    println!("ruta_objeto: {}", ruta_objeto);
     let contenido_leido = io::leer_bytes(ruta_objeto)?;
     let contenido_descomprimido = descomprimir_contenido_u8(&contenido_leido)?;
     let contenido_decodificado = decodificar_contenido(contenido_descomprimido)?;
