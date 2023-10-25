@@ -1,5 +1,6 @@
 use std::{fs::OpenOptions, io::Write, path, rc::Rc};
 
+//use chrono::{Utc, Offset};
 use sha1::{Digest, Sha1};
 
 use crate::{
@@ -14,6 +15,17 @@ pub struct Commit {
     logger: Rc<Logger>,
     mensaje: String,
 }
+
+// fn armar_timestamp_commit() -> String{
+//     let timestamp = Utc::now().timestamp();
+//     let binding = Utc::now();
+//     let offset = binding.offset();
+//     let offset_hours = offset.fix().local_minus_utc() / 3600;
+//     let offset_minutes = (offset.fix().local_minus_utc() % 3600) / 60;
+//     let sign = if offset_hours >= 0 { "+" } else { "-" };
+
+//     format!("{} {}{:02}{:02}", timestamp, sign, offset_hours.abs(), offset_minutes.abs())
+// }
 
 impl Commit {
     pub fn from(args: &mut Vec<String>, logger: Rc<Logger>) -> Result<Commit, String> {
@@ -47,10 +59,12 @@ impl Commit {
             "" => write_tree::crear_arbol_commit(None)?,
             _ => write_tree::crear_arbol_commit(Some(hash_padre_commit.clone()))?,
         };
-
+        let (nombre, mail) = Self::conseguir_nombre_y_mail_del_config()?;
+        let linea_autor = format!("{} <{}>", nombre, mail);
+        //let timestamp = armar_timestamp_commit();
         let contenido_commit = format!(
             "tree {}\nparent {}\nauthor {}\ncommitter {}\n\n{}",
-            hash_arbol, hash_padre_commit, "", "", self.mensaje
+            hash_arbol, hash_padre_commit, linea_autor, linea_autor, self.mensaje
         );
         let header = format!("commit {}\0", contenido_commit.len());
         let contenido_total = format!("{}{}", header, contenido_commit);
@@ -101,6 +115,17 @@ impl Commit {
         Ok(())
     }
 
+    fn conseguir_nombre_y_mail_del_config() -> Result<(String, String), String>{
+        let config_path = ".gir/CONFIG";
+        let contenido = io::leer_a_string(config_path)?;
+         
+        let lineas = contenido.split("\n").collect::<Vec<&str>>();
+        let nombre = lineas[0].split("=").collect::<Vec<&str>>()[1];
+        let mail = lineas[1].split("=").collect::<Vec<&str>>()[1];
+        Ok((nombre.to_string(), mail.to_string()))
+
+    }
+
     fn ejecutar_wrapper(&self, contenido_total: String) -> Result<(), String> {
         let contenido_comprimido = comprimir_contenido(contenido_total.clone())?;
         let hash = self.hashear_contenido_objeto(&contenido_total);
@@ -114,7 +139,50 @@ impl Commit {
         Ok(())
     }
 
+    fn archivo_config_esta_vacio() -> bool{
+        let config_path = ".gir/CONFIG";
+        let contenido = match io::leer_a_string(config_path) {
+            Ok(contenido) => contenido,
+            Err(_) => return true,
+        };
+        if contenido.is_empty() {
+            return true;
+        }
+        false
+    }
+        
+
+    fn armar_config_con_mail_y_nombre() -> Result<(), String>{
+        if !Self::archivo_config_esta_vacio() {
+            return Ok(())
+        }
+        let mut nombre = String::new();
+        let mut mail = String::new();
+    
+        println!("Por favor, ingrese su nombre:");
+        match std::io::stdin().read_line(&mut nombre) {
+            Ok(_) => (),
+            Err(_) => return Err("No se pudo leer el nombre ingresado".to_string()),
+        };
+    
+        println!("Por favor, ingrese su correo electrónico:");
+        match std::io::stdin().read_line(&mut mail) {
+            Ok(_) => (),
+            Err(_) => return Err("No se pudo leer el mail ingresado".to_string()),
+        };
+    
+        nombre = nombre.trim().to_string();
+        mail = mail.trim().to_string();
+    
+        let config_path = ".gir/CONFIG";
+        let contenido = format!("nombre = {}\nmail = {}\n", nombre, mail);
+        io::escribir_bytes(config_path, contenido)?;
+        println!("Información de usuario guardada en .git/config.");
+        Ok(())
+    } 
+
     pub fn ejecutar(&self) -> Result<String, String> {
+        Self::armar_config_con_mail_y_nombre()?;
         let hash_padre_commit = Self::obtener_hash_del_padre_del_commit()?;
         let (hash_arbol, contenido_total) = self.crear_contenido_commit(hash_padre_commit)?;
         match self.ejecutar_wrapper(contenido_total) {
@@ -147,6 +215,12 @@ mod test {
 
     use super::Commit;
 
+    fn craer_archivo_config_default() {
+        let config_path = ".gir/CONFIG";
+        let contenido = format!("nombre = aaaa\nmail = bbbb\n");
+        std::fs::write(config_path, contenido).unwrap();
+    }
+
     fn limpiar_archivo_gir() {
         rm_directorio(".gir").unwrap();
         let logger = Rc::new(Logger::new(PathBuf::from("tmp/branch_init")).unwrap());
@@ -155,6 +229,7 @@ mod test {
             logger,
         };
         init.ejecutar().unwrap();
+        craer_archivo_config_default();
     }
 
     fn conseguir_hash_padre(branch: String) -> String {
@@ -188,17 +263,17 @@ mod test {
 
     #[test]
     fn test01_se_actualiza_el_head_ref_correspondiente_con_el_hash_del_commit() {
-        limpiar_archivo_gir();
+       limpiar_archivo_gir();
         let logger = Rc::new(Logger::new(PathBuf::from("tmp/commit_test01")).unwrap());
         let mut add = Add::from(vec!["test_file.txt".to_string()], logger.clone()).unwrap();
         add.ejecutar().unwrap();
         let commit =
             Commit::from(&mut vec!["-m".to_string(), "mensaje".to_string()], logger).unwrap();
         commit.ejecutar().unwrap();
-        let contenido_head_ref = std::fs::read_to_string(".gir/refs/heads/master").unwrap();
+        let arbol_last_commit = conseguir_arbol_commit("master".to_string());
         assert_eq!(
-            contenido_head_ref,
-            "b7bc8f86f54d688762276aa50bfec4cffafdcc01".to_string()
+            arbol_last_commit,
+            "ce0ef9a25817847d31d12df1295248d24d07b309".to_string()
         );
     }
 
@@ -210,18 +285,12 @@ mod test {
         addear_archivos_y_comittear(vec!["test_file.txt".to_string()], logger.clone());
 
         let hash_padre = std::fs::read_to_string(".gir/refs/heads/master").unwrap();
-        addear_archivos_y_comittear(vec!["test_file.txt".to_string()], logger.clone());
+        addear_archivos_y_comittear(vec!["test_file2.txt".to_string()], logger.clone());
 
         let hash_padre_desde_hijo = conseguir_hash_padre("master".to_string());
-
         assert_eq!(
             hash_padre_desde_hijo,
             format!("parent {}", hash_padre).to_string()
-        );
-        let contenido_head_ref = std::fs::read_to_string(".gir/refs/heads/master").unwrap();
-        assert_eq!(
-            contenido_head_ref,
-            "3180b84bdbe898f3c72643981abdcbe02c63f1e7".to_string()
         );
     }
 

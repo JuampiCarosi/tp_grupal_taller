@@ -49,7 +49,7 @@ impl Branch {
         Ok(output)
     }
 
-    fn obtener_commit_head(&self) -> Result<String, String> {
+    pub fn obtener_commit_head() -> Result<String, String> {
         let direccion_head = ".gir/HEAD";
         let direccion_branch_actual = io::leer_a_string(direccion_head)?;
         let branch_actual = direccion_branch_actual
@@ -71,7 +71,7 @@ impl Branch {
         if PathBuf::from(&direccion_rama_nueva).exists() {
             return Err(format!("La rama {} ya existe", rama_nueva));
         }
-        let ultimo_commit = self.obtener_commit_head()?;
+        let ultimo_commit = Self::obtener_commit_head()?;
         io::escribir_bytes(direccion_rama_nueva, ultimo_commit)?;
         Ok(format!("Se creó la rama {}", rama_nueva))
     }

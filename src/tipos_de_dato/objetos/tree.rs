@@ -1,6 +1,4 @@
 use std::{
-    env::consts::OS,
-    ffi::OsStr,
     fmt::{Display, Write},
     fs,
     num::ParseIntError,
@@ -107,51 +105,6 @@ impl Tree {
             contenido.append(&mut line);
         }
         Ok(contenido)
-    }
-
-    fn obtener_hash_completo(hash_incompleto: String) -> Result<String, String> {
-        let dir_candidatos = format!(".gir/objects/{}/", &hash_incompleto[..2]);
-        let candidatos = match fs::read_dir(&dir_candidatos) {
-            Ok(candidatos) => candidatos,
-            Err(_) => {
-                return Err(format!(
-                    "No se econtro el objeto con hash {}",
-                    hash_incompleto
-                ))
-            }
-        };
-
-        for candidato in candidatos {
-            let candidato_string = candidato
-                .map_err(|_| {
-                    format!(
-                        "Error al extraer el hash {} de la carpeta padre",
-                        hash_incompleto
-                    )
-                })?
-                .path()
-                .display()
-                .to_string();
-            let candidato_hash = candidato_string
-                .split('/')
-                .last()
-                .ok_or_else(|| {
-                    format!(
-                        "Error al extraer carpeta hijo del padre {}, existe dicho hash?",
-                        hash_incompleto
-                    )
-                })?
-                .to_string();
-            let (prefijo, hash_a_comparar) = hash_incompleto.split_at(2);
-            if candidato_hash.starts_with(hash_a_comparar) {
-                return Ok(format!("{}{}", prefijo, candidato_hash));
-            }
-        }
-
-        Err(format!(
-            "No se econtro el objeto con hash {}",
-            hash_incompleto
-        ))
     }
 
     pub fn from_directorio(

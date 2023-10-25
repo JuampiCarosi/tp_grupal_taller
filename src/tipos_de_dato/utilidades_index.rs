@@ -7,7 +7,7 @@ use std::{
 };
 
 use crate::{
-    tipos_de_dato::comandos::hash_object::HashObject, utilidades_path_buf::obtener_directorio_raiz,
+    tipos_de_dato::comandos::hash_object::HashObject, utilidades_path_buf::obtener_directorio_raiz, io,
 };
 
 use super::{logger::Logger, objeto::Objeto};
@@ -23,11 +23,16 @@ pub fn crear_index() {
 
 //Devuelve true si el index esta vacio y false en caso contrario. 
 //Si falla se presupone que es porque no existe y por lo tanto esta vacio 
-pub fn esta_vacio_el_index()->bool{
-    match fs::metadata(PATH_INDEX) {
-        Ok(metadatos) => metadatos.len() > 0,
-        Err(_) => true, // Devuelve true en caso de error
-    }
+pub fn esta_vacio_el_index() -> bool {
+    let config_path = ".gir/CONFIG";
+        let contenido = match io::leer_a_string(config_path) {
+            Ok(contenido) => contenido,
+            Err(_) => return true,
+        };
+        if contenido.is_empty() {
+            return true;
+        }
+        false
 }
 
 pub fn leer_index() -> Result<Vec<Objeto>, String> {

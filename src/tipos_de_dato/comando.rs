@@ -3,7 +3,7 @@ use std::rc::Rc;
 use super::{
     comandos::{
         add::Add, branch::Branch, cat_file::CatFile, checkout::Checkout, commit::Commit,
-        hash_object::HashObject, init::Init, rm::Remove, version::Version,
+        hash_object::HashObject, init::Init, rm::Remove, version::Version, log::Log,
     },
     logger::Logger,
 };
@@ -18,6 +18,7 @@ pub enum Comando {
     Checkout(Checkout),
     Branch(Branch),
     Commit(Commit),
+    Log(Log),
     Unknown,
 }
 
@@ -38,6 +39,7 @@ impl Comando {
             "branch" => Comando::Branch(Branch::from(&mut vector_args, logger)?),
             "checkout" => Comando::Checkout(Checkout::from(vector_args, logger)?),
             "commit" => Comando::Commit(Commit::from(&mut vector_args, logger)?),
+            "log" => Comando::Log(Log::from(&mut vector_args, logger)?),
             _ => Comando::Unknown,
         };
 
@@ -57,6 +59,7 @@ impl Comando {
             Comando::Checkout(ref mut checkout) => checkout.ejecutar(),
             Comando::Branch(ref mut branch) => branch.ejecutar(),
             Comando::Commit(ref mut commit) => commit.ejecutar(),
+            Comando::Log(ref mut log) => log.ejecutar(),
             Comando::Unknown => Err("Comando desconocido".to_string()),
         }
     }

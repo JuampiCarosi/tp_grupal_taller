@@ -60,7 +60,7 @@ impl Checkout {
         })
     }
 
-    fn obtener_ramas(&self) -> Result<Vec<String>, String> {
+    pub fn obtener_ramas() -> Result<Vec<String>, String> {
         let directorio = ".gir/refs/heads";
         let entradas = std::fs::read_dir(directorio)
             .map_err(|e| format!("No se pudo leer el directorio:{}\n {}", directorio, e))?;
@@ -79,7 +79,7 @@ impl Checkout {
     }
 
     fn verificar_si_la_rama_existe(&self) -> Result<(), String> {
-        let ramas = self.obtener_ramas()?;
+        let ramas = Self::obtener_ramas()?;
         for rama in ramas {
             if rama == self.rama_a_cambiar {
                 return Ok(());
@@ -125,7 +125,6 @@ impl Checkout {
     }
 
     fn comprobar_que_no_haya_contenido_index(&self) -> Result<(), String> {
-        return Ok(());
         if !utilidades_index::esta_vacio_el_index() {
             Err("Fallo, tiene contendio sin guardar. Por favor, haga commit para no perder los cambios".to_string())
         } else {
@@ -149,8 +148,6 @@ impl Checkout {
                 io::leer_a_string(format!(".gir/refs/heads/{}", self.rama_a_cambiar))?;
             let hash_tree_padre = conseguir_arbol_padre_from_ult_commit(head_commit);
             let tree_padre = Tree::from_hash(hash_tree_padre, PathBuf::from("."))?;
-            return Ok(format!("Cambiado a nueva rama {}", self.rama_a_cambiar));
-
             let tree = self.deep_changes_entre_arboles(&tree_actual, &tree_padre)?;
             tree.escribir_en_directorio()?;
         };
