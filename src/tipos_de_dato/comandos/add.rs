@@ -36,22 +36,6 @@ impl Add {
                 Objeto::Tree(tree) => tree.directorio == ubicacion,
             });
 
-            let trees_a_actualizar = &mut self.index.iter().filter_map(|x| {
-                if let Objeto::Tree(tree) = x {
-                    let directorio_tree = PathBuf::from(&tree.directorio);
-                    if ubicacion.starts_with(directorio_tree) {
-                        return Some(Objeto::Tree(tree.clone()));
-                    }
-                }
-                None
-            });
-
-            for tree in trees_a_actualizar {
-                if let Objeto::Tree(mut tree) = tree {
-                    tree.actualizar_hijos(nuevo_objeto.obtener_hash());
-                }
-            }
-
             if let Some(i) = indice {
                 let _ = std::mem::replace(&mut self.index[i], nuevo_objeto);
             } else {
@@ -148,7 +132,7 @@ mod test {
 
         assert_eq!(
             file,
-            "40000 59fd3de622aa800bc7e0684773ce2dc40d876377 test_dir\n"
+            "40000 1f67151c34d6b33ec1a98fdafef8b021068395a0 test_dir\n"
         );
     }
 
@@ -186,7 +170,7 @@ mod test {
 
         assert_eq!(
             file,
-            "40000 59fd3de622aa800bc7e0684773ce2dc40d876377 test_dir\n100644 678e12dc5c03a7cf6e9f64e688868962ab5d8b65 test_file.txt\n"
+            "40000 1f67151c34d6b33ec1a98fdafef8b021068395a0 test_dir\n100644 678e12dc5c03a7cf6e9f64e688868962ab5d8b65 test_file.txt\n"
         );
     }
 
@@ -203,7 +187,7 @@ mod test {
 
         assert_eq!(
             file,
-            "40000 9ce160c141eb52a2479bd734e54e0a64a49c5d76 test_dir\n"
+            "40000 64aec41173e6ef51f8918e665fb5dfc5247ae08a test_dir\n"
         );
     }
 
@@ -221,10 +205,10 @@ mod test {
 
         assert_eq!(
             file,
-            "40000 dff341b050347f57726eb70b97addee11ea73194 test_dir\n"
+            "40000 74f21726ba8d24ac75264d20a2042e4901694e70 test_dir\n"
         );
 
-        let archivo_2 = "test_dir/muchos_objetos/archivo copy.txt".to_string();
+        let archivo_2 = "test_dir/muchos_objetos/archivo_copy.txt".to_string();
 
         let mut add = Add::from(vec![archivo_2], logger.clone()).unwrap();
         add.ejecutar().unwrap();
@@ -233,7 +217,7 @@ mod test {
 
         assert_eq!(
             file,
-            "40000 9ce160c141eb52a2479bd734e54e0a64a49c5d76 test_dir\n"
+            "40000 64aec41173e6ef51f8918e665fb5dfc5247ae08a test_dir\n"
         );
     }
 
@@ -268,7 +252,7 @@ mod test {
 
         assert_eq!(
             file,
-            "40000 59fd3de622aa800bc7e0684773ce2dc40d876377 test_dir\n100644 678e12dc5c03a7cf6e9f64e688868962ab5d8b65 test_file.txt\n"
+            "40000 1f67151c34d6b33ec1a98fdafef8b021068395a0 test_dir\n100644 678e12dc5c03a7cf6e9f64e688868962ab5d8b65 test_file.txt\n"
         );
     }
 }
