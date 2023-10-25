@@ -125,14 +125,22 @@ impl Checkout {
     }
 
     fn comprobar_que_no_haya_contenido_index(&self) -> Result<(), String> {
-        return Ok(());
-        if !utilidades_index::esta_vacio_el_index() {
+        if !utilidades_index::esta_vacio_el_index()? {
             Err("Fallo, tiene contendio sin guardar. Por favor, haga commit para no perder los cambios".to_string())
         } else {
             Ok(())
         }
     }
     //si hay contenido en el index no swich
+
+    fn obtener_arbol_commit_actual(&self) -> Result<Tree, String> {
+        let ref_actual = io::leer_a_string(PATH_HEAD)?;
+        let rama_actual = self.conseguir_rama_actual(ref_actual)?;
+        let head_commit = io::leer_a_string(format!(".gir/refs/heads/{}", rama_actual))?;
+        let hash_tree_padre = conseguir_arbol_padre_from_ult_commit(head_commit);
+        Ok(Tree::from_hash(hash_tree_padre, PathBuf::from("."))?)
+    }
+
     pub fn ejecutar(&self) -> Result<String, String> {
         self.comprobar_que_no_haya_contenido_index()?;
 
@@ -142,19 +150,42 @@ impl Checkout {
             return Ok(format!("Cambiado a nueva rama {}", self.rama_a_cambiar));
         };
 
-        self.cambiar_rama()?;
         if !self.crear_rama {
-            let tree_actual = Tree::from_directorio(PathBuf::from("."), None)?;
-            let head_commit =
-                io::leer_a_string(format!(".gir/refs/heads/{}", self.rama_a_cambiar))?;
-            let hash_tree_padre = conseguir_arbol_padre_from_ult_commit(head_commit);
-            let tree_padre = Tree::from_hash(hash_tree_padre, PathBuf::from("."))?;
-            return Ok(format!("Cambiado a nueva rama {}", self.rama_a_cambiar));
+            let tree_viejo = self.obtener_arbol_commit_actual()?;
+            self.cambiar_rama()?;
+            let tree_futuro = self.obtener_arbol_commit_actual()?;
 
-            let tree = self.deep_changes_entre_arboles(&tree_actual, &tree_padre)?;
-            tree.escribir_en_directorio()?;
+            let objetos_a_eliminar = self.obtener_objetos_eliminados(&tree_viejo, &tree_futuro);
+            self.eliminar_objetos(&objetos_a_eliminar)?;
+
+            tree_futuro.escribir_en_directorio()?;
         };
         Ok(format!("Cambiado a rama {}", self.rama_a_cambiar))
+    }
+
+    fn eliminar_objetos(&self, objetos: &Vec<Objeto>) -> Result<(), String> {
+        for objeto in objetos {
+            match objeto {
+                Objeto::Blob(blob) => {
+                    io::rm_directorio(blob.ubicacion.clone())?;
+                }
+                Objeto::Tree(tree) => {
+                    io::rm_directorio(tree.directorio.clone())?;
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn obtener_objetos_eliminados(&self, tree_viejo: &Tree, tree_nuevo: &Tree) -> Vec<Objeto> {
+        let mut objetos_eliminados: Vec<Objeto> = Vec::new();
+
+        for objeto_viejo in tree_viejo.objetos.iter() {
+            if !tree_nuevo.contiene_hijo_por_nombre(objeto_viejo.obtener_path()) {
+                objetos_eliminados.push(objeto_viejo.clone());
+            }
+        }
+        objetos_eliminados
     }
 
     fn deep_changes_entre_arboles(&self, arbol1: &Tree, arbol2: &Tree) -> Result<Tree, String> {
@@ -180,6 +211,7 @@ impl Checkout {
                             if b1.obtener_hash() != b2.obtener_hash() {
                                 hijos.push(Objeto::Blob(b2.clone()));
                                 hijos_2_sin_usar.remove(hijo2);
+                                hijo_encontrado = false;
                             }
                         }
                     }
@@ -189,6 +221,7 @@ impl Checkout {
                             if t1.obtener_hash() != t2.obtener_hash() {
                                 hijos.push(Objeto::Tree(self.deep_changes_entre_arboles(t1, t2)?));
                                 hijos_2_sin_usar.remove(hijo2);
+                                hijo_encontrado = false;
                             }
                         }
                     }
@@ -200,9 +233,9 @@ impl Checkout {
             }
         }
 
-        for hijo2 in hijos_2_sin_usar {
-            hijos.push(hijo2.clone());
-        }
+        // for hijo2 in hijos_2_sin_usar {
+        //     hijos.push(hijo2.clone());
+        // }
 
         Ok(Tree {
             directorio: arbol1.directorio.clone(),

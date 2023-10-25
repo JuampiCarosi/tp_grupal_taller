@@ -44,8 +44,9 @@ impl Tree {
         for objeto in objetos {
             match objeto {
                 Objeto::Blob(blob) => {
-                    io::escribir_bytes(blob.ubicacion, descomprimir_objeto(blob.hash).unwrap())
-                        .unwrap();
+                    let objeto = descomprimir_objeto(blob.hash)?;
+                    let contenido = objeto.split('\0').collect::<Vec<&str>>()[1];
+                    io::escribir_bytes(blob.ubicacion, contenido).unwrap();
                 }
                 Objeto::Tree(_) => Err("Llego a un tree pero no deberia")?,
             };
@@ -273,12 +274,6 @@ impl Tree {
                 ubicacion = nombre.clone()
             }
 
-            println!(
-                "ubicacion: {} direcorio: {}",
-                ubicacion,
-                directorio.display()
-            );
-
             match modo.as_str() {
                 "100644" => {
                     let blob = Objeto::Blob(Blob {
@@ -313,6 +308,14 @@ impl Tree {
     pub fn contiene_hijo(&self, hash_hijo: String) -> bool {
         for objeto in &self.objetos {
             if objeto.obtener_hash() == hash_hijo {
+                return true;
+            }
+        }
+        false
+    }
+    pub fn contiene_hijo_por_nombre(&self, nombre_hijo: PathBuf) -> bool {
+        for objeto in &self.objetos {
+            if objeto.obtener_path() == nombre_hijo {
                 return true;
             }
         }
