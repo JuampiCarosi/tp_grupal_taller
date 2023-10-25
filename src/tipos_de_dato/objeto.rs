@@ -1,8 +1,8 @@
-use std::path::PathBuf;
+use std::{hash::Hash, path::PathBuf};
 
 use super::objetos::{blob::Blob, tree::Tree};
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Objeto {
     Tree(Tree),
     Blob(Blob),
@@ -13,6 +13,13 @@ pub fn flag_es_un_objeto_(flag: &String) -> bool {
 }
 
 impl Objeto {
+    pub fn obtener_path(&self) -> PathBuf {
+        match self {
+            Objeto::Tree(tree) => tree.directorio.clone(),
+            Objeto::Blob(blob) => blob.ubicacion.clone(),
+        }
+    }
+
     pub fn obtener_hash(&self) -> String {
         match self {
             Objeto::Tree(tree) => match tree.obtener_hash() {

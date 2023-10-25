@@ -28,9 +28,9 @@ pub fn obtener_directorio_raiz(directorio: &Path) -> Result<String, String> {
 pub fn obtener_nombre(directorio: &Path) -> Result<String, String> {
     let directorio_split = directorio
         .file_name()
-        .ok_or("Error al obtener el directorio raiz")?
+        .ok_or("Error al obtener el nombre")?
         .to_str()
-        .ok_or("Error al obtener el directorio raiz")?;
+        .ok_or("Error al obtener el nombre")?;
 
     Ok(directorio_split.to_string())
 }

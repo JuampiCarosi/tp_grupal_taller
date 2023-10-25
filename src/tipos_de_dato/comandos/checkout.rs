@@ -1,10 +1,15 @@
-use std::rc::Rc;
+use std::{collections::HashSet, path::PathBuf, rc::Rc};
 
 use crate::{
     io,
-    tipos_de_dato::{comandos::branch::Branch, logger::Logger, objetos::tree::Tree, utilidades_index},
+    tipos_de_dato::{
+        comandos::branch::Branch, logger::Logger, objeto::Objeto, objetos::tree::Tree,
+        utilidades_index,
+    },
     utilidades_path_buf,
 };
+
+use super::write_tree::conseguir_arbol_padre_from_ult_commit;
 
 const PATH_HEAD: &str = "./.gir/HEAD";
 
@@ -113,14 +118,14 @@ impl Checkout {
     }
 
     fn crear_rama(&self) -> Result<(), String> {
-        let msg_branch =  Branch::from(&mut vec![self.rama_a_cambiar.clone()], self.logger.clone())?
+        let msg_branch = Branch::from(&mut vec![self.rama_a_cambiar.clone()], self.logger.clone())?
             .ejecutar()?;
         print!("{}", msg_branch);
         Ok(())
     }
 
-    fn comprobar_que_no_haya_contenido_index(&self)->Result<(),String>{
-        if !utilidades_index::esta_vacio_el_index(){
+    fn comprobar_que_no_haya_contenido_index(&self) -> Result<(), String> {
+        if !utilidades_index::esta_vacio_el_index() {
             Err("Fallo, tiene contendio sin guardar. Por favor, haga commit para no perder los cambios".to_string())
         } else {
             Ok(())
@@ -134,7 +139,70 @@ impl Checkout {
             self.crear_rama()?;
         };
 
-        self.cambiar_rama()
+        self.cambiar_rama()?;
+        if !self.crear_rama {
+            let tree_actual = Tree::from_directorio(PathBuf::from("."), None)?;
+            let head_commit =
+                io::leer_a_string(format!(".gir/refs/heads/{}", self.rama_a_cambiar))?;
+            let hash_tree_padre = conseguir_arbol_padre_from_ult_commit(head_commit);
+            let tree_padre = Tree::from_hash(hash_tree_padre, PathBuf::from("."))?;
+
+            let tree = self.deep_changes_entre_arboles(&tree_actual, &tree_padre)?;
+            tree.escribir_en_directorio()?;
+        };
+        Ok("".to_string())
     }
 
+    fn deep_changes_entre_arboles(&self, arbol1: &Tree, arbol2: &Tree) -> Result<Tree, String> {
+        let mut hijos: Vec<Objeto> = Vec::new();
+
+        if arbol1.directorio != arbol2.directorio {
+            return Err(format!(
+                "Los directorios de los arboles no coinciden: {} y {}",
+                arbol1.directorio.display(),
+                arbol2.directorio.display()
+            ));
+        };
+
+        let mut hijos_2_sin_usar: HashSet<&Objeto> = HashSet::from_iter(arbol2.objetos.iter());
+
+        for hijo in &arbol1.objetos {
+            let mut hijo_encontrado = false;
+            for hijo2 in &arbol2.objetos {
+                match (hijo, hijo2) {
+                    (Objeto::Blob(b1), Objeto::Blob(b2)) => {
+                        if b1.ubicacion == b2.ubicacion {
+                            hijo_encontrado = true;
+                            if b1.obtener_hash() != b2.obtener_hash() {
+                                hijos.push(Objeto::Blob(b2.clone()));
+                                hijos_2_sin_usar.remove(hijo2);
+                            }
+                        }
+                    }
+                    (Objeto::Tree(t1), Objeto::Tree(t2)) => {
+                        if t1.directorio == t2.directorio {
+                            hijo_encontrado = true;
+                            if t1.obtener_hash() != t2.obtener_hash() {
+                                hijos.push(Objeto::Tree(self.deep_changes_entre_arboles(t1, t2)?));
+                                hijos_2_sin_usar.remove(hijo2);
+                            }
+                        }
+                    }
+                    _ => {}
+                }
+            }
+            if !hijo_encontrado {
+                hijos.push(hijo.clone());
+            }
+        }
+
+        for hijo2 in hijos_2_sin_usar {
+            hijos.push(hijo2.clone());
+        }
+
+        Ok(Tree {
+            directorio: arbol1.directorio.clone(),
+            objetos: hijos,
+        })
+    }
 }

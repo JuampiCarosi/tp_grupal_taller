@@ -46,7 +46,7 @@ pub fn leer_index() -> Result<Vec<Objeto>, String> {
     }
     Ok(objetos)
 }
-fn generar_objetos_raiz(objetos: &Vec<Objeto>) -> Result<Vec<Objeto>, String> {
+pub fn generar_objetos_raiz(objetos: &Vec<Objeto>) -> Result<Vec<Objeto>, String> {
     let mut objetos_raiz: Vec<Objeto> = Vec::new();
     let mut directorios_raiz: HashSet<PathBuf> = HashSet::new();
     let mut directorios_a_tener_en_cuenta: Vec<PathBuf> = Vec::new();
@@ -126,4 +126,15 @@ pub fn escribir_index(logger: Rc<Logger>, objetos: &Vec<Objeto>) -> Result<(), S
         .unwrap();
     let _ = file.write_all(buffer.as_bytes());
     Ok(())
+}
+
+pub fn limpiar_archivo_index() -> Result<(), String> {
+    let _ = match OpenOptions::new()
+        .write(true)
+        .truncate(true)
+        .open("./.gir/index") {
+            Ok(archivo) => archivo,
+            Err(_) => return Err("No se pudo abrir el archivo index".to_string()),
+        };
+    Ok(())    
 }
