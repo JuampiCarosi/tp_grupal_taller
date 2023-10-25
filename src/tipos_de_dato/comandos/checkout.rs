@@ -149,6 +149,7 @@ impl Checkout {
                 io::leer_a_string(format!(".gir/refs/heads/{}", self.rama_a_cambiar))?;
             let hash_tree_padre = conseguir_arbol_padre_from_ult_commit(head_commit);
             let tree_padre = Tree::from_hash(hash_tree_padre, PathBuf::from("."))?;
+            return Ok(format!("Cambiado a nueva rama {}", self.rama_a_cambiar));
 
             let tree = self.deep_changes_entre_arboles(&tree_actual, &tree_padre)?;
             tree.escribir_en_directorio()?;

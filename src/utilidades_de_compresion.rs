@@ -29,6 +29,7 @@ fn decodificar_contenido(contenido: Vec<u8>) -> Result<String, String> {
     spliteado_por_null_separado_por_linea.push(spliteado_por_null[1].clone());
     let last_line = spliteado_por_null.pop();
     spliteado_por_null.iter().skip(2).for_each(|x| {
+        println!("X{:?}", x);
         let (hash, modo_y_nombre) = x.split_at(20);
         spliteado_por_null_separado_por_linea.push(hash.to_vec());
         spliteado_por_null_separado_por_linea.push(modo_y_nombre.to_vec());

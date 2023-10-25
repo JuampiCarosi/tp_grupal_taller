@@ -20,7 +20,7 @@ fn main() -> Result<(), String> {
             logger.log(mensaje);
         }
         Err(mensaje) => {
-            println!("{}", mensaje);
+            println!("ERROR: {}", mensaje);
             logger.log(mensaje);
         }
     };

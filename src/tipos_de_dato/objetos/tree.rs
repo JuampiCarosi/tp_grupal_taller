@@ -1,4 +1,6 @@
 use std::{
+    env::consts::OS,
+    ffi::OsStr,
     fmt::{Display, Write},
     fs,
     num::ParseIntError,
@@ -175,14 +177,16 @@ impl Tree {
             let path = entrada.path();
 
             if path.ends_with(".DS_Store")
-                || path.starts_with(".gir")
+                || path.starts_with("./.target")
                 || path.starts_with("./.gir")
+                || path.starts_with("./.git")
                 || path == PathBuf::from("./gir")
+                || path == PathBuf::from("./git")
+                || path == PathBuf::from("./target")
+                || path == PathBuf::from("./diagrama.png")
             {
                 continue;
             }
-
-            println!("path: {}", path.display());
 
             if let Some(hijos_especificados) = &hijos_especificados {
                 if !esta_directorio_habilitado(&path, hijos_especificados) {
