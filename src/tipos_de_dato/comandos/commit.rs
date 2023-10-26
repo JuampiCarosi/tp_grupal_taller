@@ -1,6 +1,6 @@
 use std::{fs::OpenOptions, io::Write, path, rc::Rc};
 
-//use chrono::{Utc, Offset};
+use chrono::{Utc, Offset};
 use sha1::{Digest, Sha1};
 
 use crate::{
@@ -16,16 +16,16 @@ pub struct Commit {
     mensaje: String,
 }
 
-// fn armar_timestamp_commit() -> String{
-//     let timestamp = Utc::now().timestamp();
-//     let binding = Utc::now();
-//     let offset = binding.offset();
-//     let offset_hours = offset.fix().local_minus_utc() / 3600;
-//     let offset_minutes = (offset.fix().local_minus_utc() % 3600) / 60;
-//     let sign = if offset_hours >= 0 { "+" } else { "-" };
+fn armar_timestamp_commit() -> String{
+    let timestamp = Utc::now().timestamp();
+    let binding = Utc::now();
+    let offset = binding.offset();
+    let offset_hours = offset.fix().local_minus_utc() / 3600;
+    let offset_minutes = (offset.fix().local_minus_utc() % 3600) / 60;
+    let sign = if offset_hours >= 0 { "+" } else { "-" };
 
-//     format!("{} {}{:02}{:02}", timestamp, sign, offset_hours.abs(), offset_minutes.abs())
-// }
+    format!("{} {}{:02}{:02}", timestamp, sign, offset_hours.abs(), offset_minutes.abs())
+}
 
 impl Commit {
     pub fn from(args: &mut Vec<String>, logger: Rc<Logger>) -> Result<Commit, String> {
@@ -61,10 +61,10 @@ impl Commit {
         };
         let (nombre, mail) = Self::conseguir_nombre_y_mail_del_config()?;
         let linea_autor = format!("{} <{}>", nombre, mail);
-        //let timestamp = armar_timestamp_commit();
+        let timestamp = armar_timestamp_commit();
         let contenido_commit = format!(
-            "tree {}\nparent {}\nauthor {}\ncommitter {}\n\n{}",
-            hash_arbol, hash_padre_commit, linea_autor, linea_autor, self.mensaje
+            "tree {}\nparent {}\nauthor {} {}\ncommitter {} {}\n\n{}",
+            hash_arbol, hash_padre_commit, linea_autor, timestamp, linea_autor, timestamp, self.mensaje
         );
         let header = format!("commit {}\0", contenido_commit.len());
         let contenido_total = format!("{}{}", header, contenido_commit);
@@ -175,7 +175,7 @@ impl Commit {
         mail = mail.trim().to_string();
     
         let config_path = ".gir/CONFIG";
-        let contenido = format!("nombre = {}\nmail = {}\n", nombre, mail);
+        let contenido = format!("nombre ={}\nmail ={}\n", nombre, mail);
         io::escribir_bytes(config_path, contenido)?;
         println!("Información de usuario guardada en .git/config.");
         Ok(())
@@ -205,12 +205,11 @@ mod test {
     use std::{path::PathBuf, rc::Rc};
 
     use crate::{
-        io::rm_directorio,
+        io::{rm_directorio, escribir_bytes},
         tipos_de_dato::{
-            comandos::{add::Add, init::Init},
+            comandos::{add::Add, init::Init, hash_object::HashObject},
             logger::Logger,
-        },
-        utilidades_de_compresion,
+        }, utilidades_de_compresion,
     };
 
     use super::Commit;
@@ -306,6 +305,45 @@ mod test {
         assert_eq!(
             contenido_arbol,
             "tree 41\0100644 test_file.txt\0678e12dc5c03a7cf6e9f64e688868962ab5d8b65".to_string()
+        );
+    }
+
+    #[test]
+    fn test04_al_hacer_commit_de_un_archivo_y_luego_hacer_otro_commit_de_ese_archivo_modificado_el_hash_tree_es_correcto() {
+        limpiar_archivo_gir();
+        let logger = Rc::new(Logger::new(PathBuf::from("tmp/commit_test04")).unwrap());
+        addear_archivos_y_comittear(vec!["test_file.txt".to_string()], logger.clone());
+
+        escribir_bytes("test_file.txt", "hola".to_string()).unwrap();
+        addear_archivos_y_comittear(vec!["test_file.txt".to_string()], logger.clone());
+
+        let hash_arbol = conseguir_arbol_commit("master".to_string());
+        let contenido_arbol = utilidades_de_compresion::descomprimir_objeto(hash_arbol).unwrap();
+        let hash_correcto = HashObject::from(&mut vec!["test_file.txt".to_string()], logger.clone()).unwrap().ejecutar().unwrap();
+
+        escribir_bytes("test_file.txt", "test file modified".to_string()).unwrap();
+        assert_eq!(
+            contenido_arbol,
+            format!("tree 41\0100644 test_file.txt\0{}", hash_correcto)
+        );
+    }
+
+    #[test]
+    fn test05_al_hacer_commit_de_un_directorio_y_luego_hacer_otro_commit_de_ese_directorio_modificado_el_hash_tree_es_correcto() {
+        limpiar_archivo_gir();
+        let logger = Rc::new(Logger::new(PathBuf::from("tmp/commit_test05")).unwrap());
+        addear_archivos_y_comittear(vec!["test_dir/muchos_objetos".to_string()], logger.clone());
+
+        escribir_bytes("test_dir/muchos_objetos/archivo.txt", "hola".to_string()).unwrap();
+        addear_archivos_y_comittear(vec!["test_dir/muchos_objetos".to_string()], logger.clone());
+
+        let hash_arbol = conseguir_arbol_commit("master".to_string());
+        let hash_arbol_git = "c847ae43830604fea16a9830f90e60f0a5f0d993";
+
+        escribir_bytes("test_dir/muchos_objetos/archivo.txt", "mas contenido".to_string()).unwrap();
+        assert_eq!(
+            hash_arbol_git,
+            hash_arbol
         );
     }
 }

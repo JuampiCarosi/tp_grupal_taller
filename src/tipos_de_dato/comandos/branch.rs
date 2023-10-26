@@ -88,10 +88,19 @@ impl Branch {
 mod test {
     use super::Branch;
     use crate::io::rm_directorio;
+    use crate::tipos_de_dato::comandos::add::Add;
+    use crate::tipos_de_dato::comandos::commit::Commit;
     use crate::tipos_de_dato::comandos::init::Init;
     use crate::tipos_de_dato::logger::Logger;
+    use crate::utilidades_de_compresion;
     use std::path::PathBuf;
     use std::rc::Rc;
+
+    fn craer_archivo_config_default() {
+        let config_path = ".gir/CONFIG";
+        let contenido = format!("nombre =aaaa\nmail =bbbb\n");
+        std::fs::write(config_path, contenido).unwrap();
+    }
 
     fn limpiar_archivo_gir() {
         if PathBuf::from("./.gir").exists(){
@@ -104,6 +113,27 @@ mod test {
             logger,
         };
         init.ejecutar().unwrap();
+        craer_archivo_config_default();
+    }
+
+    fn conseguir_arbol_commit(branch: String) -> String {
+        let hash_hijo = std::fs::read_to_string(format!(".gir/refs/heads/{}", branch)).unwrap();
+        let contenido_hijo =
+            utilidades_de_compresion::descomprimir_objeto(hash_hijo.clone()).unwrap();
+        let lineas_sin_null = contenido_hijo.replace("\0", "\n");
+        let lineas = lineas_sin_null.split("\n").collect::<Vec<&str>>();
+        let arbol_commit = lineas[1];
+        let lineas = arbol_commit.split(" ").collect::<Vec<&str>>();
+        let arbol_commit = lineas[1];
+        arbol_commit.to_string()
+    }
+
+    fn addear_archivos_y_comittear(args: Vec<String>, logger: Rc<Logger>) {
+        let mut add = Add::from(args, logger.clone()).unwrap();
+        add.ejecutar().unwrap();
+        let commit =
+            Commit::from(&mut vec!["-m".to_string(), "mensaje".to_string()], logger).unwrap();
+        commit.ejecutar().unwrap();
     }
 
     #[test]
@@ -184,7 +214,7 @@ mod test {
     #[should_panic(expected = "Demasiados argumentos\\ngir branch [<nombre-rama-nueva>]")]
     fn test07_muchos_argumentos() {
         limpiar_archivo_gir();
-        let logger = Rc::new(Logger::new(PathBuf::from("tmp/branch_test06")).unwrap());
+        let logger = Rc::new(Logger::new(PathBuf::from("tmp/branch_test07")).unwrap());
         let mut branch = Branch::from(
             &mut vec!["nueva_rama".to_string(), "otra_nueva_rama".to_string()],
             logger,
@@ -195,8 +225,20 @@ mod test {
     }
 
     #[test]
-    #[ignore = "falta terminar el commit"]
     fn test08_la_branch_se_crea_apuntando_al_ultimo_commit() {
-        
+        limpiar_archivo_gir();
+        let logger = Rc::new(Logger::new(PathBuf::from("tmp/branch_test08")).unwrap());
+        addear_archivos_y_comittear(vec!["test_file.txt".to_string()], logger.clone());
+        let mut branch = Branch {
+            mostrar: false,
+            rama_nueva: Some("nueva_rama".to_string()),
+            logger: logger.clone(),
+        };
+        branch.ejecutar().unwrap();
+
+        let hash_arbol = conseguir_arbol_commit("nueva_rama".to_string());
+        let hash_arbol_git = "ce0ef9a25817847d31d12df1295248d24d07b309";
+
+        assert_eq!(hash_arbol, hash_arbol_git);
     }
 }

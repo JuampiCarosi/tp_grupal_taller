@@ -182,7 +182,7 @@ impl Tree {
         lineas.remove(0);
 
         let mut lineas_separadas: Vec<&str> = Vec::new();
-        lineas_separadas.push(lineas[0].clone());
+        lineas_separadas.push(lineas[0]);
         let ultima_linea = lineas.pop().unwrap();
         lineas.iter().skip(1).for_each(|x| {
             let (hash, modo_y_nombre) = x.split_at(40);
