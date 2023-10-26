@@ -221,7 +221,7 @@ mod test {
         let contenido_head_ref = std::fs::read_to_string(".gir/refs/heads/master").unwrap();
         assert_eq!(
             contenido_head_ref,
-            "3180b84bdbe898f3c72643981abdcbe02c63f1e7".to_string()
+            "2ee1266b3fb3117c6bc957a9c4d25d8fe4f3e4c1".to_string()
         );
     }
 
