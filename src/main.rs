@@ -4,7 +4,7 @@ use gir::tipos_de_dato::{comando::Comando, logger::Logger};
 
 use gir::io;
 
-const DIR_ARCHIVO_CONFIG: &str = "./CONFIG";
+const DIR_ARCHIVO_CONFIG: &str = "~/.girconfig";
 
 //extrae la ubiacion del archivo log seteada en el archivo config. En caso de error
 // devuelve una direccion default = .log
