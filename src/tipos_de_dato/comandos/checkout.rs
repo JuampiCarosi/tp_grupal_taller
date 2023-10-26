@@ -188,19 +188,12 @@ impl Checkout {
                     }
                 }
                 Objeto::Tree(tree) => {
-                    if tree.directorio == objeto_viejo.obtener_path() {
-                        objetos_eliminados.push(objeto_viejo.clone());
-                    }
-                    // let mut hijos_eliminados = self.obtener_objetos_eliminados(tree, tree_nuevo);
-                    // objetos_eliminados.append(&mut hijos_eliminados);
+                    let mut hijos_eliminados = self.obtener_objetos_eliminados(tree, tree_nuevo);
+                    objetos_eliminados.append(&mut hijos_eliminados);
                 }
             }
         }
 
-        // println!("viejo : {:#?}", tree_viejo);
-        // println!("nuevo: {:#?}", tree_nuevo);
-
-        println!("objetos eliminados: {:#?}", objetos_eliminados);
         objetos_eliminados
     }
 
@@ -399,6 +392,7 @@ mod test {
         let checkout = Checkout::from(vec!["master".to_string()], logger.clone()).unwrap();
         checkout.ejecutar().unwrap();
 
-        assert!(!PathBuf::from("tmp/checkout_test04_test_2").exists())
+        assert!(!PathBuf::from("tmp/checkout_test04_test_2").exists());
+        assert!(PathBuf::from("tmp/checkout_test04_test").exists());
     }
 }
