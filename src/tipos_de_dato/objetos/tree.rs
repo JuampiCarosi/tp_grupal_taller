@@ -1,14 +1,18 @@
-use std::{fmt::Display, fs, io::Write, path::PathBuf, rc::Rc};
-
-use flate2::{self, write::ZlibEncoder, Compression};
+use std::{
+    fmt::{Display, Write},
+    fs,
+    num::ParseIntError,
+    path::PathBuf,
+    rc::Rc,
+};
 
 use sha1::{Digest, Sha1};
 
 use crate::{
     io,
     tipos_de_dato::{comandos::hash_object::HashObject, logger, objeto::Objeto},
-    utilidades_de_compresion::descomprimir_objeto,
-    utilidades_path_buf::esta_directorio_habilitado,
+    utilidades_de_compresion::{comprimir_contenido_u8, descomprimir_objeto},
+    utilidades_path_buf::{esta_directorio_habilitado, obtener_nombre},
 };
 
 use super::blob::Blob;
@@ -20,6 +24,58 @@ pub struct Tree {
     pub objetos: Vec<Objeto>,
 }
 impl Tree {
+    pub fn decode_hex(s: &str) -> Result<Vec<u8>, String> {
+        match (0..s.len())
+            .step_by(2)
+            .map(|i| u8::from_str_radix(&s[i..i + 2], 16))
+            .collect::<Result<Vec<u8>, ParseIntError>>()
+        {
+            Ok(hex) => Ok(hex),
+            Err(_) => Err(format!("Error al decodificar el hash {}", s)),
+        }
+    }
+
+    pub fn encode_hex(bytes: &[u8]) -> String {
+        let mut s = String::with_capacity(bytes.len() * 2);
+        for &b in bytes {
+            write!(&mut s, "{:02x}", b).unwrap();
+        }
+        s
+    }
+
+    pub fn obtener_hash(&self) -> Result<String, String> {
+        let contenido = self.obtener_contenido()?;
+        let mut sha1 = Sha1::new();
+
+        let header = format!("tree {}\0", contenido.len());
+        sha1.update([header.as_bytes(), &contenido].concat());
+
+        let hash = sha1.finalize();
+        Ok(format!("{:x}", hash))
+    }
+
+    fn obtener_contenido(&self) -> Result<Vec<u8>, String> {
+        let objetos_ordenados = Self::ordenar_objetos_alfabeticamente(&self.objetos);
+
+        let mut contenido: Vec<u8> = Vec::new();
+
+        for objeto in objetos_ordenados {
+            let mut line = match objeto {
+                Objeto::Blob(ref blob) => {
+                    let hash = Self::decode_hex(&blob.hash)?;
+                    [b"100644 ", blob.nombre.as_bytes(), b"\0", &hash].concat()
+                }
+                Objeto::Tree(tree) => {
+                    let nombre = obtener_nombre(&tree.directorio.clone())?;
+                    let hash = &Self::decode_hex(&tree.obtener_hash()?)?;
+                    [b"40000 ", nombre.as_bytes(), b"\0", &hash].concat()
+                }
+            };
+            contenido.append(&mut line);
+        }
+        Ok(contenido)
+    }
+
     fn obtener_hash_completo(hash_20: String) -> Result<String, String> {
         let dir_candidatos = format!(".gir/objects/{}/", &hash_20[..2]);
         let candidatos = match fs::read_dir(&dir_candidatos) {
@@ -112,31 +168,43 @@ impl Tree {
         let mut lineas = contenido.split('\0').collect::<Vec<&str>>();
         lineas.remove(0);
 
-        for i in (0..lineas.len()).step_by(2) {
-            if i + 1 < lineas.len() {
-                let linea = lineas[i].split_whitespace();
+        let mut lineas_separadas: Vec<&str> = Vec::new();
+        lineas_separadas.push(lineas[0].clone());
+        let ultima_linea = lineas.pop().unwrap();
+        lineas.iter().skip(1).for_each(|x| {
+            let (hash, modo_y_nombre) = x.split_at(40);
+            lineas_separadas.push(hash);
+            lineas_separadas.push(modo_y_nombre);
+        });
+        lineas_separadas.push(ultima_linea);
+
+        for i in (0..lineas_separadas.len()).step_by(2) {
+            if i + 1 < lineas_separadas.len() {
+                let linea = lineas_separadas[i].split_whitespace();
                 let linea_spliteada = linea.clone().collect::<Vec<&str>>();
                 let modo = linea_spliteada[0];
                 let nombre = linea_spliteada[1];
                 let tupla = (
                     modo.to_string(),
                     nombre.to_string(),
-                    lineas[i + 1].to_string(),
+                    lineas_separadas[i + 1].to_string(),
                 );
                 contenido_parseado.push(tupla);
             } else {
                 return Err("Error al parsear el contenido del tree".to_string());
             }
         }
+
         Ok(contenido_parseado)
     }
 
-    pub fn from_hash_20(hash: String, directorio: PathBuf) -> Result<Tree, String> {
-        let hash_completo = Self::obtener_hash_completo(hash)?;
+    pub fn from_hash(hash: String, directorio: PathBuf) -> Result<Tree, String> {
+        // let hash_completo = Self::obtener_hash_completo(hash)?;
 
-        let contenido = descomprimir_objeto(hash_completo)?;
+        let contenido = descomprimir_objeto(hash)?;
 
         let contenido_parseado = Self::obtener_datos_de_contenido(contenido)?;
+        println!("{:#?}", contenido_parseado);
         let mut objetos: Vec<Objeto> = Vec::new();
 
         for (modo, nombre, hash_hijo) in contenido_parseado {
@@ -152,7 +220,7 @@ impl Tree {
                     objetos.push(blob);
                 }
                 "40000" => {
-                    let tree = Self::from_hash_20(hash_hijo, PathBuf::from(ubicacion))?;
+                    let tree = Self::from_hash(hash_hijo, PathBuf::from(ubicacion))?;
                     objetos.push(Objeto::Tree(tree));
                 }
                 _ => {}
@@ -166,7 +234,7 @@ impl Tree {
     }
 
     pub fn obtener_tamanio(&self) -> Result<usize, String> {
-        let contenido = match Self::mostrar_contenido(&self.objetos) {
+        let contenido = match self.obtener_contenido() {
             Ok(contenido) => contenido,
             Err(_) => return Err("No se pudo obtener el contenido del tree".to_string()),
         };
@@ -226,7 +294,7 @@ impl Tree {
         }
     }
 
-    pub fn obtener_hash(&self) -> Result<String, String> {
+    pub fn obtener_hash_old(&self) -> Result<String, String> {
         let contenido = Self::mostrar_contenido(&self.objetos)?;
         let header = format!("tree {}\0", contenido.len());
 
@@ -238,7 +306,7 @@ impl Tree {
         Ok(format!("{:x}", hash))
     }
 
-    fn ordenar_objetos_alfabeticamente(objetos: &[Objeto]) -> Vec<Objeto> {
+    pub fn ordenar_objetos_alfabeticamente(objetos: &[Objeto]) -> Vec<Objeto> {
         let mut objetos = objetos.to_owned();
         objetos.sort_by(|a, b| {
             let directorio_a = match a {
@@ -258,16 +326,26 @@ impl Tree {
         let hash = self.obtener_hash()?;
         let ruta = format!(".gir/objects/{}/{}", &hash[..2], &hash[2..]);
 
-        let contenido = Self::mostrar_contenido(&self.objetos)?;
-        let header = format!("tree {}\0", contenido.len());
+        // if PathBuf::from(&ruta).exists() || self.es_vacio() {
+        //     return Ok(());
+        // }
 
-        let contenido_total = format!("{}{}", header, contenido);
-        io::escribir_bytes(&ruta, self.comprimir_contenido(contenido_total)?)?;
+        let contenido = self.obtener_contenido()?;
+
+        let header = format!("tree {}\0", contenido.len());
+        let contenido_completo = [header.as_bytes(), &contenido].concat();
+
+        io::escribir_bytes(&ruta, comprimir_contenido_u8(&contenido_completo)?)?;
 
         for objeto in &self.objetos {
             match objeto {
                 Objeto::Blob(blob) => {
                     let logger = Rc::new(logger::Logger::new(PathBuf::from("tmp/tree"))?);
+
+                    // if PathBuf::from(&blob.ubicacion).is_file() {
+                    //     continue;
+                    // }
+
                     HashObject {
                         logger: logger.clone(),
                         escribir: true,
@@ -275,27 +353,11 @@ impl Tree {
                     }
                     .ejecutar()?;
                 }
-                Objeto::Tree(tree) => {
-                    if tree.es_vacio() {
-                        continue;
-                    }
-                    tree.escribir_en_base()?;
-                }
-            }
+                Objeto::Tree(tree) => tree.escribir_en_base()?,
+            };
         }
 
         Ok(())
-    }
-
-    fn comprimir_contenido(&self, contenido: String) -> Result<Vec<u8>, String> {
-        let mut compresor = ZlibEncoder::new(Vec::new(), Compression::default());
-        if compresor.write_all(contenido.as_bytes()).is_err() {
-            return Err("No se pudo comprimir el contenido".to_string());
-        };
-        match compresor.finish() {
-            Ok(contenido_comprimido) => Ok(contenido_comprimido),
-            Err(_) => Err("No se pudo comprimir el contenido".to_string()),
-        }
     }
 
     fn mostrar_contenido(objetos: &[Objeto]) -> Result<String, String> {
@@ -305,14 +367,14 @@ impl Tree {
 
         for objeto in objetos_ordenados {
             let line = match objeto {
-                Objeto::Blob(blob) => format!("100644 {}\0{}", blob.nombre, &blob.hash[..20]),
+                Objeto::Blob(blob) => format!("100644 {}    {}\n", blob.nombre, blob.hash),
                 Objeto::Tree(tree) => {
                     let name = match tree.directorio.file_name() {
                         Some(name) => name,
                         None => return Err("Error al obtener el nombre del directorio".to_string()),
                     };
                     let hash = tree.obtener_hash()?;
-                    format!("40000 {}\0{}", name.to_string_lossy(), &hash[..20])
+                    format!("40000 {}    {}\n", name.to_string_lossy(), hash)
                 }
             };
             output.push_str(&line);
@@ -349,19 +411,21 @@ impl Display for Tree {
 #[cfg(test)]
 
 mod test {
-    use flate2::read::ZlibDecoder;
 
     use crate::io;
     use crate::tipos_de_dato::{objeto::Objeto, objetos::tree::Tree};
-    use std::io::Read;
+    use crate::utilidades_de_compresion::descomprimir_contenido_u8;
     use std::path::PathBuf;
 
     #[test]
     fn test01_test_obtener_hash() {
         let objeto = Objeto::from_directorio(PathBuf::from("test_dir/objetos"), None).unwrap();
-        println!("{:?}", objeto);
+
+        if let Objeto::Tree(ref tree) = objeto {
+            tree.escribir_en_base().unwrap();
+        }
         let hash = objeto.obtener_hash();
-        assert_eq!(hash, "bf902127ac66b999327fba07a9f4b7a50b87922a");
+        assert_eq!(hash, "1442e275fd3a2e743f6bccf3b11ab27862157179");
     }
 
     #[test]
@@ -378,7 +442,10 @@ mod test {
 
         if let Objeto::Tree(tree) = objeto {
             let contenido = Tree::mostrar_contenido(&tree.objetos).unwrap();
-            assert_eq!(contenido, "100644 archivo.txt\02b824e648965b94c6c6b");
+            assert_eq!(
+                contenido,
+                "100644 archivo.txt    2b824e648965b94c6c6b3dd0702feb91f699ed62\n"
+            );
         } else {
             assert!(false)
         }
@@ -392,7 +459,7 @@ mod test {
             let contenido = Tree::mostrar_contenido(&tree.objetos).unwrap();
             assert_eq!(
                 contenido,
-                "40000 muchos_objetos\0748ef9d5f9df6f40b07b40000 objetos\0bf902127ac66b999327f"
+                "40000 muchos_objetos    896ca4eb090e033d16d4e9b1027216572ac3eaae\n40000 objetos    1442e275fd3a2e743f6bccf3b11ab27862157179\n"
             );
         } else {
             assert!(false)
@@ -406,17 +473,17 @@ mod test {
             tree.escribir_en_base().unwrap();
 
             let contenido_leido =
-                io::leer_bytes(".gir/objects/bf/902127ac66b999327fba07a9f4b7a50b87922a")?;
-            let mut descompresor = ZlibDecoder::new(contenido_leido.as_slice());
-            let mut contenido_descomprimido = String::new();
-            descompresor
-                .read_to_string(&mut contenido_descomprimido)
-                .unwrap();
+                io::leer_bytes(".gir/objects/14/42e275fd3a2e743f6bccf3b11ab27862157179")?;
 
-            assert_eq!(
-                contenido_descomprimido,
-                "tree 39\0100644 archivo.txt\02b824e648965b94c6c6b"
-            );
+            let contenido_descomprimido = descomprimir_contenido_u8(&contenido_leido).unwrap();
+
+            let contenido_esperado = [
+                b"tree 39\0100644 archivo.txt\0".to_vec(),
+                Tree::decode_hex("2b824e648965b94c6c6b3dd0702feb91f699ed62").unwrap(),
+            ]
+            .concat();
+
+            assert_eq!(contenido_descomprimido, contenido_esperado);
 
             Ok(())
         } else {
@@ -428,21 +495,23 @@ mod test {
     #[test]
     fn test06_escribir_en_base_con_anidados() -> Result<(), String> {
         let objeto = Objeto::from_directorio(PathBuf::from("test_dir"), None).unwrap();
+        println!("{:#?}", objeto.obtener_hash());
         if let Objeto::Tree(tree) = objeto {
             tree.escribir_en_base().unwrap();
 
             let contenido_leido =
-                io::leer_bytes(".gir/objects/e0/46b641e27871e304ef4ce3fdf4382265d58354").unwrap();
-            let mut descompresor = ZlibDecoder::new(contenido_leido.as_slice());
-            let mut contenido_descomprimido = String::new();
-            descompresor
-                .read_to_string(&mut contenido_descomprimido)
-                .unwrap();
+                io::leer_bytes(".gir/objects/d1/bd5884df89a9734e3b0a4e7721a4802d85cce8").unwrap();
+            let contenido_descomprimido = descomprimir_contenido_u8(&contenido_leido).unwrap();
 
-            assert_eq!(
-                contenido_descomprimido,
-                "tree 75\040000 muchos_objetos\0748ef9d5f9df6f40b07b40000 objetos\0bf902127ac66b999327f"
-            );
+            let contenido_esperado = [
+                b"tree 75\040000 muchos_objetos\0".to_vec(),
+                Tree::decode_hex("896ca4eb090e033d16d4e9b1027216572ac3eaae").unwrap(),
+                b"40000 objetos\0".to_vec(),
+                Tree::decode_hex("1442e275fd3a2e743f6bccf3b11ab27862157179").unwrap(),
+            ]
+            .concat();
+
+            assert_eq!(contenido_descomprimido, contenido_esperado);
 
             Ok(())
         } else {
