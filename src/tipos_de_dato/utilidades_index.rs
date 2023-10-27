@@ -7,12 +7,13 @@ use std::{
 };
 
 use crate::{
-    tipos_de_dato::comandos::hash_object::HashObject, utilidades_path_buf::obtener_directorio_raiz, io,
+    io, tipos_de_dato::comandos::hash_object::HashObject,
+    utilidades_path_buf::obtener_directorio_raiz,
 };
 
 use super::{logger::Logger, objeto::Objeto};
 
-const PATH_INDEX:&str = "./.gir/index";
+const PATH_INDEX: &str = "./.gir/index";
 
 pub fn crear_index() {
     if Path::new(PATH_INDEX).exists() {
@@ -21,18 +22,11 @@ pub fn crear_index() {
     let _ = fs::File::create(PATH_INDEX);
 }
 
-//Devuelve true si el index esta vacio y false en caso contrario. 
-//Si falla se presupone que es porque no existe y por lo tanto esta vacio 
-pub fn esta_vacio_el_index() -> bool {
-    let config_path = ".gir/CONFIG";
-        let contenido = match io::leer_a_string(config_path) {
-            Ok(contenido) => contenido,
-            Err(_) => return true,
-        };
-        if contenido.is_empty() {
-            return true;
-        }
-        false
+//Devuelve true si el index esta vacio y false en caso contrario.
+//Si falla se presupone que es porque no existe y por lo tanto esta vacio
+pub fn esta_vacio_el_index() -> Result<bool, String> {
+    let contenido = io::leer_a_string(PathBuf::from(PATH_INDEX))?;
+    Ok(contenido.is_empty())
 }
 
 pub fn leer_index() -> Result<Vec<Objeto>, String> {
@@ -137,9 +131,10 @@ pub fn limpiar_archivo_index() -> Result<(), String> {
     let _ = match OpenOptions::new()
         .write(true)
         .truncate(true)
-        .open("./.gir/index") {
-            Ok(archivo) => archivo,
-            Err(_) => return Err("No se pudo abrir el archivo index".to_string()),
-        };
-    Ok(())    
+        .open("./.gir/index")
+    {
+        Ok(archivo) => archivo,
+        Err(_) => return Err("No se pudo abrir el archivo index".to_string()),
+    };
+    Ok(())
 }

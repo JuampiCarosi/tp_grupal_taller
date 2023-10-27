@@ -125,13 +125,22 @@ impl Checkout {
     }
 
     fn comprobar_que_no_haya_contenido_index(&self) -> Result<(), String> {
-        if !utilidades_index::esta_vacio_el_index() {
+        if !utilidades_index::esta_vacio_el_index()? {
             Err("Fallo, tiene contendio sin guardar. Por favor, haga commit para no perder los cambios".to_string())
         } else {
             Ok(())
         }
     }
     //si hay contenido en el index no swich
+
+    fn obtener_arbol_commit_actual(&self) -> Result<Tree, String> {
+        let ref_actual = io::leer_a_string(PATH_HEAD)?;
+        let rama_actual = self.conseguir_rama_actual(ref_actual)?;
+        let head_commit = io::leer_a_string(format!(".gir/refs/heads/{}", rama_actual))?;
+        let hash_tree_padre = conseguir_arbol_padre_from_ult_commit(head_commit);
+        Ok(Tree::from_hash(hash_tree_padre, PathBuf::from("."))?)
+    }
+
     pub fn ejecutar(&self) -> Result<String, String> {
         self.comprobar_que_no_haya_contenido_index()?;
 
@@ -141,17 +150,51 @@ impl Checkout {
             return Ok(format!("Cambiado a nueva rama {}", self.rama_a_cambiar));
         };
 
-        self.cambiar_rama()?;
         if !self.crear_rama {
-            let tree_actual = Tree::from_directorio(PathBuf::from("."), None)?;
-            let head_commit =
-                io::leer_a_string(format!(".gir/refs/heads/{}", self.rama_a_cambiar))?;
-            let hash_tree_padre = conseguir_arbol_padre_from_ult_commit(head_commit);
-            let tree_padre = Tree::from_hash(hash_tree_padre, PathBuf::from("."))?;
-            let tree = self.deep_changes_entre_arboles(&tree_actual, &tree_padre)?;
-            tree.escribir_en_directorio()?;
+            let tree_viejo = self.obtener_arbol_commit_actual()?;
+            self.cambiar_rama()?;
+            let tree_futuro = self.obtener_arbol_commit_actual()?;
+
+            let objetos_a_eliminar = self.obtener_objetos_eliminados(&tree_viejo, &tree_futuro);
+            self.eliminar_objetos(&objetos_a_eliminar)?;
+
+            tree_futuro.escribir_en_directorio()?;
         };
         Ok(format!("Cambiado a rama {}", self.rama_a_cambiar))
+    }
+
+    fn eliminar_objetos(&self, objetos: &Vec<Objeto>) -> Result<(), String> {
+        for objeto in objetos {
+            match objeto {
+                Objeto::Blob(blob) => {
+                    io::rm_directorio(blob.ubicacion.clone())?;
+                }
+                Objeto::Tree(tree) => {
+                    io::rm_directorio(tree.directorio.clone())?;
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn obtener_objetos_eliminados(&self, tree_viejo: &Tree, tree_nuevo: &Tree) -> Vec<Objeto> {
+        let mut objetos_eliminados: Vec<Objeto> = Vec::new();
+
+        for objeto_viejo in tree_viejo.objetos.iter() {
+            match objeto_viejo {
+                Objeto::Blob(blob) => {
+                    if blob.ubicacion == objeto_viejo.obtener_path() {
+                        objetos_eliminados.push(objeto_viejo.clone());
+                    }
+                }
+                Objeto::Tree(tree) => {
+                    let mut hijos_eliminados = self.obtener_objetos_eliminados(tree, tree_nuevo);
+                    objetos_eliminados.append(&mut hijos_eliminados);
+                }
+            }
+        }
+
+        objetos_eliminados
     }
 
     fn deep_changes_entre_arboles(&self, arbol1: &Tree, arbol2: &Tree) -> Result<Tree, String> {
@@ -177,6 +220,7 @@ impl Checkout {
                             if b1.obtener_hash() != b2.obtener_hash() {
                                 hijos.push(Objeto::Blob(b2.clone()));
                                 hijos_2_sin_usar.remove(hijo2);
+                                hijo_encontrado = false;
                             }
                         }
                     }
@@ -186,6 +230,7 @@ impl Checkout {
                             if t1.obtener_hash() != t2.obtener_hash() {
                                 hijos.push(Objeto::Tree(self.deep_changes_entre_arboles(t1, t2)?));
                                 hijos_2_sin_usar.remove(hijo2);
+                                hijo_encontrado = false;
                             }
                         }
                     }
@@ -197,13 +242,165 @@ impl Checkout {
             }
         }
 
-        for hijo2 in hijos_2_sin_usar {
-            hijos.push(hijo2.clone());
-        }
+        // for hijo2 in hijos_2_sin_usar {
+        //     hijos.push(hijo2.clone());
+        // }
 
         Ok(Tree {
             directorio: arbol1.directorio.clone(),
             objetos: hijos,
         })
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use std::{fs::OpenOptions, path::PathBuf, rc::Rc};
+
+    use crate::{
+        io::{self, escribir_bytes, rm_directorio},
+        tipos_de_dato::{
+            comandos::{add::Add, branch::Branch, commit::Commit, init::Init},
+            logger::Logger,
+        },
+        utilidades_de_compresion,
+    };
+
+    use super::Checkout;
+
+    fn craer_archivo_config_default() {
+        let config_path = "~/.girconfig";
+        let contenido = format!("nombre = aaaa\nmail = bbbb\n");
+        println!("contenido: {}", contenido);
+        escribir_bytes(config_path, contenido).unwrap();
+    }
+
+    fn limpiar_archivo_gir() {
+        rm_directorio(".gir").unwrap();
+        let logger = Rc::new(Logger::new(PathBuf::from("tmp/branch_init")).unwrap());
+        let init = Init {
+            path: "./.gir".to_string(),
+            logger,
+        };
+        init.ejecutar().unwrap();
+        craer_archivo_config_default();
+    }
+
+    fn conseguir_hash_padre(branch: String) -> String {
+        let hash = std::fs::read_to_string(format!(".gir/refs/heads/{}", branch)).unwrap();
+        let contenido = utilidades_de_compresion::descomprimir_objeto(hash.clone()).unwrap();
+        let lineas_sin_null = contenido.replace("\0", "\n");
+        let lineas = lineas_sin_null.split("\n").collect::<Vec<&str>>();
+        let hash_padre = lineas[2];
+        hash_padre.to_string()
+    }
+
+    fn conseguir_arbol_commit(branch: String) -> String {
+        let hash_hijo = std::fs::read_to_string(format!(".gir/refs/heads/{}", branch)).unwrap();
+        let contenido_hijo =
+            utilidades_de_compresion::descomprimir_objeto(hash_hijo.clone()).unwrap();
+        let lineas_sin_null = contenido_hijo.replace("\0", "\n");
+        let lineas = lineas_sin_null.split("\n").collect::<Vec<&str>>();
+        let hash_arbol = lineas[1];
+        hash_arbol.to_string()
+    }
+
+    fn addear_archivos_y_comittear(args: Vec<String>, logger: Rc<Logger>) {
+        let mut add = Add::from(args, logger.clone()).unwrap();
+        add.ejecutar().unwrap();
+        let commit =
+            Commit::from(&mut vec!["-m".to_string(), "mensaje".to_string()], logger).unwrap();
+        commit.ejecutar().unwrap();
+    }
+
+    #[test]
+    fn test01_checkout_cambia_de_rama() {
+        limpiar_archivo_gir();
+        let logger = Rc::new(Logger::new(PathBuf::from("tmp/checkout_test02")).unwrap());
+        let args = vec!["test_dir/objetos/archivo.txt".to_string()];
+        addear_archivos_y_comittear(args, logger.clone());
+
+        Branch::from(&mut vec!["una_rama".to_string()], logger.clone())
+            .unwrap()
+            .ejecutar()
+            .unwrap();
+
+        let checkout = Checkout::from(vec!["una_rama".to_string()], logger.clone()).unwrap();
+        checkout.ejecutar().unwrap();
+
+        let contenido_head = std::fs::read_to_string(".gir/HEAD").unwrap();
+        assert_eq!(contenido_head, "ref: refs/heads/una_rama".to_string());
+    }
+
+    #[test]
+
+    fn test02_checkout_crea_y_cambia_de_rama() {
+        limpiar_archivo_gir();
+        let logger = Rc::new(Logger::new(PathBuf::from("tmp/checkout_test02")).unwrap());
+        let args = vec!["test_dir/objetos/archivo.txt".to_string()];
+        addear_archivos_y_comittear(args, logger.clone());
+
+        let checkout = Checkout::from(
+            vec!["-b".to_string(), "una_rama".to_string()],
+            logger.clone(),
+        )
+        .unwrap();
+        checkout.ejecutar().unwrap();
+
+        let contenido_head = std::fs::read_to_string(".gir/HEAD").unwrap();
+        assert_eq!(contenido_head, "ref: refs/heads/una_rama".to_string());
+    }
+
+    #[test]
+    fn test03_al_hacer_checkout_actualiza_contenido() {
+        limpiar_archivo_gir();
+        let logger = Rc::new(Logger::new(PathBuf::from("tmp/checkout_test03")).unwrap());
+        io::escribir_bytes("tmp/checkout_test03_test", "contenido").unwrap();
+        let args = vec!["tmp/checkout_test03_test".to_string()];
+        addear_archivos_y_comittear(args, logger.clone());
+
+        let checkout = Checkout::from(
+            vec!["-b".to_string(), "una_rama".to_string()],
+            logger.clone(),
+        )
+        .unwrap();
+        checkout.ejecutar().unwrap();
+
+        io::escribir_bytes("tmp/checkout_test03_test", "contenido 2").unwrap();
+        let args = vec!["tmp/checkout_test03_test".to_string()];
+        addear_archivos_y_comittear(args, logger.clone());
+
+        let checkout = Checkout::from(vec!["master".to_string()], logger.clone()).unwrap();
+        checkout.ejecutar().unwrap();
+
+        let contenido_archivo = io::leer_a_string("tmp/checkout_test03_test").unwrap();
+
+        assert_eq!(contenido_archivo, "contenido".to_string());
+    }
+
+    #[test]
+    fn test04_al_hacer_checkout_se_eliminan_no_trackeados() {
+        limpiar_archivo_gir();
+        let logger = Rc::new(Logger::new(PathBuf::from("tmp/checkout_test03")).unwrap());
+        io::escribir_bytes("tmp/checkout_test04_test", "contenido").unwrap();
+        let args = vec!["tmp/checkout_test04_test".to_string()];
+        addear_archivos_y_comittear(args, logger.clone());
+
+        let checkout = Checkout::from(
+            vec!["-b".to_string(), "una_rama".to_string()],
+            logger.clone(),
+        )
+        .unwrap();
+        checkout.ejecutar().unwrap();
+
+        io::escribir_bytes("tmp/checkout_test04_test_2", "contenido 2").unwrap();
+        let args = vec!["tmp/checkout_test04_test_2".to_string()];
+        addear_archivos_y_comittear(args, logger.clone());
+
+        let checkout = Checkout::from(vec!["master".to_string()], logger.clone()).unwrap();
+        checkout.ejecutar().unwrap();
+
+        assert!(!PathBuf::from("tmp/checkout_test04_test_2").exists());
+        assert!(PathBuf::from("tmp/checkout_test04_test").exists());
     }
 }

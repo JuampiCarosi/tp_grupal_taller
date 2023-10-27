@@ -37,7 +37,7 @@ impl Add {
             });
 
             if let Some(i) = indice {
-                let _ = std::mem::replace(&mut self.index[i], nuevo_objeto);
+                self.index[i] = nuevo_objeto;
             } else {
                 self.index.push(nuevo_objeto);
             }
