@@ -123,12 +123,14 @@ pub fn escribir_index(logger: Rc<Logger>, objetos_index: &Vec<ObjetoIndex>) -> R
     for objeto_index in objetos_index {
         let line = match objeto_index.objeto {
             Objeto::Blob(ref blob) => {
-                HashObject {
-                    logger: logger.clone(),
-                    escribir: true,
-                    ubicacion_archivo: blob.ubicacion.clone(),
+                if !objeto_index.es_eliminado {
+                    HashObject {
+                        logger: logger.clone(),
+                        escribir: true,
+                        ubicacion_archivo: blob.ubicacion.clone(),
+                    }
+                    .ejecutar()?;
                 }
-                .ejecutar()?;
                 let simbolo_eliminado = if objeto_index.es_eliminado { "-" } else { "+" };
                 let merge = if objeto_index.merge { "1" } else { "0" };
                 format!("{simbolo_eliminado} {merge} {blob}")
@@ -139,7 +141,8 @@ pub fn escribir_index(logger: Rc<Logger>, objetos_index: &Vec<ObjetoIndex>) -> R
         buffer.push_str(&line);
     }
 
-    file.write_all(buffer.as_bytes());
+    file.write_all(buffer.as_bytes())
+        .map_err(|_| "No se pudo escribir el index".to_string())?;
     Ok(())
 }
 

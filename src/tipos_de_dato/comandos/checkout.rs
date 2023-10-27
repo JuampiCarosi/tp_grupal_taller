@@ -254,7 +254,7 @@ impl Checkout {
 
 #[cfg(test)]
 mod test {
-    use std::{fs::OpenOptions, path::PathBuf, rc::Rc};
+    use std::{path::PathBuf, rc::Rc};
 
     use crate::{
         io::{self, escribir_bytes, rm_directorio},
@@ -262,7 +262,6 @@ mod test {
             comandos::{add::Add, branch::Branch, commit::Commit, init::Init},
             logger::Logger,
         },
-        utilidades_de_compresion,
     };
 
     use super::Checkout;
@@ -283,25 +282,6 @@ mod test {
         };
         init.ejecutar().unwrap();
         craer_archivo_config_default();
-    }
-
-    fn conseguir_hash_padre(branch: String) -> String {
-        let hash = std::fs::read_to_string(format!(".gir/refs/heads/{}", branch)).unwrap();
-        let contenido = utilidades_de_compresion::descomprimir_objeto(hash.clone()).unwrap();
-        let lineas_sin_null = contenido.replace("\0", "\n");
-        let lineas = lineas_sin_null.split("\n").collect::<Vec<&str>>();
-        let hash_padre = lineas[2];
-        hash_padre.to_string()
-    }
-
-    fn conseguir_arbol_commit(branch: String) -> String {
-        let hash_hijo = std::fs::read_to_string(format!(".gir/refs/heads/{}", branch)).unwrap();
-        let contenido_hijo =
-            utilidades_de_compresion::descomprimir_objeto(hash_hijo.clone()).unwrap();
-        let lineas_sin_null = contenido_hijo.replace("\0", "\n");
-        let lineas = lineas_sin_null.split("\n").collect::<Vec<&str>>();
-        let hash_arbol = lineas[1];
-        hash_arbol.to_string()
     }
 
     fn addear_archivos_y_comittear(args: Vec<String>, logger: Rc<Logger>) {
