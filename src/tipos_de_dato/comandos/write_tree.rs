@@ -5,9 +5,9 @@ use sha1::{Digest, Sha1};
 
 use crate::io;
 use crate::tipos_de_dato::objeto::Objeto;
-use crate::tipos_de_dato::utilidades_index::generar_objetos_raiz;
-use crate::tipos_de_dato::{objetos::tree::Tree, utilidades_index};
+use crate::tipos_de_dato::objetos::tree::Tree;
 use crate::utilidades_de_compresion;
+use crate::utilidades_index::{generar_objetos_raiz, leer_index, ObjetoIndex};
 
 pub fn conseguir_arbol_padre_from_ult_commit(hash_commit_padre: String) -> String {
     let contenido =
@@ -20,34 +20,45 @@ pub fn conseguir_arbol_padre_from_ult_commit(hash_commit_padre: String) -> Strin
     arbol_commit.to_string()
 }
 
-fn mergear_arboles(arbol_index: &[Objeto], arbol_padre: &[Objeto]) -> Vec<Objeto> {
-    let mut arbol_mergeado: HashMap<PathBuf, Objeto> = HashMap::new();
+fn aplicar_index_a_arbol(arbol_index: &[ObjetoIndex], arbol_padre: &[Objeto]) -> Vec<ObjetoIndex> {
+    let mut arbol_mergeado: HashMap<PathBuf, ObjetoIndex> = HashMap::new();
 
     for objeto_padre in arbol_padre {
-        arbol_mergeado.insert(objeto_padre.obtener_path(), objeto_padre.clone());
+        let objeto_index = ObjetoIndex {
+            es_eliminado: false,
+            merge: false,
+            objeto: objeto_padre.clone(),
+        };
+        arbol_mergeado.insert(objeto_padre.obtener_path(), objeto_index);
     }
     for objeto_index in arbol_index {
-        arbol_mergeado.insert(objeto_index.obtener_path(), objeto_index.clone());
+        if objeto_index.es_eliminado {
+            arbol_mergeado.remove(&objeto_index.objeto.obtener_path());
+            continue;
+        }
+        arbol_mergeado.insert(objeto_index.objeto.obtener_path(), objeto_index.clone());
     }
-    arbol_mergeado.values().cloned().collect::<Vec<Objeto>>()
+    arbol_mergeado
+        .values()
+        .cloned()
+        .collect::<Vec<ObjetoIndex>>()
 }
 
 pub fn crear_arbol_commit(commit_padre: Option<String>) -> Result<String, String> {
-    let objetos = utilidades_index::leer_index()?;
-    if objetos.is_empty() {
+    let objetos_index = leer_index()?;
+    if objetos_index.is_empty() {
         return Err("No hay archivos trackeados para commitear".to_string());
     }
 
-    let objetos_raiz = utilidades_index::generar_objetos_raiz(&objetos)?;
-    let mut objetos_a_utilizar = objetos_raiz.clone();
-
-    if let Some(hash) = commit_padre {
+    let objetos_a_utilizar = if let Some(hash) = commit_padre {
         let hash_arbol_padre = conseguir_arbol_padre_from_ult_commit(hash.clone());
         let arbol_padre = Tree::from_hash(hash_arbol_padre.clone(), PathBuf::from("./"))?;
-        let objetos_arbol_nuevo_commit = mergear_arboles(&objetos_raiz, &arbol_padre.objetos);
-        let objetos_raiz_con_padre = generar_objetos_raiz(&objetos_arbol_nuevo_commit)?;
-        objetos_a_utilizar = objetos_raiz_con_padre
-    }
+        let objetos_arbol_nuevo_commit =
+            aplicar_index_a_arbol(&objetos_index, &arbol_padre.objetos);
+        generar_objetos_raiz(&objetos_arbol_nuevo_commit)?
+    } else {
+        generar_objetos_raiz(&objetos_index)?
+    };
 
     let contenido_arbol_commit = Tree::obtener_contenido(&objetos_a_utilizar)?;
 
@@ -146,6 +157,27 @@ mod test {
         assert_eq!(
             contenido_commit,
             "tree 41\0100644 test_file.txt\0678e12dc5c03a7cf6e9f64e688868962ab5d8b65"
+        );
+    }
+
+    #[test]
+    fn test02_se_escribe_arbol_con_carpeta() {
+        limpiar_archivo_gir();
+        let logger = Rc::new(Logger::new(PathBuf::from("tmp/commit_test01")).unwrap());
+        Add::from(vec!["test_dir/objetos".to_string()], logger)
+            .unwrap()
+            .ejecutar()
+            .unwrap();
+
+        let arbol_commit = crear_arbol_commit(None).unwrap();
+
+        assert_eq!(arbol_commit, "01f67151c34d6b33ec1a98fdafef8b021068395a0");
+
+        let contenido_commit = utilidades_de_compresion::descomprimir_objeto(arbol_commit).unwrap();
+
+        assert_eq!(
+            contenido_commit,
+            "tree 41\040000 test_dir\01442e275fd3a2e743f6bccf3b11ab27862157179"
         );
     }
 }

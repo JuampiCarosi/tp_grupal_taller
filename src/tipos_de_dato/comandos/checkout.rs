@@ -4,9 +4,8 @@ use crate::{
     io,
     tipos_de_dato::{
         comandos::branch::Branch, logger::Logger, objeto::Objeto, objetos::tree::Tree,
-        utilidades_index,
     },
-    utilidades_path_buf,
+    utilidades_index, utilidades_path_buf,
 };
 
 use super::write_tree::conseguir_arbol_padre_from_ult_commit;

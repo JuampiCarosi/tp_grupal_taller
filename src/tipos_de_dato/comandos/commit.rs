@@ -5,8 +5,9 @@ use sha1::{Digest, Sha1};
 
 use crate::{
     io::{self, leer_a_string},
-    tipos_de_dato::{logger::Logger, utilidades_index},
+    tipos_de_dato::logger::Logger,
     utilidades_de_compresion::comprimir_contenido,
+    utilidades_index,
 };
 
 use super::write_tree;

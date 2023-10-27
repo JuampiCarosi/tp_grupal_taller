@@ -212,6 +212,8 @@ impl Tree {
         Ok(contenido_parseado)
     }
 
+    /// Lee el objeto tree de la base de datos en base a un hash pasado por parametro y
+    ///  el directorio en el que se encuentra el tree y lo devuelve como un objeto Tree
     pub fn from_hash(hash: String, directorio: PathBuf) -> Result<Tree, String> {
         // let hash_completo = Self::obtener_hash_completo(hash)?;
 
@@ -278,8 +280,6 @@ impl Tree {
                     if tree.directorio == nombre_hijo.clone() {
                         return true;
                     }
-
-                    
                 }
             }
         }
