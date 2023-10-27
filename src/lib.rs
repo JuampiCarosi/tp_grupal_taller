@@ -1,5 +1,6 @@
 pub mod tipos_de_dato {
     pub mod comando;
+    pub mod config;
     pub mod logger;
     pub mod objeto;
     pub mod utilidades_index;
@@ -16,6 +17,7 @@ pub mod tipos_de_dato {
         pub mod commit;
         pub mod hash_object;
         pub mod init;
+        pub mod remote;
         pub mod rm;
         pub mod version;
         pub mod write_tree;
