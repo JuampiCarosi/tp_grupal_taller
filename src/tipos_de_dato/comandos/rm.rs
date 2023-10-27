@@ -14,6 +14,8 @@ pub struct Remove {
 }
 
 impl Remove {
+    /// Elimina los directorios vacios que quedaron remanentes luego de eliminar los
+    /// archivos
     fn limpiar_directorios_vacios(&self) {
         let mut ubicaciones_a_corroborar: HashSet<PathBuf> = HashSet::new();
 
@@ -46,6 +48,8 @@ impl Remove {
         }
     }
 
+    /// Dada una lista de ubicaciones, devuelve una lista con las ubicaciones hoja
+    /// (las ubicaciones hoja son los archivos que se encuentran en las ubicaciones)
     pub fn obtener_ubicaciones_hoja(
         ubicaciones: Vec<PathBuf>,
         recursivo: bool,
