@@ -209,7 +209,7 @@ mod test {
     }
 
     #[test]
-    fn test02_remove_ejecutar_con_anidado() {
+    fn test02_remove_recursivo() {
         clear_index();
         crear_archivo_en_dir();
         let logger = Rc::new(Logger::new(PathBuf::from("tmp/rm_test01")).unwrap());
@@ -226,7 +226,11 @@ mod test {
         .ejecutar()
         .unwrap();
 
-        let args = vec!["--cached".to_string(), "tmp/test_dir".to_string()];
+        let args = vec![
+            "--cached".to_string(),
+            "-r".to_string(),
+            "tmp/test_dir".to_string(),
+        ];
         Remove::from(args, logger).unwrap().ejecutar().unwrap();
 
         let index = leer_a_string(".gir/index").unwrap();
@@ -269,7 +273,7 @@ mod test {
     }
 
     #[test]
-    fn test04_remove_recursivo() {
+    fn test04_remove_recursivo_sin_cached() {
         clear_index();
         crear_archivo_en_dir();
 
