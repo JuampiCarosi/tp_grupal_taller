@@ -1,6 +1,6 @@
 use std::{path::PathBuf, rc::Rc};
 
-use crate::{tipos_de_dato::logger::Logger, utilidades_path_buf::obtener_nombre};
+use crate::{tipos_de_dato::logger::Logger, utilidades_path_buf::obtener_nombre, io};
 
 pub struct Branch {
     pub mostrar: bool,
@@ -33,14 +33,9 @@ impl Branch {
         })
     }
 
-    fn mostrar_ramas(&self) -> Result<String, String> {
+    pub fn mostrar_ramas() -> Result<String, String> {
         let directorio = ".gir/refs/heads";
-        let ramas = std::fs::read_dir(directorio);
-
-        let entradas = match ramas {
-            Ok(entradas) => entradas,
-            Err(_) => Err(format!("No se pudo leer el directorio {}\n", directorio))?,
-        };
+        let entradas = std::fs::read_dir(directorio).map_err(|e|format!("No se pudo leer el directorio:{}\n {}", directorio,e))?;
 
         let mut output = String::new();
 
@@ -54,6 +49,17 @@ impl Branch {
         Ok(output)
     }
 
+    fn obtener_commit_head(&self) -> Result<String, String> {
+        let direccion_head = ".gir/HEAD";
+        let direccion_branch_actual = io::leer_a_string(direccion_head)?;
+        let branch_actual = direccion_branch_actual
+            .split('/')
+            .last()
+            .ok_or(format!("No se pudo obtener el hash del commit"))?;
+        let hash_commit = io::leer_a_string(format!(".gir/refs/heads/{}", branch_actual))?;
+        Ok(hash_commit.to_string())
+    }
+
     fn crear_rama(&mut self) -> Result<String, String> {
         let rama_nueva = self
             .rama_nueva
@@ -65,20 +71,15 @@ impl Branch {
         if PathBuf::from(&direccion_rama_nueva).exists() {
             return Err(format!("La rama {} ya existe", rama_nueva));
         }
-
-        let resultado = std::fs::File::create(direccion_rama_nueva);
-
-        match resultado {
-            Ok(_) => Ok(format!("Se creó la rama {}", rama_nueva)),
-            Err(_) => Err(format!("No se pudo crear la rama {}", rama_nueva)),
-        }
+        let ultimo_commit = self.obtener_commit_head()?;
+        io::escribir_bytes(direccion_rama_nueva, ultimo_commit)?;
+        Ok(format!("Se creó la rama {}", rama_nueva))
     }
 
     pub fn ejecutar(&mut self) -> Result<String, String> {
         if self.mostrar {
-            return Ok(self.mostrar_ramas()?);
+            return Ok(Self::mostrar_ramas()?);
         }
-
         Ok(self.crear_rama()?)
     }
 }
@@ -86,18 +87,28 @@ impl Branch {
 #[cfg(test)]
 mod test {
     use super::Branch;
-    use crate::io::{crear_archivo, rm_directorio};
+    use crate::io::rm_directorio;
+    use crate::tipos_de_dato::comandos::init::Init;
     use crate::tipos_de_dato::logger::Logger;
     use std::path::PathBuf;
     use std::rc::Rc;
 
-    fn limpiar_heads() {
-        rm_directorio(".gir/refs/heads").unwrap();
-        crear_archivo(".gir/refs/heads/master").unwrap()
+    fn limpiar_archivo_gir() {
+        if PathBuf::from("./.gir").exists(){
+            rm_directorio(".gir").unwrap();
+        }
+        
+        let logger = Rc::new(Logger::new(PathBuf::from("tmp/branch_init")).unwrap());
+        let init = Init {
+            path: "./.gir".to_string(),
+            logger,
+        };
+        init.ejecutar().unwrap();
     }
 
     #[test]
     fn test01_mostrar_ramas() {
+        limpiar_archivo_gir();
         let logger = Rc::new(Logger::new(PathBuf::from("tmp/branch_test01")).unwrap());
         let mut branch = Branch {
             mostrar: true,
@@ -112,7 +123,7 @@ mod test {
 
     #[test]
     fn test02_crear_rama() {
-        limpiar_heads();
+        limpiar_archivo_gir();
         let logger = Rc::new(Logger::new(PathBuf::from("tmp/branch_test02")).unwrap());
         let mut branch = Branch {
             mostrar: false,
@@ -127,7 +138,7 @@ mod test {
 
     #[test]
     fn test03_crear_una_rama_y_mostrar_ramas() {
-        limpiar_heads();
+        limpiar_archivo_gir();
         let logger = Rc::new(Logger::new(PathBuf::from("tmp/branch_test03")).unwrap());
         Branch {
             mostrar: false,
@@ -149,7 +160,7 @@ mod test {
 
     #[test]
     fn test05_mostrar_from() {
-        limpiar_heads();
+        limpiar_archivo_gir();
         let logger = Rc::new(Logger::new(PathBuf::from("tmp/branch_test05")).unwrap());
         let mut branch = Branch::from(&mut vec![], logger).unwrap();
 
@@ -160,7 +171,7 @@ mod test {
 
     #[test]
     fn test06_crear_from() {
-        limpiar_heads();
+        limpiar_archivo_gir();
         let logger = Rc::new(Logger::new(PathBuf::from("tmp/branch_test06")).unwrap());
         let mut branch = Branch::from(&mut vec!["nueva_rama".to_string()], logger).unwrap();
 
@@ -172,7 +183,7 @@ mod test {
     #[test]
     #[should_panic(expected = "Demasiados argumentos\\ngir branch [<nombre-rama-nueva>]")]
     fn test07_muchos_argumentos() {
-        limpiar_heads();
+        limpiar_archivo_gir();
         let logger = Rc::new(Logger::new(PathBuf::from("tmp/branch_test06")).unwrap());
         let mut branch = Branch::from(
             &mut vec!["nueva_rama".to_string(), "otra_nueva_rama".to_string()],
@@ -181,5 +192,11 @@ mod test {
         .unwrap();
 
         branch.ejecutar().unwrap();
+    }
+
+    #[test]
+    #[ignore = "falta terminar el commit"]
+    fn test08_la_branch_se_crea_apuntando_al_ultimo_commit() {
+        
     }
 }

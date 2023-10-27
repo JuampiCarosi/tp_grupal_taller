@@ -17,7 +17,10 @@ fn decodificar_contenido(contenido: Vec<u8>) -> Result<String, String> {
         .collect::<Vec<Vec<u8>>>();
     let header = String::from_utf8(spliteado_por_null[0].clone()).unwrap();
     let tipo_objeto = header.split_whitespace().collect::<Vec<&str>>()[0];
+
     if tipo_objeto == "blob" {
+        return Ok(String::from_utf8(contenido.clone()).unwrap());
+    } else if tipo_objeto == "commit" {
         return Ok(String::from_utf8(contenido.clone()).unwrap());
     }
 

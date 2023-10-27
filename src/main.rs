@@ -44,10 +44,11 @@ fn main() -> Result<(), String> {
 
     match comando.ejecutar() {
         Ok(mensaje) => {
-            logger.log(mensaje.clone());
             println!("{}", mensaje);
+            logger.log(mensaje);
         }
         Err(mensaje) => {
+            println!("ERROR: {}", mensaje);
             logger.log(mensaje);
         }
     };

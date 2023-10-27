@@ -12,10 +12,13 @@ pub mod tipos_de_dato {
         pub mod add;
         pub mod branch;
         pub mod cat_file;
+        pub mod checkout;
+        pub mod commit;
         pub mod hash_object;
         pub mod init;
         pub mod rm;
         pub mod version;
+        pub mod write_tree;
     }
 }
 pub mod io;
