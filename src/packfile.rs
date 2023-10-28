@@ -7,6 +7,7 @@ use crate::tipos_de_dato::{
 use crate::io;
 use std::net::TcpStream;
 use sha1::{Digest, Sha1};
+use flate2::{Decompress, FlushDecompress};
 use std::io::Read;
 pub struct Packfile {
     objetos: Vec<u8>,
@@ -38,9 +39,16 @@ impl Packfile {
             _ => {return Err("Tipo de objeto invalido".to_string());} 
         };
 
+
+        // me tira 10 bytes menos de un commit ...
+
+
+
         self.objetos.extend(nbyte); 
         let ruta_objeto = format!("./.git/objects/{}/{}", &objeto[..2], &objeto[2..]);
         let objeto_comprimido = io::leer_bytes(&ruta_objeto).unwrap();
+
+        println!("largo del objeto: {} comprimido: {}", objeto, objeto_comprimido.len());
         self.objetos.extend(objeto_comprimido);
 
         self.cant_objetos += 1;
@@ -54,6 +62,8 @@ impl Packfile {
         // let objetos = io::obtener_objetos_del_directorio(dir)?;
         // commit y blob
         let objetos = vec!["8ab3bc50ab8155b55c54a2c4d75afdc910203483".to_string(), "0e0082b1300909b92177ba464ee56bd9e8abc4d3".to_string()];
+        // let objetos = vec!["0e0082b1300909b92177ba464ee56bd9e8abc4d3".to_string()]; // 2487
+        // let objetos = vec!["0e0082b1300909b92177ba464ee56bd9e8abc4d3".to_string()];
         // let objetos = vec!["9a22491ff4809b4b1e07163a7b36737831b78046".to_string()];
         for objeto in objetos {
             let inicio= self.objetos.len() as u32; // obtengo el len previo a aniadir el objeto
@@ -156,13 +166,13 @@ pub fn decodificar_bytes(bytes: &mut Vec<u8>) -> (u8, u32, u32) {
     if bytes[0] & 0x80 != 0 {
         continua = true;
     }
+    bytes.remove(0);
     corrimiento += 4;
     bytes_leidos += 1;
     loop {
         if !continua {
             break;
         }
-        bytes.remove(0);
         // flujo.read_exact(&mut byte).unwrap();
         if bytes[0] & 0x80 == 0 {
             continua = false;
@@ -171,6 +181,7 @@ pub fn decodificar_bytes(bytes: &mut Vec<u8>) -> (u8, u32, u32) {
         numero_decodificado |= ((bytes[0] & 0x7f) as u32) << corrimiento;
         corrimiento += 7;
         bytes_leidos += 1;
+        bytes.remove(0);
     }
     (tipo, numero_decodificado, bytes_leidos)
 }

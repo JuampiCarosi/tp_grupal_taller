@@ -76,7 +76,8 @@ impl Comunicacion {
     pub fn responder_con_bytes(&mut self, lineas: Vec<u8>) -> Result<(), ErrorDeComunicacion> {
         self.flujo.write_all(&lineas)?;
         if !lineas.starts_with(b"PACK"){
-            self.flujo.write_all(String::from("0000").as_bytes())?;
+            println!("Entre aca");
+            self.flujo.write_all(String::from("k0000").as_bytes())?;
         }
         Ok(())
     }
@@ -121,48 +122,55 @@ impl Comunicacion {
     
     pub fn obtener_paquete(&mut self, bytes: &mut Vec<u8>) -> Result<(), ErrorDeComunicacion> {
         // a partir de aca obtengo el paquete
-        println!("cant bytes: {:?}", bytes.len());
-        println!("obteniendo firma");
+        // println!("cant bytes: {:?}", bytes.len());
+        // println!("obteniendo firma");
         let firma = &bytes[0..4];
-        println!("firma: {:?}", str::from_utf8(&firma));
+        // println!("firma: {:?}", str::from_utf8(&firma));
         // assert_eq!("PACK", str::from_utf8(&firma).unwrap());
         bytes.drain(0..4);
 
         let version = &bytes[0..4];
-        println!("version: {:?}", str::from_utf8(&version)?);
+        // println!("version: {:?}", str::from_utf8(&version)?);
         // // assert_eq!("0002", str::from_utf8(&version)?);
         bytes.drain(0..4);
     
-        println!("obteniendo largo");
+        // println!("obteniendo largo");
         let largo = &bytes[0..4];
         let largo_packfile: [u8; 4] = largo.try_into().unwrap();
         let largo = u32::from_be_bytes(largo_packfile);
-        println!("largo: {:?}", largo);        
+        // println!("largo: {:?}", largo);        
         bytes.drain(0..4);
-        println!("cant bytes: {:?}", bytes.len());
 
-        let (tipo, tamanio, bytes_leidos) = packfile::decodificar_bytes(bytes);
-        println!("tipo: {:?}", tipo);
-        println!("tamanio: {:?}", tamanio);
-        println!("bytes leidos: {:?}", bytes_leidos);
-        let bytes = bytes.split_off((bytes_leidos - 1) as usize);
-        println!("cant bytes: {:?}", bytes.len());
 
-        // bytes.drain(0..bytes_leidos);
-        // // -- leo el contenido comprimido --
-        let mut objeto_descomprimido = vec![0; tamanio as usize];
-        
-        let mut descompresor = Decompress::new(true);
-
-        descompresor.decompress(&bytes, &mut objeto_descomprimido, FlushDecompress::Finish ).unwrap();
-
-        let contenido = String::from_utf8(objeto_descomprimido).unwrap();
-        println!("contenido: {:?}", contenido);
-
-        // let offset = descompresor.total_out();
+        while bytes.len() > 0 {
+            println!("cant bytes: {:?}", bytes.len());
+            let (tipo, tamanio, bytes_leidos) = packfile::decodificar_bytes(bytes);
+            println!("cant bytes post decodificacion: {:?}", bytes.len());
+            println!("tipo: {:?}", tipo);
+            println!("tamanio: {:?}", tamanio);
+    
+            // // -- leo el contenido comprimido --
+            let mut objeto_descomprimido = vec![0; tamanio as usize];
+            
+            let mut descompresor = Decompress::new(true);
+    
+            descompresor.decompress(&bytes, &mut objeto_descomprimido, FlushDecompress::None ).unwrap();
+    
+            let contenido = String::from_utf8(objeto_descomprimido.clone()).unwrap();
+            println!("contenido: {:?}", contenido);
+            // let total_out = descompresor.total_out(); // esto es lo que debe matchear el tamanio que se pasa en el header
+            let total_in = descompresor.total_in(); // esto es para calcular el offset
+            println!("total in: {:?}", total_in as usize);
+            bytes.drain(0..total_in as usize);
+            println!("cant bytes restantes: {:?}", bytes.len());
+        }
         Ok(())
     }
 }   
+
+fn eliminar_primero(bytes: &mut Vec<u8>, cant: usize) {
+    bytes.drain(0..cant);
+}
 
 
 // pub fn obtener_capacidades(referencias: Vec<String>) -> Vec<&'static str> {
