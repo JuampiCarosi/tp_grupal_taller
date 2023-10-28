@@ -1,2 +1,2 @@
-nombre = aaaa
-mail = bbbb
+[remote "origin"]
+   url = localhost:9418
