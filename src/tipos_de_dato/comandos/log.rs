@@ -1,37 +1,44 @@
 use std::rc::Rc;
 
-use chrono::{FixedOffset, TimeZone, LocalResult};
+use chrono::{FixedOffset, LocalResult, TimeZone};
 
 use crate::tipos_de_dato::logger::Logger;
 
 use crate::tipos_de_dato::comandos::checkout::Checkout;
-use crate::{utilidades_de_compresion, io};
+use crate::{io, utilidades_de_compresion};
 
 use super::commit::Commit;
 
-
 pub struct Log {
     branch: String,
-    logger: Rc<Logger>
+    logger: Rc<Logger>,
 }
 
-fn timestamp_archivo_log(timestamp: i64, offset_horas: i32, offset_minutos: i32) -> Result<String, String> {
+fn timestamp_archivo_log(
+    timestamp: i64,
+    offset_horas: i32,
+    offset_minutos: i32,
+) -> Result<String, String> {
     let offset_seconds = offset_horas * 3600 + offset_minutos * 60;
-    let offset_str = format!("{:>+03}{:02}", offset_seconds / 3600, (offset_seconds % 3600) / 60);
-    
+    let offset_str = format!(
+        "{:>+03}{:02}",
+        offset_seconds / 3600,
+        (offset_seconds % 3600) / 60
+    );
+
     let offset = match FixedOffset::east_opt(offset_seconds) {
         Some(offset) => offset,
         None => return Err("No se pudo obtener el offset".to_string()),
     };
-    
+
     let datetime = match offset.timestamp_opt(timestamp, 0) {
         LocalResult::Single(datetime) => datetime,
         _ => return Err("No se pudo obtener el datetime".to_string()),
     };
-    
+
     let datetime_formateado = datetime.format("%a %b %d %H:%M:%S %Y");
     let formatted_timestamp = format!("{} {}", datetime_formateado, offset_str);
-    
+
     Ok(formatted_timestamp)
 }
 
@@ -39,7 +46,7 @@ impl Log {
     pub fn from(args: &mut Vec<String>, logger: Rc<Logger>) -> Result<Log, String> {
         if args.len() > 2 {
             return Err("Cantidad de argumentos invalida".to_string());
-        } 
+        }
         let branch = match args.pop() {
             Some(branch) => {
                 let ramas_disponibles = Checkout::obtener_ramas()?;
@@ -48,8 +55,9 @@ impl Log {
                 } else {
                     return Err(format!("La rama {} no existe", branch));
                 }
-            },
-            None => Commit::obtener_branch_actual().map_err(|e| format!("No se pudo obtener la rama actual\n{}", e))?,
+            }
+            None => Commit::obtener_branch_actual()
+                .map_err(|e| format!("No se pudo obtener la rama actual\n{}", e))?,
         };
         Ok(Log { branch, logger })
     }
@@ -65,20 +73,30 @@ impl Log {
         siguiente_padre.to_string()
     }
 
-    fn armar_contenido_log(contenido: &str, branch_actual: &str, hash_commit: String) -> Result<String, String> {
+    fn armar_contenido_log(
+        contenido: &str,
+        branch_actual: &str,
+        hash_commit: String,
+    ) -> Result<String, String> {
         let contenido_splitteado_del_header = contenido.split('\0').collect::<Vec<&str>>();
-        let lineas_contenido = contenido_splitteado_del_header[1].split('\n').collect::<Vec<&str>>();
+        let lineas_contenido = contenido_splitteado_del_header[1]
+            .split('\n')
+            .collect::<Vec<&str>>();
         let nombre_autor = lineas_contenido[2].split(' ').collect::<Vec<&str>>()[1];
         let mail_autor = lineas_contenido[2].split(' ').collect::<Vec<&str>>()[2];
-        let timestamp = match lineas_contenido[2].split(' ').collect::<Vec<&str>>()[3].parse::<i64>() {
-            Ok(timestamp) => timestamp,
-            Err(_) => return Err("No se pudo obtener el timestamp".to_string()),
-        };
+        let timestamp =
+            match lineas_contenido[2].split(' ').collect::<Vec<&str>>()[3].parse::<i64>() {
+                Ok(timestamp) => timestamp,
+                Err(_) => return Err("No se pudo obtener el timestamp".to_string()),
+            };
         let date = timestamp_archivo_log(timestamp, -03, 00)?;
-        Ok(format!("commit {} ({})\nAutor: {} {}\nDate: {}\n", hash_commit, branch_actual, nombre_autor, mail_autor, date))
+        Ok(format!(
+            "commit {} ({})\nAutor: {} {}\nDate: {}\n",
+            hash_commit, branch_actual, nombre_autor, mail_autor, date
+        ))
     }
 
-    pub fn ejecutar(&self) -> Result<String, String>{
+    pub fn ejecutar(&self) -> Result<String, String> {
         self.logger.log("Ejecutando comando log".to_string());
         let mut hash_commit = Self::obtener_commit_branch(&self.branch)?;
         if hash_commit.is_empty() {
@@ -87,7 +105,8 @@ impl Log {
         loop {
             let contenido = utilidades_de_compresion::descomprimir_objeto(hash_commit.clone())?;
             let siguiente_padre = Self::conseguir_padre_desde_contenido_commit(&contenido);
-            let contenido_a_mostrar = Self::armar_contenido_log(&contenido, &self.branch, hash_commit)?;
+            let contenido_a_mostrar =
+                Self::armar_contenido_log(&contenido, &self.branch, hash_commit)?;
             println!("{}", contenido_a_mostrar);
             if siguiente_padre.is_empty() {
                 break;
@@ -135,7 +154,8 @@ mod test {
         let timestamp = 1234567890;
         let offset_horas = -03;
         let offset_minutos = 00;
-        let timestamp_formateado = timestamp_archivo_log(timestamp, offset_horas, offset_minutos).unwrap();
+        let timestamp_formateado =
+            timestamp_archivo_log(timestamp, offset_horas, offset_minutos).unwrap();
         let timestamp_formateado_esperado = "Fri Feb 13 20:31:30 2009 -0300";
         assert_eq!(timestamp_formateado, timestamp_formateado_esperado);
     }
@@ -145,7 +165,8 @@ mod test {
         let contenido = "commit 142\0tree 1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p7q8r9s0t\nparent 1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p7q8r9s0t\nauthor nombre_apellido <mail> 1234567890 -0300\ncommitter nombre_apellido <mail> 1234567890 -0300\n\nMensaje del commit";
         let branch_actual = "master";
         let hash_commit = "1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p7q8r9s0t".to_string();
-        let contenido_log = Log::armar_contenido_log(contenido, branch_actual, hash_commit).unwrap();
+        let contenido_log =
+            Log::armar_contenido_log(contenido, branch_actual, hash_commit).unwrap();
         let contenido_log_esperado = "commit 1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p7q8r9s0t (master)\nAutor: nombre_apellido <mail>\nDate: Fri Feb 13 20:31:30 2009 -0300\n";
         assert_eq!(contenido_log, contenido_log_esperado);
     }

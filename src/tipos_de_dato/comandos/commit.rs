@@ -18,20 +18,20 @@ pub struct Commit {
 }
 
 fn armar_timestamp_commit() -> Result<String, String> {
-      let zona_horaria = match chrono::FixedOffset::west_opt(3 * 3600) {
-            Some(zona_horaria) => zona_horaria,
-            None => return Err("No se pudo obtener la zona horaria".to_string()),
-      };
-      let now = match zona_horaria.from_local_datetime(&chrono::Local::now().naive_local()) {
-            chrono::LocalResult::Single(now) => now,
-            _ => return Err("No se pudo obtener la fecha y hora actual".to_string()),
-      };
-      let timestamp = now.timestamp();
-      let offset_horas = -3;
-      let offset_minutos = 0;
+    let zona_horaria = match chrono::FixedOffset::west_opt(3 * 3600) {
+        Some(zona_horaria) => zona_horaria,
+        None => return Err("No se pudo obtener la zona horaria".to_string()),
+    };
+    let now = match zona_horaria.from_local_datetime(&chrono::Local::now().naive_local()) {
+        chrono::LocalResult::Single(now) => now,
+        _ => return Err("No se pudo obtener la fecha y hora actual".to_string()),
+    };
+    let timestamp = now.timestamp();
+    let offset_horas = -3;
+    let offset_minutos = 0;
 
-      let offset_format = format!("{:-03}{:02}", offset_horas, offset_minutos);
-      Ok(format!("{} {}", timestamp, offset_format))
+    let offset_format = format!("{:-03}{:02}", offset_horas, offset_minutos);
+    Ok(format!("{} {}", timestamp, offset_format))
 }
 
 impl Commit {
@@ -133,8 +133,8 @@ impl Commit {
         let contenido = io::leer_a_string(config_path)?;
 
         let lineas = contenido.split("\n").collect::<Vec<&str>>();
-        let nombre = lineas[0].split("=").collect::<Vec<&str>>()[1];
-        let mail = lineas[1].split("=").collect::<Vec<&str>>()[1];
+        let nombre = lineas[0].split("=").collect::<Vec<&str>>()[1].trim();
+        let mail = lineas[1].split("=").collect::<Vec<&str>>()[1].trim();
         Ok((nombre.to_string(), mail.to_string()))
     }
 

@@ -400,6 +400,23 @@ impl Tree {
         Ok(())
     }
 
+    pub fn rearmar_contenido_descomprimido(contenido: String) -> Result<String, String> {
+        let mut contenido_pretty: Vec<String> = Vec::new();
+        let mut contenido_splitteado_null = contenido.split('\0').collect::<Vec<&str>>();
+        contenido_pretty.push(contenido_splitteado_null[0].to_string() + " ");
+        let ultimo_hash = match contenido_splitteado_null.pop() {
+            Some(hash) => hash,
+            None => return Err("Error al parsear el contenido del tree".to_string()),
+        };
+        contenido_splitteado_null.iter().skip(1).for_each(|x| {
+            let (hash, modo_y_nombre) = x.split_at(40);
+            contenido_pretty.push(hash.to_string() + "\n");
+            contenido_pretty.push(modo_y_nombre.to_string() + " ");
+        });
+        contenido_pretty.push(ultimo_hash.to_string());
+        Ok(contenido_pretty.concat())
+    }
+
     fn mostrar_contenido(objetos: &[Objeto]) -> Result<String, String> {
         let mut output = String::new();
 
