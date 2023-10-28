@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use chrono::Utc;
+use chrono::{FixedOffset, TimeZone, LocalResult};
 
 use crate::tipos_de_dato::logger::Logger;
 
@@ -15,11 +15,18 @@ pub struct Log {
     logger: Rc<Logger>
 }
 
-//deberia rearmar el timestamp del contenido del commit pero se rompe al descomprimirlo
-fn timestamp_archivo_log() -> String {
-    let timestamp = Utc::now();
-    let formatted_timestamp = timestamp.format("%a %b %e %H:%M:%S %Y %z");
-    formatted_timestamp.to_string()
+fn timestamp_archivo_log(timestamp: i64, offset_horas: i32, offset_minutos: i32) -> Result<String, String> {
+
+    let offset = match FixedOffset::east_opt(offset_horas * 3600 + offset_minutos * 60) {
+        Some(offset) => offset,
+        None => return Err("No se pudo obtener el offset".to_string()),
+    };
+    let datetime = match offset.timestamp_opt(timestamp, 0) {
+        LocalResult::Single(datetime) => datetime,
+        _ => return Err("No se pudo obtener el datetime".to_string()),
+    };
+    let datetime_formateado = datetime.format("%a %b %d %H:%M:%S %Y %:z,");
+    Ok(datetime_formateado.to_string())
 }
 
 impl Log {
@@ -52,22 +59,29 @@ impl Log {
         siguiente_padre.to_string()
     }
 
-    fn armar_contenido_log(contenido: &str, branch_actual: &str, hash_commit: String) -> String {
+    fn armar_contenido_log(contenido: &str, branch_actual: &str, hash_commit: String) -> Result<String, String> {
         let contenido_splitteado_del_header = contenido.split('\0').collect::<Vec<&str>>();
         let lineas_contenido = contenido_splitteado_del_header[1].split('\n').collect::<Vec<&str>>();
         let nombre_autor = lineas_contenido[2].split(' ').collect::<Vec<&str>>()[1];
         let mail_autor = lineas_contenido[2].split(' ').collect::<Vec<&str>>()[2];
-        let date = timestamp_archivo_log();
-        format!("commit {} ({})\nAutor: {} <{}>\nDate: {}\n", hash_commit, branch_actual, nombre_autor, mail_autor, date)
+        let timestamp = match lineas_contenido[2].split(' ').collect::<Vec<&str>>()[3].parse::<i64>() {
+            Ok(timestamp) => timestamp,
+            Err(_) => return Err("No se pudo obtener el timestamp".to_string()),
+        };
+        let date = timestamp_archivo_log(timestamp, -03, 00)?;
+        Ok(format!("commit {} ({})\nAutor: {} {}\nDate: {}\n", hash_commit, branch_actual, nombre_autor, mail_autor, date))
     }
 
     pub fn ejecutar(&self) -> Result<String, String>{
         self.logger.log("Ejecutando comando log".to_string());
         let mut hash_commit = Self::obtener_commit_branch(&self.branch)?;
+        if hash_commit.is_empty() {
+            return Err(format!("La rama {} no tiene commits", self.branch));
+        }
         loop {
             let contenido = utilidades_de_compresion::descomprimir_objeto(hash_commit.clone())?;
             let siguiente_padre = Self::conseguir_padre_desde_contenido_commit(&contenido);
-            let contenido_a_mostrar = Self::armar_contenido_log(&contenido, &self.branch, hash_commit);
+            let contenido_a_mostrar = Self::armar_contenido_log(&contenido, &self.branch, hash_commit)?;
             println!("{}", contenido_a_mostrar);
             if siguiente_padre.is_empty() {
                 break;
