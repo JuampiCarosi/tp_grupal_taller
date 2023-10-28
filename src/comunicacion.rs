@@ -126,12 +126,12 @@ impl Comunicacion {
         // println!("obteniendo firma");
         let firma = &bytes[0..4];
         // println!("firma: {:?}", str::from_utf8(&firma));
-        // assert_eq!("PACK", str::from_utf8(&firma).unwrap());
+        assert_eq!("PACK", str::from_utf8(&firma).unwrap());
         bytes.drain(0..4);
 
         let version = &bytes[0..4];
         // println!("version: {:?}", str::from_utf8(&version)?);
-        // // assert_eq!("0002", str::from_utf8(&version)?);
+        // assert_eq!("0002", str::from_utf8(&version)?);
         bytes.drain(0..4);
     
         // println!("obteniendo largo");
@@ -168,12 +168,3 @@ impl Comunicacion {
     }
 }   
 
-fn eliminar_primero(bytes: &mut Vec<u8>, cant: usize) {
-    bytes.drain(0..cant);
-}
-
-
-// pub fn obtener_capacidades(referencias: Vec<String>) -> Vec<&'static str> {
-//     let capacidades = referencias[0].split("\0").collect::<Vec<&str>>().clone();
-    
-// }
