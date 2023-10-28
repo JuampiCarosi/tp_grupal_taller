@@ -47,7 +47,7 @@ impl Packfile {
         Ok(())
     }
 
-
+    
     // fijarse en commit que algo se manda incompleto, creo 
     // funcion que recorrer el directorio y aniade los objetos al packfile junto a su indice correspondiente
     fn obtener_objetos_del_dir(&mut self, dir: String) -> Result<(), ErrorDeComunicacion> {

@@ -4,8 +4,10 @@ use std::env;
 use std::path::PathBuf;
 use std::str;
 use crate::err_comunicacion::ErrorDeComunicacion;
+use crate::io::obtener_archivos_faltantes;
 use crate::packfile;
 use crate::{io as git_io, comunicacion::Comunicacion};
+use crate::utilidades_strings;
 pub struct Servidor { 
     listener: TcpListener,
     dir: String,
@@ -36,18 +38,20 @@ impl Servidor {
         let respuesta = self.parse_line(&pedido)?; // parse de la liena para ver que se pide
         comunicacion.responder(respuesta)?; // respondo con las refs (en caso de que sea upload-pack)
         
-        let wants = comunicacion.obtener_lineas()?; // obtengo los wants del cliente 
-        // a partir de aca se asume que va a ser un clone porque es el caso mas sencillo, despues cambiar
-        let lineas_siguientes = comunicacion.obtener_lineas()?;
+        let mut wants = comunicacion.obtener_lineas()?; // obtengo los wants del cliente 
+        let mut lineas_siguientes = comunicacion.obtener_lineas()?; // pueden ser haves o un done, depende de la operacion
+        // caso clone (no hay haves)
         if lineas_siguientes[0].clone().contains("done") {
-            let _obj_ids = comunicacion.obtener_obj_ids(&wants);
+            let want_obj_ids = utilidades_strings::eliminar_prefijos(&mut wants, "want");
             comunicacion.responder(vec![git_io::obtener_linea_con_largo_hex("NAK\n")])?; // respondo NAK
             
             let packfile = packfile::Packfile::new().obtener_pack(self.dir.clone() + "/.git/objects/"); // obtengo el packfile
             comunicacion.responder_con_bytes(packfile).unwrap();
             return Ok(());
         }
-
+        let mut have_obj_ids = utilidades_strings::eliminar_prefijos(&mut lineas_siguientes, "have");
+        let faltantes = obtener_archivos_faltantes(have_obj_ids, "./.git/objects".to_string());
+         
         Ok(())
     }
 

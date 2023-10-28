@@ -25,3 +25,4 @@ pub mod tipos_de_dato {
 }
 pub mod utilidades_de_compresion;
 pub mod utilidades_path_buf;
+pub mod utilidades_strings;

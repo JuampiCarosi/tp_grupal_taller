@@ -99,25 +99,36 @@ impl Comunicacion {
 
     
     pub fn obtener_obj_ids(&mut self, lineas: &Vec<String>) -> Vec<String> {
+        println!("lineas: {:?}", lineas);
         let mut obj_ids: Vec<String> = Vec::new();
         for linea in lineas {
             obj_ids.push(linea.split_whitespace().collect::<Vec<&str>>()[0].to_string());
         }
         obj_ids
+
     }
     
     
-    pub fn obtener_wants(&mut self, lineas: &Vec<String>, capacidades: String) -> Result<Vec<String>, ErrorDeComunicacion> {
+    pub fn obtener_wants_pkt(&mut self, lineas: &Vec<String>, capacidades: String) -> Result<Vec<String>, ErrorDeComunicacion> {
         // hay que checkear que no haya repetidos, usar hashset
         let mut lista_wants: Vec<String> = Vec::new();
         let mut obj_ids = self.obtener_obj_ids(lineas);
-        obj_ids[0].push_str(&(" ".to_string() + &capacidades));
+        obj_ids[0].push_str(&(" ".to_string() + &capacidades)); // le aniado las capacidades
         for linea in obj_ids {
             lista_wants.push(io::obtener_linea_con_largo_hex(&("want".to_string() + &linea)));     
         }
         Ok(lista_wants)
     }
-    
+    pub fn obtener_haves_pkt(&mut self, lineas: &Vec<String>) -> Vec<String> { 
+        let mut haves: Vec<String> = Vec::new();
+        for linea in lineas {
+            haves.push(io::obtener_linea_con_largo_hex(&("have".to_string() + &linea)))
+        }
+        println!("haves: {:?}", haves);
+        haves
+    }
+
+
     pub fn obtener_paquete(&mut self, bytes: &mut Vec<u8>) -> Result<(), ErrorDeComunicacion> {
         // a partir de aca obtengo el paquete
         // println!("cant bytes: {:?}", bytes.len());
@@ -164,5 +175,6 @@ impl Comunicacion {
         }
         Ok(())
     }
+
 }   
 

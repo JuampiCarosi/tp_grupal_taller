@@ -1,3 +1,4 @@
+use core::arch;
 use std::io::{self, BufRead};
 use std::path::{PathBuf, Path};
 use std::fs::{self, File};
@@ -35,7 +36,7 @@ pub fn obtener_objetos_del_directorio(dir: String) -> Result<Vec<String>, ErrorD
                     let path = archivo.path();
                     let nombre_carpeta = archivo.file_name().into_string().unwrap();
                     objetos.push(format!("{}{}", nombre_carpeta, obtener_objeto(path.clone())?));
-                }
+                }   
             }
             Err(error) => {
                 eprintln!("Error leyendo directorio: {}", error);
@@ -234,4 +235,19 @@ where
         "No se pudo borrar el directorio {}",
         directorio.as_ref().display()
     ))
+}
+
+
+// dado un vector con nombres de archivos de vuelve aquellos que no estan en el directorio
+pub fn obtener_archivos_faltantes(nombres_archivos: Vec<String>, dir: String) -> Vec<String>{
+    let mut archivos_faltantes: Vec<String> = Vec::new();
+    for nombre in nombres_archivos { 
+        let dir_archivo = format!("{}/{}/{}", dir.clone() ,&nombre[..2], &nombre[2..]);
+        println!("dir_archivo: {:?}", dir_archivo);
+        if !PathBuf::from(dir_archivo.clone()).exists() {
+            println!("el archivo no existe!: {:?}", dir_archivo.clone());
+            archivos_faltantes.push(nombre.clone());
+        }
+    }
+    archivos_faltantes
 }
