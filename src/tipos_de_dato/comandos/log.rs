@@ -16,17 +16,23 @@ pub struct Log {
 }
 
 fn timestamp_archivo_log(timestamp: i64, offset_horas: i32, offset_minutos: i32) -> Result<String, String> {
-
-    let offset = match FixedOffset::east_opt(offset_horas * 3600 + offset_minutos * 60) {
+    let offset_seconds = offset_horas * 3600 + offset_minutos * 60;
+    let offset_str = format!("{:>+03}{:02}", offset_seconds / 3600, (offset_seconds % 3600) / 60);
+    
+    let offset = match FixedOffset::east_opt(offset_seconds) {
         Some(offset) => offset,
         None => return Err("No se pudo obtener el offset".to_string()),
     };
+    
     let datetime = match offset.timestamp_opt(timestamp, 0) {
         LocalResult::Single(datetime) => datetime,
         _ => return Err("No se pudo obtener el datetime".to_string()),
     };
-    let datetime_formateado = datetime.format("%a %b %d %H:%M:%S %Y %:z,");
-    Ok(datetime_formateado.to_string())
+    
+    let datetime_formateado = datetime.format("%a %b %d %H:%M:%S %Y");
+    let formatted_timestamp = format!("{} {}", datetime_formateado, offset_str);
+    
+    Ok(formatted_timestamp)
 }
 
 impl Log {
@@ -89,5 +95,58 @@ impl Log {
             hash_commit = siguiente_padre.to_string();
         }
         Ok("Log terminado".to_string())
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use std::path::PathBuf;
+
+    use super::*;
+
+    #[test]
+    fn test01_creacion_de_log_sin_branch() {
+        let mut args = vec![];
+        let logger = Rc::new(Logger::new(PathBuf::from("tmp/log")).unwrap());
+        let log = Log::from(&mut args, logger).unwrap();
+        assert_eq!(log.branch, "master");
+    }
+
+    #[test]
+    fn test02_creacion_de_log_indicando_branch() {
+        io::escribir_bytes(".gir/refs/heads/rama", "hash".as_bytes()).unwrap();
+        let mut args = vec!["rama".to_string()];
+        let logger = Rc::new(Logger::new(PathBuf::from("tmp/log")).unwrap());
+        let log = Log::from(&mut args, logger).unwrap();
+        assert_eq!(log.branch, "rama");
+        std::fs::remove_file(".gir/refs/heads/rama").unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected = "La rama rama no existe")]
+    fn test03_error_al_usar_branch_inexistente() {
+        let mut args = vec!["rama".to_string()];
+        let logger = Rc::new(Logger::new(PathBuf::from("tmp/log")).unwrap());
+        let _ = Log::from(&mut args, logger).unwrap();
+    }
+
+    #[test]
+    fn test04_rearmar_timestamp_log() {
+        let timestamp = 1234567890;
+        let offset_horas = -03;
+        let offset_minutos = 00;
+        let timestamp_formateado = timestamp_archivo_log(timestamp, offset_horas, offset_minutos).unwrap();
+        let timestamp_formateado_esperado = "Fri Feb 13 20:31:30 2009 -0300";
+        assert_eq!(timestamp_formateado, timestamp_formateado_esperado);
+    }
+
+    #[test]
+    fn test05_armar_contenido_log() {
+        let contenido = "commit 142\0tree 1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p7q8r9s0t\nparent 1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p7q8r9s0t\nauthor nombre_apellido <mail> 1234567890 -0300\ncommitter nombre_apellido <mail> 1234567890 -0300\n\nMensaje del commit";
+        let branch_actual = "master";
+        let hash_commit = "1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p7q8r9s0t".to_string();
+        let contenido_log = Log::armar_contenido_log(contenido, branch_actual, hash_commit).unwrap();
+        let contenido_log_esperado = "commit 1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p7q8r9s0t (master)\nAutor: nombre_apellido <mail>\nDate: Fri Feb 13 20:31:30 2009 -0300\n";
+        assert_eq!(contenido_log, contenido_log_esperado);
     }
 }

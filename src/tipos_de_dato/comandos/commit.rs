@@ -27,7 +27,7 @@ fn armar_timestamp_commit() -> Result<String, String> {
             _ => return Err("No se pudo obtener la fecha y hora actual".to_string()),
       };
       let timestamp = now.timestamp();
-      let offset_horas = 3;
+      let offset_horas = -3;
       let offset_minutos = 0;
 
       let offset_format = format!("{:-03}{:02}", offset_horas, offset_minutos);
