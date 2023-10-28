@@ -19,6 +19,7 @@ fn main() -> std::io::Result<()> {
     let capacidades = refs_recibidas[0].split("\0").collect::<Vec<&str>>()[1];
     let wants = comunicacion.obtener_wants(&refs_recibidas, capacidades.to_string()).unwrap();
     comunicacion.responder(wants.clone()).unwrap();
+    comunicacion.responder(vec![io::obtener_linea_con_largo_hex("done")]).unwrap();
     let nak = comunicacion.obtener_lineas().unwrap();
     println!("nak: {:?}", nak);
 

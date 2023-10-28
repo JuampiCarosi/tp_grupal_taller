@@ -4,8 +4,6 @@ use std::net::TcpStream;
 use std::io::{Read, Write};
 use std::str;
 use crate::io;
-use crate::tipos_de_dato::comandos::cat_file::CatFile;
-use std::rc::Rc;
 use flate2::{Decompress, FlushDecompress};
 use crate::packfile;
 use std::convert::TryInto;
@@ -77,14 +75,14 @@ impl Comunicacion {
         self.flujo.write_all(&lineas)?;
         if !lineas.starts_with(b"PACK"){
             println!("Entre aca");
-            self.flujo.write_all(String::from("k0000").as_bytes())?;
+            self.flujo.write_all(String::from("0000").as_bytes())?;
         }
         Ok(())
     }
 
     pub fn obtener_lineas_como_bytes(&mut self) -> Result<Vec<u8>, ErrorDeComunicacion> {
         let mut buffer = Vec::new();
-        let mut temp_buffer = [0u8; 1024]; // Tamaño del búfer de lectura, ajusta según tus necesidades
+        let mut temp_buffer = [0u8; 1024]; // Tamaño del búfer de lectura
 
         loop {
             let bytes_read = self.flujo.read(&mut temp_buffer)?;
@@ -125,8 +123,8 @@ impl Comunicacion {
         // println!("cant bytes: {:?}", bytes.len());
         // println!("obteniendo firma");
         let firma = &bytes[0..4];
-        // println!("firma: {:?}", str::from_utf8(&firma));
-        assert_eq!("PACK", str::from_utf8(&firma).unwrap());
+        println!("firma: {:?}", str::from_utf8(&firma));
+        // assert_eq!("PACK", str::from_utf8(&firma).unwrap());
         bytes.drain(0..4);
 
         let version = &bytes[0..4];

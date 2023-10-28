@@ -2,30 +2,38 @@ use crate::{io, tipos_de_dato::objetos::tree::Tree};
 use flate2::{read::ZlibDecoder, write::ZlibEncoder, Compression};
 use std::io::{Read, Write};
 
+
+
+// CAMBIAR GIT POR GIR
+
+
 pub fn descomprimir_objeto(hash: String) -> Result<String, String> {
-    let ruta_objeto = format!(".gir/objects/{}/{}", &hash[..2], &hash[2..]);
+    let ruta_objeto = format!(".git/objects/{}/{}", &hash[..2], &hash[2..]);
     let contenido_leido = io::leer_bytes(ruta_objeto)?;
     let contenido_descomprimido = descomprimir_contenido_u8(&contenido_leido)?;
     let contenido_decodificado = decodificar_contenido(contenido_descomprimido)?;
     Ok(contenido_decodificado)
 }
-
 fn decodificar_contenido(contenido: Vec<u8>) -> Result<String, String> {
     let mut spliteado_por_null: Vec<Vec<u8>> = contenido
-        .split(|&x| x == 0)
+        .split(|&x| x == 0x00)
         .map(|x| x.to_vec())
         .collect::<Vec<Vec<u8>>>();
     let header = String::from_utf8(spliteado_por_null[0].clone()).unwrap();
     let tipo_objeto = header.split_whitespace().collect::<Vec<&str>>()[0];
+
     if tipo_objeto == "blob" {
+        return Ok(String::from_utf8(contenido.clone()).unwrap());
+    } else if tipo_objeto == "commit" {
         return Ok(String::from_utf8(contenido.clone()).unwrap());
     }
 
     let mut spliteado_por_null_separado_por_linea: Vec<Vec<u8>> = Vec::new();
-    spliteado_por_null_separado_por_linea.push(spliteado_por_null[0].clone());
-    spliteado_por_null_separado_por_linea.push(spliteado_por_null[1].clone());
+    spliteado_por_null_separado_por_linea.push(spliteado_por_null[0].clone()); // header 
+    spliteado_por_null_separado_por_linea.push(spliteado_por_null[1].clone()); // modo - nombre
     let last_line = spliteado_por_null.pop();
     spliteado_por_null.iter().skip(2).for_each(|x| {
+        println!("x: {:?}", x);
         let (hash, modo_y_nombre) = x.split_at(20);
         spliteado_por_null_separado_por_linea.push(hash.to_vec());
         spliteado_por_null_separado_por_linea.push(modo_y_nombre.to_vec());

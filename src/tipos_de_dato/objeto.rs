@@ -50,7 +50,7 @@ impl Objeto {
                 hash: hash.to_string(),
             })),
             "40000" => {
-                let tree = Tree::from_hash_20(hash.to_string(), ubicacion)?;
+                let tree = Tree::from_hash(hash.to_string(), ubicacion)?;
                 Ok(Objeto::Tree(tree))
             }
             _ => Err("Modo no soportado".to_string()),
