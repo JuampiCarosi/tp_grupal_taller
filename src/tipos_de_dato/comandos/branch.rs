@@ -1,6 +1,6 @@
 use std::{path::PathBuf, rc::Rc};
 
-use crate::{tipos_de_dato::logger::Logger, utilidades_path_buf::obtener_nombre, io};
+use crate::{io, tipos_de_dato::logger::Logger, utilidades_path_buf::obtener_nombre};
 
 pub struct Branch {
     pub mostrar: bool,
@@ -35,7 +35,8 @@ impl Branch {
 
     pub fn mostrar_ramas() -> Result<String, String> {
         let directorio = ".gir/refs/heads";
-        let entradas = std::fs::read_dir(directorio).map_err(|e|format!("No se pudo leer el directorio:{}\n {}", directorio,e))?;
+        let entradas = std::fs::read_dir(directorio)
+            .map_err(|e| format!("No se pudo leer el directorio:{}\n {}", directorio, e))?;
 
         let mut output = String::new();
 
@@ -94,10 +95,10 @@ mod test {
     use std::rc::Rc;
 
     fn limpiar_archivo_gir() {
-        if PathBuf::from("./.gir").exists(){
+        if PathBuf::from("./.gir").exists() {
             rm_directorio(".gir").unwrap();
         }
-        
+
         let logger = Rc::new(Logger::new(PathBuf::from("tmp/branch_init")).unwrap());
         let init = Init {
             path: "./.gir".to_string(),
@@ -196,7 +197,5 @@ mod test {
 
     #[test]
     #[ignore = "falta terminar el commit"]
-    fn test08_la_branch_se_crea_apuntando_al_ultimo_commit() {
-        
-    }
+    fn test08_la_branch_se_crea_apuntando_al_ultimo_commit() {}
 }

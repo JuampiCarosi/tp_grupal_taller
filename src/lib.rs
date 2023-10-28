@@ -1,8 +1,8 @@
-pub mod server;
+pub mod comunicacion;
 pub mod err_comunicacion;
 pub mod io;
-pub mod comunicacion;
 pub mod packfile;
+pub mod server;
 pub mod tipos_de_dato {
     pub mod comando;
     pub mod logger;

@@ -1,12 +1,12 @@
 use crate::err_comunicacion::ErrorDeComunicacion;
-use crate::tipos_de_dato::logger;
-use std::net::TcpStream;
-use std::io::{Read, Write};
-use std::str;
 use crate::io;
-use flate2::{Decompress, FlushDecompress};
 use crate::packfile;
+use crate::tipos_de_dato::logger;
+use flate2::{Decompress, FlushDecompress};
 use std::convert::TryInto;
+use std::io::{Read, Write};
+use std::net::TcpStream;
+use std::str;
 
 pub struct Comunicacion {
     flujo: TcpStream,
@@ -14,10 +14,10 @@ pub struct Comunicacion {
 
 impl Comunicacion {
     pub fn new(flujo: TcpStream) -> Comunicacion {
-        Comunicacion {flujo}
+        Comunicacion { flujo }
     }
 
-    pub fn aceptar_pedido(&mut self) -> Result<String, ErrorDeComunicacion>{
+    pub fn aceptar_pedido(&mut self) -> Result<String, ErrorDeComunicacion> {
         // lee primera parte, 4 bytes en hexadecimal indican el largo del stream
         let mut tamanio_bytes = [0; 4];
         self.flujo.read_exact(&mut tamanio_bytes)?;
@@ -33,9 +33,8 @@ impl Comunicacion {
     }
     // obtiene lineas en formato PKT
     pub fn obtener_lineas(&mut self) -> Result<Vec<String>, ErrorDeComunicacion> {
-    
         let mut lineas: Vec<String> = Vec::new();
-        loop { 
+        loop {
             // lee primera parte, 4 bytes en hexadecimal indican el largo del stream
             let mut tamanio_bytes = [0; 4];
             self.flujo.read_exact(&mut tamanio_bytes)?;
@@ -60,20 +59,20 @@ impl Comunicacion {
         println!("Received: {:?}", lineas);
         Ok(lineas)
     }
-    
+
     pub fn responder(&mut self, lineas: Vec<String>) -> Result<(), ErrorDeComunicacion> {
-        for linea in &lineas { 
+        for linea in &lineas {
             self.flujo.write_all(linea.as_bytes())?;
         }
         if !lineas[0].contains(&"NAK".to_string()) {
             self.flujo.write_all(String::from("0000").as_bytes())?;
-        } 
+        }
         Ok(())
     }
-    
+
     pub fn responder_con_bytes(&mut self, lineas: Vec<u8>) -> Result<(), ErrorDeComunicacion> {
         self.flujo.write_all(&lineas)?;
-        if !lineas.starts_with(b"PACK"){
+        if !lineas.starts_with(b"PACK") {
             println!("Entre aca");
             self.flujo.write_all(String::from("0000").as_bytes())?;
         }
@@ -94,10 +93,9 @@ impl Comunicacion {
             buffer.extend_from_slice(&temp_buffer[0..bytes_read]);
         }
 
-    Ok(buffer)
-}
+        Ok(buffer)
+    }
 
-    
     pub fn obtener_obj_ids(&mut self, lineas: &Vec<String>) -> Vec<String> {
         let mut obj_ids: Vec<String> = Vec::new();
         for linea in lineas {
@@ -105,19 +103,24 @@ impl Comunicacion {
         }
         obj_ids
     }
-    
-    
-    pub fn obtener_wants(&mut self, lineas: &Vec<String>, capacidades: String) -> Result<Vec<String>, ErrorDeComunicacion> {
+
+    pub fn obtener_wants(
+        &mut self,
+        lineas: &Vec<String>,
+        capacidades: String,
+    ) -> Result<Vec<String>, ErrorDeComunicacion> {
         // hay que checkear que no haya repetidos, usar hashset
         let mut lista_wants: Vec<String> = Vec::new();
         let mut obj_ids = self.obtener_obj_ids(lineas);
         obj_ids[0].push_str(&(" ".to_string() + &capacidades));
         for linea in obj_ids {
-            lista_wants.push(io::obtener_linea_con_largo_hex(&("want".to_string() + &linea)));     
+            lista_wants.push(io::obtener_linea_con_largo_hex(
+                &("want".to_string() + &linea),
+            ));
         }
         Ok(lista_wants)
     }
-    
+
     pub fn obtener_paquete(&mut self, bytes: &mut Vec<u8>) -> Result<(), ErrorDeComunicacion> {
         // a partir de aca obtengo el paquete
         // println!("cant bytes: {:?}", bytes.len());
@@ -131,14 +134,13 @@ impl Comunicacion {
         // println!("version: {:?}", str::from_utf8(&version)?);
         // assert_eq!("0002", str::from_utf8(&version)?);
         bytes.drain(0..4);
-    
+
         // println!("obteniendo largo");
         let largo = &bytes[0..4];
         let largo_packfile: [u8; 4] = largo.try_into().unwrap();
         let largo = u32::from_be_bytes(largo_packfile);
-        // println!("largo: {:?}", largo);        
+        // println!("largo: {:?}", largo);
         bytes.drain(0..4);
-
 
         while bytes.len() > 0 {
             println!("cant bytes: {:?}", bytes.len());
@@ -146,14 +148,16 @@ impl Comunicacion {
             println!("cant bytes post decodificacion: {:?}", bytes.len());
             println!("tipo: {:?}", tipo);
             println!("tamanio: {:?}", tamanio);
-    
+
             // // -- leo el contenido comprimido --
             let mut objeto_descomprimido = vec![0; tamanio as usize];
-            
+
             let mut descompresor = Decompress::new(true);
-    
-            descompresor.decompress(&bytes, &mut objeto_descomprimido, FlushDecompress::None ).unwrap();
-    
+
+            descompresor
+                .decompress(&bytes, &mut objeto_descomprimido, FlushDecompress::None)
+                .unwrap();
+
             let contenido = String::from_utf8(objeto_descomprimido.clone()).unwrap();
             println!("contenido: {:?}", contenido);
             // let total_out = descompresor.total_out(); // esto es lo que debe matchear el tamanio que se pasa en el header
@@ -164,5 +168,4 @@ impl Comunicacion {
         }
         Ok(())
     }
-}   
-
+}

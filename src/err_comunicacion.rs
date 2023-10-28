@@ -1,7 +1,4 @@
-use std::{
-    io,
-    str::Utf8Error
-};
+use std::{io, str::Utf8Error};
 
 #[derive(Debug)]
 pub enum ErrorDeComunicacion {
