@@ -7,7 +7,7 @@ use crate::{
 };
 use std::{fmt::Display, path::PathBuf, rc::Rc};
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Blob {
     pub hash: String,
     pub ubicacion: PathBuf,

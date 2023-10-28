@@ -180,7 +180,7 @@ where
     match fs::read(&archivo) {
         Ok(contenido) => Ok(contenido),
         Err(_) => Err(format!(
-            "No se pudo leer el archivo {}",
+            "No se pudo leer el archivo leyendo bytes {}",
             archivo.as_ref().display()
         )),
     }

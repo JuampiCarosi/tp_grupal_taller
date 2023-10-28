@@ -1,8 +1,8 @@
-use std::path::PathBuf;
+use std::{hash::Hash, path::PathBuf};
 
 use super::objetos::{blob::Blob, tree::Tree};
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Objeto {
     Tree(Tree),
     Blob(Blob),
@@ -13,6 +13,13 @@ pub fn flag_es_un_objeto_(flag: &String) -> bool {
 }
 
 impl Objeto {
+    pub fn obtener_path(&self) -> PathBuf {
+        match self {
+            Objeto::Tree(tree) => tree.directorio.clone(),
+            Objeto::Blob(blob) => blob.ubicacion.clone(),
+        }
+    }
+
     pub fn obtener_hash(&self) -> String {
         match self {
             Objeto::Tree(tree) => match tree.obtener_hash() {
@@ -143,8 +150,7 @@ mod test {
 
     #[test]
     fn test04_tree_from_index() {
-        let objeto_a_escibir =
-            Objeto::from_directorio(PathBuf::from("test_dir/objetos"), None).unwrap();
+        let objeto_a_escibir = Objeto::from_directorio(PathBuf::from("test_dir"), None).unwrap();
 
         if let Objeto::Tree(ref tree) = objeto_a_escibir {
             tree.escribir_en_base().unwrap();
@@ -153,22 +159,44 @@ mod test {
         }
 
         let objeto = Objeto::from_index(format!(
-            "40000 {} test_dir/objetos",
-            &objeto_a_escibir.obtener_hash()[..20]
+            "40000 {} test_dir",
+            &objeto_a_escibir.obtener_hash()
         ))
         .unwrap();
 
-        let hijo = Objeto::Blob(Blob {
+        let nieto_1 = Objeto::Blob(Blob {
             nombre: "archivo.txt".to_string(),
             hash: "2b824e648965b94c6c6b3dd0702feb91f699ed62".to_string(),
             ubicacion: PathBuf::from("test_dir/objetos/archivo.txt"),
         });
 
+        let nieto_2 = Objeto::Blob(Blob {
+            nombre: "archivo.txt".to_string(),
+            hash: "ba1d9d6871ba93f7e070c8663e6739cc22f07d3f".to_string(),
+            ubicacion: PathBuf::from("test_dir/muchos_objetos/archivo.txt"),
+        });
+
+        let nieto_3 = Objeto::Blob(Blob {
+            nombre: "archivo_copy.txt".to_string(),
+            hash: "2b824e648965b94c6c6b3dd0702feb91f699ed62".to_string(),
+            ubicacion: PathBuf::from("test_dir/muchos_objetos/archivo_copy.txt"),
+        });
+
+        let hijo_1 = Objeto::Tree(Tree {
+            directorio: PathBuf::from("test_dir/objetos"),
+            objetos: vec![nieto_1],
+        });
+
+        let hijo_2 = Objeto::Tree(Tree {
+            directorio: PathBuf::from("test_dir/muchos_objetos"),
+            objetos: Tree::ordenar_objetos_alfabeticamente(&vec![nieto_2, nieto_3]),
+        });
+
         assert_eq!(
             objeto,
             Objeto::Tree(Tree {
-                directorio: PathBuf::from("test_dir/objetos"),
-                objetos: vec![hijo]
+                directorio: PathBuf::from("test_dir"),
+                objetos: Tree::ordenar_objetos_alfabeticamente(&vec![hijo_1, hijo_2]),
             })
         );
     }
