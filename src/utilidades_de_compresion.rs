@@ -12,51 +12,65 @@ pub fn descomprimir_objeto(hash: String) -> Result<String, String> {
     Ok(contenido_decodificado)
 }
 
-fn decodificar_contenido(contenido: Vec<u8>) -> Result<String, String> {
-    let mut spliteado_por_null: Vec<Vec<u8>> = contenido
-        .split(|&x| x == 0)
-        .map(|x| x.to_vec())
-        .collect::<Vec<Vec<u8>>>();
-    let header = String::from_utf8(spliteado_por_null[0].clone()).unwrap();
+pub fn decodificar_contenido(contenido: Vec<u8>) -> Result<String, String> {
+    let header_u8: &[u8] = contenido.split(|&x| x == 0).collect::<Vec<&[u8]>>()[0];
+
+    let header = String::from_utf8(header_u8.to_vec()).unwrap();
     let tipo_objeto = header.split_whitespace().collect::<Vec<&str>>()[0];
 
     if tipo_objeto == "blob" {
         return Ok(String::from_utf8(contenido.clone()).unwrap());
     } else if tipo_objeto == "commit" {
         return Ok(String::from_utf8(contenido.clone()).unwrap());
-    }
+    } else if tipo_objeto == "tree" {
+        let mut spliteado_por_null: Vec<Vec<u8>> = Vec::new();
+        let mut buffer: Vec<u8> = Vec::new();
+        let mut i = 0;
 
-    let mut spliteado_por_null_separado_por_linea: Vec<Vec<u8>> = Vec::new();
-    spliteado_por_null_separado_por_linea.push(spliteado_por_null[0].clone());
-    spliteado_por_null_separado_por_linea.push(spliteado_por_null[1].clone());
-    let last_line = spliteado_por_null.pop();
-    spliteado_por_null.iter().skip(2).for_each(|x| {
-        let (hash, modo_y_nombre) = x.split_at(20);
-        spliteado_por_null_separado_por_linea.push(hash.to_vec());
-        spliteado_por_null_separado_por_linea.push(modo_y_nombre.to_vec());
-    });
-
-    spliteado_por_null_separado_por_linea.push(last_line.unwrap().clone());
-
-    let mut contenido = format!("{}\0", header);
-
-    for i in (0..(spliteado_por_null_separado_por_linea.len()))
-        .skip(1)
-        .step_by(2)
-    {
-        if i + 1 < spliteado_por_null_separado_por_linea.len() {
-            let modo_y_nombre =
-                String::from_utf8(spliteado_por_null_separado_por_linea[i].clone()).unwrap();
-            let hash = Tree::encode_hex(&spliteado_por_null_separado_por_linea[i + 1]);
-
-            let linea = format!("{modo_y_nombre}\0{hash}");
-            contenido.push_str(&linea);
-        } else {
-            return Err("Error al decodificar el contenido del tree".to_string());
+        for char in contenido.iter() {
+            if *char == 0 && (buffer.len() > 20 || i < 2) {
+                spliteado_por_null.push(buffer.clone());
+                buffer.clear();
+                i += 1;
+            } else {
+                buffer.push(*char);
+            }
         }
+
+        let mut spliteado_por_null_separado_por_linea: Vec<Vec<u8>> = Vec::new();
+        spliteado_por_null_separado_por_linea.push(spliteado_por_null[0].clone());
+        spliteado_por_null_separado_por_linea.push(spliteado_por_null[1].clone());
+        let last_line = spliteado_por_null.pop();
+        spliteado_por_null.iter().skip(2).for_each(|x| {
+            let (hash, modo_y_nombre) = x.split_at(20);
+            spliteado_por_null_separado_por_linea.push(hash.to_vec());
+            spliteado_por_null_separado_por_linea.push(modo_y_nombre.to_vec());
+        });
+
+        spliteado_por_null_separado_por_linea.push(last_line.unwrap().clone());
+
+        let mut contenido = format!("{}\0", header);
+
+        for i in (0..(spliteado_por_null_separado_por_linea.len()))
+            .skip(1)
+            .step_by(2)
+        {
+            if i + 1 < spliteado_por_null_separado_por_linea.len() {
+                let modo_y_nombre =
+                    String::from_utf8(spliteado_por_null_separado_por_linea[i].clone()).unwrap();
+                let hash = Tree::encode_hex(&spliteado_por_null_separado_por_linea[i + 1]);
+
+                let linea = format!("{modo_y_nombre}\0{hash}");
+                contenido.push_str(&linea);
+            } else {
+                return Err("Error al decodificar el contenido del tree".to_string());
+            }
+        }
+
+        return Ok(contenido);
     }
 
-    Ok(contenido)
+    Err("Tipo de objeto invalido".to_string())
 }
 
 pub fn comprimir_contenido(contenido: String) -> Result<Vec<u8>, String> {

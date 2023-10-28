@@ -58,7 +58,7 @@ impl Packfile {
         // println!("objetos: {:?}", objetos);
         // commit y blob
         // let objetos = vec!["8ab3bc50ab8155b55c54a2c4d75afdc910203483".to_string(), "0e0082b1300909b92177ba464ee56bd9e8abc4d3".to_string()];
-        let objetos = vec!["0052a72159d2bfda2bb25c29367d84800a1beed4".to_string()]; // Tree
+        let objetos = vec!["33f1d08333d2738cdbe83a8b5ffd3e6ee80d9cce".to_string()]; // Tree
                                                                                     // let objetos = vec!["0e0082b1300909b92177ba464ee56bd9e8abc4d3".to_string()];
                                                                                     // let objetos = vec!["9a22491ff4809b4b1e07163a7b36737831b78046".to_string()];
         for objeto in objetos {

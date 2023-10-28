@@ -1,7 +1,8 @@
 use crate::err_comunicacion::ErrorDeComunicacion;
 use crate::io;
-use crate::packfile;
+use crate::packfile::{self, decodificar_bytes};
 use crate::tipos_de_dato::logger;
+use crate::utilidades_de_compresion::decodificar_contenido;
 use flate2::{Decompress, FlushDecompress};
 use std::convert::TryInto;
 use std::io::{Read, Write};
@@ -158,7 +159,7 @@ impl Comunicacion {
                 .decompress(&bytes, &mut objeto_descomprimido, FlushDecompress::None)
                 .unwrap();
 
-            let contenido = String::from_utf8(objeto_descomprimido.clone()).unwrap();
+            let contenido = decodificar_contenido(objeto_descomprimido);
             println!("contenido: {:?}", contenido);
             // let total_out = descompresor.total_out(); // esto es lo que debe matchear el tamanio que se pasa en el header
             let total_in = descompresor.total_in(); // esto es para calcular el offset
