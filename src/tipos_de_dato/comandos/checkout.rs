@@ -4,9 +4,8 @@ use crate::{
     io,
     tipos_de_dato::{
         comandos::branch::Branch, logger::Logger, objeto::Objeto, objetos::tree::Tree,
-        utilidades_index,
     },
-    utilidades_path_buf,
+    utilidades_index, utilidades_path_buf,
 };
 
 use super::write_tree::conseguir_arbol_padre_from_ult_commit;
@@ -60,7 +59,7 @@ impl Checkout {
         })
     }
 
-    fn obtener_ramas(&self) -> Result<Vec<String>, String> {
+    pub fn obtener_ramas() -> Result<Vec<String>, String> {
         let directorio = ".gir/refs/heads";
         let entradas = std::fs::read_dir(directorio)
             .map_err(|e| format!("No se pudo leer el directorio:{}\n {}", directorio, e))?;
@@ -79,7 +78,7 @@ impl Checkout {
     }
 
     fn verificar_si_la_rama_existe(&self) -> Result<(), String> {
-        let ramas = self.obtener_ramas()?;
+        let ramas = Self::obtener_ramas()?;
         for rama in ramas {
             if rama == self.rama_a_cambiar {
                 return Ok(());
@@ -255,18 +254,24 @@ impl Checkout {
 
 #[cfg(test)]
 mod test {
-    use std::{fs::OpenOptions, path::PathBuf, rc::Rc};
+    use std::{path::PathBuf, rc::Rc};
 
     use crate::{
-        io::{self, rm_directorio},
+        io::{self, escribir_bytes, rm_directorio},
         tipos_de_dato::{
             comandos::{add::Add, branch::Branch, commit::Commit, init::Init},
             logger::Logger,
         },
-        utilidades_de_compresion,
     };
 
     use super::Checkout;
+
+    fn craer_archivo_config_default() {
+        let config_path = "~/.girconfig";
+        let contenido = format!("nombre = aaaa\nmail = bbbb\n");
+        println!("contenido: {}", contenido);
+        escribir_bytes(config_path, contenido).unwrap();
+    }
 
     fn limpiar_archivo_gir() {
         rm_directorio(".gir").unwrap();
@@ -276,25 +281,7 @@ mod test {
             logger,
         };
         init.ejecutar().unwrap();
-    }
-
-    fn conseguir_hash_padre(branch: String) -> String {
-        let hash = std::fs::read_to_string(format!(".gir/refs/heads/{}", branch)).unwrap();
-        let contenido = utilidades_de_compresion::descomprimir_objeto(hash.clone()).unwrap();
-        let lineas_sin_null = contenido.replace("\0", "\n");
-        let lineas = lineas_sin_null.split("\n").collect::<Vec<&str>>();
-        let hash_padre = lineas[2];
-        hash_padre.to_string()
-    }
-
-    fn conseguir_arbol_commit(branch: String) -> String {
-        let hash_hijo = std::fs::read_to_string(format!(".gir/refs/heads/{}", branch)).unwrap();
-        let contenido_hijo =
-            utilidades_de_compresion::descomprimir_objeto(hash_hijo.clone()).unwrap();
-        let lineas_sin_null = contenido_hijo.replace("\0", "\n");
-        let lineas = lineas_sin_null.split("\n").collect::<Vec<&str>>();
-        let hash_arbol = lineas[1];
-        hash_arbol.to_string()
+        craer_archivo_config_default();
     }
 
     fn addear_archivos_y_comittear(args: Vec<String>, logger: Rc<Logger>) {

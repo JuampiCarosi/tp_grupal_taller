@@ -1,10 +1,6 @@
 /target
 log.txt
 .gir
-<<<<<<< HEAD
 /test_dir
 /tmp/*
 !/tmp/.gitkeep
-=======
-/test_dir
->>>>>>> main

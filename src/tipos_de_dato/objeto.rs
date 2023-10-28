@@ -64,6 +64,9 @@ impl Objeto {
         }
     }
 
+    /// Devuelve una instancia del objeto en el directorio indicado
+    /// Si el directorio es un archivo, devuelve un Blob
+    /// Si el directorio es un directorio, devuelve un Tree
     pub fn from_directorio(
         directorio: PathBuf,
         hijos_especificados: Option<&Vec<PathBuf>>,

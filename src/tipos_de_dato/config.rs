@@ -89,7 +89,7 @@ impl Config {
             contenido.push_str(&format!("   merge = {}\n", branch.merge));
         }
 
-        escribir_bytes(PathBuf::from(".gir/config"), contenido)?;
+        escribir_bytes(PathBuf::from("~/.girconfig"), contenido)?;
 
         Ok(())
     }
@@ -116,7 +116,7 @@ mod tests {
 
         config.guardar_config().unwrap();
 
-        let file = io::leer_a_string(".gir/config").unwrap();
+        let file = io::leer_a_string("~/.girconfig").unwrap();
 
         assert_eq!(file, "[remote \"origin\"]\n   url = localhost:3000\n");
     }

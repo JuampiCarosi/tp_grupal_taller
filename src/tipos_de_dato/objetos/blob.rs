@@ -50,7 +50,7 @@ impl Blob {
 
 impl Display for Blob {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let string = format!("100644 {} {}\n", self.hash, self.nombre);
+        let string = format!("100644 {} {}\n", self.hash, self.ubicacion.display());
         write!(f, "{}", string)
     }
 }
