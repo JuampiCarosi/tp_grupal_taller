@@ -36,6 +36,9 @@ pub fn esta_vacio_el_index() -> Result<bool, String> {
 }
 
 pub fn leer_index() -> Result<Vec<ObjetoIndex>, String> {
+    if !PathBuf::from(PATH_INDEX).exists() {
+        return Ok(Vec::new());
+    }
     let file = match OpenOptions::new().read(true).open(PATH_INDEX) {
         Ok(file) => file,
         Err(_) => return Err("No se pudo abrir el archivo index".to_string()),

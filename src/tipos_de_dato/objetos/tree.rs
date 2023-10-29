@@ -24,7 +24,7 @@ pub struct Tree {
     pub objetos: Vec<Objeto>,
 }
 impl Tree {
-    fn obtener_objetos_hoja(&self) -> Vec<Objeto> {
+    pub fn obtener_objetos_hoja(&self) -> Vec<Objeto> {
         let mut objetos: Vec<Objeto> = Vec::new();
         for objeto in &self.objetos {
             match objeto {
@@ -268,18 +268,17 @@ impl Tree {
         }
         false
     }
-    pub fn contiene_hijo_por_nombre(&self, nombre_hijo: PathBuf) -> bool {
+
+    pub fn contiene_hijo_por_ubicacion(&self, ubicacion_hijo: PathBuf) -> bool {
         for objeto in &self.objetos {
             match objeto {
                 Objeto::Blob(blob) => {
-                    if blob.ubicacion == nombre_hijo.clone() {
+                    if blob.ubicacion == ubicacion_hijo.clone() {
                         return true;
                     }
                 }
                 Objeto::Tree(tree) => {
-                    if tree.directorio == nombre_hijo.clone() {
-                        return true;
-                    }
+                    return tree.contiene_hijo_por_ubicacion(ubicacion_hijo.clone());
                 }
             }
         }
