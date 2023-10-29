@@ -7,13 +7,19 @@ use std::{
 };
 
 use crate::{
-    io, tipos_de_dato::comandos::hash_object::HashObject,
+    io,
+    tipos_de_dato::{comandos::hash_object::HashObject, logger::Logger, objeto::Objeto},
     utilidades_path_buf::obtener_directorio_raiz,
 };
 
-use super::{logger::Logger, objeto::Objeto};
-
 const PATH_INDEX: &str = "./.gir/index";
+
+#[derive(Debug, Clone)]
+pub struct ObjetoIndex {
+    pub merge: bool,
+    pub objeto: Objeto,
+    pub es_eliminado: bool,
+}
 
 pub fn crear_index() {
     if Path::new(PATH_INDEX).exists() {
@@ -29,35 +35,46 @@ pub fn esta_vacio_el_index() -> Result<bool, String> {
     Ok(contenido.is_empty())
 }
 
-pub fn leer_index() -> Result<Vec<Objeto>, String> {
+pub fn leer_index() -> Result<Vec<ObjetoIndex>, String> {
     let file = match OpenOptions::new().read(true).open(PATH_INDEX) {
         Ok(file) => file,
         Err(_) => return Err("No se pudo abrir el archivo index".to_string()),
     };
 
-    let mut objetos: Vec<Objeto> = Vec::new();
+    let mut objetos: Vec<ObjetoIndex> = Vec::new();
 
     for line in std::io::BufReader::new(file).lines() {
         if let Ok(line) = line.as_ref() {
+            let (metadata, line) = line.split_at(4);
+            let (simbolo_eliminado, merge) = metadata.split_at(2);
             let objeto = Objeto::from_index(line.to_string())?;
-            objetos.push(objeto);
+            let objeto_index = ObjetoIndex {
+                merge: merge.trim() == "1",
+                es_eliminado: simbolo_eliminado.trim() == "-",
+                objeto,
+            };
+            objetos.push(objeto_index);
         }
     }
     Ok(objetos)
 }
-pub fn generar_objetos_raiz(objetos: &Vec<Objeto>) -> Result<Vec<Objeto>, String> {
+pub fn generar_objetos_raiz(objetos_index: &Vec<ObjetoIndex>) -> Result<Vec<Objeto>, String> {
     let mut objetos_raiz: Vec<Objeto> = Vec::new();
     let mut directorios_raiz: HashSet<PathBuf> = HashSet::new();
     let mut directorios_a_tener_en_cuenta: Vec<PathBuf> = Vec::new();
 
-    for objeto in objetos.iter() {
-        match objeto {
-            Objeto::Blob(blob) => {
+    for objeto_index in objetos_index {
+        if objeto_index.es_eliminado {
+            continue;
+        }
+
+        match objeto_index.objeto {
+            Objeto::Blob(ref blob) => {
                 directorios_a_tener_en_cuenta.push(blob.ubicacion.clone());
                 let padre = obtener_directorio_raiz(&blob.ubicacion)?;
                 directorios_raiz.insert(PathBuf::from(padre));
             }
-            Objeto::Tree(tree) => {
+            Objeto::Tree(ref tree) => {
                 if tree.es_vacio() {
                     continue;
                 }
@@ -82,13 +99,17 @@ pub fn generar_objetos_raiz(objetos: &Vec<Objeto>) -> Result<Vec<Objeto>, String
     Ok(objetos_raiz)
 }
 
-pub fn escribir_index(logger: Rc<Logger>, objetos: &Vec<Objeto>) -> Result<(), String> {
-    let mut file = match OpenOptions::new().write(true).open(PATH_INDEX) {
+pub fn escribir_index(logger: Rc<Logger>, objetos_index: &Vec<ObjetoIndex>) -> Result<(), String> {
+    let mut file = match OpenOptions::new()
+        .write(true)
+        .truncate(true)
+        .open(PATH_INDEX)
+    {
         Ok(file) => file,
-        Err(_) => return Err("No se pudo escribir el archivo index".to_string()),
+        Err(_) => return Err("No se pudo abrir el archivo index".to_string()),
     };
 
-    if objetos.is_empty() {
+    if objetos_index.is_empty() {
         OpenOptions::new()
             .write(true)
             .truncate(true)
@@ -99,31 +120,29 @@ pub fn escribir_index(logger: Rc<Logger>, objetos: &Vec<Objeto>) -> Result<(), S
 
     let mut buffer = String::new();
 
-    for objeto in generar_objetos_raiz(objetos)? {
-        let line = match objeto {
-            Objeto::Blob(blob) => {
-                HashObject {
-                    logger: logger.clone(),
-                    escribir: true,
-                    ubicacion_archivo: blob.ubicacion.clone(),
+    for objeto_index in objetos_index {
+        let line = match objeto_index.objeto {
+            Objeto::Blob(ref blob) => {
+                if !objeto_index.es_eliminado {
+                    HashObject {
+                        logger: logger.clone(),
+                        escribir: true,
+                        ubicacion_archivo: blob.ubicacion.clone(),
+                    }
+                    .ejecutar()?;
                 }
-                .ejecutar()?;
-                format!("{blob}")
+                let simbolo_eliminado = if objeto_index.es_eliminado { "-" } else { "+" };
+                let merge = if objeto_index.merge { "1" } else { "0" };
+                format!("{simbolo_eliminado} {merge} {blob}")
             }
-            Objeto::Tree(tree) => {
-                tree.escribir_en_base()?;
-                format!("{tree}")
-            }
+            Objeto::Tree(_) => Err("No se puede escribir un arbol en el index".to_string())?,
         };
 
         buffer.push_str(&line);
     }
-    OpenOptions::new()
-        .write(true)
-        .truncate(true)
-        .open(PATH_INDEX)
-        .unwrap();
-    let _ = file.write_all(buffer.as_bytes());
+
+    file.write_all(buffer.as_bytes())
+        .map_err(|_| "No se pudo escribir el index".to_string())?;
     Ok(())
 }
 

@@ -3,6 +3,7 @@ use crate::{
         comandos::{cat_file::conseguir_tamanio, hash_object::HashObject},
         logger::Logger,
     },
+    utilidades_de_compresion::descomprimir_objeto,
     utilidades_path_buf::obtener_nombre,
 };
 use std::{fmt::Display, path::PathBuf, rc::Rc};
@@ -19,10 +20,8 @@ impl Blob {
         self.hash.clone()
     }
     pub fn obtener_tamanio(&self) -> Result<usize, String> {
-        let tamanio_blob = match conseguir_tamanio(self.hash.clone()) {
-            Ok(tamanio) => tamanio,
-            Err(_) => return Err("No se pudo obtener el tamanio del blob".to_string()),
-        };
+        let contenido_blob = descomprimir_objeto(self.hash.clone())?;
+        let tamanio_blob = conseguir_tamanio(contenido_blob)?;
         match tamanio_blob.parse::<usize>() {
             Ok(tamanio) => Ok(tamanio),
             Err(_) => Err("No se pudo parsear el tamanio del blob".to_string()),
@@ -50,7 +49,7 @@ impl Blob {
 
 impl Display for Blob {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let string = format!("100644 {} {}\n", self.hash, self.nombre);
+        let string = format!("100644 {} {}\n", self.hash, self.ubicacion.display());
         write!(f, "{}", string)
     }
 }

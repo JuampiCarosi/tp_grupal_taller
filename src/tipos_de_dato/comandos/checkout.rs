@@ -1,12 +1,11 @@
-use std::{collections::HashSet, path::PathBuf, rc::Rc};
+use std::{path::PathBuf, rc::Rc};
 
 use crate::{
     io,
     tipos_de_dato::{
         comandos::branch::Branch, logger::Logger, objeto::Objeto, objetos::tree::Tree,
-        utilidades_index,
     },
-    utilidades_path_buf,
+    utilidades_index, utilidades_path_buf,
 };
 
 use super::write_tree::conseguir_arbol_padre_from_ult_commit;
@@ -60,7 +59,7 @@ impl Checkout {
         })
     }
 
-    fn obtener_ramas(&self) -> Result<Vec<String>, String> {
+    pub fn obtener_ramas() -> Result<Vec<String>, String> {
         let directorio = ".gir/refs/heads";
         let entradas = std::fs::read_dir(directorio)
             .map_err(|e| format!("No se pudo leer el directorio:{}\n {}", directorio, e))?;
@@ -79,7 +78,7 @@ impl Checkout {
     }
 
     fn verificar_si_la_rama_existe(&self) -> Result<(), String> {
-        let ramas = self.obtener_ramas()?;
+        let ramas = Self::obtener_ramas()?;
         for rama in ramas {
             if rama == self.rama_a_cambiar {
                 return Ok(());
@@ -196,77 +195,29 @@ impl Checkout {
 
         objetos_eliminados
     }
-
-    fn deep_changes_entre_arboles(&self, arbol1: &Tree, arbol2: &Tree) -> Result<Tree, String> {
-        let mut hijos: Vec<Objeto> = Vec::new();
-
-        if arbol1.directorio != arbol2.directorio {
-            return Err(format!(
-                "Los directorios de los arboles no coinciden: {} y {}",
-                arbol1.directorio.display(),
-                arbol2.directorio.display()
-            ));
-        };
-
-        let mut hijos_2_sin_usar: HashSet<&Objeto> = HashSet::from_iter(arbol2.objetos.iter());
-
-        for hijo in &arbol1.objetos {
-            let mut hijo_encontrado = false;
-            for hijo2 in &arbol2.objetos {
-                match (hijo, hijo2) {
-                    (Objeto::Blob(b1), Objeto::Blob(b2)) => {
-                        if b1.ubicacion == b2.ubicacion {
-                            hijo_encontrado = true;
-                            if b1.obtener_hash() != b2.obtener_hash() {
-                                hijos.push(Objeto::Blob(b2.clone()));
-                                hijos_2_sin_usar.remove(hijo2);
-                                hijo_encontrado = false;
-                            }
-                        }
-                    }
-                    (Objeto::Tree(t1), Objeto::Tree(t2)) => {
-                        if t1.directorio == t2.directorio {
-                            hijo_encontrado = true;
-                            if t1.obtener_hash() != t2.obtener_hash() {
-                                hijos.push(Objeto::Tree(self.deep_changes_entre_arboles(t1, t2)?));
-                                hijos_2_sin_usar.remove(hijo2);
-                                hijo_encontrado = false;
-                            }
-                        }
-                    }
-                    _ => {}
-                }
-            }
-            if !hijo_encontrado {
-                hijos.push(hijo.clone());
-            }
-        }
-
-        // for hijo2 in hijos_2_sin_usar {
-        //     hijos.push(hijo2.clone());
-        // }
-
-        Ok(Tree {
-            directorio: arbol1.directorio.clone(),
-            objetos: hijos,
-        })
-    }
 }
 
 #[cfg(test)]
 mod test {
-    use std::{fs::OpenOptions, path::PathBuf, rc::Rc};
+    use std::{path::PathBuf, rc::Rc};
 
     use crate::{
-        io::{self, rm_directorio},
+        io::{self, escribir_bytes, rm_directorio},
         tipos_de_dato::{
             comandos::{add::Add, branch::Branch, commit::Commit, init::Init},
             logger::Logger,
         },
-        utilidades_de_compresion,
     };
 
     use super::Checkout;
+
+    fn craer_archivo_config_default() {
+        let home = std::env::var("HOME").unwrap();
+        let config_path = format!("{home}/.girconfig");
+        let contenido = format!("nombre = aaaa\nmail = bbbb\n");
+        println!("contenido: {}", contenido);
+        escribir_bytes(config_path, contenido).unwrap();
+    }
 
     fn limpiar_archivo_gir() {
         rm_directorio(".gir").unwrap();
@@ -276,25 +227,7 @@ mod test {
             logger,
         };
         init.ejecutar().unwrap();
-    }
-
-    fn conseguir_hash_padre(branch: String) -> String {
-        let hash = std::fs::read_to_string(format!(".gir/refs/heads/{}", branch)).unwrap();
-        let contenido = utilidades_de_compresion::descomprimir_objeto(hash.clone()).unwrap();
-        let lineas_sin_null = contenido.replace("\0", "\n");
-        let lineas = lineas_sin_null.split("\n").collect::<Vec<&str>>();
-        let hash_padre = lineas[2];
-        hash_padre.to_string()
-    }
-
-    fn conseguir_arbol_commit(branch: String) -> String {
-        let hash_hijo = std::fs::read_to_string(format!(".gir/refs/heads/{}", branch)).unwrap();
-        let contenido_hijo =
-            utilidades_de_compresion::descomprimir_objeto(hash_hijo.clone()).unwrap();
-        let lineas_sin_null = contenido_hijo.replace("\0", "\n");
-        let lineas = lineas_sin_null.split("\n").collect::<Vec<&str>>();
-        let hash_arbol = lineas[1];
-        hash_arbol.to_string()
+        craer_archivo_config_default();
     }
 
     fn addear_archivos_y_comittear(args: Vec<String>, logger: Rc<Logger>) {
