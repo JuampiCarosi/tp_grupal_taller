@@ -6,8 +6,8 @@ use crate::tipos_de_dato::objetos::tree::Tree;
 use crate::utilidades_de_compresion;
 use crate::utilidades_index::{generar_objetos_raiz, leer_index, ObjetoIndex};
 
-/// Dado un commit padre, devuelve el hash del arbol del commit padre
-pub fn conseguir_arbol_padre_from_ult_commit(hash_commit_padre: String) -> String {
+/// Dado un hash de un commit, devuelve el hash del arbol de ese commit
+pub fn conseguir_arbol_from_hash_commit(hash_commit_padre: String) -> String {
     let contenido =
         utilidades_de_compresion::descomprimir_objeto(hash_commit_padre.clone()).unwrap();
     let lineas_sin_null = contenido.replace("\0", "\n");
@@ -52,7 +52,7 @@ pub fn crear_arbol_commit(commit_padre: Option<String>) -> Result<String, String
     }
 
     let objetos_a_utilizar = if let Some(hash) = commit_padre {
-        let hash_arbol_padre = conseguir_arbol_padre_from_ult_commit(hash.clone());
+        let hash_arbol_padre = conseguir_arbol_from_hash_commit(hash.clone());
         let arbol_padre = Tree::from_hash(hash_arbol_padre.clone(), PathBuf::from("./"))?;
         let objetos_arbol_nuevo_commit =
             aplicar_index_a_arbol(&objetos_index, &arbol_padre.objetos);

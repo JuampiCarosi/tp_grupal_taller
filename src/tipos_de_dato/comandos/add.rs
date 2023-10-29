@@ -244,7 +244,7 @@ mod test {
     }
 
     #[test]
-    fn test07_agregar_dos_archivos_de_una() {
+    fn test06_agregar_dos_archivos_de_una() {
         clear_index();
         let logger = Rc::new(Logger::new(PathBuf::from("tmp/add_test07")).unwrap());
         let ubicacion = "test_file.txt".to_string();

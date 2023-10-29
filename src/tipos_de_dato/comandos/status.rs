@@ -9,7 +9,7 @@ use crate::{
     utilidades_index::{leer_index, ObjetoIndex},
 };
 
-use super::{commit::Commit, write_tree::conseguir_arbol_padre_from_ult_commit};
+use super::{commit::Commit, write_tree::conseguir_arbol_from_hash_commit};
 
 pub struct Status {
     logger: Rc<Logger>,
@@ -27,7 +27,7 @@ pub fn obtener_arbol_del_commit_head() -> Option<Tree> {
     if padre_commit == "" {
         None
     } else {
-        let hash_arbol_commit = conseguir_arbol_padre_from_ult_commit(padre_commit);
+        let hash_arbol_commit = conseguir_arbol_from_hash_commit(padre_commit);
         let tree = Tree::from_hash(hash_arbol_commit, PathBuf::from("./")).unwrap();
         Some(tree)
     }

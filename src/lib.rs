@@ -16,10 +16,11 @@ pub mod tipos_de_dato {
         pub mod hash_object;
         pub mod init;
         pub mod log;
+        pub mod merge;
         pub mod rm;
+        pub mod status;
         pub mod version;
         pub mod write_tree;
-        pub mod status;
     }
 }
 pub mod io;

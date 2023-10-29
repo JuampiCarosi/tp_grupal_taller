@@ -13,7 +13,7 @@ pub struct CatFile {
     pub hash_objeto: String,
 }
 
-fn obtener_contenido_objeto(hash: String) -> Result<(String, String), String> {
+pub fn obtener_contenido_objeto(hash: String) -> Result<(String, String), String> {
     let objeto = descomprimir_objeto(hash)?;
     match objeto.split_once('\0') {
         Some((header, contenido)) => Ok((header.to_string(), contenido.to_string())),
