@@ -1,15 +1,13 @@
 use crate::err_comunicacion::ErrorDeComunicacion;
-use crate::tipos_de_dato::{
-    comandos::cat_file::conseguir_tamanio,
-    comandos::cat_file::conseguir_tipo_objeto,
-
-};
 use crate::io;
+use crate::tipos_de_dato::{
+    comandos::cat_file::conseguir_tamanio, comandos::cat_file::conseguir_tipo_objeto,
+};
 use sha1::{Digest, Sha1};
 pub struct Packfile {
     objetos: Vec<u8>,
     indice: Vec<u8>,
-    cant_objetos: u32
+    cant_objetos: u32,
 }
 
 impl Packfile {
@@ -17,30 +15,36 @@ impl Packfile {
         Packfile {
             objetos: Vec::new(),
             indice: Vec::new(),
-            cant_objetos: 0
+            cant_objetos: 0,
         }
     }
 
-    fn aniadir_objeto(&mut self, objeto: String) -> Result<(), String>{
+    fn aniadir_objeto(&mut self, objeto: String) -> Result<(), String> {
         // let logger = Rc::new(Logger::new(PathBuf::from("log.txt"))?);
-        
+
         // optimizar el hecho de que pido descomprimir 2 veces un archivo
         let tamanio_objeto = conseguir_tamanio(objeto.clone())?.parse::<u32>().unwrap();
         let tipo_objeto = conseguir_tipo_objeto(objeto.clone())?;
         // codifica el tamanio del archivo descomprimido y su tipo en un tipo variable de longitud
         let nbyte = match tipo_objeto.as_str() {
             "commit" => codificar_bytes(1, tamanio_objeto), //1
-            "tree" => codificar_bytes(2, tamanio_objeto), // 2
-            "blob" => codificar_bytes(3,tamanio_objeto), // 3
-            "tag" => codificar_bytes(4, tamanio_objeto), // 4
-            _ => {return Err("Tipo de objeto invalido".to_string());} 
+            "tree" => codificar_bytes(2, tamanio_objeto),   // 2
+            "blob" => codificar_bytes(3, tamanio_objeto),   // 3
+            "tag" => codificar_bytes(4, tamanio_objeto),    // 4
+            _ => {
+                return Err("Tipo de objeto invalido".to_string());
+            }
         };
 
-        self.objetos.extend(nbyte); 
+        self.objetos.extend(nbyte);
         let ruta_objeto = format!("./.git/objects/{}/{}", &objeto[..2], &objeto[2..]);
         let objeto_comprimido = io::leer_bytes(&ruta_objeto).unwrap();
 
-        println!("largo del objeto: {} comprimido: {}", objeto, objeto_comprimido.len());
+        println!(
+            "largo del objeto: {} comprimido: {}",
+            objeto,
+            objeto_comprimido.len()
+        );
         self.objetos.extend(objeto_comprimido);
 
         self.cant_objetos += 1;
@@ -51,20 +55,20 @@ impl Packfile {
     // fijarse en commit que algo se manda incompleto, creo 
     // funcion que recorrer el directorio y aniade los objetos al packfile junto a su indice correspondiente
     fn obtener_objetos_del_dir(&mut self, dir: String) -> Result<(), ErrorDeComunicacion> {
-        // let objetos = io::obtener_objetos_del_directorio(dir)?;
+        let objetos = io::obtener_objetos_del_directorio(dir)?;
         // println!("objetos: {:?}", objetos);
         // commit y blob
         // let objetos = vec!["8ab3bc50ab8155b55c54a2c4d75afdc910203483".to_string(), "0e0082b1300909b92177ba464ee56bd9e8abc4d3".to_string()];
-        let objetos = vec!["0052a72159d2bfda2bb25c29367d84800a1beed4".to_string()]; // Tree 
-        // let objetos = vec!["0e0082b1300909b92177ba464ee56bd9e8abc4d3".to_string()];
-        // let objetos = vec!["9a22491ff4809b4b1e07163a7b36737831b78046".to_string()];
+        // let objetos = vec!["33f1d08333d2738cdbe83a8b5ffd3e6ee80d9cce".to_string()]; // Tree
+                                                                                    // let objetos = vec!["0e0082b1300909b92177ba464ee56bd9e8abc4d3".to_string()];
+                                                                                    // let objetos = vec!["9a22491ff4809b4b1e07163a7b36737831b78046".to_string()];
         for objeto in objetos {
-            let inicio= self.objetos.len() as u32; // obtengo el len previo a aniadir el objeto
+            let inicio = self.objetos.len() as u32; // obtengo el len previo a aniadir el objeto
             self.aniadir_objeto(objeto.clone()).unwrap();
 
-            let offset = self.objetos.len() as u32 - inicio; 
-            self.indice.extend(&offset.to_be_bytes()); 
-            self.indice.extend(objeto.as_bytes()); 
+            let offset = self.objetos.len() as u32 - inicio;
+            self.indice.extend(&offset.to_be_bytes());
+            self.indice.extend(objeto.as_bytes());
         }
         Ok(())
     }
@@ -74,7 +78,7 @@ impl Packfile {
     }
     pub fn obtener_pack(&mut self, dir: String) -> Vec<u8> {
         println!("Despachando packfile");
-        self.obtener_objetos_del_dir(dir).unwrap(); 
+        self.obtener_objetos_del_dir(dir).unwrap();
         let mut packfile = Vec::new();
 
         // agrego el indice primero
@@ -98,16 +102,16 @@ impl Packfile {
 
         packfile
     }
-    
+
     fn verificar_checksum(packfile: &[u8]) -> bool {
         // Get the expected hash from the end of the packfile
         let expected_hash = &packfile[packfile.len() - 20..];
-    
+
         // Compute the SHA-1 hash of the packfile data
         let mut hasher = Sha1::new();
         hasher.update(&packfile[..packfile.len() - 20]);
         let actual_hash = hasher.finalize();
-    
+
         // Compare the expected hash to the actual hash
         expected_hash == actual_hash.as_slice()
     }
@@ -123,11 +127,10 @@ pub fn codificar_bytes(tipo: u8, numero: u32) -> Vec<u8> {
         ((tipo & 0x07) << 4) as u8 | 0x80 | (numero & 0x0F) as u8
     } else {
         ((tipo & 0x07) << 4) as u8 | (numero & 0x0F) as u8
-        
     };
 
-    resultado.push(primer_byte); // Establecer el bit más significativo a 1 y agregar los 4 bits finales 
-    valor >>= 4;    
+    resultado.push(primer_byte); // Establecer el bit más significativo a 1 y agregar los 4 bits finales
+    valor >>= 4;
     loop {
         if valor == 0 {
             break;
@@ -154,9 +157,9 @@ pub fn decodificar_bytes(bytes: &mut Vec<u8>) -> (u8, u32, u32) {
     let mut bytes_leidos = 0;
 
     // decodifico el primer byte que es distinto
-    let tipo = bytes[0] >> 4 & 0x07; // deduzco el tipo 
+    let tipo = bytes[0] >> 4 & 0x07; // deduzco el tipo
     numero_decodificado = (bytes[0] & 0x0f) as u32; // obtengo los primeros 4 bits
-    
+
     if bytes[0] & 0x80 != 0 {
         continua = true;
     }
@@ -170,7 +173,6 @@ pub fn decodificar_bytes(bytes: &mut Vec<u8>) -> (u8, u32, u32) {
         // flujo.read_exact(&mut byte).unwrap();
         if bytes[0] & 0x80 == 0 {
             continua = false;
-            
         }
         numero_decodificado |= ((bytes[0] & 0x7f) as u32) << corrimiento;
         corrimiento += 7;

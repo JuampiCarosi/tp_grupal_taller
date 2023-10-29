@@ -1,8 +1,8 @@
-pub mod server;
+pub mod comunicacion;
 pub mod err_comunicacion;
 pub mod io;
-pub mod comunicacion;
 pub mod packfile;
+pub mod server;
 pub mod tipos_de_dato {
     pub mod comando;
     pub mod logger;
@@ -17,10 +17,13 @@ pub mod tipos_de_dato {
         pub mod add;
         pub mod branch;
         pub mod cat_file;
+        pub mod checkout;
+        pub mod commit;
         pub mod hash_object;
         pub mod init;
         pub mod rm;
         pub mod version;
+        pub mod write_tree;
     }
 }
 pub mod utilidades_de_compresion;

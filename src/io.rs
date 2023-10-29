@@ -1,11 +1,10 @@
-use core::arch;
-use std::io::{self, BufRead};
-use std::path::{PathBuf, Path};
-use std::fs::{self, File};
-use std::str;
 use crate::err_comunicacion::ErrorDeComunicacion;
+use std::fs::{self, File};
+use std::io::{self, BufRead};
+use std::path::{Path, PathBuf};
+use std::str;
 
-pub fn leer_archivos_directorio(direccion: &mut Path) -> Result<Vec<String>, ErrorDeComunicacion>{
+pub fn leer_archivos_directorio(direccion: &mut Path) -> Result<Vec<String>, ErrorDeComunicacion> {
     let mut contenidos: Vec<String> = Vec::new();
     let head_dir = fs::read_dir(&direccion)?;
     for archivo in head_dir {
@@ -22,21 +21,28 @@ pub fn leer_archivos_directorio(direccion: &mut Path) -> Result<Vec<String>, Err
     Ok(contenidos)
 }
 
-pub fn obtener_objetos_del_directorio(dir: String) -> Result<Vec<String>, ErrorDeComunicacion>{
+pub fn obtener_objetos_del_directorio(dir: String) -> Result<Vec<String>, ErrorDeComunicacion> {
     let path = PathBuf::from(dir);
     println!("path: {:?}", path);
     let mut objetos: Vec<String> = Vec::new();
-    
+
     let dir_abierto = fs::read_dir(path.clone())?;
-    
-    for archivo in  dir_abierto {
+
+    for archivo in dir_abierto {
         match archivo {
             Ok(archivo) => {
-                if archivo.file_type().unwrap().is_dir() && archivo.file_name().into_string().unwrap() != "info" && archivo.file_name().into_string().unwrap() != "pack"{
+                if archivo.file_type().unwrap().is_dir()
+                    && archivo.file_name().into_string().unwrap() != "info"
+                    && archivo.file_name().into_string().unwrap() != "pack"
+                {
                     let path = archivo.path();
                     let nombre_carpeta = archivo.file_name().into_string().unwrap();
-                    objetos.push(format!("{}{}", nombre_carpeta, obtener_objeto(path.clone())?));
-                }   
+                    objetos.push(format!(
+                        "{}{}",
+                        nombre_carpeta,
+                        obtener_objeto(path.clone())?
+                    ));
+                }
             }
             Err(error) => {
                 eprintln!("Error leyendo directorio: {}", error);
@@ -47,7 +53,7 @@ pub fn obtener_objetos_del_directorio(dir: String) -> Result<Vec<String>, ErrorD
 }
 
 // dado un directorio devuelve el nombre del archivo contenido (solo caso de objectos de git)
-pub fn obtener_objeto(dir: PathBuf) -> Result<String, ErrorDeComunicacion>{
+pub fn obtener_objeto(dir: PathBuf) -> Result<String, ErrorDeComunicacion> {
     let mut directorio = fs::read_dir(dir.clone())?;
     if let Some(archivo) = directorio.next() {
         match archivo {
@@ -60,9 +66,11 @@ pub fn obtener_objeto(dir: PathBuf) -> Result<String, ErrorDeComunicacion>{
         }
     }
     println!("no hay archivos en el directorio: {:?}", dir);
-    Err(ErrorDeComunicacion::IoError(io::Error::new(io::ErrorKind::NotFound, "Hubo un error al obtener el objeto")))
+    Err(ErrorDeComunicacion::IoError(io::Error::new(
+        io::ErrorKind::NotFound,
+        "Hubo un error al obtener el objeto",
+    )))
 }
-
 
 pub fn obtener_refs(path: &mut Path) -> Result<Vec<String>, ErrorDeComunicacion> {
     let mut refs: Vec<String> = Vec::new();
@@ -71,8 +79,7 @@ pub fn obtener_refs(path: &mut Path) -> Result<Vec<String>, ErrorDeComunicacion>
     }
     if path.ends_with("HEAD") {
         refs.push(obtener_ref_head(path.to_path_buf())?);
-    }
-    else {
+    } else {
         let head_dir = fs::read_dir(&path)?;
         for archivo in head_dir {
             match archivo {
@@ -102,31 +109,43 @@ pub fn obtener_linea_con_largo_hex(line: &str) -> String {
 
 fn leer_archivo(path: &mut Path) -> Result<String, ErrorDeComunicacion> {
     let archivo = fs::File::open(path.to_path_buf())?;
-    let mut contenido = String::new();            
+    let mut contenido = String::new();
     std::io::BufReader::new(archivo).read_line(&mut contenido)?;
     Ok(contenido.trim().to_string())
 }
 
 fn obtener_referencia(path: &mut Path) -> Result<String, ErrorDeComunicacion> {
-    let contenido = leer_archivo(path)?;            
-    let referencia = format!("{} {}", contenido.trim(), path.to_str().ok_or(std::io::Error::new(std::io::ErrorKind::NotFound, "No existe HEAD"))?);
+    let contenido = leer_archivo(path)?;
+    let referencia = format!(
+        "{} {}",
+        contenido.trim(),
+        path.to_str().ok_or(std::io::Error::new(
+            std::io::ErrorKind::NotFound,
+            "No existe HEAD"
+        ))?
+    );
     Ok(obtener_linea_con_largo_hex(&referencia))
 }
 
-fn obtener_ref_head(path: PathBuf) -> Result<String, ErrorDeComunicacion>{
+fn obtener_ref_head(path: PathBuf) -> Result<String, ErrorDeComunicacion> {
     if !path.exists() {
-        return Err(ErrorDeComunicacion::IoError(io::Error::new(io::ErrorKind::NotFound, "No existe HEAD")));
+        return Err(ErrorDeComunicacion::IoError(io::Error::new(
+            io::ErrorKind::NotFound,
+            "No existe HEAD",
+        )));
     }
     let contenido = leer_archivo(&mut path.clone())?;
     let head_ref: Vec<&str> = contenido.split_whitespace().collect();
-    if let Some(ruta) = path.clone().parent(){
+    if let Some(ruta) = path.clone().parent() {
         let cont = leer_archivo(&mut ruta.join(head_ref[1]))? + " HEAD";
         Ok(obtener_linea_con_largo_hex(&cont))
     } else {
-        Err(ErrorDeComunicacion::IoError(io::Error::new(io::ErrorKind::NotFound, "No existe HEAD")))
+        Err(ErrorDeComunicacion::IoError(io::Error::new(
+            io::ErrorKind::NotFound,
+            "No existe HEAD",
+        )))
     }
 }
-
 
 pub fn crear_directorio<P: AsRef<Path> + Clone>(directorio: P) -> Result<(), String> {
     let dir = fs::metadata(directorio.clone());
@@ -181,7 +200,7 @@ where
     match fs::read(&archivo) {
         Ok(contenido) => Ok(contenido),
         Err(_) => Err(format!(
-            "No se pudo leer el archivo {}",
+            "No se pudo leer el archivo leyendo bytes {}",
             archivo.as_ref().display()
         )),
     }
@@ -243,10 +262,8 @@ pub fn obtener_archivos_faltantes(nombres_archivos: Vec<String>, dir: String) ->
     let mut archivos_faltantes: Vec<String> = Vec::new();
     for nombre in nombres_archivos { 
         let dir_archivo = format!("{}/{}/{}", dir.clone() ,&nombre[..2], &nombre[2..]);
-        println!("dir_archivo: {:?}", dir_archivo);
         if !PathBuf::from(dir_archivo.clone()).exists() {
-            println!("el archivo no existe!: {:?}", dir_archivo.clone());
-            archivos_faltantes.push(nombre.clone());
+                archivos_faltantes.push(nombre.clone());
         }
     }
     archivos_faltantes

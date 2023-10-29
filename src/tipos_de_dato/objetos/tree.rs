@@ -1,4 +1,6 @@
 use std::{
+    env::consts::OS,
+    ffi::OsStr,
     fmt::{Display, Write},
     fs,
     num::ParseIntError,
@@ -17,13 +19,41 @@ use crate::{
 
 use super::blob::Blob;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 
 pub struct Tree {
     pub directorio: PathBuf,
     pub objetos: Vec<Objeto>,
 }
 impl Tree {
+    fn obtener_objetos_hoja(&self) -> Vec<Objeto> {
+        let mut objetos: Vec<Objeto> = Vec::new();
+        for objeto in &self.objetos {
+            match objeto {
+                Objeto::Blob(blob) => objetos.push(Objeto::Blob(blob.clone())),
+                Objeto::Tree(tree) => {
+                    objetos.extend(tree.obtener_objetos_hoja());
+                }
+            }
+        }
+        objetos
+    }
+
+    pub fn escribir_en_directorio(&self) -> Result<(), String> {
+        let objetos = self.obtener_objetos_hoja();
+        for objeto in objetos {
+            match objeto {
+                Objeto::Blob(blob) => {
+                    let objeto = descomprimir_objeto(blob.hash)?;
+                    let contenido = objeto.split('\0').collect::<Vec<&str>>()[1];
+                    io::escribir_bytes(blob.ubicacion, contenido).unwrap();
+                }
+                Objeto::Tree(_) => Err("Llego a un tree pero no deberia")?,
+            };
+        }
+        Ok(())
+    }
+
     pub fn decode_hex(s: &str) -> Result<Vec<u8>, String> {
         match (0..s.len())
             .step_by(2)
@@ -44,7 +74,7 @@ impl Tree {
     }
 
     pub fn obtener_hash(&self) -> Result<String, String> {
-        let contenido = self.obtener_contenido()?;
+        let contenido = Self::obtener_contenido(&self.objetos)?;
         let mut sha1 = Sha1::new();
 
         let header = format!("tree {}\0", contenido.len());
@@ -54,8 +84,8 @@ impl Tree {
         Ok(format!("{:x}", hash))
     }
 
-    fn obtener_contenido(&self) -> Result<Vec<u8>, String> {
-        let objetos_ordenados = Self::ordenar_objetos_alfabeticamente(&self.objetos);
+    pub fn obtener_contenido(objetos: &[Objeto]) -> Result<Vec<u8>, String> {
+        let objetos_ordenados = Self::ordenar_objetos_alfabeticamente(&objetos);
 
         let mut contenido: Vec<u8> = Vec::new();
 
@@ -66,7 +96,11 @@ impl Tree {
                     [b"100644 ", blob.nombre.as_bytes(), b"\0", &hash].concat()
                 }
                 Objeto::Tree(tree) => {
-                    let nombre = obtener_nombre(&tree.directorio.clone())?;
+                    let nombre = if tree.directorio == PathBuf::from(".") {
+                        String::from(".")
+                    } else {
+                        obtener_nombre(&tree.directorio.clone())?
+                    };
                     let hash = &Self::decode_hex(&tree.obtener_hash()?)?;
                     [b"40000 ", nombre.as_bytes(), b"\0", &hash].concat()
                 }
@@ -76,16 +110,26 @@ impl Tree {
         Ok(contenido)
     }
 
-    fn obtener_hash_completo(hash_20: String) -> Result<String, String> {
-        let dir_candidatos = format!(".gir/objects/{}/", &hash_20[..2]);
+    fn obtener_hash_completo(hash_incompleto: String) -> Result<String, String> {
+        let dir_candidatos = format!(".gir/objects/{}/", &hash_incompleto[..2]);
         let candidatos = match fs::read_dir(&dir_candidatos) {
             Ok(candidatos) => candidatos,
-            Err(_) => return Err(format!("No se econtro el objeto con hash {}", hash_20)),
+            Err(_) => {
+                return Err(format!(
+                    "No se econtro el objeto con hash {}",
+                    hash_incompleto
+                ))
+            }
         };
 
         for candidato in candidatos {
             let candidato_string = candidato
-                .map_err(|_| format!("Error al extraer el hash {} de la carpeta padre", hash_20))?
+                .map_err(|_| {
+                    format!(
+                        "Error al extraer el hash {} de la carpeta padre",
+                        hash_incompleto
+                    )
+                })?
                 .path()
                 .display()
                 .to_string();
@@ -95,17 +139,20 @@ impl Tree {
                 .ok_or_else(|| {
                     format!(
                         "Error al extraer carpeta hijo del padre {}, existe dicho hash?",
-                        hash_20
+                        hash_incompleto
                     )
                 })?
                 .to_string();
-            let (prefijo, hash_a_comparar) = hash_20.split_at(2);
+            let (prefijo, hash_a_comparar) = hash_incompleto.split_at(2);
             if candidato_hash.starts_with(hash_a_comparar) {
                 return Ok(format!("{}{}", prefijo, candidato_hash));
             }
         }
 
-        Err(format!("No se econtro el objeto con hash {}", hash_20))
+        Err(format!(
+            "No se econtro el objeto con hash {}",
+            hash_incompleto
+        ))
     }
 
     pub fn from_directorio(
@@ -113,6 +160,12 @@ impl Tree {
         hijos_especificados: Option<&Vec<PathBuf>>,
     ) -> Result<Tree, String> {
         let mut objetos: Vec<Objeto> = Vec::new();
+
+        // if directorio.starts_with("./") && directorio != PathBuf::from("./") {
+        //     directorio = directorio.strip_prefix("./").unwrap().to_path_buf();
+        // }
+
+        // println!("directorio: {}", directorio.display());
 
         let entradas = match fs::read_dir(&directorio) {
             Ok(entradas) => entradas,
@@ -124,7 +177,15 @@ impl Tree {
                 .map_err(|_| format!("Error al leer entrada el directorio {directorio:#?}"))?;
             let path = entrada.path();
 
-            if path.ends_with(".DS_Store") {
+            if path.ends_with(".DS_Store")
+                || path.starts_with("./.target")
+                || path.starts_with("./.gir")
+                || path.starts_with("./.git")
+                || path == PathBuf::from("./gir")
+                || path == PathBuf::from("./git")
+                || path == PathBuf::from("./target")
+                || path == PathBuf::from("./diagrama.png")
+            {
                 continue;
             }
 
@@ -208,14 +269,18 @@ impl Tree {
         let mut objetos: Vec<Objeto> = Vec::new();
 
         for (modo, nombre, hash_hijo) in contenido_parseado {
-            let ubicacion = format!("{}/{}", directorio.display(), nombre);
+            let mut ubicacion = format!("{}/{}", directorio.display(), nombre);
+
+            if directorio == PathBuf::from(".") {
+                ubicacion = nombre.clone()
+            }
 
             match modo.as_str() {
                 "100644" => {
                     let blob = Objeto::Blob(Blob {
                         nombre,
                         ubicacion: PathBuf::from(ubicacion),
-                        hash: Self::obtener_hash_completo(hash_hijo.to_string())?,
+                        hash: hash_hijo.to_string(),
                     });
                     objetos.push(blob);
                 }
@@ -234,7 +299,7 @@ impl Tree {
     }
 
     pub fn obtener_tamanio(&self) -> Result<usize, String> {
-        let contenido = match self.obtener_contenido() {
+        let contenido = match Self::obtener_contenido(&self.objetos) {
             Ok(contenido) => contenido,
             Err(_) => return Err("No se pudo obtener el contenido del tree".to_string()),
         };
@@ -249,20 +314,41 @@ impl Tree {
         }
         false
     }
+    pub fn contiene_hijo_por_nombre(&self, nombre_hijo: PathBuf) -> bool {
+        for objeto in &self.objetos {
+            match objeto {
+                Objeto::Blob(blob) => {
+                    if blob.ubicacion == nombre_hijo.clone() {
+                        return true;
+                    }
+                }
+                Objeto::Tree(tree) => {
+                    if tree.directorio == nombre_hijo.clone() {
+                        return true;
+                    }
+                }
+            }
+        }
+        false
+    }
 
     pub fn agregar_hijo(&mut self, objeto: Objeto) {
         self.objetos.push(objeto);
     }
 
-    pub fn actualizar_hijos(&mut self, hash_hijo: String) {
+    pub fn actualizar_hijos(&mut self, objeto_a_actualizar: Objeto) {
         for objeto in &mut self.objetos {
-            if objeto.obtener_hash() == hash_hijo {
-                match objeto {
-                    Objeto::Tree(tree) => {
-                        tree.actualizar_hijos(hash_hijo.clone());
-                    }
-                    Objeto::Blob(blob) => {
-                        blob.hash = hash_hijo.clone();
+            match objeto {
+                Objeto::Tree(tree) => {
+                    if tree.directorio == objeto_a_actualizar.obtener_path() {
+                        *objeto = objeto_a_actualizar.clone();
+                    } else {
+                        tree.actualizar_hijos(objeto_a_actualizar.clone());
+                    };
+                }
+                Objeto::Blob(blob) => {
+                    if blob.ubicacion == objeto_a_actualizar.obtener_path() {
+                        *objeto = objeto_a_actualizar.clone();
                     }
                 }
             }
@@ -330,7 +416,7 @@ impl Tree {
         //     return Ok(());
         // }
 
-        let contenido = self.obtener_contenido()?;
+        let contenido = Self::obtener_contenido(&self.objetos)?;
 
         let header = format!("tree {}\0", contenido.len());
         let contenido_completo = [header.as_bytes(), &contenido].concat();

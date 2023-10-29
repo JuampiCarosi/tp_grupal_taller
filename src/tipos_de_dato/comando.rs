@@ -2,8 +2,8 @@ use std::rc::Rc;
 
 use super::{
     comandos::{
-        add::Add, cat_file::CatFile, hash_object::HashObject, init::Init, rm::Remove,
-        version::Version,
+        add::Add, branch::Branch, cat_file::CatFile, checkout::Checkout, commit::Commit,
+        hash_object::HashObject, init::Init, rm::Remove, version::Version,
     },
     logger::Logger,
 };
@@ -15,6 +15,9 @@ pub enum Comando {
     CatFile(CatFile),
     Add(Add),
     Remove(Remove),
+    Checkout(Checkout),
+    Branch(Branch),
+    Commit(Commit),
     Unknown,
 }
 
@@ -32,6 +35,9 @@ impl Comando {
             "cat-file" => Comando::CatFile(CatFile::from(&mut vector_args, logger)?),
             "add" => Comando::Add(Add::from(vector_args, logger)?),
             "rm" => Comando::Remove(Remove::from(vector_args, logger)?),
+            "branch" => Comando::Branch(Branch::from(&mut vector_args, logger)?),
+            "checkout" => Comando::Checkout(Checkout::from(vector_args, logger)?),
+            "commit" => Comando::Commit(Commit::from(&mut vector_args, logger)?),
             _ => Comando::Unknown,
         };
 
@@ -48,6 +54,9 @@ impl Comando {
             Comando::CatFile(cat_file) => cat_file.ejecutar(),
             Comando::Add(ref mut add) => add.ejecutar(),
             Comando::Remove(ref mut remove) => remove.ejecutar(),
+            Comando::Checkout(ref mut checkout) => checkout.ejecutar(),
+            Comando::Branch(ref mut branch) => branch.ejecutar(),
+            Comando::Commit(ref mut commit) => commit.ejecutar(),
             Comando::Unknown => Err("Comando desconocido".to_string()),
         }
     }

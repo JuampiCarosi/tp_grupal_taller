@@ -7,20 +7,30 @@ use std::{
 };
 
 use crate::{
-    tipos_de_dato::comandos::hash_object::HashObject, utilidades_path_buf::obtener_directorio_raiz,
+    io, tipos_de_dato::comandos::hash_object::HashObject,
+    utilidades_path_buf::obtener_directorio_raiz,
 };
 
 use super::{logger::Logger, objeto::Objeto};
 
+const PATH_INDEX: &str = "./.gir/index";
+
 pub fn crear_index() {
-    if Path::new("./.gir/index").exists() {
+    if Path::new(PATH_INDEX).exists() {
         return;
     }
-    let _ = fs::File::create("./.gir/index");
+    let _ = fs::File::create(PATH_INDEX);
+}
+
+//Devuelve true si el index esta vacio y false en caso contrario.
+//Si falla se presupone que es porque no existe y por lo tanto esta vacio
+pub fn esta_vacio_el_index() -> Result<bool, String> {
+    let contenido = io::leer_a_string(PathBuf::from(PATH_INDEX))?;
+    Ok(contenido.is_empty())
 }
 
 pub fn leer_index() -> Result<Vec<Objeto>, String> {
-    let file = match OpenOptions::new().read(true).open("./.gir/index") {
+    let file = match OpenOptions::new().read(true).open(PATH_INDEX) {
         Ok(file) => file,
         Err(_) => return Err("No se pudo abrir el archivo index".to_string()),
     };
@@ -35,7 +45,7 @@ pub fn leer_index() -> Result<Vec<Objeto>, String> {
     }
     Ok(objetos)
 }
-fn generar_objetos_raiz(objetos: &Vec<Objeto>) -> Result<Vec<Objeto>, String> {
+pub fn generar_objetos_raiz(objetos: &Vec<Objeto>) -> Result<Vec<Objeto>, String> {
     let mut objetos_raiz: Vec<Objeto> = Vec::new();
     let mut directorios_raiz: HashSet<PathBuf> = HashSet::new();
     let mut directorios_a_tener_en_cuenta: Vec<PathBuf> = Vec::new();
@@ -73,7 +83,7 @@ fn generar_objetos_raiz(objetos: &Vec<Objeto>) -> Result<Vec<Objeto>, String> {
 }
 
 pub fn escribir_index(logger: Rc<Logger>, objetos: &Vec<Objeto>) -> Result<(), String> {
-    let mut file = match OpenOptions::new().write(true).open("./.gir/index") {
+    let mut file = match OpenOptions::new().write(true).open(PATH_INDEX) {
         Ok(file) => file,
         Err(_) => return Err("No se pudo escribir el archivo index".to_string()),
     };
@@ -82,7 +92,7 @@ pub fn escribir_index(logger: Rc<Logger>, objetos: &Vec<Objeto>) -> Result<(), S
         OpenOptions::new()
             .write(true)
             .truncate(true)
-            .open("./.gir/index")
+            .open(PATH_INDEX)
             .unwrap();
         return Ok(());
     }
@@ -111,8 +121,20 @@ pub fn escribir_index(logger: Rc<Logger>, objetos: &Vec<Objeto>) -> Result<(), S
     OpenOptions::new()
         .write(true)
         .truncate(true)
-        .open("./.gir/index")
+        .open(PATH_INDEX)
         .unwrap();
     let _ = file.write_all(buffer.as_bytes());
+    Ok(())
+}
+
+pub fn limpiar_archivo_index() -> Result<(), String> {
+    let _ = match OpenOptions::new()
+        .write(true)
+        .truncate(true)
+        .open("./.gir/index")
+    {
+        Ok(archivo) => archivo,
+        Err(_) => return Err("No se pudo abrir el archivo index".to_string()),
+    };
     Ok(())
 }

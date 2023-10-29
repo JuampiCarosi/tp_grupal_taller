@@ -50,7 +50,7 @@ impl CatFile {
             "No se especifico una opcion de visualizacion (-t | -s | -p)".to_string()
         })?;
         let visualizacion = match flag_es_un_objeto_(&segundo_argumento) {
-             true => Visualizaciones::from("-p".to_string())?,
+            true => Visualizaciones::from("-p".to_string())?,
             false => Visualizaciones::from(segundo_argumento)?,
         };
         Ok(CatFile {
