@@ -129,7 +129,8 @@ impl Commit {
     }
 
     fn conseguir_nombre_y_mail_del_config() -> Result<(String, String), String> {
-        let config_path = "~/.girconfig";
+        let home = std::env::var("HOME").unwrap();
+        let config_path = format!("{home}/.girconfig");
         let contenido = io::leer_a_string(config_path)?;
 
         let lineas = contenido.split("\n").collect::<Vec<&str>>();
@@ -152,7 +153,8 @@ impl Commit {
     }
 
     fn archivo_config_esta_vacio() -> bool {
-        let config_path = "~/.girconfig";
+        let home = std::env::var("HOME").unwrap();
+        let config_path = format!("{home}/.girconfig");
         let contenido = match io::leer_a_string(config_path) {
             Ok(contenido) => contenido,
             Err(_) => return true,
@@ -185,7 +187,8 @@ impl Commit {
         nombre = nombre.trim().to_string();
         mail = mail.trim().to_string();
 
-        let config_path = "~/.girconfig";
+        let home = std::env::var("HOME").unwrap();
+        let config_path = format!("{home}/.girconfig");
         let contenido = format!("nombre ={}\nmail ={}\n", nombre, mail);
         io::escribir_bytes(config_path, contenido)?;
         println!("Información de usuario guardada en ~/.girconfig.");
@@ -227,7 +230,8 @@ mod test {
     use super::Commit;
 
     fn craer_archivo_config_default() {
-        let config_path = "~/.girconfig";
+        let home = std::env::var("HOME").unwrap();
+        let config_path = format!("{home}/.girconfig");
         let contenido = format!("nombre =aaaa\nmail =bbbb\n");
         println!("contenido: {}", contenido);
         escribir_bytes(config_path, contenido).unwrap();
