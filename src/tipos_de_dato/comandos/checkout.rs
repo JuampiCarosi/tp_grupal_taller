@@ -1,4 +1,4 @@
-use std::{collections::HashSet, path::PathBuf, rc::Rc};
+use std::{path::PathBuf, rc::Rc};
 
 use crate::{
     io,
@@ -195,61 +195,6 @@ impl Checkout {
 
         objetos_eliminados
     }
-
-    fn deep_changes_entre_arboles(&self, arbol1: &Tree, arbol2: &Tree) -> Result<Tree, String> {
-        let mut hijos: Vec<Objeto> = Vec::new();
-
-        if arbol1.directorio != arbol2.directorio {
-            return Err(format!(
-                "Los directorios de los arboles no coinciden: {} y {}",
-                arbol1.directorio.display(),
-                arbol2.directorio.display()
-            ));
-        };
-
-        let mut hijos_2_sin_usar: HashSet<&Objeto> = HashSet::from_iter(arbol2.objetos.iter());
-
-        for hijo in &arbol1.objetos {
-            let mut hijo_encontrado = false;
-            for hijo2 in &arbol2.objetos {
-                match (hijo, hijo2) {
-                    (Objeto::Blob(b1), Objeto::Blob(b2)) => {
-                        if b1.ubicacion == b2.ubicacion {
-                            hijo_encontrado = true;
-                            if b1.obtener_hash() != b2.obtener_hash() {
-                                hijos.push(Objeto::Blob(b2.clone()));
-                                hijos_2_sin_usar.remove(hijo2);
-                                hijo_encontrado = false;
-                            }
-                        }
-                    }
-                    (Objeto::Tree(t1), Objeto::Tree(t2)) => {
-                        if t1.directorio == t2.directorio {
-                            hijo_encontrado = true;
-                            if t1.obtener_hash() != t2.obtener_hash() {
-                                hijos.push(Objeto::Tree(self.deep_changes_entre_arboles(t1, t2)?));
-                                hijos_2_sin_usar.remove(hijo2);
-                                hijo_encontrado = false;
-                            }
-                        }
-                    }
-                    _ => {}
-                }
-            }
-            if !hijo_encontrado {
-                hijos.push(hijo.clone());
-            }
-        }
-
-        // for hijo2 in hijos_2_sin_usar {
-        //     hijos.push(hijo2.clone());
-        // }
-
-        Ok(Tree {
-            directorio: arbol1.directorio.clone(),
-            objetos: hijos,
-        })
-    }
 }
 
 #[cfg(test)]
@@ -267,7 +212,8 @@ mod test {
     use super::Checkout;
 
     fn craer_archivo_config_default() {
-        let config_path = "~/.girconfig";
+        let home = std::env::var("HOME").unwrap();
+        let config_path = format!("{home}/.girconfig");
         let contenido = format!("nombre = aaaa\nmail = bbbb\n");
         println!("contenido: {}", contenido);
         escribir_bytes(config_path, contenido).unwrap();

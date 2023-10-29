@@ -2,10 +2,7 @@ use std::{path::PathBuf, rc::Rc};
 
 use gir::tipos_de_dato::{comando::Comando, logger::Logger};
 
-
 use gir::io;
-
-const DIR_ARCHIVO_CONFIG: &str = "~/.girconfig";
 
 //extrae la ubiacion del archivo log seteada en el archivo config. En caso de error
 // devuelve una direccion default = .log
@@ -28,7 +25,6 @@ fn obtener_dir_archivo_log(ubicacion_config: PathBuf) -> String {
 
     dir_archivo_log
 }
-
 
 fn main() -> Result<(), String> {
     let args = std::env::args().collect::<Vec<String>>();

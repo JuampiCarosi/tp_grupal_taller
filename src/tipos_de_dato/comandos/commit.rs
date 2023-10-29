@@ -1,6 +1,6 @@
 use std::{fs::OpenOptions, io::Write, path, rc::Rc};
 
-use chrono::{Offset, Utc};
+use chrono::TimeZone;
 use sha1::{Digest, Sha1};
 
 use crate::{
@@ -17,21 +17,21 @@ pub struct Commit {
     mensaje: String,
 }
 
-fn armar_timestamp_commit() -> String {
-    let timestamp = Utc::now().timestamp();
-    let binding = Utc::now();
-    let offset = binding.offset();
-    let offset_hours = offset.fix().local_minus_utc() / 3600;
-    let offset_minutes = (offset.fix().local_minus_utc() % 3600) / 60;
-    let sign = if offset_hours >= 0 { "+" } else { "-" };
+fn armar_timestamp_commit() -> Result<String, String> {
+    let zona_horaria = match chrono::FixedOffset::west_opt(3 * 3600) {
+        Some(zona_horaria) => zona_horaria,
+        None => return Err("No se pudo obtener la zona horaria".to_string()),
+    };
+    let now = match zona_horaria.from_local_datetime(&chrono::Local::now().naive_local()) {
+        chrono::LocalResult::Single(now) => now,
+        _ => return Err("No se pudo obtener la fecha y hora actual".to_string()),
+    };
+    let timestamp = now.timestamp();
+    let offset_horas = -3;
+    let offset_minutos = 0;
 
-    format!(
-        "{} {}{:02}{:02}",
-        timestamp,
-        sign,
-        offset_hours.abs(),
-        offset_minutes.abs()
-    )
+    let offset_format = format!("{:-03}{:02}", offset_horas, offset_minutos);
+    Ok(format!("{} {}", timestamp, offset_format))
 }
 
 impl Commit {
@@ -68,7 +68,7 @@ impl Commit {
         };
         let (nombre, mail) = Self::conseguir_nombre_y_mail_del_config()?;
         let linea_autor = format!("{} <{}>", nombre, mail);
-        let timestamp = armar_timestamp_commit();
+        let timestamp = armar_timestamp_commit()?;
         let contenido_commit = format!(
             "tree {}\nparent {}\nauthor {} {}\ncommitter {} {}\n\n{}",
             hash_arbol,
@@ -129,12 +129,13 @@ impl Commit {
     }
 
     fn conseguir_nombre_y_mail_del_config() -> Result<(String, String), String> {
-        let config_path = "~/.girconfig";
+        let home = std::env::var("HOME").unwrap();
+        let config_path = format!("{home}/.girconfig");
         let contenido = io::leer_a_string(config_path)?;
 
         let lineas = contenido.split("\n").collect::<Vec<&str>>();
-        let nombre = lineas[0].split("=").collect::<Vec<&str>>()[1];
-        let mail = lineas[1].split("=").collect::<Vec<&str>>()[1];
+        let nombre = lineas[0].split("=").collect::<Vec<&str>>()[1].trim();
+        let mail = lineas[1].split("=").collect::<Vec<&str>>()[1].trim();
         Ok((nombre.to_string(), mail.to_string()))
     }
 
@@ -152,7 +153,8 @@ impl Commit {
     }
 
     fn archivo_config_esta_vacio() -> bool {
-        let config_path = "~/.girconfig";
+        let home = std::env::var("HOME").unwrap();
+        let config_path = format!("{home}/.girconfig");
         let contenido = match io::leer_a_string(config_path) {
             Ok(contenido) => contenido,
             Err(_) => return true,
@@ -185,10 +187,11 @@ impl Commit {
         nombre = nombre.trim().to_string();
         mail = mail.trim().to_string();
 
-        let config_path = "~/.girconfig";
+        let home = std::env::var("HOME").unwrap();
+        let config_path = format!("{home}/.girconfig");
         let contenido = format!("nombre ={}\nmail ={}\n", nombre, mail);
         io::escribir_bytes(config_path, contenido)?;
-        println!("Información de usuario guardada en .git/config.");
+        println!("Información de usuario guardada en ~/.girconfig.");
         Ok(())
     }
 
@@ -227,8 +230,9 @@ mod test {
     use super::Commit;
 
     fn craer_archivo_config_default() {
-        let config_path = "~/.girconfig";
-        let contenido = format!("nombre = aaaa\nmail = bbbb\n");
+        let home = std::env::var("HOME").unwrap();
+        let config_path = format!("{home}/.girconfig");
+        let contenido = format!("nombre =aaaa\nmail =bbbb\n");
         println!("contenido: {}", contenido);
         escribir_bytes(config_path, contenido).unwrap();
     }
