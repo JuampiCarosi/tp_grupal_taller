@@ -114,10 +114,6 @@ impl Tree {
     ) -> Result<Tree, String> {
         let mut objetos: Vec<Objeto> = Vec::new();
 
-        // if directorio.starts_with("./") && directorio != PathBuf::from("./") {
-        //     directorio = directorio.strip_prefix("./").unwrap().to_path_buf();
-        // }
-
         // println!("directorio: {}", directorio.display());
 
         let entradas = match fs::read_dir(&directorio) {
@@ -279,6 +275,21 @@ impl Tree {
                 }
                 Objeto::Tree(tree) => {
                     return tree.contiene_hijo_por_ubicacion(ubicacion_hijo.clone());
+                }
+            }
+        }
+        false
+    }
+
+    pub fn contiene_directorio(&self, directorio: PathBuf) -> bool {
+        for objeto in &self.objetos {
+            match objeto {
+                Objeto::Blob(_) => {}
+                Objeto::Tree(tree) => {
+                    if tree.directorio == directorio {
+                        return true;
+                    }
+                    return tree.contiene_directorio(directorio);
                 }
             }
         }
