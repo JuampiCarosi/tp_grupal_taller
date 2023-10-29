@@ -18,7 +18,7 @@ pub struct Status {
     tree_directorio_actual: Tree,
 }
 
-fn obtener_arbol_del_commit_head() -> Option<Tree> {
+pub fn obtener_arbol_del_commit_head() -> Option<Tree> {
     let ruta = match Commit::obtener_ruta_branch_commit() {
         Ok(ruta) => ruta,
         Err(_) => return None,
@@ -88,12 +88,10 @@ impl Status {
         };
         for objeto in self.tree_directorio_actual.obtener_objetos_hoja() {
             if tree_head.contiene_hijo_por_ubicacion(objeto.obtener_path()) {
-                if !tree_head.contiene_hijo(objeto.obtener_hash()) {
-                    trackeados.push(format!(
-                        "{}: {}",
-                        "modificado",
-                        objeto.obtener_path().display()
-                    ));
+                if !tree_head
+                    .contiene_misma_version_hijo(objeto.obtener_hash(), objeto.obtener_path())
+                {
+                    trackeados.push(format!("modificado: {}", objeto.obtener_path().display()));
                 }
             }
         }
@@ -103,7 +101,6 @@ impl Status {
     fn obtener_hijos_untrackeados(tree: &Tree, tree_head: &Tree) -> Result<Vec<String>, String> {
         let mut untrackeados = Vec::new();
 
-        println!("tree: {:#?}", tree_head);
         for objeto in tree.objetos.iter() {
             match objeto {
                 Objeto::Blob(_) => {
@@ -113,7 +110,7 @@ impl Status {
                 }
                 Objeto::Tree(ref tree) => {
                     if !tree_head.contiene_directorio(objeto.obtener_path()) {
-                        untrackeados.push(format!("{}", objeto.obtener_path().display()));
+                        untrackeados.push(format!("{}/", objeto.obtener_path().display()));
                     } else {
                         let mut untrackeados_hijos =
                             Self::obtener_hijos_untrackeados(&tree, &tree_head)?;

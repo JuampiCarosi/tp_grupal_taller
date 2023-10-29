@@ -5,6 +5,8 @@ use crate::{
     utilidades_index::{crear_index, escribir_index, leer_index, ObjetoIndex},
 };
 
+use super::status::obtener_arbol_del_commit_head;
+
 pub struct Add {
     logger: Rc<Logger>,
     ubicaciones: Vec<PathBuf>,
@@ -50,10 +52,6 @@ impl Add {
         self.logger.log("Ejecutando update-index".to_string());
 
         for ubicacion in self.ubicaciones.clone() {
-            if ubicacion.is_dir() {
-                Err("No se puede agregar un directorio".to_string())?;
-            }
-
             let nuevo_objeto = Objeto::from_directorio(ubicacion.clone(), None)?;
             let nuevo_objeto_index = ObjetoIndex {
                 merge: false,
@@ -70,8 +68,21 @@ impl Add {
                 });
 
             if let Some(i) = indice {
+                if self.index[i].objeto.obtener_hash() == nuevo_objeto_index.objeto.obtener_hash() {
+                    continue;
+                }
+
                 self.index[i] = nuevo_objeto_index;
             } else {
+                let tree_head = obtener_arbol_del_commit_head();
+                if let Some(tree_head) = tree_head {
+                    if tree_head.contiene_misma_version_hijo(
+                        nuevo_objeto_index.objeto.obtener_hash(),
+                        nuevo_objeto_index.objeto.obtener_path(),
+                    ) {
+                        continue;
+                    }
+                }
                 self.index.push(nuevo_objeto_index);
             }
         }

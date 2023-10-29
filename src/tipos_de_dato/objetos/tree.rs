@@ -256,10 +256,19 @@ impl Tree {
         Ok(contenido.len())
     }
 
-    pub fn contiene_hijo(&self, hash_hijo: String) -> bool {
+    pub fn contiene_misma_version_hijo(&self, hash_hijo: String, ubicacion_hijo: PathBuf) -> bool {
         for objeto in &self.objetos {
-            if objeto.obtener_hash() == hash_hijo {
-                return true;
+            match objeto {
+                Objeto::Blob(blob) => {
+                    if blob.hash == hash_hijo && blob.ubicacion == ubicacion_hijo.clone() {
+                        return true;
+                    }
+                }
+                Objeto::Tree(tree) => {
+                    if tree.contiene_misma_version_hijo(hash_hijo.clone(), ubicacion_hijo.clone()) {
+                        return true;
+                    }
+                }
             }
         }
         false
