@@ -73,6 +73,21 @@ impl Log {
         siguiente_padre.to_string()
     }
 
+    fn calcular_date_desde_linea(tiempo: &str, offset: &str) -> Result<String, String> {
+        let timestamp = match tiempo.parse::<i64>() {
+            Ok(timestamp) => timestamp,
+            Err(_) => return Err("No se pudo obtener el timestamp".to_string()),
+        };
+        let (horas, minutos) = offset.split_at(3);
+        let offset_horas = horas[0..3].parse::<i32>().unwrap_or_else(|_| -3);
+        let offset_minutos = minutos.parse::<i32>().unwrap_or_else(|_| 0);
+        Ok(timestamp_archivo_log(
+            timestamp,
+            offset_horas,
+            offset_minutos,
+        )?)
+    }
+
     fn armar_contenido_log(
         contenido: &str,
         branch_actual: &str,
@@ -85,18 +100,16 @@ impl Log {
         let linea_autor_splitteada = lineas_contenido[2].split(' ').collect::<Vec<&str>>();
         let nombre_autor = linea_autor_splitteada[1];
         let mail_autor = linea_autor_splitteada[2];
-        let timestamp = match linea_autor_splitteada[3].parse::<i64>() {
-            Ok(timestamp) => timestamp,
-            Err(_) => return Err("No se pudo obtener el timestamp".to_string()),
-        };
-        let (horas, minutos) = linea_autor_splitteada[4].split_at(3);
-        let offset_horas = horas[0..3].parse::<i32>().unwrap_or_else(|_| -3);
-        let offset_minutos = minutos.parse::<i32>().unwrap_or_else(|_| 0);
-        let date = timestamp_archivo_log(timestamp, offset_horas, offset_minutos)?;
+        let date =
+            Self::calcular_date_desde_linea(linea_autor_splitteada[3], linea_autor_splitteada[4])?;
         let mensaje = lineas_contenido[5];
+        let mut branch_format = format!("({})", branch_actual);
+        if branch_actual == "" {
+            branch_format = "".to_string();
+        }
         Ok(format!(
-            "commit {} ({})\nAutor: {} {}\nDate: {}\n\n     {}\n",
-            hash_commit, branch_actual, nombre_autor, mail_autor, date, mensaje
+            "commit {} {}\nAutor: {} {}\nDate: {}\n\n     {}\n",
+            hash_commit, branch_format, nombre_autor, mail_autor, date, mensaje
         ))
     }
 
@@ -106,11 +119,17 @@ impl Log {
         if hash_commit.is_empty() {
             return Err(format!("La rama {} no tiene commits", self.branch));
         }
+        let mut i = 1;
         loop {
             let contenido = utilidades_de_compresion::descomprimir_objeto(hash_commit.clone())?;
             let siguiente_padre = Self::conseguir_padre_desde_contenido_commit(&contenido);
-            let contenido_a_mostrar =
-                Self::armar_contenido_log(&contenido, &self.branch, hash_commit)?;
+            let contenido_a_mostrar = match i {
+                1 => {
+                    i -= 1;
+                    Self::armar_contenido_log(&contenido, &self.branch, hash_commit.clone())?
+                }
+                _ => Self::armar_contenido_log(&contenido, "", hash_commit.clone())?,
+            };
             println!("{}", contenido_a_mostrar);
             if siguiente_padre.is_empty() {
                 break;
