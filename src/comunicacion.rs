@@ -140,22 +140,23 @@ impl Comunicacion {
         println!("firma: {:?}", str::from_utf8(&firma));
         // assert_eq!("PACK", str::from_utf8(&firma).unwrap());
         bytes.drain(0..4);
-
         let version = &bytes[0..4];
-        // println!("version: {:?}", str::from_utf8(&version)?);
+        println!("version: {:?}", str::from_utf8(&version)?);
         // assert_eq!("0002", str::from_utf8(&version)?);
-        bytes.drain(0..4);
 
+        bytes.drain(0..4);
         // println!("obteniendo largo");
         let largo = &bytes[0..4];
         let largo_packfile: [u8; 4] = largo.try_into().unwrap();
         let largo = u32::from_be_bytes(largo_packfile);
-        // println!("largo: {:?}", largo);
+        println!("largo: {:?}", largo);
         bytes.drain(0..4);
 
         while bytes.len() > 0 {
             // println!("cant bytes: {:?}", bytes.len());
+            println!("Hola");
             let (tipo, tamanio, bytes_leidos) = packfile::decodificar_bytes(bytes);
+            println!("tipo: {:?}, tamanio: {}", tipo, tamanio);
             // println!("cant bytes post decodificacion: {:?}", bytes.len());
             // println!("tipo: {:?}", tipo);
             // println!("tamanio: {:?}", tamanio);
@@ -174,7 +175,7 @@ impl Comunicacion {
             let _hash = hasher.finalize();
             let hash = format!("{:x}", _hash);
             
-            // println!("hash: {:?}", hash);
+            println!("hash: {:?}", hash);
             let ruta = format!("/home/juani/git/objects/{}/{}", &hash[..2], &hash[2..]);
 
             // let contenido = decodificar_contenido(objeto_descomprimido);
@@ -193,9 +194,9 @@ impl Comunicacion {
                 //     eprintln!("Error al decodificar contenido: {}", error);
                 // }
             // }
-            // let total_out = descompresor.total_out(); // esto es lo que debe matchear el tamanio que se pasa en el header
+            let total_out = descompresor.total_out(); // esto es lo que debe matchear el tamanio que se pasa en el header
             let total_in = descompresor.total_in(); // esto es para calcular el offset
-            // println!("total in: {:?}, total out: {:?} ", total_in as usize, total_out as usize);
+            println!("total in: {:?}, total out: {:?} ", total_in as usize, total_out as usize);
             
             io::escribir_bytes(ruta, bytes.drain(0..total_in as usize)).unwrap();
 

@@ -222,6 +222,7 @@ pub fn leer_bytes<P>(archivo: P) -> Result<Vec<u8>, String>
 where
     P: AsRef<Path>,
 {
+    println!("archivo: {:?}", archivo.as_ref().display());
     match fs::read(&archivo) {
         Ok(contenido) => Ok(contenido),
         Err(_) => Err(format!(
@@ -283,13 +284,28 @@ where
 
 
 // dado un vector con nombres de archivos de vuelve aquellos que no estan en el directorio
+
+// HACER MAS EFICIENTE *Hay iteraciones de mas que se pueden evitar unificando las funciones*
 pub fn obtener_archivos_faltantes(nombres_archivos: Vec<String>, dir: String) -> Vec<String>{
+
+    let objetcts_contained = obtener_objetos_con_nombre_carpeta(PathBuf::from(dir.clone())).unwrap();
     let mut archivos_faltantes: Vec<String> = Vec::new();
     for nombre in nombres_archivos { 
-        let dir_archivo = format!("{}/{}/{}", dir.clone() ,&nombre[..2], &nombre[2..]);
-        if !PathBuf::from(dir_archivo.clone()).exists() {
-                archivos_faltantes.push(nombre.clone());
+        if objetcts_contained.contains(&nombre) {
+            println!("nombre: {:?}", nombre);
+            println!("objetcts_contained: {:?}", objetcts_contained);
+            println!("contiene");
+        } else {
+            println!("nombre: {:?}", nombre);
+            println!("objetcts_contained: {:?}", objetcts_contained);
+            println!("no contiene");
+            archivos_faltantes.push(nombre.clone());
         }
+        // let dir_archivo = format!("{}/{}/{}", dir.clone() ,&nombre[..2], &nombre[2..]);
+        // if !PathBuf::from(dir_archivo.clone()).exists() {
+
+        //         archivos_faltantes.push(nombre.clone());
+        // }
     }
     archivos_faltantes
 }

@@ -26,37 +26,27 @@ impl Packfile {
     fn aniadir_objeto(&mut self, objeto: String) -> Result<(), String> {
         // let logger = Rc::new(Logger::new(PathBuf::from("log.txt"))?);
    
-        // optimizar el hecho de que pido descomprimir 2 veces un archivo
-        let ruta_objeto = format!("./.git/objects/{}/{}", &objeto[..2], &objeto[2..]);
+        // let ruta_objeto = format!("./.git/objects/{}/{}", &objeto[..2], &objeto[2..]);
+        let ruta_objeto = format!("./.git/objects/pack/pack-31897a1f902980a7e540e812b54f5702f449af8b.pack");
         let objeto_comprimido = io::leer_bytes(&ruta_objeto).unwrap();
-        let tamanio_objeto = utilidades_de_compresion::descomprimir_contenido_u8(&objeto_comprimido)?.len() as u32;
-        let tipo_objeto = conseguir_tipo_objeto(objeto.clone())?;
-        // codifica el tamanio del archivo descomprimido y su tipo en un tipo variable de longitud
+        println!("Hola");
+        // let tamanio_objeto = utilidades_de_compresion::descomprimir_contenido_u8(&objeto_comprimido)?.len() as u32;
+        // let tipo_objeto = conseguir_tipo_objeto(objeto.clone())?;
+        // // codifica el tamanio del archivo descomprimido y su tipo en un tipo variable de longitud
 
-        let nbyte = match tipo_objeto.as_str() {
-            "commit" => codificar_bytes(1, tamanio_objeto), //1
-            "tree" => codificar_bytes(2, tamanio_objeto),   // 2
-            "blob" => codificar_bytes(3, tamanio_objeto),   // 3
-            "tag" => codificar_bytes(4, tamanio_objeto),    // 4
-            _ => {
-                return Err("Tipo de objeto invalido".to_string());
-            }
-        };
+        // let nbyte = match tipo_objeto.as_str() {
+        //     "commit" => codificar_bytes(1, tamanio_objeto), //1
+        //     "tree" => codificar_bytes(2, tamanio_objeto),   // 2
+        //     "blob" => codificar_bytes(3, tamanio_objeto),   // 3
+        //     "tag" => codificar_bytes(4, tamanio_objeto),    // 4
+        //     "ofs_delta" => codificar_bytes(6, tamanio_objeto), // 6
+        //     "ref_delta" => codificar_bytes(7, tamanio_objeto), // 7
+        // //     _ => {
+        // //         return Err("Tipo de objeto invalido".to_string());
+        // //     }
+        // // };
 
-        self.objetos.extend(nbyte);
-        //     if objeto.contains("c60288ccc62ae7747e7d718a521b91e5f706bc") { 
-        //     println!("Este es el objeto..");
-        //     let mut objeto_descomprimido = vec![0; 1000];
-        //     let mut descompresor = Decompress::new(true);
-    
-        //     descompresor
-        //         .decompress(&objeto_comprimido, &mut objeto_descomprimido, FlushDecompress::None)
-        //         .unwrap();
-    
-        //     let contenido = utilidades_de_compresion::decodificar_contenido(objeto_descomprimido);
-    
-        //     println!("contenido: {:?}", contenido.unwrap());
-        // }
+        // self.objetos.extend(nbyte);
         self.objetos.extend(objeto_comprimido);
 
         self.cant_objetos += 1;
@@ -68,7 +58,9 @@ impl Packfile {
     // funcion que recorrer el directorio y aniade los objetos al packfile junto a su indice correspondiente
     fn obtener_objetos_del_dir(&mut self, dir: String) -> Result<(), ErrorDeComunicacion> {
         // esto porque es un clone, deberia pasarle los objetos que quiero
-        let objetos = io::obtener_objetos_del_directorio(dir)?;
+        // let objetos = io::obtener_objetos_del_directorio(dir)?;
+        let dir = "packl;;".to_string();
+        let objetos = vec![format!("{}/{}", dir, "pack-31897a1f902980a7e540e812b54f5702f449af8b.pack")];
         // --- 
         for objeto in objetos {
             let inicio = self.objetos.len() as u32; // obtengo el len previo a aniadir el objeto
@@ -84,7 +76,7 @@ impl Packfile {
     pub fn obtener_indice(&mut self) -> Vec<u8> {
         self.indice.clone()
     }
-    pub fn obtener_pack(&mut self, dir: String) -> Vec<u8> {
+    pub fn obtener_pack_entero(&mut self, dir: String) -> Vec<u8> {
         println!("Despachando packfile");
         self.obtener_objetos_del_dir(dir).unwrap();
         let mut packfile = Vec::new();
@@ -122,6 +114,19 @@ impl Packfile {
 
         // Compare the expected hash to the actual hash
         expected_hash == actual_hash.as_slice()
+    }
+
+
+    pub fn obtener_pack_con_archivos(&mut self, objetos: Vec<String>) {
+        for objeto in objetos {
+            self.aniadir_objeto(objeto).unwrap();
+        }
+        let mut packfile: Vec<u8> = Vec::new();
+        packfile.extend("PACK".as_bytes());
+        packfile.extend(&[0, 0, 0, 2]);
+        packfile.extend(&self.cant_objetos.to_be_bytes());
+        packfile.extend(&self.objetos);
+
     }
 }
 
