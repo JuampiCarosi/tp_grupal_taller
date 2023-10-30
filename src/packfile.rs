@@ -1,8 +1,11 @@
 use crate::err_comunicacion::ErrorDeComunicacion;
+use crate::utilidades_de_compresion::descomprimir_objeto;
 use crate::{io, utilidades_de_compresion};
 use crate::tipos_de_dato::{
     comandos::cat_file::conseguir_tamanio, comandos::cat_file::conseguir_tipo_objeto,
 };
+use flate2::{Decompress, FlushDecompress};
+
 use sha1::{Digest, Sha1};
 
 pub struct Packfile {
@@ -22,7 +25,7 @@ impl Packfile {
 
     fn aniadir_objeto(&mut self, objeto: String) -> Result<(), String> {
         // let logger = Rc::new(Logger::new(PathBuf::from("log.txt"))?);
-
+   
         // optimizar el hecho de que pido descomprimir 2 veces un archivo
         let ruta_objeto = format!("./.git/objects/{}/{}", &objeto[..2], &objeto[2..]);
         let objeto_comprimido = io::leer_bytes(&ruta_objeto).unwrap();
@@ -41,17 +44,19 @@ impl Packfile {
         };
 
         self.objetos.extend(nbyte);
-        // let mut objeto_descomprimido = vec![0; 300];
-
-        // let mut descompresor = Decompress::new(true);
-
-        // descompresor
-        //     .decompress(&objeto_comprimido, &mut objeto_descomprimido, FlushDecompress::None)
-        //     .unwrap();
-
-        // let contenido = decodificar_contenido(objeto_descomprimido);
-
-        // println!("contenido: {:?}", contenido);
+        //     if objeto.contains("c60288ccc62ae7747e7d718a521b91e5f706bc") { 
+        //     println!("Este es el objeto..");
+        //     let mut objeto_descomprimido = vec![0; 1000];
+        //     let mut descompresor = Decompress::new(true);
+    
+        //     descompresor
+        //         .decompress(&objeto_comprimido, &mut objeto_descomprimido, FlushDecompress::None)
+        //         .unwrap();
+    
+        //     let contenido = utilidades_de_compresion::decodificar_contenido(objeto_descomprimido);
+    
+        //     println!("contenido: {:?}", contenido.unwrap());
+        // }
         self.objetos.extend(objeto_comprimido);
 
         self.cant_objetos += 1;
@@ -64,7 +69,6 @@ impl Packfile {
     fn obtener_objetos_del_dir(&mut self, dir: String) -> Result<(), ErrorDeComunicacion> {
         // esto porque es un clone, deberia pasarle los objetos que quiero
         let objetos = io::obtener_objetos_del_directorio(dir)?;
-        // let objetos = vec!["7d0dd12a068032c0538bbe27605b1f8bfd6eaa60".to_string()];        
         // --- 
         for objeto in objetos {
             let inicio = self.objetos.len() as u32; // obtengo el len previo a aniadir el objeto

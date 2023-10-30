@@ -40,6 +40,7 @@ impl Tree {
     }
 
     pub fn escribir_en_directorio(&self) -> Result<(), String> {
+        println!("escribiendo en directorio: {}", self.directorio.display());
         let objetos = self.obtener_objetos_hoja();
         for objeto in objetos {
             match objeto {
@@ -225,10 +226,10 @@ impl Tree {
     fn obtener_datos_de_contenido(
         contenido: String,
     ) -> Result<Vec<(String, String, String)>, String> {
+        println!("{:#?}", contenido);
         let mut contenido_parseado: Vec<(String, String, String)> = Vec::new();
         let mut lineas = contenido.split('\0').collect::<Vec<&str>>();
         lineas.remove(0);
-
         let mut lineas_separadas: Vec<&str> = Vec::new();
         lineas_separadas.push(lineas[0].clone());
         let ultima_linea = lineas.pop().unwrap();
@@ -238,7 +239,7 @@ impl Tree {
             lineas_separadas.push(modo_y_nombre);
         });
         lineas_separadas.push(ultima_linea);
-
+        println!("{:#?}", lineas_separadas);
         for i in (0..lineas_separadas.len()).step_by(2) {
             if i + 1 < lineas_separadas.len() {
                 let linea = lineas_separadas[i].split_whitespace();
@@ -261,15 +262,14 @@ impl Tree {
 
     pub fn from_hash(hash: String, directorio: PathBuf) -> Result<Tree, String> {
         // let hash_completo = Self::obtener_hash_completo(hash)?;
-        let contenido = descomprimir_objeto(hash, String::from(directorio.to_string_lossy()))?;
-
+        let contenido = descomprimir_objeto(hash, "/home/juani/git/objects".to_string())?;
+        println!("directorio del hash {:?}", directorio);
         let contenido_parseado = Self::obtener_datos_de_contenido(contenido)?;
-        println!("{:#?}", contenido_parseado);
+        // println!("{:#?}", contenido_parseado);
         let mut objetos: Vec<Objeto> = Vec::new();
 
         for (modo, nombre, hash_hijo) in contenido_parseado {
             let mut ubicacion = format!("{}/{}", directorio.display(), nombre);
-
             if directorio == PathBuf::from(".") {
                 ubicacion = nombre.clone()
             }
@@ -282,6 +282,7 @@ impl Tree {
                         hash: hash_hijo.to_string(),
                     });
                     objetos.push(blob);
+                    println!("BLoblinham");
                 }
                 "40000" => {
                     let tree = Self::from_hash(hash_hijo, PathBuf::from(ubicacion))?;

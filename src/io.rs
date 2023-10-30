@@ -93,7 +93,7 @@ pub fn obtener_objetos_con_nombre_carpeta(dir: PathBuf) -> Result<Vec<String>, E
             "No se encontraron objetos en el directorio",
         )));
     }
-
+    println!("nombres: {:?}", nombres);
     Ok(nombres)
 }
 

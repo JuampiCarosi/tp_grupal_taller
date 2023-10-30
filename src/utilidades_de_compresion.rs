@@ -6,7 +6,7 @@ use std::io::{Read, Write};
 
 pub fn descomprimir_objeto(hash: String, ruta: String) -> Result<String, String> {
     let ruta_objeto = format!("{}/{}/{}", ruta.clone(), &hash[..2], &hash[2..]);
-    // println!("descomprimiendo objeto: {}, ruta: {}", hash, ruta_objeto);
+
     let contenido_leido = io::leer_bytes(ruta_objeto)?;
     let contenido_descomprimido = descomprimir_contenido_u8(&contenido_leido)?;
     let contenido_decodificado = decodificar_contenido(contenido_descomprimido)?;
@@ -29,7 +29,7 @@ pub fn decodificar_contenido(contenido: Vec<u8>) -> Result<String, String> {
         let mut i = 0;
 
         for char in contenido.iter() {
-            if *char == 0 && (buffer.len() > 20 || i < 2) {
+            if *char == 0 && (buffer.len() >= 20 || i < 2) {
                 spliteado_por_null.push(buffer.clone());
                 buffer.clear();
                 i += 1;
@@ -37,11 +37,15 @@ pub fn decodificar_contenido(contenido: Vec<u8>) -> Result<String, String> {
                 buffer.push(*char);
             }
         }
+        spliteado_por_null.push(buffer);
+
 
         let mut spliteado_por_null_separado_por_linea: Vec<Vec<u8>> = Vec::new();
-        spliteado_por_null_separado_por_linea.push(spliteado_por_null[0].clone());
-        spliteado_por_null_separado_por_linea.push(spliteado_por_null[1].clone());
-        let last_line = spliteado_por_null.pop();
+        spliteado_por_null_separado_por_linea.push(spliteado_por_null[0].clone()); // tree 
+        spliteado_por_null_separado_por_linea.push(spliteado_por_null[1].clone()); // size
+        
+        let last_line = spliteado_por_null.pop(); // saco ultima que es hash
+
         spliteado_por_null.iter().skip(2).for_each(|x| {
             let (hash, modo_y_nombre) = x.split_at(20);
             spliteado_por_null_separado_por_linea.push(hash.to_vec());

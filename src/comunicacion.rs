@@ -10,6 +10,9 @@ use std::net::TcpStream;
 use std::str;
 use crate::tipos_de_dato::comandos::hash_object::HashObject;
 use crate::utilidades_de_compresion::comprimir_contenido;
+                    
+use sha1::{Digest, Sha1};
+
 pub struct Comunicacion {
     flujo: TcpStream,
 }
@@ -153,9 +156,9 @@ impl Comunicacion {
         while bytes.len() > 0 {
             // println!("cant bytes: {:?}", bytes.len());
             let (tipo, tamanio, bytes_leidos) = packfile::decodificar_bytes(bytes);
-            println!("cant bytes post decodificacion: {:?}", bytes.len());
-            println!("tipo: {:?}", tipo);
-            println!("tamanio: {:?}", tamanio);
+            // println!("cant bytes post decodificacion: {:?}", bytes.len());
+            // println!("tipo: {:?}", tipo);
+            // println!("tamanio: {:?}", tamanio);
 
             // // -- leo el contenido comprimido --
             let mut objeto_descomprimido = vec![0; tamanio as usize];
@@ -166,34 +169,39 @@ impl Comunicacion {
                 .decompress(&bytes, &mut objeto_descomprimido, FlushDecompress::None)
                 .unwrap();
 
-            if tipo == 1 { 
+            let mut hasher = Sha1::new();
+            hasher.update(objeto_descomprimido.clone());
+            let _hash = hasher.finalize();
+            let hash = format!("{:x}", _hash);
+            
+            // println!("hash: {:?}", hash);
+            let ruta = format!("/home/juani/git/objects/{}/{}", &hash[..2], &hash[2..]);
 
-                println!("objeto_descomprimido: {:?}", String::from_utf8(objeto_descomprimido.clone()));
-            }
+            // let contenido = decodificar_contenido(objeto_descomprimido);
 
-            let contenido = decodificar_contenido(objeto_descomprimido);
             // println!("contenido: {:?}", contenido);
-            match contenido {
-                Ok(contenido) => {
-                    println!("contenido: {:?}", contenido);
-                    let hash = HashObject::hashear_contenido_objeto(&contenido);
-                    println!("len del contenido: {}", contenido.clone().len());
-                    println!("hash: {:?}", hash);
+            // match contenido {
+                // Ok(contenido) => {
+                    // let hash = HashObject::hashear_contenido_objeto(&contenido);
+                    // if hash.contains("038323861343064373837643"){ 
+                    //     println!("hash rancio: {:?}", hash);
+                    //     println!("ruta de coso: {}", ruta);
 
-                    let ruta = format!("/home/juani/git/objects/{}/{}", &hash[..2], &hash[2..]);
-                    // println!("ruta de coso: {}", ruta);
-                    io::escribir_bytes(ruta, comprimir_contenido(contenido).unwrap()).unwrap();
-                }
-                Err(error) => {
-                    eprintln!("Error al decodificar contenido: {}", error);
-                }
-            }
-            let total_out = descompresor.total_out(); // esto es lo que debe matchear el tamanio que se pasa en el header
+                    // }
+                // }
+                // // Err(error) => {
+                //     eprintln!("Error al decodificar contenido: {}", error);
+                // }
+            // }
+            // let total_out = descompresor.total_out(); // esto es lo que debe matchear el tamanio que se pasa en el header
             let total_in = descompresor.total_in(); // esto es para calcular el offset
-            println!("total in: {:?}, total out: {:?} ", total_in as usize, total_out as usize);
-            bytes.drain(0..total_in as usize);
-            println!("cant bytes restantes: {:?}", bytes.len());
-        }
+            // println!("total in: {:?}, total out: {:?} ", total_in as usize, total_out as usize);
+            
+            io::escribir_bytes(ruta, bytes.drain(0..total_in as usize)).unwrap();
+
+            }
+            // println!("cant bytes restantes: {:?}", bytes.len());
+        // }
         Ok(())
     }
 
