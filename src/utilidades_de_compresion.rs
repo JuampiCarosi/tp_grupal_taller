@@ -4,8 +4,9 @@ use std::io::{Read, Write};
 
 // CAMBIAR GIT POR GIR
 
-pub fn descomprimir_objeto(hash: String) -> Result<String, String> {
-    let ruta_objeto = format!(".git/objects/{}/{}", &hash[..2], &hash[2..]);
+pub fn descomprimir_objeto(hash: String, ruta: String) -> Result<String, String> {
+    let ruta_objeto = format!("{}/{}/{}", ruta.clone(), &hash[..2], &hash[2..]);
+    // println!("descomprimiendo objeto: {}, ruta: {}", hash, ruta_objeto);
     let contenido_leido = io::leer_bytes(ruta_objeto)?;
     let contenido_descomprimido = descomprimir_contenido_u8(&contenido_leido)?;
     let contenido_decodificado = decodificar_contenido(contenido_descomprimido)?;

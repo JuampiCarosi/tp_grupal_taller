@@ -36,12 +36,10 @@ pub fn obtener_objetos_del_directorio(dir: String) -> Result<Vec<String>, ErrorD
                     && archivo.file_name().into_string().unwrap() != "pack"
                 {
                     let path = archivo.path();
+                    println!("path: {:?}", path);
                     let nombre_carpeta = archivo.file_name().into_string().unwrap();
-                    objetos.push(format!(
-                        "{}{}",
-                        nombre_carpeta,
-                        obtener_objeto(path.clone())?
-                    ));
+                    println!("nombre_carpeta: {:?}", nombre_carpeta);
+                    objetos.append(&mut obtener_objetos_con_nombre_carpeta(path.clone())?);
                 }
             }
             Err(error) => {
@@ -53,8 +51,9 @@ pub fn obtener_objetos_del_directorio(dir: String) -> Result<Vec<String>, ErrorD
 }
 
 // dado un directorio devuelve el nombre del archivo contenido (solo caso de objectos de git)
-pub fn obtener_objeto(dir: PathBuf) -> Result<String, ErrorDeComunicacion> {
+pub fn obtener_objetos(dir: PathBuf) -> Result<String, ErrorDeComunicacion> {
     let mut directorio = fs::read_dir(dir.clone())?;
+    let path = PathBuf::from(dir);
     if let Some(archivo) = directorio.next() {
         match archivo {
             Ok(archivo) => {
@@ -65,11 +64,37 @@ pub fn obtener_objeto(dir: PathBuf) -> Result<String, ErrorDeComunicacion> {
             }
         }
     }
-    println!("no hay archivos en el directorio: {:?}", dir);
     Err(ErrorDeComunicacion::IoError(io::Error::new(
         io::ErrorKind::NotFound,
         "Hubo un error al obtener el objeto",
     )))
+}
+
+
+pub fn obtener_objetos_con_nombre_carpeta(dir: PathBuf) -> Result<Vec<String>, ErrorDeComunicacion> {
+    let directorio = fs::read_dir(dir.clone())?;
+    let mut nombres = Vec::new();
+    let nombre_directorio = dir.file_name().unwrap().to_string_lossy().to_string();
+    for archivo in directorio {
+        match archivo {
+            Ok(archivo) => {
+                println!("carpeta: {} archivo: {:?}", nombre_directorio.clone(), archivo.file_name().to_string_lossy().to_string());
+                nombres.push(nombre_directorio.clone() + &archivo.file_name().to_string_lossy().to_string());
+            }
+            Err(error) => {
+                eprintln!("Error leyendo directorio: {}", error);
+            }
+        }
+    }
+
+    if nombres.is_empty() {
+        return Err(ErrorDeComunicacion::IoError(io::Error::new(
+            io::ErrorKind::NotFound,
+            "No se encontraron objetos en el directorio",
+        )));
+    }
+
+    Ok(nombres)
 }
 
 pub fn obtener_refs(path: &mut Path) -> Result<Vec<String>, ErrorDeComunicacion> {

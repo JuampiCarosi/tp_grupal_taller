@@ -56,9 +56,7 @@ impl Comunicacion {
                 break;
             }
             // println!("Received: {:?}", linea);
-            // lineas.push(linea.to_string());
         }
-        println!("Received: {:?}", lineas);
         Ok(lineas)
     }
 
@@ -153,7 +151,7 @@ impl Comunicacion {
         bytes.drain(0..4);
 
         while bytes.len() > 0 {
-            println!("cant bytes: {:?}", bytes.len());
+            // println!("cant bytes: {:?}", bytes.len());
             let (tipo, tamanio, bytes_leidos) = packfile::decodificar_bytes(bytes);
             println!("cant bytes post decodificacion: {:?}", bytes.len());
             println!("tipo: {:?}", tipo);
@@ -168,24 +166,31 @@ impl Comunicacion {
                 .decompress(&bytes, &mut objeto_descomprimido, FlushDecompress::None)
                 .unwrap();
 
+            if tipo == 1 { 
+
+                println!("objeto_descomprimido: {:?}", String::from_utf8(objeto_descomprimido.clone()));
+            }
+
             let contenido = decodificar_contenido(objeto_descomprimido);
             // println!("contenido: {:?}", contenido);
             match contenido {
                 Ok(contenido) => {
+                    println!("contenido: {:?}", contenido);
                     let hash = HashObject::hashear_contenido_objeto(&contenido);
-                    
-                    // aca va el directorio.. 
-                    let ruta = format!("/home/juani/gir/objects/{}/{}", &hash[..2], &hash[2..]);
+                    println!("len del contenido: {}", contenido.clone().len());
+                    println!("hash: {:?}", hash);
+
+                    let ruta = format!("/home/juani/git/objects/{}/{}", &hash[..2], &hash[2..]);
+                    // println!("ruta de coso: {}", ruta);
                     io::escribir_bytes(ruta, comprimir_contenido(contenido).unwrap()).unwrap();
                 }
                 Err(error) => {
                     eprintln!("Error al decodificar contenido: {}", error);
                 }
             }
-        
-            // let total_out = descompresor.total_out(); // esto es lo que debe matchear el tamanio que se pasa en el header
+            let total_out = descompresor.total_out(); // esto es lo que debe matchear el tamanio que se pasa en el header
             let total_in = descompresor.total_in(); // esto es para calcular el offset
-            println!("total in: {:?}", total_in as usize);
+            println!("total in: {:?}, total out: {:?} ", total_in as usize, total_out as usize);
             bytes.drain(0..total_in as usize);
             println!("cant bytes restantes: {:?}", bytes.len());
         }

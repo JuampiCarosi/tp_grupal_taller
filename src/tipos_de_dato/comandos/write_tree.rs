@@ -11,7 +11,7 @@ use crate::utilidades_de_compresion;
 
 pub fn conseguir_arbol_padre_from_ult_commit(hash_commit_padre: String) -> String {
     let contenido =
-        utilidades_de_compresion::descomprimir_objeto(hash_commit_padre.clone()).unwrap();
+        utilidades_de_compresion::descomprimir_objeto(hash_commit_padre.clone(), String::from(".git/{}/{}")).unwrap();
     let lineas_sin_null = contenido.replace("\0", "\n");
     let lineas = lineas_sin_null.split("\n").collect::<Vec<&str>>();
     let arbol_commit = lineas[1];
@@ -141,7 +141,7 @@ mod test {
             .unwrap();
 
         let arbol_commit = crear_arbol_commit(None).unwrap();
-        let contenido_commit = utilidades_de_compresion::descomprimir_objeto(arbol_commit).unwrap();
+        let contenido_commit = utilidades_de_compresion::descomprimir_objeto(arbol_commit, String::from(".git/{}/{}")).unwrap();
 
         assert_eq!(
             contenido_commit,

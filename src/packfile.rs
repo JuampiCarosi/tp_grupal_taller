@@ -1,9 +1,10 @@
 use crate::err_comunicacion::ErrorDeComunicacion;
-use crate::io;
+use crate::{io, utilidades_de_compresion};
 use crate::tipos_de_dato::{
     comandos::cat_file::conseguir_tamanio, comandos::cat_file::conseguir_tipo_objeto,
 };
 use sha1::{Digest, Sha1};
+
 pub struct Packfile {
     objetos: Vec<u8>,
     indice: Vec<u8>,
@@ -23,9 +24,12 @@ impl Packfile {
         // let logger = Rc::new(Logger::new(PathBuf::from("log.txt"))?);
 
         // optimizar el hecho de que pido descomprimir 2 veces un archivo
-        let tamanio_objeto = conseguir_tamanio(objeto.clone())?.parse::<u32>().unwrap();
+        let ruta_objeto = format!("./.git/objects/{}/{}", &objeto[..2], &objeto[2..]);
+        let objeto_comprimido = io::leer_bytes(&ruta_objeto).unwrap();
+        let tamanio_objeto = utilidades_de_compresion::descomprimir_contenido_u8(&objeto_comprimido)?.len() as u32;
         let tipo_objeto = conseguir_tipo_objeto(objeto.clone())?;
         // codifica el tamanio del archivo descomprimido y su tipo en un tipo variable de longitud
+
         let nbyte = match tipo_objeto.as_str() {
             "commit" => codificar_bytes(1, tamanio_objeto), //1
             "tree" => codificar_bytes(2, tamanio_objeto),   // 2
@@ -37,14 +41,17 @@ impl Packfile {
         };
 
         self.objetos.extend(nbyte);
-        let ruta_objeto = format!("./.git/objects/{}/{}", &objeto[..2], &objeto[2..]);
-        let objeto_comprimido = io::leer_bytes(&ruta_objeto).unwrap();
+        // let mut objeto_descomprimido = vec![0; 300];
 
-        println!(
-            "largo del objeto: {} comprimido: {}",
-            objeto,
-            objeto_comprimido.len()
-        );
+        // let mut descompresor = Decompress::new(true);
+
+        // descompresor
+        //     .decompress(&objeto_comprimido, &mut objeto_descomprimido, FlushDecompress::None)
+        //     .unwrap();
+
+        // let contenido = decodificar_contenido(objeto_descomprimido);
+
+        // println!("contenido: {:?}", contenido);
         self.objetos.extend(objeto_comprimido);
 
         self.cant_objetos += 1;
@@ -55,13 +62,10 @@ impl Packfile {
     // fijarse en commit que algo se manda incompleto, creo 
     // funcion que recorrer el directorio y aniade los objetos al packfile junto a su indice correspondiente
     fn obtener_objetos_del_dir(&mut self, dir: String) -> Result<(), ErrorDeComunicacion> {
+        // esto porque es un clone, deberia pasarle los objetos que quiero
         let objetos = io::obtener_objetos_del_directorio(dir)?;
-        // println!("objetos: {:?}", objetos);
-        // commit y blob
-        // let objetos = vec!["8ab3bc50ab8155b55c54a2c4d75afdc910203483".to_string(), "0e0082b1300909b92177ba464ee56bd9e8abc4d3".to_string()];
-        // let objetos = vec!["33f1d08333d2738cdbe83a8b5ffd3e6ee80d9cce".to_string()]; // Tree
-                                                                                    // let objetos = vec!["0e0082b1300909b92177ba464ee56bd9e8abc4d3".to_string()];
-                                                                                    // let objetos = vec!["9a22491ff4809b4b1e07163a7b36737831b78046".to_string()];
+        // let objetos = vec!["7d0dd12a068032c0538bbe27605b1f8bfd6eaa60".to_string()];        
+        // --- 
         for objeto in objetos {
             let inicio = self.objetos.len() as u32; // obtengo el len previo a aniadir el objeto
             self.aniadir_objeto(objeto.clone()).unwrap();
@@ -120,8 +124,6 @@ impl Packfile {
 pub fn codificar_bytes(tipo: u8, numero: u32) -> Vec<u8> {
     let mut resultado = Vec::new();
     let mut valor = numero;
-    println!("codificando al tipo: {:?} y numero: {:?}", tipo, numero);
-
     // si lo el tamanio del numero es mayor a 4 bits, entonces tengo que poner el bit mas significativo en 1
     let primer_byte: u8 = if valor >> 4 != 0 {
         ((tipo & 0x07) << 4) as u8 | 0x80 | (numero & 0x0F) as u8

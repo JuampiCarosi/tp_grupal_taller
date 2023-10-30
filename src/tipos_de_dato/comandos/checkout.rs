@@ -280,7 +280,7 @@ mod test {
 
     fn conseguir_hash_padre(branch: String) -> String {
         let hash = std::fs::read_to_string(format!(".gir/refs/heads/{}", branch)).unwrap();
-        let contenido = utilidades_de_compresion::descomprimir_objeto(hash.clone()).unwrap();
+        let contenido = utilidades_de_compresion::descomprimir_objeto(hash.clone(), String::from(".gir/refs/heads")).unwrap();
         let lineas_sin_null = contenido.replace("\0", "\n");
         let lineas = lineas_sin_null.split("\n").collect::<Vec<&str>>();
         let hash_padre = lineas[2];
@@ -290,7 +290,7 @@ mod test {
     fn conseguir_arbol_commit(branch: String) -> String {
         let hash_hijo = std::fs::read_to_string(format!(".gir/refs/heads/{}", branch)).unwrap();
         let contenido_hijo =
-            utilidades_de_compresion::descomprimir_objeto(hash_hijo.clone()).unwrap();
+            utilidades_de_compresion::descomprimir_objeto(hash_hijo.clone(), String::from(".gir/refs/heads")).unwrap();
         let lineas_sin_null = contenido_hijo.replace("\0", "\n");
         let lineas = lineas_sin_null.split("\n").collect::<Vec<&str>>();
         let hash_arbol = lineas[1];

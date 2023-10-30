@@ -82,14 +82,13 @@ impl Servidor {
                 println!("git-upload-pack");
                 let args: Vec<_> = req[1].split('\0').collect();
                 let path = PathBuf::from(self.dir.clone() + args[0]);
-                let mut refs: Vec<String> = Vec::new();
+                    let mut refs: Vec<String> = Vec::new();
                 if let Ok(mut head) = git_io::obtener_refs(&mut path.join("HEAD")) {
                     refs.append(&mut head);
                 }
                 refs.append(&mut git_io::obtener_refs(&mut path.join("refs/heads/"))?);
                 refs.append(&mut git_io::obtener_refs(&mut path.join("refs/tags/"))?);
                 refs[0] = self.agregar_capacidades(refs[0].clone());
-                // println!("refs: {:?}", refs);
                 Ok(refs)
             }
             _ => {

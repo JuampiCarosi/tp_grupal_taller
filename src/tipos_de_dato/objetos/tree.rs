@@ -44,7 +44,7 @@ impl Tree {
         for objeto in objetos {
             match objeto {
                 Objeto::Blob(blob) => {
-                    let objeto = descomprimir_objeto(blob.hash)?;
+                    let objeto = descomprimir_objeto(blob.hash, String::from(self.directorio.to_string_lossy()))?;
                     let contenido = objeto.split('\0').collect::<Vec<&str>>()[1];
                     io::escribir_bytes(blob.ubicacion, contenido).unwrap();
                 }
@@ -261,8 +261,7 @@ impl Tree {
 
     pub fn from_hash(hash: String, directorio: PathBuf) -> Result<Tree, String> {
         // let hash_completo = Self::obtener_hash_completo(hash)?;
-
-        let contenido = descomprimir_objeto(hash)?;
+        let contenido = descomprimir_objeto(hash, String::from(directorio.to_string_lossy()))?;
 
         let contenido_parseado = Self::obtener_datos_de_contenido(contenido)?;
         println!("{:#?}", contenido_parseado);
