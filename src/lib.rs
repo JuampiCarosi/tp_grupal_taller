@@ -21,6 +21,7 @@ pub mod tipos_de_dato {
         pub mod write_tree;
     }
 }
+pub mod gui;
 pub mod io;
 pub mod utilidades_de_compresion;
 pub mod utilidades_index;
