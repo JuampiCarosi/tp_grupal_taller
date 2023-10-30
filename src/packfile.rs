@@ -117,7 +117,7 @@ impl Packfile {
     }
 
 
-    pub fn obtener_pack_con_archivos(&mut self, objetos: Vec<String>) {
+    pub fn obtener_pack_con_archivos(&mut self, objetos: Vec<String>) -> Vec<u8> {
         for objeto in objetos {
             self.aniadir_objeto(objeto).unwrap();
         }
@@ -126,7 +126,7 @@ impl Packfile {
         packfile.extend(&[0, 0, 0, 2]);
         packfile.extend(&self.cant_objetos.to_be_bytes());
         packfile.extend(&self.objetos);
-
+        packfile
     }
 }
 

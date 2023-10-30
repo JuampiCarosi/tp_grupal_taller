@@ -58,7 +58,8 @@ impl Servidor {
         comunicacion.responder(respuesta)?; // respondo con las refs (en caso de que sea upload-pack)
 
         let mut wants = comunicacion.obtener_lineas()?; // obtengo los wants del cliente
-                                                    // a partir de aca se asume que va a ser un clone porque es el caso mas sencillo, despues cambiar
+        // ------- CLONE --------
+        // a partir de aca se asume que va a ser un clone porque es el caso mas sencillo, despues cambiar
         let mut lineas_siguientes = comunicacion.obtener_lineas()?;
         if lineas_siguientes[0].clone().contains("done") {
             let want_obj_ids = utilidades_strings::eliminar_prefijos(&mut wants, "want");
@@ -70,9 +71,16 @@ impl Servidor {
             comunicacion.responder_con_bytes(packfile).unwrap();
             return Ok(());
         }
-        let mut have_obj_ids = utilidades_strings::eliminar_prefijos(&mut lineas_siguientes, "have");
+
+        // -------- pull / fetch ----------
+        let have_obj_ids = utilidades_strings::eliminar_prefijos(&mut lineas_siguientes, "have");
+        let respuesta_acks_nak = git_io::obtener_ack(have_obj_ids.clone(), self.dir.clone() + "/.git/objects/");
+        comunicacion.responder(respuesta_acks_nak).unwrap();
+
         let faltantes = obtener_archivos_faltantes(have_obj_ids, self.dir.clone());
         // obtener un packfile de los faltantes...
+        let packfile = packfile::Packfile::new().obtener_pack_con_archivos(faltantes);
+        comunicacion.responder_con_bytes(packfile).unwrap();
         // enviar
         Ok(())
     }

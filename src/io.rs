@@ -301,11 +301,19 @@ pub fn obtener_archivos_faltantes(nombres_archivos: Vec<String>, dir: String) ->
             println!("no contiene");
             archivos_faltantes.push(nombre.clone());
         }
-        // let dir_archivo = format!("{}/{}/{}", dir.clone() ,&nombre[..2], &nombre[2..]);
-        // if !PathBuf::from(dir_archivo.clone()).exists() {
-
-        //         archivos_faltantes.push(nombre.clone());
-        // }
+     
     }
     archivos_faltantes
+}
+// aca depende de si esta multi_ack y esas cosas, esta es para cuando no hay multi_ack ni multi_ack_mode
+pub fn obtener_ack(nombres_archivos: Vec<String>, dir: String) -> Vec<String>{ 
+   let mut ack = Vec::new();
+   for nombre in nombres_archivos {
+       let dir_archivo = format!("{}/{}/{}", dir.clone() ,&nombre[..2], &nombre[2..]);
+            if PathBuf::from(dir_archivo.clone()).exists() {
+                ack.push(obtener_linea_con_largo_hex(&dir_archivo));
+            }
+   }
+    ack.push(obtener_linea_con_largo_hex("NAK"));
+    ack
 }
