@@ -24,6 +24,7 @@ pub struct Tree {
     pub objetos: Vec<Objeto>,
 }
 impl Tree {
+    /// Devuelve un vector con todos los objetos de tipo Blob que se encuentran en el arbol
     fn obtener_objetos_hoja(&self) -> Vec<Objeto> {
         let mut objetos: Vec<Objeto> = Vec::new();
         for objeto in &self.objetos {
@@ -37,6 +38,7 @@ impl Tree {
         objetos
     }
 
+    /// Escribe en el directorio actual los archivos que se encuentran en el arbol
     pub fn escribir_en_directorio(&self) -> Result<(), String> {
         let objetos = self.obtener_objetos_hoja();
         for objeto in objetos {
@@ -52,6 +54,7 @@ impl Tree {
         Ok(())
     }
 
+    /// Pasa un string de hexadecimal a un vector de u8
     pub fn decode_hex(s: &str) -> Result<Vec<u8>, String> {
         match (0..s.len())
             .step_by(2)
@@ -63,6 +66,7 @@ impl Tree {
         }
     }
 
+    /// Pasa un vector de u8 a un string de hexadecimal
     pub fn encode_hex(bytes: &[u8]) -> String {
         let mut s = String::with_capacity(bytes.len() * 2);
         for &b in bytes {
@@ -71,6 +75,7 @@ impl Tree {
         s
     }
 
+    /// Devuelve el hash completo de un objeto
     pub fn obtener_hash(&self) -> Result<String, String> {
         let contenido = Self::obtener_contenido(&self.objetos)?;
         let mut sha1 = Sha1::new();
@@ -82,6 +87,7 @@ impl Tree {
         Ok(format!("{:x}", hash))
     }
 
+    /// Devuelve el contenido de un objeto tree en u8 para poder ser comprimido
     pub fn obtener_contenido(objetos: &[Objeto]) -> Result<Vec<u8>, String> {
         let objetos_ordenados = Self::ordenar_objetos_alfabeticamente(&objetos);
 
@@ -108,6 +114,7 @@ impl Tree {
         Ok(contenido)
     }
 
+    /// Devuelve un objeto Tree a partir de un directorio y un vector de directorios que se quieren
     pub fn from_directorio(
         directorio: PathBuf,
         hijos_especificados: Option<&Vec<PathBuf>>,
