@@ -30,6 +30,11 @@ impl Add {
                         ubicaciones_hoja.append(&mut Self::obtener_ubicaciones_hoja(vec![path])?);
                     }
                 }
+            } else {
+                return Err(format!(
+                    "{} no es un archivo o directorio",
+                    ubicacion.display()
+                ));
             }
         }
         Ok(ubicaciones_hoja)
