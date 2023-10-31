@@ -128,10 +128,10 @@ fn main() -> Result<(), String> {
 //     loop {
 //         let contenido = utilidades_de_compresion::descomprimir_objeto(ultimo_commit.clone())?;
 //         let siguiente_padre = Log::conseguir_padre_desde_contenido_commit(&contenido);
+//         historial_commits.push(ultimo_commit.clone());
 //         if siguiente_padre.is_empty() {
 //             break;
 //         }
-//         historial_commits.push(ultimo_commit.clone());
 //         ultimo_commit = siguiente_padre.to_string();
 //     }
 //     Ok(historial_commits)

@@ -58,8 +58,8 @@ impl Comunicacion {
             if linea.contains("NAK") {
                 break;
             }
-            // println!("Received: {:?}", linea);
         }
+        println!("Received: {:?}", lineas);
         Ok(lineas)
     }
 
