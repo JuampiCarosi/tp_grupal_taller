@@ -1,18 +1,19 @@
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
-use std::sync::{Arc, Mutex};
 
 use gtk::builders::LabelBuilder;
+use gtk::glib::GString;
 use gtk::prelude::*;
 use gtk::{self, Align};
 
 use crate::io::leer_a_string;
 use crate::tipos_de_dato::comandos::branch::{self, Branch};
+use crate::tipos_de_dato::comandos::checkout::Checkout;
 use crate::tipos_de_dato::comandos::log::Log;
 use crate::tipos_de_dato::logger::Logger;
 use crate::utilidades_de_compresion::descomprimir_objeto;
 
-fn branch_dialog(builder: gtk::Builder) {
+fn branch_dialog(builder: gtk::Builder, window: gtk::Window) {
     let branch_button: gtk::Button = builder.object("branch-button").unwrap();
     let dialog: gtk::MessageDialog = builder.object("branch").unwrap();
 
@@ -30,7 +31,16 @@ fn branch_dialog(builder: gtk::Builder) {
     confirm.connect_clicked(move |_| {
         let dialog: gtk::MessageDialog = builder_clone.object("branch").unwrap();
         let input: gtk::Entry = builder_clone.object("branch-input").unwrap();
-        println!("branch name: {}", input.text());
+        Branch::from(
+            &mut vec![input.text().to_string()],
+            Rc::new(Logger::new(PathBuf::from("log.txt")).unwrap()),
+        )
+        .unwrap()
+        .ejecutar()
+        .unwrap();
+
+        select_branch(builder_clone.clone(), window.clone());
+        input.set_text("");
         dialog.hide();
     });
 
@@ -42,8 +52,9 @@ fn branch_dialog(builder: gtk::Builder) {
     });
 }
 
-fn select_branch(builder: gtk::Builder, rama_seleccionada: Arc<Mutex<String>>) {
+fn select_branch(builder: gtk::Builder, window: gtk::Window) {
     let select: gtk::ComboBoxText = builder.object("select-branch").unwrap();
+    // select.remove_all();
 
     let binding = Branch::mostrar_ramas().unwrap();
     let branches = binding.split("\n");
@@ -55,15 +66,20 @@ fn select_branch(builder: gtk::Builder, rama_seleccionada: Arc<Mutex<String>>) {
         select.append_text(branch);
     });
 
-    select.connect_changed(move |select| {
-        let active = select.active_text().unwrap();
+    select.set_active(Some(1 as u32));
+    select.connect_changed(move |a| {
+        let logger = Rc::new(Logger::new(PathBuf::from("log.txt")).unwrap());
 
-        *rama_seleccionada.lock().unwrap() = active.to_string();
+        println!("select: {:?}", a);
 
-        println!("active: {:?}", rama_seleccionada);
+        let active = a.active_text().unwrap();
+        mostrar_log(builder.clone(), active.to_string());
+        Checkout::from(vec![active.to_string()], logger)
+            .unwrap()
+            .ejecutar()
+            .unwrap();
+        window.show_all();
     });
-
-    select.set_active(Some(0 as u32));
 }
 
 fn obtener_listas_de_commits(branch: &String) -> Result<Vec<String>, String> {
@@ -74,7 +90,6 @@ fn obtener_listas_de_commits(branch: &String) -> Result<Vec<String>, String> {
         return Ok(Vec::new());
     }
     let mut historial_commits: Vec<String> = Vec::new();
-    historial_commits.push(ultimo_commit.clone());
     loop {
         let contenido = descomprimir_objeto(ultimo_commit.clone())?;
         let siguiente_padre = Log::conseguir_padre_desde_contenido_commit(&contenido);
@@ -91,15 +106,17 @@ fn crear_label(string: &str) -> gtk::Label {
     gtk::Label::new(Some(string))
 }
 
-fn mostrar_log(builder: gtk::Builder, branch: Arc<Mutex<String>>) {
+fn mostrar_log(builder: gtk::Builder, branch: String) {
     let container: gtk::Box = builder.object("log-container").unwrap();
+    container.children().iter().for_each(|child| {
+        container.remove(child);
+    });
 
-    let commits = obtener_listas_de_commits(&branch.lock().unwrap().clone()).unwrap();
-    println!("commits: {:?}", commits);
+    let commits = obtener_listas_de_commits(&branch).unwrap();
 
     for commit in commits {
         let label = crear_label(&commit);
-        container.pack_start(&label, true, true, 0);
+        container.add(&label);
     }
 }
 
@@ -109,17 +126,14 @@ pub fn ejecutar() {
         return;
     }
 
-    let rama_seleccionada = Arc::new(Mutex::new(String::new()));
-
     let glade_src = include_str!("glade1.glade");
     let builder = gtk::Builder::from_string(glade_src);
 
     let window: gtk::Window = builder.object("home").unwrap();
     window.set_position(gtk::WindowPosition::Center);
 
-    branch_dialog(builder.clone());
-    select_branch(builder.clone(), rama_seleccionada.clone());
-    mostrar_log(builder.clone(), rama_seleccionada.clone());
+    branch_dialog(builder.clone(), window.clone());
+    select_branch(builder.clone(), window.clone());
 
     window.show_all();
 

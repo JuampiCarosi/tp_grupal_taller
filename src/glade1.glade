@@ -184,7 +184,7 @@
             <property name="height-request">43</property>
             <property name="visible">True</property>
             <property name="can-focus">False</property>
-            <property name="spacing">4</property>
+            <property name="spacing">2</property>
             <child>
               <object class="GtkComboBoxText" id="select-branch">
                 <property name="name">select-branch</property>
@@ -197,7 +197,7 @@
             </child>
           </object>
           <packing>
-            <property name="x">700</property>
+            <property name="x">685</property>
           </packing>
         </child>
         <child>
