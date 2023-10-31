@@ -68,9 +68,13 @@ impl Objeto {
     /// Si el directorio es un archivo, devuelve un Blob
     /// Si el directorio es un directorio, devuelve un Tree
     pub fn from_directorio(
-        directorio: PathBuf,
+        mut directorio: PathBuf,
         hijos_especificados: Option<&Vec<PathBuf>>,
     ) -> Result<Objeto, String> {
+        if directorio.starts_with("./") && directorio != PathBuf::from("./") {
+            directorio = directorio.strip_prefix("./").unwrap().to_path_buf();
+        }
+
         if directorio.is_dir() {
             let tree = Tree::from_directorio(directorio.clone(), hijos_especificados)?;
             Ok(Objeto::Tree(tree))

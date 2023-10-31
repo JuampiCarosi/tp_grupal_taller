@@ -100,7 +100,7 @@ impl Commit {
         Ok(branch.to_string())
     }
 
-    fn obtener_ruta_branch_commit() -> Result<String, String> {
+    pub fn obtener_ruta_branch_commit() -> Result<String, String> {
         let branch = Self::obtener_branch_actual()?;
         let ruta = format!(".gir/refs/heads/{}", branch);
         Ok(ruta)

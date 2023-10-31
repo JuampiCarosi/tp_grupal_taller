@@ -24,7 +24,8 @@ pub struct Tree {
     pub objetos: Vec<Objeto>,
 }
 impl Tree {
-    fn obtener_objetos_hoja(&self) -> Vec<Objeto> {
+    /// Devuelve un vector con todos los objetos de tipo Blob que se encuentran en el arbol
+    pub fn obtener_objetos_hoja(&self) -> Vec<Objeto> {
         let mut objetos: Vec<Objeto> = Vec::new();
         for objeto in &self.objetos {
             match objeto {
@@ -37,6 +38,7 @@ impl Tree {
         objetos
     }
 
+    /// Escribe en el directorio actual los archivos que se encuentran en el arbol
     pub fn escribir_en_directorio(&self) -> Result<(), String> {
         let objetos = self.obtener_objetos_hoja();
         for objeto in objetos {
@@ -52,6 +54,7 @@ impl Tree {
         Ok(())
     }
 
+    /// Pasa un string de hexadecimal a un vector de u8
     pub fn decode_hex(s: &str) -> Result<Vec<u8>, String> {
         match (0..s.len())
             .step_by(2)
@@ -63,6 +66,7 @@ impl Tree {
         }
     }
 
+    /// Pasa un vector de u8 a un string de hexadecimal
     pub fn encode_hex(bytes: &[u8]) -> String {
         let mut s = String::with_capacity(bytes.len() * 2);
         for &b in bytes {
@@ -71,6 +75,7 @@ impl Tree {
         s
     }
 
+    /// Devuelve el hash completo de un objeto
     pub fn obtener_hash(&self) -> Result<String, String> {
         let contenido = Self::obtener_contenido(&self.objetos)?;
         let mut sha1 = Sha1::new();
@@ -82,6 +87,7 @@ impl Tree {
         Ok(format!("{:x}", hash))
     }
 
+    /// Devuelve el contenido de un objeto tree en u8 para poder ser comprimido
     pub fn obtener_contenido(objetos: &[Objeto]) -> Result<Vec<u8>, String> {
         let objetos_ordenados = Self::ordenar_objetos_alfabeticamente(&objetos);
 
@@ -108,15 +114,12 @@ impl Tree {
         Ok(contenido)
     }
 
+    /// Devuelve un objeto Tree a partir de un directorio y un vector de directorios que se quieren
     pub fn from_directorio(
         directorio: PathBuf,
         hijos_especificados: Option<&Vec<PathBuf>>,
     ) -> Result<Tree, String> {
         let mut objetos: Vec<Objeto> = Vec::new();
-
-        // if directorio.starts_with("./") && directorio != PathBuf::from("./") {
-        //     directorio = directorio.strip_prefix("./").unwrap().to_path_buf();
-        // }
 
         // println!("directorio: {}", directorio.display());
 
@@ -260,26 +263,49 @@ impl Tree {
         Ok(contenido.len())
     }
 
-    pub fn contiene_hijo(&self, hash_hijo: String) -> bool {
-        for objeto in &self.objetos {
-            if objeto.obtener_hash() == hash_hijo {
-                return true;
-            }
-        }
-        false
-    }
-    pub fn contiene_hijo_por_nombre(&self, nombre_hijo: PathBuf) -> bool {
+    pub fn contiene_misma_version_hijo(&self, hash_hijo: String, ubicacion_hijo: PathBuf) -> bool {
         for objeto in &self.objetos {
             match objeto {
                 Objeto::Blob(blob) => {
-                    if blob.ubicacion == nombre_hijo.clone() {
+                    if blob.hash == hash_hijo && blob.ubicacion == ubicacion_hijo.clone() {
                         return true;
                     }
                 }
                 Objeto::Tree(tree) => {
-                    if tree.directorio == nombre_hijo.clone() {
+                    if tree.contiene_misma_version_hijo(hash_hijo.clone(), ubicacion_hijo.clone()) {
                         return true;
                     }
+                }
+            }
+        }
+        false
+    }
+
+    pub fn contiene_hijo_por_ubicacion(&self, ubicacion_hijo: PathBuf) -> bool {
+        for objeto in &self.objetos {
+            match objeto {
+                Objeto::Blob(blob) => {
+                    if blob.ubicacion == ubicacion_hijo.clone() {
+                        return true;
+                    }
+                }
+                Objeto::Tree(tree) => {
+                    return tree.contiene_hijo_por_ubicacion(ubicacion_hijo.clone());
+                }
+            }
+        }
+        false
+    }
+
+    pub fn contiene_directorio(&self, directorio: PathBuf) -> bool {
+        for objeto in &self.objetos {
+            match objeto {
+                Objeto::Blob(_) => {}
+                Objeto::Tree(tree) => {
+                    if tree.directorio == directorio {
+                        return true;
+                    }
+                    return tree.contiene_directorio(directorio);
                 }
             }
         }
