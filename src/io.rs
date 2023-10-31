@@ -1,6 +1,7 @@
 use crate::err_comunicacion::ErrorDeComunicacion;
 use std::fs::{self, File};
 use std::io::{self, BufRead};
+use std::ops::Deref;
 use std::path::{Path, PathBuf};
 use std::str;
 
@@ -98,20 +99,23 @@ pub fn obtener_objetos_con_nombre_carpeta(dir: PathBuf) -> Result<Vec<String>, E
     Ok(nombres)
 }
 
-pub fn obtener_refs(path: &mut Path) -> Result<Vec<String>, ErrorDeComunicacion> {
+pub fn obtener_refs(refs_path: &mut Path) -> Result<Vec<String>, ErrorDeComunicacion> {
     let mut refs: Vec<String> = Vec::new();
-    if !path.exists() {
+    println!("PATH ADQUIRIDO: {:?}", refs_path);
+    if !refs_path.exists() {
         io::Error::new(io::ErrorKind::NotFound, "No existe el repositorio");
     }
-    if path.ends_with("HEAD") {
-        refs.push(obtener_ref_head(path.to_path_buf())?);
+    if refs_path.ends_with("HEAD") {
+        refs.push(obtener_ref_head(refs_path.to_path_buf())?);
     } else {
-        let head_dir = fs::read_dir(&path)?;
+        let head_dir = fs::read_dir(&refs_path)?;
         for archivo in head_dir {
             match archivo {
                 Ok(archivo) => {
-                    let path = archivo.path();
-                    refs.push(obtener_referencia(&mut path.clone())?);
+                    let mut path = archivo.path();
+                    // let mut path = archivo.path().to_string_lossy().split("./.gir/").into_iter().next().unwrap().to_string();
+                    println!("pathingham: {:?}", path);
+                    refs.push(obtener_referencia(&mut path)?);
                 }
                 Err(error) => {
                     eprintln!("Error leyendo directorio: {}", error);
@@ -140,12 +144,14 @@ fn leer_archivo(path: &mut Path) -> Result<String, ErrorDeComunicacion> {
     Ok(contenido.trim().to_string())
 }
 
-fn obtener_referencia(path: &mut Path) -> Result<String, ErrorDeComunicacion> {
+fn obtener_referencia(path: &mut PathBuf) -> Result<String, ErrorDeComunicacion> {
     let contenido = leer_archivo(path)?;
+    // esto esta hardcodeado, hay que cambiar la forma de sacarle el prefijo
+    let directorio_sin_prefijo= path.strip_prefix("/home/juani/23C2-Cangrejos-Tacticos/srv/.gir/").unwrap().to_path_buf();
     let referencia = format!(
         "{} {}",
         contenido.trim(),
-        path.to_str().ok_or(std::io::Error::new(
+        directorio_sin_prefijo.to_str().ok_or(std::io::Error::new(
             std::io::ErrorKind::NotFound,
             "No existe HEAD"
         ))?
