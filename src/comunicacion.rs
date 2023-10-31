@@ -117,7 +117,7 @@ impl Comunicacion {
         obj_ids[0].push_str(&(" ".to_string() + &capacidades)); // le aniado las capacidades
         for linea in obj_ids {
             lista_wants.push(io::obtener_linea_con_largo_hex(
-                &("want".to_string() + &linea),
+                &("want ".to_string() + &linea),
             ));
         }
         Ok(lista_wants)

@@ -25,7 +25,7 @@ pub fn leer_archivos_directorio(direccion: &mut Path) -> Result<Vec<String>, Err
 pub fn obtener_objetos_del_directorio(dir: String) -> Result<Vec<String>, ErrorDeComunicacion> {
     let path = PathBuf::from(dir);
     let mut objetos: Vec<String> = Vec::new();
-
+    println!("Voy a obtener objetos del directorio: {:?}", path);
     let dir_abierto = fs::read_dir(path.clone())?;
     // println!("dir_abierto: {:?}", dir_abierto);
     for archivo in dir_abierto {
@@ -37,9 +37,9 @@ pub fn obtener_objetos_del_directorio(dir: String) -> Result<Vec<String>, ErrorD
                 {
                     let path = archivo.path();
                     if !path.to_string_lossy().contains("log.txt"){
-                        // println!("path: {:?}", path);
+                        println!("path: {:?}", path);
                         let nombre_carpeta = archivo.file_name().into_string().unwrap();
-                        // println!("nombre_carpeta: {:?}", nombre_carpeta);
+                        println!("nombre_carpeta: {:?}", nombre_carpeta);
                         objetos.append(&mut obtener_objetos_con_nombre_carpeta(path.clone())?);
                     }
                 }
