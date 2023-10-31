@@ -9,6 +9,7 @@ use gtk::{self, Align};
 use crate::io::leer_a_string;
 use crate::tipos_de_dato::comandos::branch::{self, Branch};
 use crate::tipos_de_dato::comandos::checkout::Checkout;
+use crate::tipos_de_dato::comandos::commit::Commit;
 use crate::tipos_de_dato::comandos::log::Log;
 use crate::tipos_de_dato::logger::Logger;
 use crate::utilidades_de_compresion::descomprimir_objeto;
@@ -54,25 +55,32 @@ fn branch_dialog(builder: gtk::Builder, window: gtk::Window) {
 
 fn select_branch(builder: gtk::Builder, window: gtk::Window) {
     let select: gtk::ComboBoxText = builder.object("select-branch").unwrap();
-    // select.remove_all();
+    let branch_actual = Commit::obtener_branch_actual().unwrap();
+    select.remove_all();
 
     let binding = Branch::mostrar_ramas().unwrap();
     let branches = binding.split("\n");
 
+    let mut i = 0;
     branches.for_each(|branch| {
         if branch == "" {
             return;
         }
         select.append_text(branch);
+        if branch == branch_actual {
+            select.set_active(Some(i));
+        }
+        i += 1;
     });
 
-    select.set_active(Some(1 as u32));
     select.connect_changed(move |a| {
         let logger = Rc::new(Logger::new(PathBuf::from("log.txt")).unwrap());
 
-        println!("select: {:?}", a);
+        let active = match a.active_text() {
+            Some(text) => text,
+            None => return,
+        };
 
-        let active = a.active_text().unwrap();
         mostrar_log(builder.clone(), active.to_string());
         Checkout::from(vec![active.to_string()], logger)
             .unwrap()
@@ -93,12 +101,13 @@ fn obtener_listas_de_commits(branch: &String) -> Result<Vec<String>, String> {
     loop {
         let contenido = descomprimir_objeto(ultimo_commit.clone())?;
         let siguiente_padre = Log::conseguir_padre_desde_contenido_commit(&contenido);
+        historial_commits.push(ultimo_commit.clone());
         if siguiente_padre.is_empty() {
             break;
         }
-        historial_commits.push(ultimo_commit.clone());
         ultimo_commit = siguiente_padre.to_string();
     }
+
     Ok(historial_commits)
 }
 
