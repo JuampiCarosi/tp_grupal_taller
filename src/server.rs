@@ -55,9 +55,14 @@ impl Servidor {
     ) -> Result<(), ErrorDeComunicacion> {
         let pedido = comunicacion.aceptar_pedido()?; // acepto la primera linea
         let respuesta = self.parse_line(&pedido)?; // parse de la liena para ver que se pide
-        comunicacion.responder(respuesta)?; // respondo con las refs (en caso de que sea upload-pack)
+        comunicacion.responder(respuesta)?; // respondo con las refs 
+        
+        // caso push 
+        // let refs_a_actualizar = comunicacion.obtener_lineas().unwrap();
+        
 
         let mut wants = comunicacion.obtener_lineas()?; // obtengo los wants del cliente
+
         // ------- CLONE --------
         // a partir de aca se asume que va a ser un clone porque es el caso mas sencillo, despues cambiar
         let mut lineas_siguientes = comunicacion.obtener_lineas()?;
@@ -86,14 +91,14 @@ impl Servidor {
     }
 
     fn parse_line(&mut self, line: &str) -> Result<Vec<String>, ErrorDeComunicacion> {
-        let req: Vec<&str> = line.split_whitespace().collect();
+        let pedido: Vec<&str> = line.split_whitespace().collect();
         // veo si es un comando git
-        match req[0] {
+        match pedido[0] {
             "git-upload-pack" => {
                 println!("git-upload-pack");
-                let args: Vec<_> = req[1].split('\0').collect();
+                let args: Vec<_> = pedido[1].split('\0').collect();
                 let path = PathBuf::from(self.dir.clone() + args[0]);
-                    let mut refs: Vec<String> = Vec::new();
+                let mut refs: Vec<String> = Vec::new();
                 if let Ok(mut head) = git_io::obtener_refs(&mut path.join("HEAD")) {
                     refs.append(&mut head);
                 }
