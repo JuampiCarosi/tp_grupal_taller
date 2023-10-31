@@ -132,7 +132,7 @@ impl Comunicacion {
     }
 
 
-    pub fn obtener_paquete(&mut self, bytes: &mut Vec<u8>, ubicacion: String) -> Result<(), ErrorDeComunicacion> {
+    pub fn obtener_paquete_y_escribir(&mut self, bytes: &mut Vec<u8>, ubicacion: String) -> Result<(), ErrorDeComunicacion> {
         // a partir de aca obtengo el paquete
         // println!("cant bytes: {:?}", bytes.len());
         // println!("obteniendo firma");
@@ -178,31 +178,15 @@ impl Comunicacion {
             println!("hash: {:?}", hash);
             let ruta = format!("{}{}/{}", &ubicacion, &hash[..2], &hash[2..]);
             println!("rutarda donde pongo objetos: {:?}", ruta);
-            // let contenido = decodificar_contenido(objeto_descomprimido);
 
-            // println!("contenido: {:?}", contenido);
-            // match contenido {
-                // Ok(contenido) => {
-                    // let hash = HashObject::hashear_contenido_objeto(&contenido);
-                    // if hash.contains("038323861343064373837643"){ 
-                    //     println!("hash rancio: {:?}", hash);
-                    //     println!("ruta de coso: {}", ruta);
-
-                    // }
-                // }
-                // // Err(error) => {
-                //     eprintln!("Error al decodificar contenido: {}", error);
-                // }
-            // }
             let total_out = descompresor.total_out(); // esto es lo que debe matchear el tamanio que se pasa en el header
             let total_in = descompresor.total_in(); // esto es para calcular el offset
             println!("total in: {:?}, total out: {:?} ", total_in as usize, total_out as usize);
             
             io::escribir_bytes(ruta, bytes.drain(0..total_in as usize)).unwrap();
 
-            }
             // println!("cant bytes restantes: {:?}", bytes.len());
-        // }
+        }
         Ok(())
     }
 

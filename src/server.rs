@@ -67,9 +67,9 @@ impl Servidor {
         // a partir de aca se asume que va a ser un clone porque es el caso mas sencillo, despues cambiar
         let mut lineas_siguientes = comunicacion.obtener_lineas()?;
         if lineas_siguientes[0].clone().contains("done") {
-            let want_obj_ids = utilidades_strings::eliminar_prefijos(&mut wants, "want");
             comunicacion.responder(vec![git_io::obtener_linea_con_largo_hex("NAK\n")])?; // respondo NAK
-            println!("want_obj_ids: {:?}", want_obj_ids);
+            // let want_obj_ids = utilidades_strings::eliminar_prefijos(&mut wants, "want");
+            // println!("want_obj_ids: {:?}", want_obj_ids);
             let packfile =
                 packfile::Packfile::new().obtener_pack_entero(self.dir.clone() + "/.gir/"); // obtengo el packfile
                 // git_io::leer_bytes("./.git/objects/pack/pack-31897a1f902980a7e540e812b54f5702f449af8b.pack").unwrap();
@@ -77,7 +77,7 @@ impl Servidor {
             return Ok(());
         }
 
-        // -------- pull / fetch ----------
+        // -------- fetch ----------
         let have_obj_ids = utilidades_strings::eliminar_prefijos(&mut lineas_siguientes, "have");
         let respuesta_acks_nak = git_io::obtener_ack(have_obj_ids.clone(), self.dir.clone() + "/.git/objects/");
         comunicacion.responder(respuesta_acks_nak).unwrap();
