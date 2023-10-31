@@ -75,8 +75,9 @@ pub fn obtener_objetos(dir: PathBuf) -> Result<String, ErrorDeComunicacion> {
 
 pub fn obtener_objetos_con_nombre_carpeta(dir: PathBuf) -> Result<Vec<String>, ErrorDeComunicacion> {
     let directorio = fs::read_dir(dir.clone())?;
+    println!("DIRECTORIO : {:?}", directorio);
     let mut nombres = Vec::new();
-    let nombre_directorio = dir.file_name().unwrap().to_string_lossy().to_string();
+    let nombre_directorio = dir.file_name().unwrap().to_string_lossy().to_string();     
     for archivo in directorio {
         match archivo {
             Ok(archivo) => {
@@ -295,21 +296,19 @@ where
 
 // HACER MAS EFICIENTE *Hay iteraciones de mas que se pueden evitar unificando las funciones*
 pub fn obtener_archivos_faltantes(nombres_archivos: Vec<String>, dir: String) -> Vec<String>{
-
-    let objetcts_contained = obtener_objetos_con_nombre_carpeta(PathBuf::from(dir.clone())).unwrap();
+    // DESHARDCODEAR EL NOMBRE DEL DIRECTORIO (.gir)
+    let objetcts_contained = obtener_objetos_del_directorio(dir.clone() + "/.gir/objects/").unwrap();
+    // println!("objetcts_contained: {:?}", objetcts_contained);
+    // println!("Nombres: {:?}", nombres_archivos);
     let mut archivos_faltantes: Vec<String> = Vec::new();
-    for nombre in nombres_archivos { 
-        if objetcts_contained.contains(&nombre) {
-            println!("nombre: {:?}", nombre);
-            println!("objetcts_contained: {:?}", objetcts_contained);
-            println!("contiene");
+    for nombre in &objetcts_contained { 
+        if nombres_archivos.contains(&nombre) {
+            println!("contiene nombre: {:?}", nombre);
         } else {
-            println!("nombre: {:?}", nombre);
-            println!("objetcts_contained: {:?}", objetcts_contained);
-            println!("no contiene");
+            println!("NO CONTIENE nombre: {:?}", nombre);
             archivos_faltantes.push(nombre.clone());
         }
-     
+        
     }
     archivos_faltantes
 }
@@ -318,10 +317,11 @@ pub fn obtener_ack(nombres_archivos: Vec<String>, dir: String) -> Vec<String>{
    let mut ack = Vec::new();
    for nombre in nombres_archivos {
        let dir_archivo = format!("{}/{}/{}", dir.clone() ,&nombre[..2], &nombre[2..]);
-            if PathBuf::from(dir_archivo.clone()).exists() {
-                ack.push(obtener_linea_con_largo_hex(&dir_archivo));
-            }
+        if PathBuf::from(dir_archivo.clone()).exists() {
+            ack.push(obtener_linea_con_largo_hex(("ACK".to_string() + &nombre + &"\n".to_string()).as_str()));
+            break;
+        }
    }
-    ack.push(obtener_linea_con_largo_hex("NAK"));
+    ack.push(obtener_linea_con_largo_hex("NAK\n"));
     ack
 }

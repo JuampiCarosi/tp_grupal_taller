@@ -23,12 +23,12 @@ impl Packfile {
     fn aniadir_objeto(&mut self, objeto: String) -> Result<(), String> {
         // let logger = Rc::new(Logger::new(PathBuf::from("log.txt"))?);
         println!("Aniadiendo objeto: {}", objeto);
+        // DESHARCODEAR EL ./.GIR
         let ruta_objeto = format!("./srv/.gir/objects/{}/{}", &objeto[..2], &objeto[2..]);
         let objeto_comprimido = io::leer_bytes(&ruta_objeto).unwrap();
         let tamanio_objeto = utilidades_de_compresion::descomprimir_contenido_u8(&objeto_comprimido)?.len() as u32;
         let tipo_objeto = conseguir_tipo_objeto(objeto.clone())?;
         // codifica el tamanio del archivo descomprimido y su tipo en un tipo variable de longitud
-
         let nbyte = match tipo_objeto.as_str() {
             "commit" => codificar_bytes(1, tamanio_objeto), //1
             "tree" => codificar_bytes(2, tamanio_objeto),   // 2

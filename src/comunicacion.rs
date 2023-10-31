@@ -67,7 +67,8 @@ impl Comunicacion {
         for linea in &lineas {
             self.flujo.write_all(linea.as_bytes())?;
         }
-        if !lineas[0].contains(&"NAK".to_string()) {
+        if !lineas[0].contains(&"NAK".to_string()) && !lineas[0].contains(&"ACK".to_string()) && !lineas[0].contains(&"done".to_string()) {
+            println!("Entre aca con: {:?}", lineas);
             self.flujo.write_all(String::from("0000").as_bytes())?;
         }
         Ok(())
@@ -95,7 +96,6 @@ impl Comunicacion {
             // Copiar los bytes leídos al búfer principal
             buffer.extend_from_slice(&temp_buffer[0..bytes_read]);
         }
-
         Ok(buffer)
     }
 
@@ -103,7 +103,7 @@ impl Comunicacion {
         println!("lineas: {:?}", lineas);
         let mut obj_ids: Vec<String> = Vec::new();
         for linea in lineas {
-            obj_ids.push(linea.split_whitespace().collect::<Vec<&str>>()[0].to_string());
+            obj_ids.push(linea.split_whitespace().collect::<Vec<&str>>()[1].to_string());
         }
         obj_ids
 
@@ -117,7 +117,7 @@ impl Comunicacion {
         obj_ids[0].push_str(&(" ".to_string() + &capacidades)); // le aniado las capacidades
         for linea in obj_ids {
             lista_wants.push(io::obtener_linea_con_largo_hex(
-                &("want ".to_string() + &linea),
+                &("want ".to_string() + &linea + "\n"),
             ));
         }
         Ok(lista_wants)
@@ -125,9 +125,8 @@ impl Comunicacion {
     pub fn obtener_haves_pkt(&mut self, lineas: &Vec<String>) -> Vec<String> { 
         let mut haves: Vec<String> = Vec::new();
         for linea in lineas {
-            haves.push(io::obtener_linea_con_largo_hex(&("have".to_string() + &linea)))
+            haves.push(io::obtener_linea_con_largo_hex(&("have ".to_string() + &linea + "\n")))
         }
-        println!("haves: {:?}", haves);
         haves
     }
 
@@ -154,7 +153,6 @@ impl Comunicacion {
 
         while bytes.len() > 0 {
             // println!("cant bytes: {:?}", bytes.len());
-            println!("Hola");
             let (tipo, tamanio, bytes_leidos) = packfile::decodificar_bytes(bytes);
             println!("tipo: {:?}, tamanio: {}", tipo, tamanio);
             // println!("cant bytes post decodificacion: {:?}", bytes.len());
