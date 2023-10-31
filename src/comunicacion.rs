@@ -55,7 +55,7 @@ impl Comunicacion {
             self.flujo.read_exact(&mut data)?;
             let linea = str::from_utf8(&data)?;
             lineas.push(linea.to_string());
-            if linea.contains("NAK") {
+            if linea.contains("NAK") || linea.contains("done") {
                 break;
             }
         }
@@ -68,7 +68,6 @@ impl Comunicacion {
             self.flujo.write_all(linea.as_bytes())?;
         }
         if !lineas[0].contains(&"NAK".to_string()) && !lineas[0].contains(&"ACK".to_string()) && !lineas[0].contains(&"done".to_string()) {
-            println!("Entre aca con: {:?}", lineas);
             self.flujo.write_all(String::from("0000").as_bytes())?;
         }
         Ok(())
@@ -77,7 +76,6 @@ impl Comunicacion {
     pub fn responder_con_bytes(&mut self, lineas: Vec<u8>) -> Result<(), ErrorDeComunicacion> {
         self.flujo.write_all(&lineas)?;
         if !lineas.starts_with(b"PACK") {
-            println!("Entre aca");
             self.flujo.write_all(String::from("0000").as_bytes())?;
         }
         Ok(())
@@ -103,7 +101,7 @@ impl Comunicacion {
         println!("lineas: {:?}", lineas);
         let mut obj_ids: Vec<String> = Vec::new();
         for linea in lineas {
-            obj_ids.push(linea.split_whitespace().collect::<Vec<&str>>()[1].to_string());
+            obj_ids.push(linea.split_whitespace().collect::<Vec<&str>>()[0].to_string());
         }
         obj_ids
 
@@ -114,6 +112,7 @@ impl Comunicacion {
         // hay que checkear que no haya repetidos, usar hashset
         let mut lista_wants: Vec<String> = Vec::new();
         let mut obj_ids = self.obtener_obj_ids(lineas);
+        println!("obj_ids: {:?}", obj_ids);
         obj_ids[0].push_str(&(" ".to_string() + &capacidades)); // le aniado las capacidades
         for linea in obj_ids {
             lista_wants.push(io::obtener_linea_con_largo_hex(

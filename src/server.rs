@@ -62,7 +62,6 @@ impl Servidor {
         
 
         let mut wants = comunicacion.obtener_lineas()?; // obtengo los wants del cliente
-
         // ------- CLONE --------
         // a partir de aca se asume que va a ser un clone porque es el caso mas sencillo, despues cambiar
         let lineas_siguientes = comunicacion.obtener_lineas()?;

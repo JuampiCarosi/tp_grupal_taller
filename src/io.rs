@@ -303,12 +303,9 @@ pub fn obtener_archivos_faltantes(nombres_archivos: Vec<String>, dir: String) ->
     let mut archivos_faltantes: Vec<String> = Vec::new();
     for nombre in &objetcts_contained { 
         if nombres_archivos.contains(&nombre) {
-            println!("contiene nombre: {:?}", nombre);
         } else {
-            println!("NO CONTIENE nombre: {:?}", nombre);
             archivos_faltantes.push(nombre.clone());
         }
-        
     }
     archivos_faltantes
 }
