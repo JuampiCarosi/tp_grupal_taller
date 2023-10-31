@@ -11,7 +11,8 @@ pub struct CatFile {
 }
 
 fn obtener_contenido_objeto(hash: String) -> Result<(String, String), String> {
-    let objeto = descomprimir_objeto(hash, String::from(".git/objects"))?;
+    // sacar el hardcode de esto
+    let objeto = descomprimir_objeto(hash, String::from("./srv/.gir/objects"))?;
     match objeto.split_once('\0') {
         Some((header, contenido)) => Ok((header.to_string(), contenido.to_string())),
         None => Err("Objeto invalido".to_string()),

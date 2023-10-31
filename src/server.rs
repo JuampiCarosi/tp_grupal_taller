@@ -18,7 +18,7 @@ impl Servidor {
     pub fn new(address: &str) -> std::io::Result<Servidor> {
         let listener = TcpListener::bind(address)?;
         // busca la carpeta raiz del proyecto (evita hardcodear la ruta)
-        let dir = env!("CARGO_MANIFEST_DIR").to_string();
+        let dir = env!("CARGO_MANIFEST_DIR").to_string() + "/srv";
         // esto es para checkear, no tengo implementado nada de lo que dice xd
         let capacidades: Vec<String> = [
             "multi_ack",
@@ -71,7 +71,7 @@ impl Servidor {
             comunicacion.responder(vec![git_io::obtener_linea_con_largo_hex("NAK\n")])?; // respondo NAK
             println!("want_obj_ids: {:?}", want_obj_ids);
             let packfile =
-                packfile::Packfile::new().obtener_pack_entero(self.dir.clone() + "/.git/objects/"); // obtengo el packfile
+                packfile::Packfile::new().obtener_pack_entero(self.dir.clone() + "/.gir/"); // obtengo el packfile
                 // git_io::leer_bytes("./.git/objects/pack/pack-31897a1f902980a7e540e812b54f5702f449af8b.pack").unwrap();
             comunicacion.responder_con_bytes(packfile).unwrap();
             return Ok(());
@@ -98,6 +98,7 @@ impl Servidor {
                 println!("git-upload-pack");
                 let args: Vec<_> = pedido[1].split('\0').collect();
                 let path = PathBuf::from(self.dir.clone() + args[0]);
+                println!("path: {:?}", path);
                 let mut refs: Vec<String> = Vec::new();
                 if let Ok(mut head) = git_io::obtener_refs(&mut path.join("HEAD")) {
                     refs.append(&mut head);

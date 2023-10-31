@@ -23,11 +23,10 @@ pub fn leer_archivos_directorio(direccion: &mut Path) -> Result<Vec<String>, Err
 
 pub fn obtener_objetos_del_directorio(dir: String) -> Result<Vec<String>, ErrorDeComunicacion> {
     let path = PathBuf::from(dir);
-    println!("path: {:?}", path);
     let mut objetos: Vec<String> = Vec::new();
 
     let dir_abierto = fs::read_dir(path.clone())?;
-
+    // println!("dir_abierto: {:?}", dir_abierto);
     for archivo in dir_abierto {
         match archivo {
             Ok(archivo) => {
@@ -36,10 +35,12 @@ pub fn obtener_objetos_del_directorio(dir: String) -> Result<Vec<String>, ErrorD
                     && archivo.file_name().into_string().unwrap() != "pack"
                 {
                     let path = archivo.path();
-                    println!("path: {:?}", path);
-                    let nombre_carpeta = archivo.file_name().into_string().unwrap();
-                    println!("nombre_carpeta: {:?}", nombre_carpeta);
-                    objetos.append(&mut obtener_objetos_con_nombre_carpeta(path.clone())?);
+                    if !path.to_string_lossy().contains("log.txt"){
+                        // println!("path: {:?}", path);
+                        let nombre_carpeta = archivo.file_name().into_string().unwrap();
+                        // println!("nombre_carpeta: {:?}", nombre_carpeta);
+                        objetos.append(&mut obtener_objetos_con_nombre_carpeta(path.clone())?);
+                    }
                 }
             }
             Err(error) => {
@@ -210,6 +211,7 @@ where
     P: AsRef<Path>,
     C: AsRef<[u8]>,
 {
+    println!("Voy a escribir en: {:?}", dir_archivo.as_ref().display());
     si_no_existe_directorio_de_archivo_crearlo(&dir_archivo)?;
 
     match fs::write(dir_archivo, contenido) {

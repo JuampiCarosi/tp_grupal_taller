@@ -132,7 +132,7 @@ impl Comunicacion {
     }
 
 
-    pub fn obtener_paquete(&mut self, bytes: &mut Vec<u8>) -> Result<(), ErrorDeComunicacion> {
+    pub fn obtener_paquete(&mut self, bytes: &mut Vec<u8>, ubicacion: String) -> Result<(), ErrorDeComunicacion> {
         // a partir de aca obtengo el paquete
         // println!("cant bytes: {:?}", bytes.len());
         // println!("obteniendo firma");
@@ -176,8 +176,8 @@ impl Comunicacion {
             let hash = format!("{:x}", _hash);
             
             println!("hash: {:?}", hash);
-            let ruta = format!("/home/juani/git/objects/{}/{}", &hash[..2], &hash[2..]);
-
+            let ruta = format!("{}{}/{}", &ubicacion, &hash[..2], &hash[2..]);
+            println!("rutarda donde pongo objetos: {:?}", ruta);
             // let contenido = decodificar_contenido(objeto_descomprimido);
 
             // println!("contenido: {:?}", contenido);

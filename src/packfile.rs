@@ -22,8 +22,8 @@ impl Packfile {
 
     fn aniadir_objeto(&mut self, objeto: String) -> Result<(), String> {
         // let logger = Rc::new(Logger::new(PathBuf::from("log.txt"))?);
-   
-        let ruta_objeto = format!("./.git/objects/{}/{}", &objeto[..2], &objeto[2..]);
+        println!("Aniadiendo objeto: {}", objeto);
+        let ruta_objeto = format!("./srv/.gir/objects/{}/{}", &objeto[..2], &objeto[2..]);
         let objeto_comprimido = io::leer_bytes(&ruta_objeto).unwrap();
         let tamanio_objeto = utilidades_de_compresion::descomprimir_contenido_u8(&objeto_comprimido)?.len() as u32;
         let tipo_objeto = conseguir_tipo_objeto(objeto.clone())?;
@@ -53,9 +53,9 @@ impl Packfile {
     // funcion que recorrer el directorio y aniade los objetos al packfile junto a su indice correspondiente
     fn obtener_objetos_del_dir(&mut self, dir: String) -> Result<(), ErrorDeComunicacion> {
         // esto porque es un clone, deberia pasarle los objetos que quiero
-        let objetos = io::obtener_objetos_del_directorio(dir)?;
-        let dir = "packl;;".to_string();
+        let objetos = io::obtener_objetos_del_directorio(dir + "objects/")?;
         // --- 
+        
         for objeto in objetos {
             let inicio = self.objetos.len() as u32; // obtengo el len previo a aniadir el objeto
             self.aniadir_objeto(objeto.clone()).unwrap();

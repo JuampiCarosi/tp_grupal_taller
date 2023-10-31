@@ -9,9 +9,19 @@ use crate::tipos_de_dato::utilidades_index::generar_objetos_raiz;
 use crate::tipos_de_dato::{objetos::tree::Tree, utilidades_index};
 use crate::utilidades_de_compresion;
 
+pub fn conseguir_arbol_padre_from_ult_commit_de_dir(hash_commit_padre: String, dir: String) -> String {
+    let contenido =
+        utilidades_de_compresion::descomprimir_objeto(hash_commit_padre.clone(), dir).unwrap();
+    let lineas_sin_null = contenido.replace("\0", "\n");
+    let lineas = lineas_sin_null.split("\n").collect::<Vec<&str>>();
+    let arbol_commit = lineas[1];
+    let lineas = arbol_commit.split(" ").collect::<Vec<&str>>();
+    let arbol_commit = lineas[1];
+    arbol_commit.to_string()
+}
 pub fn conseguir_arbol_padre_from_ult_commit(hash_commit_padre: String) -> String {
     let contenido =
-        utilidades_de_compresion::descomprimir_objeto(hash_commit_padre.clone(), String::from("/home/juani/git/objects")).unwrap();
+        utilidades_de_compresion::descomprimir_objeto(hash_commit_padre.clone(), String::from("/home/juani/objects")).unwrap();
     let lineas_sin_null = contenido.replace("\0", "\n");
     let lineas = lineas_sin_null.split("\n").collect::<Vec<&str>>();
     let arbol_commit = lineas[1];
