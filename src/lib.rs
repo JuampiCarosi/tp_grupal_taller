@@ -25,10 +25,11 @@ pub mod tipos_de_dato {
         pub mod version;
         pub mod write_tree;
         pub mod fetch;
+        pub mod push;
         pub mod clone;
-
     }
 }
 pub mod utilidades_de_compresion;
 pub mod utilidades_path_buf;
 pub mod utilidades_strings;
+pub mod upload_pack;

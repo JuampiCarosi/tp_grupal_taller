@@ -3,7 +3,7 @@ use std::rc::Rc;
 use super::{
     comandos::{
         add::Add, branch::Branch, cat_file::CatFile, checkout::Checkout, commit::Commit,
-        hash_object::HashObject, init::Init, rm::Remove, version::Version, clone::Clone, fetch::Fetch
+        hash_object::HashObject, init::Init, rm::Remove, version::Version, clone::Clone, fetch::Fetch, push::Push
     },
     logger::Logger,
 };
@@ -20,8 +20,8 @@ pub enum Comando {
     Commit(Commit),
     Clone(Clone),
     Fetch(Fetch),
+    Push(Push),
     // Pull,
-    // Push,
     Unknown,
 }
 
@@ -43,8 +43,8 @@ impl Comando {
             "checkout" => Comando::Checkout(Checkout::from(vector_args, logger)?),
             "commit" => Comando::Commit(Commit::from(&mut vector_args, logger)?),
             "fetch" => Comando::Fetch(Fetch::new()),
-            "clone" => {Comando::Clone(Clone::new())},
-            // "push",
+            "clone" => Comando::Clone(Clone::new()),
+            "push" => Comando::Push(Push::new()),
             // "pull",
 
             _ => Comando::Unknown,
@@ -68,6 +68,7 @@ impl Comando {
             Comando::Commit(ref mut commit) => commit.ejecutar(),
             Comando::Fetch(ref mut fetch) => fetch.ejecutar(),
             Comando::Clone(clone) => clone.ejecutar(),
+            Comando::Push(push) => push.ejecutar(),
             Comando::Unknown => Err("Comando desconocido".to_string()),
         }
     }
