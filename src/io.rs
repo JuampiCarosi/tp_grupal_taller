@@ -102,7 +102,6 @@ pub fn obtener_objetos_con_nombre_carpeta(dir: PathBuf) -> Result<Vec<String>, E
 
 pub fn obtener_refs(refs_path: &mut Path) -> Result<Vec<String>, ErrorDeComunicacion> {
     let mut refs: Vec<String> = Vec::new();
-    println!("PATH ADQUIRIDO: {:?}", refs_path);
     if !refs_path.exists() {
         io::Error::new(io::ErrorKind::NotFound, "No existe el repositorio");
     }
@@ -115,7 +114,6 @@ pub fn obtener_refs(refs_path: &mut Path) -> Result<Vec<String>, ErrorDeComunica
                 Ok(archivo) => {
                     let mut path = archivo.path();
                     // let mut path = archivo.path().to_string_lossy().split("./.gir/").into_iter().next().unwrap().to_string();
-                    println!("pathingham: {:?}", path);
                     refs.push(obtener_referencia(&mut path)?);
                 }
                 Err(error) => {

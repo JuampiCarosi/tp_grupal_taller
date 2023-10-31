@@ -9,6 +9,7 @@ use std::path::PathBuf;
 use std::str;
 use crate::utilidades_strings;
 use crate::upload_pack::upload_pack;
+use crate::receive_pack::receive_pack;
 pub struct Servidor {
     listener: TcpListener,
     dir: String,
@@ -55,46 +56,8 @@ impl Servidor {
         comunicacion: &mut Comunicacion,
     ) -> Result<(), ErrorDeComunicacion> {
         let pedido = comunicacion.aceptar_pedido()?; // acepto la primera linea
-        let respuesta = self.parse_line(&pedido, comunicacion)?; // parse de la liena para ver que se pide
+        self.parse_line(&pedido, comunicacion)?; // parse de la liena para ver que se pide
 
-        // comunicacion.responder(respuesta)?; // respondo con las refs 
-        
-        // caso push 
-        // let refs_a_actualizar = comunicacion.obtener_lineas().unwrap();
-        
-
-        // let mut wants = comunicacion.obtener_lineas()?; // obtengo los wants del cliente
-        // // ------- CLONE --------
-        // // a partir de aca se asume que va a ser un clone porque es el caso mas sencillo, despues cambiar
-        // let lineas_siguientes = comunicacion.obtener_lineas()?;
-        // println!("lineas_siguientes: {:?}", lineas_siguientes);
-        // if lineas_siguientes[0].clone().contains("done") {
-        //     comunicacion.responder(vec![git_io::obtener_linea_con_largo_hex("NAK\n")])?; // respondo NAK
-        //     // let want_obj_ids = utilidades_strings::eliminar_prefijos(&mut wants, "want");
-        //     // println!("want_obj_ids: {:?}", want_obj_ids);
-        //     let packfile =
-        //         packfile::Packfile::new().obtener_pack_entero(self.dir.clone() + "/.gir/"); // obtengo el packfile
-        //         // git_io::leer_bytes("./.git/objects/pack/pack-31897a1f902980a7e540e812b54f5702f449af8b.pack").unwrap();
-        //     comunicacion.responder_con_bytes(packfile).unwrap();
-        //     return Ok(());
-        // }
-
-        // // -------- fetch ----------
-        // println!("Entro aca porque hay haves");
-        // let have_objs_ids = utilidades_strings::eliminar_prefijos(&lineas_siguientes);
-        // println!("have_objs_ids: {:?}", have_objs_ids);
-        // // let have_obj_ids = utilidades_strings::eliminar_prefijos(&mut lineas_siguientes, "have");
-        // let respuesta_acks_nak = git_io::obtener_ack(have_objs_ids.clone(), self.dir.clone() + "/.gir/objects");
-        // println!("respuesta_acks_nak: {:?}", respuesta_acks_nak);
-        // comunicacion.responder(respuesta_acks_nak).unwrap();
-        // // let lineas = comunicacion.obtener_lineas().unwrap();
-        // // println!("lineas: {:?}", lineas);
-        // let faltantes = obtener_archivos_faltantes(have_objs_ids, self.dir.clone());
-        // // obtener un packfile de los faltantes...
-        // let packfile = packfile::Packfile::new().obtener_pack_con_archivos(faltantes);
-        // comunicacion.responder_con_bytes(packfile).unwrap();
-
-        // // enviar
         Ok(())
     }
 
@@ -110,7 +73,11 @@ impl Servidor {
                 refs = self.obtener_refs_de(path);
                 upload_pack(refs, self.dir.clone(), comunicacion)
             },
-            "git-receive-pack" => {Ok(())},
+            "git-receive-pack" => {
+                refs = self.obtener_refs_de(path);
+                receive_pack(refs, self.dir.clone(), comunicacion)
+                // Ok(())
+            },
             _ => {
                 println!("No se reconoce el comando");
                 // cambiar el error
@@ -120,9 +87,6 @@ impl Servidor {
                 )));
             }
         }
-    
-        // Ok(refs)
-
     }
     // devuelve las refs de un directorio valido
     fn obtener_refs_de(&self, dir: PathBuf) -> Vec<String> {
