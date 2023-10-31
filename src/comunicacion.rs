@@ -107,7 +107,6 @@ impl Comunicacion {
 
     }
     
-    
     pub fn obtener_wants_pkt(&mut self, lineas: &Vec<String>, capacidades: String) -> Result<Vec<String>, ErrorDeComunicacion> {
         // hay que checkear que no haya repetidos, usar hashset
         let mut lista_wants: Vec<String> = Vec::new();

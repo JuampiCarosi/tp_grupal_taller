@@ -78,7 +78,9 @@ impl Servidor {
         }
 
         // -------- fetch ----------
-        let have_objs_ids = comunicacion.obtener_obj_ids(&lineas_siguientes);
+        println!("Entro aca porque hay haves");
+        let have_objs_ids = utilidades_strings::eliminar_prefijos(&lineas_siguientes);
+        println!("have_objs_ids: {:?}", have_objs_ids);
         // let have_obj_ids = utilidades_strings::eliminar_prefijos(&mut lineas_siguientes, "have");
         let respuesta_acks_nak = git_io::obtener_ack(have_objs_ids.clone(), self.dir.clone() + "/.gir/objects");
         println!("respuesta_acks_nak: {:?}", respuesta_acks_nak);
