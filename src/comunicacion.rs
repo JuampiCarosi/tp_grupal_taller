@@ -1,15 +1,11 @@
 use crate::err_comunicacion::ErrorDeComunicacion;
 use crate::io;
 use crate::packfile;
-use crate::tipos_de_dato::logger;
-use crate::utilidades_de_compresion::decodificar_contenido;
 use flate2::{Decompress, FlushDecompress};
 use std::convert::TryInto;
 use std::io::{Read, Write};
 use std::net::TcpStream;
 use std::str;
-use crate::tipos_de_dato::comandos::hash_object::HashObject;
-use crate::utilidades_de_compresion::comprimir_contenido;
                     
 use sha1::{Digest, Sha1};
 

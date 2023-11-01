@@ -18,7 +18,7 @@ pub fn conseguir_arbol_padre_from_ult_commit_de_dir(hash_commit_padre: String, d
 }
 pub fn conseguir_arbol_padre_from_ult_commit(hash_commit_padre: String) -> String {
     let contenido =
-        utilidades_de_compresion::descomprimir_objeto(hash_commit_padre.clone(), String::from("/home/juani/objects")).unwrap();
+        utilidades_de_compresion::descomprimir_objeto(hash_commit_padre.clone(), String::from("./.gir/objects")).unwrap();
     let lineas_sin_null = contenido.replace("\0", "\n");
     let lineas = lineas_sin_null.split("\n").collect::<Vec<&str>>();
     let arbol_commit = lineas[1];

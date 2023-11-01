@@ -1,13 +1,10 @@
 use crate::err_comunicacion::ErrorDeComunicacion;
-use crate::io::obtener_archivos_faltantes;
-use crate::packfile;
 use crate::{comunicacion::Comunicacion, io as git_io};
 use std::env;
 use std::io;
 use std::net::TcpListener;
 use std::path::PathBuf;
 use std::str;
-use crate::utilidades_strings;
 use crate::upload_pack::upload_pack;
 use crate::receive_pack::receive_pack;
 pub struct Servidor {
@@ -92,11 +89,11 @@ impl Servidor {
     fn obtener_refs_de(&self, dir: PathBuf) -> Vec<String> {
         println!("path del comando: {:?}", dir);
         let mut refs: Vec<String> = Vec::new();
-        if let Ok(mut head) = git_io::obtener_refs(dir.join("HEAD"), "/home/juani/23C2-Cangrejos-Tacticos/srv/.gir/".to_string()) {
+        if let Ok(mut head) = git_io::obtener_refs_con_largo_hex(dir.join("HEAD"), "/home/juani/23C2-Cangrejos-Tacticos/srv/.gir/".to_string()) {
             refs.append(&mut head);
         }
-        refs.append(&mut git_io::obtener_refs(dir.join("refs/heads/"), String::from("/home/juani/23C2-Cangrejos-Tacticos/srv/.gir/")).unwrap());
-        refs.append(&mut git_io::obtener_refs(dir.join("refs/tags/"), String::from("/home/juani/23C2-Cangrejos-Tacticos/srv/.gir/")).unwrap());
+        refs.append(&mut git_io::obtener_refs_con_largo_hex(dir.join("refs/heads/"), String::from("/home/juani/23C2-Cangrejos-Tacticos/srv/.gir/")).unwrap());
+        refs.append(&mut git_io::obtener_refs_con_largo_hex(dir.join("refs/tags/"), String::from("/home/juani/23C2-Cangrejos-Tacticos/srv/.gir/")).unwrap());
         refs[0] = self.agregar_capacidades(refs[0].clone());
         refs
     }

@@ -1,8 +1,6 @@
-use gir::{comunicacion::Comunicacion, io, packfile, tipos_de_dato::objetos::tree::Tree, tipos_de_dato::comandos::write_tree};
-use std::io::Write;
+use gir::io;
 use std::path::PathBuf;
 use std::rc::Rc;
-use std::{char::decode_utf16, net::TcpStream};
 use gir::tipos_de_dato::{comando::Comando, logger::Logger};
 
 

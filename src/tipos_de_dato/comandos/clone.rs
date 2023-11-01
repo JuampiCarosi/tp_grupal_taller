@@ -1,4 +1,4 @@
-use crate::io::escribir_bytes;
+use crate::io::{escribir_bytes, escribir_referencia};
 use crate::{comunicacion::Comunicacion, io, packfile, tipos_de_dato::objetos::tree::Tree, tipos_de_dato::comandos::write_tree};
 use std::io::Write;
 use std::path::PathBuf;
@@ -33,15 +33,18 @@ impl Clone {
 
         client.write_all(request_data_con_largo_hex.as_bytes()).unwrap();
         let refs_recibidas = comunicacion.obtener_lineas().unwrap();
-        
+        // escribo las refs
         for referencia in &refs_recibidas { 
-            let referencia_y_contenido = referencia.split_whitespace().collect::<Vec<&str>>();
-            if !&referencia_y_contenido[1].contains("HEAD"){
-                let dir = PathBuf::from("./.gir/".to_string() + referencia_y_contenido[1]);
-                println!("Voy a escribir en: {:?}", dir);
-                escribir_bytes(dir, referencia_y_contenido[0]).unwrap();
-            }
-        }   
+            io::escribir_referencia(referencia, PathBuf::from("./.gir/"));
+        }
+        //  for referencia in &refs_recibidas { 
+        //     let referencia_y_contenido = referencia.split_whitespace().collect::<Vec<&str>>();
+        //     if !&referencia_y_contenido[1].contains("HEAD"){
+        //         let dir = PathBuf::from("./.gir/".to_string() + referencia_y_contenido[1]);
+        //         println!("Voy a escribir en: {:?}", dir);
+        //         escribir_bytes(dir, referencia_y_contenido[0]).unwrap();
+        //     }
+        // }   
         let capacidades = refs_recibidas[0].split("\0").collect::<Vec<&str>>()[1];
         let wants = comunicacion.obtener_wants_pkt(&refs_recibidas, capacidades.to_string()).unwrap();
         comunicacion.responder(wants.clone()).unwrap();

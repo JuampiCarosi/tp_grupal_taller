@@ -1,7 +1,6 @@
 use crate::err_comunicacion::ErrorDeComunicacion;
 use std::fs::{self, File};
 use std::io::{self, BufRead};
-use std::ops::Deref;
 use std::path::{Path, PathBuf};
 use std::str;
 
@@ -100,6 +99,31 @@ pub fn obtener_objetos_con_nombre_carpeta(dir: PathBuf) -> Result<Vec<String>, E
     Ok(nombres)
 }
 
+pub fn obtener_refs_con_largo_hex(refs_path: PathBuf, dir: String) -> Result<Vec<String>, ErrorDeComunicacion> {
+    let mut refs: Vec<String> = Vec::new();
+    if !refs_path.exists() {
+        io::Error::new(io::ErrorKind::NotFound, "No existe el repositorio");
+    }
+    if refs_path.ends_with("HEAD") {
+        refs.push(obtener_ref_head(refs_path.to_path_buf())?);
+    } else {
+        let head_dir = fs::read_dir(&refs_path)?;
+        for archivo in head_dir {
+            match archivo {
+                Ok(archivo) => {
+                    let mut path = archivo.path();
+                    // let mut path = archivo.path().to_string_lossy().split("./.gir/").into_iter().next().unwrap().to_string();
+                    refs.push(obtener_linea_con_largo_hex(&obtener_referencia(&mut path, dir.clone())?));
+                }
+                Err(error) => {
+                    eprintln!("Error leyendo directorio: {}", error);
+                }
+            }
+        }
+    }
+    Ok(refs)
+}
+
 pub fn obtener_refs(refs_path: PathBuf, dir: String) -> Result<Vec<String>, ErrorDeComunicacion> {
     let mut refs: Vec<String> = Vec::new();
     if !refs_path.exists() {
@@ -156,7 +180,7 @@ fn obtener_referencia(path: &mut PathBuf, prefijo: String) -> Result<String, Err
         ))?
     );
     println!("Referencia: {}", referencia);
-    Ok(obtener_linea_con_largo_hex(&referencia))
+    Ok(referencia)
 }
 
 fn obtener_ref_head(path: PathBuf) -> Result<String, ErrorDeComunicacion> {
@@ -320,4 +344,14 @@ pub fn obtener_ack(nombres_archivos: Vec<String>, dir: String) -> Vec<String>{
    }
     ack.push(obtener_linea_con_largo_hex("NAK\n"));
     ack
+}
+
+pub fn escribir_referencia(referencia: &String, dir: PathBuf) {
+    let referencia_y_contenido = referencia.split_whitespace().collect::<Vec<&str>>();
+    if !&referencia_y_contenido[1].contains("HEAD"){
+        let dir = dir.join(referencia_y_contenido[1]);
+        // let dir = PathBuf::from("./.gir/".to_string() + referencia_y_contenido[1]);
+        println!("Voy a escribir en: {:?}", dir);
+        escribir_bytes(dir, referencia_y_contenido[0]).unwrap();
+}   
 }

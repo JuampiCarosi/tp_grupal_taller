@@ -225,7 +225,7 @@ impl Tree {
     ///  el directorio en el que se encuentra el tree y lo devuelve como un objeto Tree
     pub fn from_hash(hash: String, directorio: PathBuf) -> Result<Tree, String> {
         // let hash_completo = Self::obtener_hash_completo(hash)?;
-        let contenido = descomprimir_objeto(hash, "/home/juani/git/objects".to_string())?;
+        let contenido = descomprimir_objeto(hash, "./.gir/objects".to_string())?;
         println!("directorio del hash {:?}", directorio);
         let contenido_parseado = Self::obtener_datos_de_contenido(contenido)?;
         // println!("{:#?}", contenido_parseado);

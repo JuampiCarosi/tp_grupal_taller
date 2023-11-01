@@ -1,21 +1,29 @@
-use crate::io::{escribir_bytes, obtener_archivos_faltantes};
-use crate::{comunicacion::Comunicacion, io, packfile, tipos_de_dato::objetos::tree::Tree, tipos_de_dato::comandos::write_tree};
+use crate::{comunicacion::Comunicacion, io};
 use std::io::Write;
 use std::path::PathBuf;
 use std::path::Path;
-use std::rc::Rc;
 use std::net::TcpStream;
 use crate::io::leer_a_string;
 use crate::utilidades_de_compresion;
 use crate::tipos_de_dato::comandos::log::Log;
+use std::collections::HashMap;
+
+
+// idea: Key -> (String, String) , primera entrada la ref que tiene el cliente, segunda la que tiene el sv.
 pub struct Push { 
-    refs: Vec<String>
+    hash_refs: HashMap<String, (String, String)>
 }
 impl Push { 
     pub fn new() -> Self {
+        let mut hash_refs: HashMap<String, (String, String)> = HashMap::new();
         let refs = obtener_refs_de(PathBuf::from("./.gir/refs/"), String::from("./.gir/"));
-        println!("Refs: {:?}", refs);
-        Push { refs }
+        for referencia in refs {
+            hash_refs.insert(
+                referencia.split(' ').collect::<Vec<&str>>()[1].to_string(),
+                (referencia.split(' ').collect::<Vec<&str>>()[0].to_string(), String::new()),
+            );
+        }        
+        Push { hash_refs }
     }
     pub fn ejecutar(&mut self) -> Result<String, String> { 
         println!("Se ejecuto el comando push");
@@ -41,21 +49,36 @@ impl Push {
         // 4) en algun lugar hay que checkear que no se modifica el repositorio mientras ocurre esta negociacion, en cuyo caso se debe abortar el push
     
         // voy a suponer el caso base, que es cuando hay que mandar actualizaciones al servidor
-        let mut lista: Vec<String> = Vec::new();
-        // for referencia in refs_recibidas {
-        //     let obj_id = referencia.split(' ').collect::<Vec<&str>>()[0];
-        //     let referencia = referencia.split('/').collect::<Vec<&str>>();
-        //     // checkear que branchs hay en el local que no haya obtenido como referencias, tambien las que me paso el server y no tengo 
-        //     // En dicho checkear si error o si delete
-        //     let lista = obtener_listas_de_commits(&referencia.last().unwrap().to_string());
+        for referencia in refs_recibidas {
+            let obj_id = referencia.split(' ').collect::<Vec<&str>>()[0];
+            let referencia = referencia.split(' ').collect::<Vec<&str>>()[1];
+            match self.hash_refs.get_mut(referencia) { 
+                Some(hash) => { 
+                    if hash.0 != obj_id { 
+                        hash.1 = obj_id.to_string();
+                    } else {
+                        // borra la entrada (ver esta parte..)
+                        self.hash_refs.remove_entry(referencia);
+                    }
+                }   
+                None => {
+                    // el server tiene un head que el cliente no tiene, abortar push (no borramos brancahes por lo tanto el sv esta)
+                }
 
+            }
+        }
+        // falta contemplar creado y borrado
+        // cuando es update se manda viejo, nuevo, ref
+        let mut actualizaciones = Vec::new();
+        for (key, value) in &self.hash_refs {
+            println!("{} / {}", key, value.0);
+            actualizaciones.push(io::obtener_linea_con_largo_hex(&format!("{} {} {}\n", value.1, value.0, key))); // viejo (el del sv), nuevo (cliente), ref
+        }
+        comunicacion.responder(actualizaciones).unwrap();
+        // actualizaciones.push(String::from("0000"));
 
-        // }
-
-        // println!("Refs recibidas: {:?}", refs_recibidas);
-
-
-        let archivos_faltantes = obtener_archivos_faltantes(refs_recibidas, "./.gir/refs".to_string());
+        println!("hash: {:?}", self.hash_refs);
+        // let archivos_faltantes = obtener_archivos_faltantes(refs_recibidas, "./.gir/refs".to_string());
 
         // println!("Refs recibidas: {:?}", refs_recibidas);
         Ok(String::from("Push ejecutado con exito"))
@@ -90,3 +113,8 @@ fn obtener_refs_de(dir: PathBuf, prefijo: String) -> Vec<String> {
     // refs[0] = self.agregar_capacidades(refs[0].clone());
     refs
 }
+
+
+
+
+

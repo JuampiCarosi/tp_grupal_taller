@@ -6,7 +6,7 @@ use std::io::{Read, Write};
 
 pub fn descomprimir_objeto(hash: String, ruta: String) -> Result<String, String> {
     let ruta_objeto = format!("{}/{}/{}", ruta.clone(), &hash[..2], &hash[2..]);
-
+    println!("gonna decompress from: {}", ruta_objeto);
     let contenido_leido = io::leer_bytes(ruta_objeto)?;
     let contenido_descomprimido = descomprimir_contenido_u8(&contenido_leido)?;
     let contenido_decodificado = decodificar_contenido(contenido_descomprimido)?;

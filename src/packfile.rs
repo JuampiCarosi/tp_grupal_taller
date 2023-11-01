@@ -1,5 +1,4 @@
 use crate::err_comunicacion::ErrorDeComunicacion;
-use crate::utilidades_de_compresion::descomprimir_objeto;
 use crate::{io, utilidades_de_compresion};
 use crate::tipos_de_dato::comandos::cat_file::conseguir_tipo_objeto;
 
