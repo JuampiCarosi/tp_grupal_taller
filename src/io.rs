@@ -5,22 +5,22 @@ use std::ops::Deref;
 use std::path::{Path, PathBuf};
 use std::str;
 
-pub fn leer_archivos_directorio(direccion: &mut Path) -> Result<Vec<String>, ErrorDeComunicacion> {
-    let mut contenidos: Vec<String> = Vec::new();
-    let head_dir = fs::read_dir(&direccion)?;
-    for archivo in head_dir {
-        match archivo {
-            Ok(archivo) => {
-                let path = archivo.path();
-                contenidos.push(obtener_referencia(&mut path.clone())?);
-            }
-            Err(error) => {
-                eprintln!("Error leyendo directorio: {}", error);
-            }
-        }
-    }
-    Ok(contenidos)
-}
+// pub fn leer_archivos_directorio(direccion: &mut Path) -> Result<Vec<String>, ErrorDeComunicacion> {
+//     let mut contenidos: Vec<String> = Vec::new();
+//     let head_dir = fs::read_dir(&direccion)?;
+//     for archivo in head_dir {
+//         match archivo {
+//             Ok(archivo) => {
+//                 let path = archivo.path();
+//                 contenidos.push(obtener_referencia(&mut path.clone())?);
+//             }
+//             Err(error) => {
+//                 eprintln!("Error leyendo directorio: {}", error);
+//             }
+//         }
+//     }
+//     Ok(contenidos)
+// }
 
 pub fn obtener_objetos_del_directorio(dir: String) -> Result<Vec<String>, ErrorDeComunicacion> {
     let path = PathBuf::from(dir);
@@ -100,7 +100,7 @@ pub fn obtener_objetos_con_nombre_carpeta(dir: PathBuf) -> Result<Vec<String>, E
     Ok(nombres)
 }
 
-pub fn obtener_refs(refs_path: &mut Path) -> Result<Vec<String>, ErrorDeComunicacion> {
+pub fn obtener_refs(refs_path: PathBuf, dir: String) -> Result<Vec<String>, ErrorDeComunicacion> {
     let mut refs: Vec<String> = Vec::new();
     if !refs_path.exists() {
         io::Error::new(io::ErrorKind::NotFound, "No existe el repositorio");
@@ -114,7 +114,7 @@ pub fn obtener_refs(refs_path: &mut Path) -> Result<Vec<String>, ErrorDeComunica
                 Ok(archivo) => {
                     let mut path = archivo.path();
                     // let mut path = archivo.path().to_string_lossy().split("./.gir/").into_iter().next().unwrap().to_string();
-                    refs.push(obtener_referencia(&mut path)?);
+                    refs.push(obtener_referencia(&mut path, dir.clone())?);
                 }
                 Err(error) => {
                     eprintln!("Error leyendo directorio: {}", error);
@@ -143,10 +143,10 @@ fn leer_archivo(path: &mut Path) -> Result<String, ErrorDeComunicacion> {
     Ok(contenido.trim().to_string())
 }
 
-fn obtener_referencia(path: &mut PathBuf) -> Result<String, ErrorDeComunicacion> {
+fn obtener_referencia(path: &mut PathBuf, prefijo: String) -> Result<String, ErrorDeComunicacion> {
     let contenido = leer_archivo(path)?;
     // esto esta hardcodeado, hay que cambiar la forma de sacarle el prefijo
-    let directorio_sin_prefijo= path.strip_prefix("/home/juani/23C2-Cangrejos-Tacticos/srv/.gir/").unwrap().to_path_buf();
+    let directorio_sin_prefijo= path.strip_prefix(prefijo).unwrap().to_path_buf();
     let referencia = format!(
         "{} {}",
         contenido.trim(),
@@ -155,6 +155,7 @@ fn obtener_referencia(path: &mut PathBuf) -> Result<String, ErrorDeComunicacion>
             "No existe HEAD"
         ))?
     );
+    println!("Referencia: {}", referencia);
     Ok(obtener_linea_con_largo_hex(&referencia))
 }
 

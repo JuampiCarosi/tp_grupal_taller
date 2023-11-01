@@ -92,11 +92,11 @@ impl Servidor {
     fn obtener_refs_de(&self, dir: PathBuf) -> Vec<String> {
         println!("path del comando: {:?}", dir);
         let mut refs: Vec<String> = Vec::new();
-        if let Ok(mut head) = git_io::obtener_refs(&mut dir.join("HEAD")) {
+        if let Ok(mut head) = git_io::obtener_refs(dir.join("HEAD"), "/home/juani/23C2-Cangrejos-Tacticos/srv/.gir/".to_string()) {
             refs.append(&mut head);
         }
-        refs.append(&mut git_io::obtener_refs(&mut dir.join("refs/heads/")).unwrap());
-        refs.append(&mut git_io::obtener_refs(&mut dir.join("refs/tags/")).unwrap());
+        refs.append(&mut git_io::obtener_refs(dir.join("refs/heads/"), String::from("/home/juani/23C2-Cangrejos-Tacticos/srv/.gir/")).unwrap());
+        refs.append(&mut git_io::obtener_refs(dir.join("refs/tags/"), String::from("/home/juani/23C2-Cangrejos-Tacticos/srv/.gir/")).unwrap());
         refs[0] = self.agregar_capacidades(refs[0].clone());
         refs
     }

@@ -28,6 +28,7 @@ impl Packfile {
         let objeto_comprimido = io::leer_bytes(&ruta_objeto).unwrap();
         let tamanio_objeto = utilidades_de_compresion::descomprimir_contenido_u8(&objeto_comprimido)?.len() as u32;
         let tipo_objeto = conseguir_tipo_objeto(objeto.clone())?;
+        println!("tipo_objeto: {}", tipo_objeto);
         // codifica el tamanio del archivo descomprimido y su tipo en un tipo variable de longitud
         let nbyte = match tipo_objeto.as_str() {
             "commit" => codificar_bytes(1, tamanio_objeto), //1
