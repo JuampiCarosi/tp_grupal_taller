@@ -46,7 +46,7 @@ impl Status {
         })
     }
 
-    fn obtener_staging(&self) -> Result<Vec<String>, String> {
+    pub fn obtener_staging(&self) -> Result<Vec<String>, String> {
         let mut staging = Vec::new();
         for objeto_index in &self.index {
             match self.tree_commit_head {
@@ -80,7 +80,7 @@ impl Status {
         Ok(staging)
     }
 
-    fn obtener_trackeados(&self) -> Result<Vec<String>, String> {
+    pub fn obtener_trackeados(&self) -> Result<Vec<String>, String> {
         let mut trackeados = Vec::new();
         let tree_head = match self.tree_commit_head {
             Some(ref tree) => tree,
@@ -90,6 +90,9 @@ impl Status {
             if tree_head.contiene_hijo_por_ubicacion(objeto.obtener_path()) {
                 if !tree_head
                     .contiene_misma_version_hijo(objeto.obtener_hash(), objeto.obtener_path())
+                    && !self.index.iter().any(|objeto_index| {
+                        objeto_index.objeto.obtener_hash() == objeto.obtener_hash()
+                    })
                 {
                     trackeados.push(format!("modificado: {}", objeto.obtener_path().display()));
                 }
@@ -98,10 +101,20 @@ impl Status {
         Ok(trackeados)
     }
 
-    fn obtener_hijos_untrackeados(tree: &Tree, tree_head: &Tree) -> Result<Vec<String>, String> {
+    fn obtener_hijos_untrackeados(
+        &self,
+        tree: &Tree,
+        tree_head: &Tree,
+    ) -> Result<Vec<String>, String> {
         let mut untrackeados = Vec::new();
-
         for objeto in tree.objetos.iter() {
+            if self
+                .index
+                .iter()
+                .any(|objeto_index| objeto_index.objeto.obtener_hash() == objeto.obtener_hash())
+            {
+                continue;
+            }
             match objeto {
                 Objeto::Blob(_) => {
                     if !tree_head.contiene_hijo_por_ubicacion(objeto.obtener_path()) {
@@ -113,7 +126,7 @@ impl Status {
                         untrackeados.push(format!("{}/", objeto.obtener_path().display()));
                     } else {
                         let mut untrackeados_hijos =
-                            Self::obtener_hijos_untrackeados(&tree, &tree_head)?;
+                            self.obtener_hijos_untrackeados(&tree, &tree_head)?;
                         untrackeados.append(&mut untrackeados_hijos);
                     }
                 }
@@ -128,6 +141,11 @@ impl Status {
             None => {
                 let mut untrackeados = Vec::new();
                 for objeto in self.tree_directorio_actual.objetos.iter() {
+                    if self.index.iter().any(|objeto_index| {
+                        objeto_index.objeto.obtener_hash() == objeto.obtener_hash()
+                    }) {
+                        continue;
+                    }
                     untrackeados.push(format!("{}", objeto.obtener_path().display()));
                 }
                 return Ok(untrackeados);
@@ -135,7 +153,7 @@ impl Status {
         };
 
         let untrackeados =
-            Self::obtener_hijos_untrackeados(&self.tree_directorio_actual, &tree_head)?;
+            self.obtener_hijos_untrackeados(&self.tree_directorio_actual, &tree_head)?;
 
         Ok(untrackeados)
     }
@@ -173,5 +191,171 @@ impl Status {
         }
         self.logger.log("Status terminado".to_string());
         Ok(mensaje)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::{io::Write, path::PathBuf, rc::Rc};
+
+    use crate::{
+        io::{self, rm_directorio},
+        tipos_de_dato::{
+            comandos::{add::Add, commit::Commit, init::Init, status::Status},
+            logger::Logger,
+        },
+    };
+
+    fn addear_archivos(args: Vec<String>, logger: Rc<Logger>) {
+        let mut add = Add::from(args, logger.clone()).unwrap();
+        add.ejecutar().unwrap();
+    }
+
+    fn addear_archivos_y_comittear(args: Vec<String>, logger: Rc<Logger>) {
+        let mut add = Add::from(args, logger.clone()).unwrap();
+        add.ejecutar().unwrap();
+        let commit =
+            Commit::from(&mut vec!["-m".to_string(), "mensaje".to_string()], logger).unwrap();
+        commit.ejecutar().unwrap();
+    }
+
+    fn limpiar_archivo_gir() {
+        rm_directorio(".gir").unwrap();
+        let logger = Rc::new(Logger::new(PathBuf::from("tmp/branch_init")).unwrap());
+        let init = Init {
+            path: "./.gir".to_string(),
+            logger,
+        };
+        init.ejecutar().unwrap();
+    }
+
+    fn crear_test_file() {
+        let mut file = std::fs::File::create("test_file.txt").unwrap();
+        let _ = file.write_all(b"test file");
+    }
+
+    fn modicar_test_file() {
+        let mut file = std::fs::OpenOptions::new()
+            .write(true)
+            .open("test_file.txt")
+            .unwrap();
+        let _ = file.write_all(b"test file modified");
+    }
+
+    fn nombre_esta_en_vector(vector: Vec<String>, nombre: &str) -> bool {
+        vector.iter().any(|x| x == nombre)
+    }
+
+    #[test]
+    fn test01_obtener_staging() {
+        limpiar_archivo_gir();
+        let logger = Rc::new(Logger::new(PathBuf::from("tmp/status_test01")).unwrap());
+        addear_archivos(
+            vec![
+                "add".to_string(),
+                "test_dir/muchos_objetos/archivo.txt".to_string(),
+            ],
+            logger.clone(),
+        );
+        let status = Status::from(logger.clone()).unwrap();
+        let staging = status.obtener_staging().unwrap();
+        assert_eq!(staging.len(), 1);
+        assert_eq!(
+            staging[0],
+            "nuevo archivo: test_dir/muchos_objetos/archivo.txt"
+        );
+    }
+
+    #[test]
+    fn test02_obtener_staging_con_archivos_multiples() {
+        limpiar_archivo_gir();
+        let logger = Rc::new(Logger::new(PathBuf::from("tmp/status_test02")).unwrap());
+        addear_archivos(
+            vec!["add".to_string(), "test_dir/".to_string()],
+            logger.clone(),
+        );
+
+        addear_archivos(
+            vec!["add".to_string(), "test_file.txt".to_string()],
+            logger.clone(),
+        );
+        let status = Status::from(logger.clone()).unwrap();
+        let staging = status.obtener_staging().unwrap();
+        assert_eq!(staging.len(), 4);
+        assert_eq!(
+            staging[0],
+            "nuevo archivo: test_dir/muchos_objetos/archivo.txt"
+        );
+        assert_eq!(
+            staging[1],
+            "nuevo archivo: test_dir/muchos_objetos/archivo_copy.txt"
+        );
+        assert_eq!(staging[2], "nuevo archivo: test_dir/objetos/archivo.txt");
+        assert_eq!(staging[3], "nuevo archivo: test_file.txt");
+    }
+
+    #[test]
+    fn test03_obtener_trackeados() {
+        limpiar_archivo_gir();
+        let logger = Rc::new(Logger::new(PathBuf::from("tmp/status_test03")).unwrap());
+        crear_test_file();
+        addear_archivos_y_comittear(vec!["test_file.txt".to_string()], logger.clone());
+        modicar_test_file();
+        let status = Status::from(logger).unwrap();
+        let trackeados = status.obtener_trackeados().unwrap();
+        assert_eq!(trackeados.len(), 1);
+        assert_eq!(trackeados[0], "modificado: test_file.txt");
+    }
+
+    #[test]
+    fn test04_obtener_trackeados_con_varios_archivos() {
+        limpiar_archivo_gir();
+        let logger = Rc::new(Logger::new(PathBuf::from("tmp/status_test04")).unwrap());
+        crear_test_file();
+        addear_archivos(vec!["test_file2.txt".to_string()], logger.clone());
+        addear_archivos_y_comittear(vec!["test_file.txt".to_string()], logger.clone());
+        modicar_test_file();
+        io::escribir_bytes("test_file2.txt", "nuevo_mensaje").unwrap();
+        let status = Status::from(logger).unwrap();
+        let trackeados = status.obtener_trackeados().unwrap();
+        let staging = status.obtener_staging().unwrap();
+        let untrackeados = status.obtener_untrackeados().unwrap();
+        io::escribir_bytes("test_file2.txt", "test file").unwrap();
+        assert_eq!(staging.len(), 0);
+        assert_eq!(untrackeados.len(), 9);
+        assert_eq!(trackeados.len(), 2);
+        assert_eq!(trackeados[0], "modificado: test_file.txt");
+        assert_eq!(trackeados[1], "modificado: test_file2.txt");
+    }
+
+    #[test]
+    fn test05_addear_archivo_lo_elimina_de_untrackeados() {
+        limpiar_archivo_gir();
+        let logger = Rc::new(Logger::new(PathBuf::from("tmp/status_test05")).unwrap());
+        addear_archivos(vec!["test_file.txt".to_string()], logger.clone());
+        let status = Status::from(logger).unwrap();
+        let untrackeados = status.obtener_untrackeados().unwrap();
+        assert_eq!(untrackeados.len(), 10);
+        assert_eq!(nombre_esta_en_vector(untrackeados, "test_file.txt"), false);
+    }
+
+    #[test]
+    fn test06_addear_y_luego_modificar_aparece_en_staging_y_trackeados() {
+        limpiar_archivo_gir();
+        let logger = Rc::new(Logger::new(PathBuf::from("tmp/status_test06")).unwrap());
+        crear_test_file();
+        addear_archivos_y_comittear(vec!["test_file.txt".to_string()], logger.clone());
+        modicar_test_file();
+        addear_archivos(vec!["test_file.txt".to_string()], logger.clone());
+        io::escribir_bytes("test_file.txt", "nuevo_mensaje").unwrap();
+        let status = Status::from(logger).unwrap();
+        let staging = status.obtener_staging().unwrap();
+        let trackeados = status.obtener_trackeados().unwrap();
+        let untrackeados = status.obtener_untrackeados().unwrap();
+        assert_eq!(staging.len(), 1);
+        assert_eq!(trackeados.len(), 1);
+        assert_eq!(staging[0], "modificado: test_file.txt");
+        assert_eq!(trackeados[0], "modificado: test_file.txt");
+        assert_eq!(nombre_esta_en_vector(untrackeados, "test_file.txt"), false);
     }
 }
