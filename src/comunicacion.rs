@@ -60,11 +60,28 @@ impl Comunicacion {
         Ok(linea.to_string())
     }
 
-    /// lee la primera parte de la linea actual, 4 bytes en hexadecimal indican el largo del stream
-    fn leer_primeros_cuatro_bytes(&mut self) -> Result<[u8; 4], ErrorDeComunicacion> {
-        let mut tamanio_bytes = [0; 4];
-        self.flujo.read_exact(&mut tamanio_bytes)?;
-        Ok(tamanio_bytes)
+    fn leer_del_flujo_tantos_bytes(&mut self, cantida_bytes_a_leer: u32) -> Result<Vec<u8>, String> {
+        let mut data = vec![0; cantida_bytes_a_leer as usize];
+        self.flujo.read_exact(&mut data).map_err(|e| {
+            format!(
+                "Fallo en obtener la linea al leer los priemeros 4 bytes.\n{}\n",
+                e
+            )
+        })?;
+        Ok(data)
+    }
+    
+    fn leer_del_flujo_tantos_bytes_en_string(&mut self, cantida_bytes_a_leer: u32) -> Result<String, String> {
+        let data = self.leer_del_flujo_tantos_bytes(cantida_bytes_a_leer)?;
+        let contendio = str::from_utf8(&data).map_err(|e| {
+            format!(
+                "Fallo en castear el contenido a String en leer del flujo.\n{}\n",
+                e
+            )
+        })?;
+
+        Ok(contendio.to_string())
+
     }
 
     ///lee la primera parte de la linea actual, obtiene el largo de la linea actual 
@@ -72,15 +89,37 @@ impl Comunicacion {
     /// # Resultado:
     /// -Devuelve el largo de la linea actual (ojo !!contando todavia los primeros 4 bytes 
     /// de la linea donde dice el largo) en u32 
-    fn obtener_largo_de_la_linea(&mut self) -> Result<u32,ErrorDeComunicacion> {
-        let tamanio_bytes = self.leer_primeros_cuatro_bytes()?;
-        let tamanio_u32 = u32::from_be_bytes(tamanio_bytes);
+    fn obtener_largo_de_la_linea(&mut self) -> Result<u32, String> {
+        let bytes_tamanio_linea = 4;
+        let tamanio = self.leer_del_flujo_tantos_bytes(bytes_tamanio_linea)?;
+        let tamanio_u32 = u32::from_be_bytes([tamanio[0], tamanio[1], tamanio[2], tamanio[3]]);
 
         Ok(tamanio_u32)
     }
     
-    /// obtiene lineas en formato PKT
-    pub fn obtener_lineas(&mut self) -> Result<Vec<String>, ErrorDeComunicacion> {
+
+    /// lee el contendio de la linea actual, es decir, lee el resto del flujo que no incluye el
+    /// largo 
+    /// 
+    /// # Argumentos
+    /// - tamanio: Es el largo de la linea actual(contando los primeros 4 bytes del largo y el contedio)
+    /// 
+    /// # Resultado
+    /// - Devuelve el contendio de la linea actual
+    fn obtener_contenido_linea(&mut self, tamanio: u32) -> Result<String, String> {
+        let tamanio_sin_largo = tamanio - 4;
+        let linea = self.leer_del_flujo_tantos_bytes_en_string(tamanio_sin_largo)?;
+        Ok(linea)
+    }
+
+    
+    /// Obtiene todo el contendio envio por el servidor hasta un NAK o done() sacando 
+    /// los bytes referentes al contendio),obtiene lineas en formato PKT.
+    /// 
+    /// # Resultado 
+    /// - Devuelve cada linea envia por el servidor (sin el largo)
+    /// 
+    pub fn obtener_lineas(&mut self) -> Result<Vec<String>, String> {
         let mut lineas: Vec<String> = Vec::new();
         loop {
            let tamanio = self.obtener_largo_de_la_linea()?;
@@ -95,21 +134,6 @@ impl Comunicacion {
             }
         }
         Ok(lineas)
-    }
-
-    /// lee el contendio de la linea actual, es decir, lee el resto del flujo que no incluye el
-    /// largo 
-    /// 
-    /// # Argumentos
-    /// - tamanio: Es el largo de la linea actual(contando los primeros 4 bytes del largo y el contedio)
-    /// 
-    /// # Resultado
-    /// - Devuelve el contendio de la linea actual
-    fn obtener_contenido_linea(&mut self, tamanio: u32) -> Result<String, ErrorDeComunicacion> {
-        let mut data = vec![0; (tamanio - 4) as usize];
-        self.flujo.read_exact(&mut data)?;
-        let linea = str::from_utf8(&data)?;
-        Ok(linea.to_string())
     }
 
     pub fn responder(&mut self, lineas: Vec<String>) -> Result<(), ErrorDeComunicacion> {
