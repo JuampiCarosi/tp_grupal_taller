@@ -18,20 +18,17 @@ impl Clone {
     }
 
     pub fn ejecutar(&mut self) -> Result<String, String> {
-        println!("Se ejecutó el comando clone");
 
         let server_address = "127.0.0.1:9418"; // Cambia la dirección IP si es necesario
-
-        let mut client = TcpStream::connect(server_address).unwrap();
-        let mut comunicacion = Comunicacion::new(client.try_clone().unwrap());
+        let mut comunicacion = Comunicacion::new_desde_direccion_servidor(server_address)?;
 
         // si es un push, tengo que calcular los commits de diferencia entre el cliente y el server, y mandarlos como packfiles.
         // hay una funcion que hace el calculo 
         // obtener_listas_de_commits
         let request_data = "git-upload-pack /.gir/\0host=example.com\0\0version=1\0"; //en donde dice /.git/ va la dir del repo
         let request_data_con_largo_hex = io::obtener_linea_con_largo_hex(request_data);
-
-        client.write_all(request_data_con_largo_hex.as_bytes()).unwrap();
+        comunicacion.enviar(&request_data_con_largo_hex)?;
+        
         let refs_recibidas = comunicacion.obtener_lineas().unwrap();
         
         for referencia in &refs_recibidas { 
