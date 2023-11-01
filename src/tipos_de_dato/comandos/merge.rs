@@ -22,19 +22,18 @@ pub struct Merge {
     pub branch_a_mergear: String,
 }
 
+enum LadoConflicto {
+    Head,
+    Entrante,
+}
 #[derive(Debug, Clone)]
+
 enum DiffType {
     Added(String),
     Removed(String),
     Unchanged(String),
 }
-#[derive(Debug, Clone)]
-enum CompleteDiffType {
-    Added(String),
-    Removed(String),
-    Unchanged(String),
-    Conflict(DiffType, DiffType),
-}
+type Conflicto = Vec<(DiffType, LadoConflicto)>;
 
 type DiffGrid = Vec<Vec<usize>>;
 
@@ -95,7 +94,7 @@ impl Merge {
     fn obtener_diffs_entre_dos_objetos(
         hash_objeto1: String,
         hash_objeto2: String,
-    ) -> Result<Vec<DiffType>, String> {
+    ) -> Result<Vec<(usize, DiffType)>, String> {
         let (_, contenido1) = cat_file::obtener_contenido_objeto(hash_objeto1)?;
         let (_, contenido2) = cat_file::obtener_contenido_objeto(hash_objeto2)?;
         let contenido1_splitteado = contenido1.split('\n').collect::<Vec<&str>>();
@@ -124,28 +123,28 @@ impl Merge {
         matriz_lcs
     }
     //en texto 1 debe ir la base
-    fn obtener_diff(texto1: Vec<&str>, texto2: Vec<&str>) -> Vec<DiffType> {
+    fn obtener_diff(texto1: Vec<&str>, texto2: Vec<&str>) -> Vec<(usize, DiffType)> {
         let diff_grid = Self::computar_lcs_grid(&texto1, &texto2);
         let mut i = texto1.len();
         let mut j = texto2.len();
-        let mut resultado_diff: Vec<DiffType> = Vec::new();
+        let mut resultado_diff: Vec<(usize, DiffType)> = Vec::new();
 
         while i != 0 || j != 0 {
             if i == 0 {
-                resultado_diff.push(DiffType::Added(texto2[j - 1].trim().to_string()));
+                resultado_diff.push((i, DiffType::Added(texto2[j - 1].trim().to_string())));
                 j -= 1;
             } else if j == 0 {
-                resultado_diff.push(DiffType::Removed(texto1[i - 1].trim().to_string()));
+                resultado_diff.push((i, DiffType::Removed(texto1[i - 1].trim().to_string())));
                 i -= 1;
             } else if texto1[i - 1] == texto2[j - 1] {
-                resultado_diff.push(DiffType::Unchanged(texto1[i - 1].trim().to_string()));
+                resultado_diff.push((i, DiffType::Unchanged(texto1[i - 1].trim().to_string())));
                 i -= 1;
                 j -= 1;
             } else if diff_grid[i - 1][j] <= diff_grid[i][j - 1] {
-                resultado_diff.push(DiffType::Added(texto2[j - 1].trim().to_string()));
+                resultado_diff.push((i, DiffType::Added(texto2[j - 1].trim().to_string())));
                 j -= 1;
             } else {
-                resultado_diff.push(DiffType::Removed(texto1[i - 1].trim().to_string()));
+                resultado_diff.push((i, DiffType::Removed(texto1[i - 1].trim().to_string())));
                 i -= 1;
             }
         }
@@ -153,142 +152,45 @@ impl Merge {
         resultado_diff
     }
 
-    fn mergear_archivos(diff_actual: Vec<DiffType>, diff_a_mergear: Vec<DiffType>) -> String {
+    fn no_hay_conflicto(conflicto: &Vec<(DiffType, LadoConflicto)>) -> bool {
+        for diff in conflicto {
+            if let DiffType::Unchanged(_) = diff.0 {
+                continue;
+            } else {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    fn mergear_archivos(
+        diff_actual: Vec<(usize, DiffType)>,
+        diff_a_mergear: Vec<(usize, DiffType)>,
+    ) -> String {
         println!("{:?}", diff_actual);
         println!("{:?}", diff_a_mergear);
-        let mut i = 0;
-        let mut j = 0;
-        let mut conflictos: Vec<(usize, usize)> = Vec::new();
+
+        let mut conflictos: Vec<Conflicto> = Vec::new();
+
+        for diff in diff_actual {
+            if diff.0 - 1 >= conflictos.len() {
+                conflictos.push(Vec::new());
+            }
+            conflictos[diff.0 - 1].push((diff.1, LadoConflicto::Head));
+        }
+
+        for diff in diff_a_mergear {
+            if diff.0 - 1 > conflictos.len() {
+                conflictos.push(Vec::new());
+            }
+            conflictos[diff.0 - 1].push((diff.1, LadoConflicto::Entrante));
+        }
+
         let mut contenido_final = String::new();
-        let mut diff_total: Vec<CompleteDiffType> = Vec::new();
-        while i < diff_actual.len() && j < diff_a_mergear.len() {
-            match (diff_actual[i].clone(), diff_a_mergear[j].clone()) {
-                (DiffType::Unchanged(linea1), DiffType::Unchanged(_)) => {
-                    i += 1;
-                    j += 1;
-                    contenido_final.push_str(&format!("{}\n", &linea1));
-                    diff_total.push(CompleteDiffType::Unchanged(linea1));
-                }
-                (DiffType::Unchanged(_), DiffType::Added(linea2)) => {
-                    j += 1;
-                    contenido_final.push_str(&format!("{}\n", &linea2));
-                    diff_total.push(CompleteDiffType::Added(linea2));
-                }
-                (DiffType::Unchanged(_), DiffType::Removed(linea2)) => {
-                    i += 1;
-                    j += 1;
-                    diff_total.push(CompleteDiffType::Removed(linea2));
-                }
-                (DiffType::Added(linea1), DiffType::Unchanged(_)) => {
-                    i += 1;
-                    contenido_final.push_str(&format!("{}\n", &linea1));
-                    diff_total.push(CompleteDiffType::Added(linea1));
-                }
-                (DiffType::Removed(linea1), DiffType::Unchanged(_)) => {
-                    i += 1;
-                    j += 1;
-                    diff_total.push(CompleteDiffType::Removed(linea1));
-                }
-                (DiffType::Added(linea1), DiffType::Added(linea2)) => {
-                    i += 1;
-                    j += 1;
-                    if linea1 != linea2 {
-                        conflictos.push((i, j));
-                        contenido_final.push_str("<<<<<<<<<<<<<\n");
-                        contenido_final.push_str(&format!("{}\n", &linea1));
-                        contenido_final.push_str("===============\n");
-                        contenido_final.push_str(&format!("{}\n", &linea2));
-                        contenido_final.push_str(">>>>>>>>>>>>>\n");
-                        diff_total.push(CompleteDiffType::Conflict(
-                            DiffType::Added(linea1),
-                            DiffType::Added(linea2),
-                        ))
-                    } else {
-                        contenido_final.push_str(format!("{}\n", &linea1).as_str());
-                        diff_total.push(CompleteDiffType::Added(linea1));
-                    }
-                }
-                (DiffType::Added(linea1), DiffType::Removed(linea2)) => {
-                    i += 1;
-                    j += 1;
-                    conflictos.push((i, j));
-                    contenido_final.push_str("<<<<<<<<<<<<<\n");
-                    contenido_final.push_str(&format!("{}\n", &linea1));
-                    contenido_final.push_str("===============\n");
-                    contenido_final.push_str(">>>>>>>>>>>>>\n");
-                    diff_total.push(CompleteDiffType::Conflict(
-                        DiffType::Added(linea1),
-                        DiffType::Removed(linea2),
-                    ))
-                }
-                (DiffType::Removed(linea1), DiffType::Added(linea2)) => {
-                    j += 1;
-                    i += 1;
-                    conflictos.push((i, j));
-                    contenido_final.push_str("<<<<<<<<<<<<<\n");
-                    contenido_final.push_str("===============\n");
-                    contenido_final.push_str(&format!("{}\n", &linea2));
-                    contenido_final.push_str(">>>>>>>>>>>>>\n");
-                    diff_total.push(CompleteDiffType::Conflict(
-                        DiffType::Removed(linea1),
-                        DiffType::Added(linea2),
-                    ))
-                }
-                (DiffType::Removed(linea1), DiffType::Removed(linea2)) => {
-                    i += 1;
-                    j += 1;
-                    if linea1 != linea2 {
-                        conflictos.push((i, j));
-                        contenido_final.push_str("<<<<<<<<<<<<<\n");
-                        contenido_final.push_str(&format!("{}\n", &linea1));
-                        contenido_final.push_str("===============\n");
-                        contenido_final.push_str(&format!("{}\n", &linea2));
-                        contenido_final.push_str(">>>>>>>>>>>>>\n");
-                        diff_total.push(CompleteDiffType::Conflict(
-                            DiffType::Removed(linea1),
-                            DiffType::Removed(linea2),
-                        ))
-                    }
-                }
-            }
-        }
-        while i < diff_actual.len() {
-            match diff_actual[i].clone() {
-                DiffType::Unchanged(linea1) => {
-                    i += 1;
-                    contenido_final.push_str(&format!("{}\n", &linea1));
-                    diff_total.push(CompleteDiffType::Unchanged(linea1));
-                }
-                DiffType::Added(linea1) => {
-                    i += 1;
-                    contenido_final.push_str(&format!("{}\n", &linea1));
-                    diff_total.push(CompleteDiffType::Added(linea1));
-                }
-                DiffType::Removed(linea1) => {
-                    i += 1;
-                    diff_total.push(CompleteDiffType::Removed(linea1));
-                }
-            }
-        }
-        while j < diff_a_mergear.len() {
-            match diff_a_mergear[j].clone() {
-                DiffType::Unchanged(linea2) => {
-                    j += 1;
-                    contenido_final.push_str(&format!("{}\n", &linea2));
-                    diff_total.push(CompleteDiffType::Unchanged(linea2));
-                }
-                DiffType::Added(linea2) => {
-                    j += 1;
-                    contenido_final.push_str(&format!("{}\n", &linea2));
-                    diff_total.push(CompleteDiffType::Added(linea2));
-                }
-                DiffType::Removed(linea2) => {
-                    j += 1;
-                    diff_total.push(CompleteDiffType::Removed(linea2));
-                }
-            }
-        }
-        println!("{:?}", diff_total);
+
+        for conflicto in conflictos {}
+
         contenido_final
     }
 
