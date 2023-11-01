@@ -16,19 +16,22 @@ impl Fetch {
     }
 
     pub fn ejecutar(&mut self) -> Result<String, String> {
-        
         let direccion_servidor = "127.0.0.1:9418"; // Cambia la dirección IP si es necesario
-        //se inicia la comunicacon con servidor 
+                                                   //se inicia la comunicacon con servidor
         let mut comunicacion = Comunicacion::new_desde_direccion_servidor(direccion_servidor)?;
 
-        //Iniciar la comunicacion con el servidor 
+        //Iniciar la comunicacion con el servidor
         // obtener_listas_de_commits
         let request_data = "git-upload-pack /.gir/\0host=example.com\0\0version=1\0"; //en donde dice /.git/ va la dir del repo
         let request_data_con_largo_hex = io::obtener_linea_con_largo_hex(request_data);
         comunicacion.enviar(&request_data_con_largo_hex)?;
-        
 
-        let mut refs_recibidas = comunicacion.obtener_lineas().unwrap();
+        let mut refs_recibidas = comunicacion.obtener_lineas().map_err(|e| {
+            format!(
+                "Fallo en la lectura de los contendios del servidor.\n{:?}\n",
+                e
+            )
+        })?;
         let first_ref = refs_recibidas.remove(0);
         escribir_en_remote_origin_las_referencias(&refs_recibidas);
 
