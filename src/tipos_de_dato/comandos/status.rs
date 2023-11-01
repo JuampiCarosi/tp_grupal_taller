@@ -46,7 +46,7 @@ impl Status {
         })
     }
 
-    fn obtener_staging(&self) -> Result<Vec<String>, String> {
+    pub fn obtener_staging(&self) -> Result<Vec<String>, String> {
         let mut staging = Vec::new();
         for objeto_index in &self.index {
             match self.tree_commit_head {
@@ -80,7 +80,7 @@ impl Status {
         Ok(staging)
     }
 
-    fn obtener_trackeados(&self) -> Result<Vec<String>, String> {
+    pub fn obtener_trackeados(&self) -> Result<Vec<String>, String> {
         let mut trackeados = Vec::new();
         let tree_head = match self.tree_commit_head {
             Some(ref tree) => tree,
@@ -90,6 +90,9 @@ impl Status {
             if tree_head.contiene_hijo_por_ubicacion(objeto.obtener_path()) {
                 if !tree_head
                     .contiene_misma_version_hijo(objeto.obtener_hash(), objeto.obtener_path())
+                    && !self.index.iter().any(|objeto_index| {
+                        objeto_index.objeto.obtener_hash() == objeto.obtener_hash()
+                    })
                 {
                     trackeados.push(format!("modificado: {}", objeto.obtener_path().display()));
                 }

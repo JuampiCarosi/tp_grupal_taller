@@ -36,7 +36,7 @@ fn main() -> Result<(), String> {
     }
 
     if args[1] == "gui" {
-        gir::gui::ejecutar();
+        gir::gui::ejecutar(logger.clone());
         return Ok(());
     }
 
