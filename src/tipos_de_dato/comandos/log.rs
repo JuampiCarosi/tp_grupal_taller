@@ -73,6 +73,21 @@ impl Log {
         siguiente_padre.to_string()
     }
 
+    fn calcular_date_desde_linea(tiempo: &str, offset: &str) -> Result<String, String> {
+        let timestamp = match tiempo.parse::<i64>() {
+            Ok(timestamp) => timestamp,
+            Err(_) => return Err("No se pudo obtener el timestamp".to_string()),
+        };
+        let (horas, minutos) = offset.split_at(3);
+        let offset_horas = horas[0..3].parse::<i32>().unwrap_or_else(|_| -3);
+        let offset_minutos = minutos.parse::<i32>().unwrap_or_else(|_| 0);
+        Ok(timestamp_archivo_log(
+            timestamp,
+            offset_horas,
+            offset_minutos,
+        )?)
+    }
+
     fn armar_contenido_log(
         contenido: &str,
         branch_actual: &str,
@@ -82,17 +97,19 @@ impl Log {
         let lineas_contenido = contenido_splitteado_del_header[1]
             .split('\n')
             .collect::<Vec<&str>>();
-        let nombre_autor = lineas_contenido[2].split(' ').collect::<Vec<&str>>()[1];
-        let mail_autor = lineas_contenido[2].split(' ').collect::<Vec<&str>>()[2];
-        let timestamp =
-            match lineas_contenido[2].split(' ').collect::<Vec<&str>>()[3].parse::<i64>() {
-                Ok(timestamp) => timestamp,
-                Err(_) => return Err("No se pudo obtener el timestamp".to_string()),
-            };
-        let date = timestamp_archivo_log(timestamp, -03, 00)?;
+        let linea_autor_splitteada = lineas_contenido[2].split(' ').collect::<Vec<&str>>();
+        let nombre_autor = linea_autor_splitteada[1];
+        let mail_autor = linea_autor_splitteada[2];
+        let date =
+            Self::calcular_date_desde_linea(linea_autor_splitteada[3], linea_autor_splitteada[4])?;
+        let mensaje = lineas_contenido[5];
+        let mut branch_format = format!("({})", branch_actual);
+        if branch_actual == "" {
+            branch_format = "".to_string();
+        }
         Ok(format!(
-            "commit {} ({})\nAutor: {} {}\nDate: {}\n",
-            hash_commit, branch_actual, nombre_autor, mail_autor, date
+            "commit {} {}\nAutor: {} {}\nDate: {}\n\n     {}\n",
+            hash_commit, branch_format, nombre_autor, mail_autor, date, mensaje
         ))
     }
 
@@ -102,11 +119,17 @@ impl Log {
         if hash_commit.is_empty() {
             return Err(format!("La rama {} no tiene commits", self.branch));
         }
+        let mut i = 1;
         loop {
             let contenido = utilidades_de_compresion::descomprimir_objeto(hash_commit.clone())?;
             let siguiente_padre = Self::conseguir_padre_desde_contenido_commit(&contenido);
-            let contenido_a_mostrar =
-                Self::armar_contenido_log(&contenido, &self.branch, hash_commit)?;
+            let contenido_a_mostrar = match i {
+                1 => {
+                    i -= 1;
+                    Self::armar_contenido_log(&contenido, &self.branch, hash_commit.clone())?
+                }
+                _ => Self::armar_contenido_log(&contenido, "", hash_commit.clone())?,
+            };
             println!("{}", contenido_a_mostrar);
             if siguiente_padre.is_empty() {
                 break;
@@ -167,7 +190,7 @@ mod test {
         let hash_commit = "1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p7q8r9s0t".to_string();
         let contenido_log =
             Log::armar_contenido_log(contenido, branch_actual, hash_commit).unwrap();
-        let contenido_log_esperado = "commit 1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p7q8r9s0t (master)\nAutor: nombre_apellido <mail>\nDate: Fri Feb 13 20:31:30 2009 -0300\n";
+        let contenido_log_esperado = "commit 1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p7q8r9s0t (master)\nAutor: nombre_apellido <mail>\nDate: Fri Feb 13 20:31:30 2009 -0300\n\n     Mensaje del commit\n";
         assert_eq!(contenido_log, contenido_log_esperado);
     }
 }

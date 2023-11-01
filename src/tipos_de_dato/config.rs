@@ -2,43 +2,54 @@ use std::path::PathBuf;
 
 use crate::io::{escribir_bytes, leer_a_string};
 
-struct RemoteInfo {
-    nombre: String,
-    url: String,
+#[derive(Debug, Clone)]
+pub struct RemoteInfo {
+    pub nombre: String,
+    pub url: String,
 }
 
-struct BranchInfo {
+#[derive(Debug, Clone)]
+
+pub struct BranchInfo {
     nombre: String,
     remote: String,
     merge: String,
 }
 
 pub struct Config {
-    remotes: Vec<RemoteInfo>,
-    branches: Vec<BranchInfo>,
+    pub remotes: Vec<RemoteInfo>,
+    pub branches: Vec<BranchInfo>,
 }
 
 impl Config {
     pub fn leer_config() -> Result<Config, String> {
-        let contenido = leer_a_string("./gir/config")?;
+        let contenido = leer_a_string(".gir/config")?;
         let contenido_spliteado = contenido.split("[").collect::<Vec<&str>>();
         let mut remotes: Vec<RemoteInfo> = Vec::new();
         let mut branches: Vec<BranchInfo> = Vec::new();
 
+        if contenido.is_empty() {
+            return Ok(Config { remotes, branches });
+        }
+
         for contenido_raw in contenido_spliteado {
+            if contenido_raw.is_empty() {
+                continue;
+            }
+
             let contenido = contenido_raw.split("]").collect::<Vec<&str>>();
             let header = contenido[0].split_whitespace().collect::<Vec<&str>>();
             match header[0] {
                 "remote" => {
                     let informacion_remote = contenido[1].split(" = ").collect::<Vec<&str>>();
 
-                    if informacion_remote[0] != "url" {
+                    if informacion_remote[0].trim() != "url" {
                         return Err(format!("Error en el archivo de configuracion"));
                     }
 
                     let remote = RemoteInfo {
                         nombre: header[1].replace("\"", "").to_string(),
-                        url: informacion_remote[1].to_string(),
+                        url: informacion_remote[1].trim().to_string(),
                     };
                     remotes.push(remote);
                 }
@@ -89,7 +100,7 @@ impl Config {
             contenido.push_str(&format!("   merge = {}\n", branch.merge));
         }
 
-        escribir_bytes(PathBuf::from("~/.girconfig"), contenido)?;
+        escribir_bytes(PathBuf::from(".gir/config"), contenido)?;
 
         Ok(())
     }
@@ -116,8 +127,29 @@ mod tests {
 
         config.guardar_config().unwrap();
 
-        let file = io::leer_a_string("~/.girconfig").unwrap();
+        let file = io::leer_a_string(".gir/config").unwrap();
 
         assert_eq!(file, "[remote \"origin\"]\n   url = localhost:3000\n");
+    }
+
+    #[test]
+
+    fn test02_leer_config() {
+        let remote = RemoteInfo {
+            nombre: "origin".to_string(),
+            url: "localhost:3000".to_string(),
+        };
+
+        let config = Config {
+            remotes: vec![remote],
+            branches: vec![],
+        };
+
+        config.guardar_config().unwrap();
+
+        let config = Config::leer_config().unwrap();
+
+        assert_eq!(config.remotes[0].nombre, "origin");
+        assert_eq!(config.remotes[0].url, "localhost:3000");
     }
 }
