@@ -7,7 +7,7 @@ use crate::tipos_de_dato::{
     logger::Logger,
 };
 
-use super::log_seleccionado;
+use super::{log_list, log_seleccionado};
 
 pub fn render(builder: &gtk::Builder, window: &gtk::Window) {
     let select: gtk::ComboBoxText = builder.object("select-branch").unwrap();
@@ -39,6 +39,7 @@ pub fn render(builder: &gtk::Builder, window: &gtk::Window) {
             None => return,
         };
 
+        log_list::render(&builder_clone, active.to_string());
         log_seleccionado::render(&builder_clone, None);
         let _ = Checkout::from(vec![active.to_string()], logger)
             .unwrap()

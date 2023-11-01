@@ -2,6 +2,7 @@ mod branch_selector;
 mod log_list;
 mod log_seleccionado;
 mod new_branch_dialog;
+mod new_commit_dialog;
 mod staging_area;
 
 use std::rc::Rc;
@@ -29,6 +30,7 @@ pub fn ejecutar(logger: Rc<Logger>) {
     log_list::render(&builder, branch_actual);
     log_seleccionado::render(&builder, None);
     staging_area::render(&builder, logger.clone(), &window);
+    new_commit_dialog::render(&builder, &window, logger.clone());
 
     window.show_all();
 
