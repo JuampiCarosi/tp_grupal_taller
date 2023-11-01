@@ -66,7 +66,6 @@ impl Commit {
             "" => write_tree::crear_arbol_commit(None)?,
             _ => write_tree::crear_arbol_commit(Some(hash_padre_commit.clone()))?,
         };
-        println!("HOLAA");
         let (nombre, mail) = Self::conseguir_nombre_y_mail_del_config()?;
         let linea_autor = format!("{} <{}>", nombre, mail);
         let timestamp = armar_timestamp_commit()?;

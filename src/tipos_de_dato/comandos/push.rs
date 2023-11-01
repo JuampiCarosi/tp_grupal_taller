@@ -9,8 +9,8 @@ use crate::utilidades_de_compresion;
 use crate::tipos_de_dato::comandos::log::Log;
 use std::collections::HashMap;
 use std::collections::HashSet;
-
-
+use crate::tipos_de_dato::comandos::write_tree;
+use crate::tipos_de_dato::objetos::tree::Tree;
 // idea: Key -> (String, String) , primera entrada la ref que tiene el cliente, segunda la que tiene el sv.
 pub struct Push { 
     hash_refs: HashMap<String, (String, String)>
@@ -72,9 +72,10 @@ impl Push {
         for (key, value) in &self.hash_refs {
             actualizaciones.push(io::obtener_linea_con_largo_hex(&format!("{} {} {}\n", value.1, value.0, key))); // viejo (el del sv), nuevo (cliente), ref
             // checkear que no existan los objetos antes de appendear
-            objetos_a_enviar.extend(obtener_listas_de_commits(key, &value.1).unwrap());
-        }
-        println!("actualizaciones: {:?}", actualizaciones);
+
+            objetos_a_enviar.extend(obtener_commits_y_objetos_asociados(key, &value.1).unwrap());
+        }   
+        println!("objetos: {:?}", objetos_a_enviar);
         if !actualizaciones.is_empty(){
             comunicacion.responder(actualizaciones).unwrap();
             comunicacion.responder_con_bytes(Packfile::new().obtener_pack_con_archivos(objetos_a_enviar.into_iter().collect(), "./.gir/objects")).unwrap();            
@@ -89,17 +90,25 @@ impl Push {
   
 }
 
-fn obtener_listas_de_commits(referencia: &String, commit_limite: &String) -> Result<Vec<String>, String> {
+fn obtener_commits_y_objetos_asociados(referencia: &String, commit_limite: &String) -> Result<HashSet<String>, String> {
     let ruta = format!(".gir/{}", referencia);
     let mut ultimo_commit = leer_a_string(Path::new(&ruta))?;
     if ultimo_commit.is_empty() {
-        return Ok(Vec::new());
+        return Ok(HashSet::new());
     }   
-    let mut historial_commits: Vec<String> = Vec::new();
+    let mut historial_commits: HashSet<String> = HashSet::new();
+   
     loop {
+        // obtengo el hash del tree que guarda el commit, le pido los objetos y los guardo en el set
+        let hash_tree = write_tree::conseguir_arbol_padre_from_ult_commit_de_dir(&ultimo_commit, "./.gir/objects".to_string()); 
+        println!("Consiguiendo los objetos para el hash tree: {}", hash_tree);
+        let tree = Tree::from_hash(hash_tree.clone(), PathBuf::from("./.gir/objects"))?;
+        historial_commits.insert(hash_tree);
+        historial_commits.extend(tree.objetos.iter().map(|objeto| objeto.obtener_hash()));
+        // obtengo el padre del commit 
         let contenido = utilidades_de_compresion::descomprimir_objeto(ultimo_commit.clone(), String::from("./.gir/objects"))?;
         let siguiente_padre = Log::conseguir_padre_desde_contenido_commit(&contenido);
-        historial_commits.push(ultimo_commit.clone());
+        historial_commits.insert(ultimo_commit.clone());
         if siguiente_padre.is_empty() || siguiente_padre == commit_limite.to_string() {
             break;
         }

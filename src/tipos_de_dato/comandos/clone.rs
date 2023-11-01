@@ -67,7 +67,7 @@ impl Clone {
         io::escribir_bytes(PathBuf::from(head_dir), b"refs/heads/master").unwrap();
         // println!("ref_head: {:?}", ref_head);
         
-        let tree_hash = write_tree::conseguir_arbol_padre_from_ult_commit_de_dir(ref_head.clone(), String::from("./.gir/objects/"));
+        let tree_hash = write_tree::conseguir_arbol_padre_from_ult_commit_de_dir(&ref_head, String::from("./.gir/objects/"));
         println!("tree_hash: {:?}", tree_hash);
 
         let tree: Tree = Tree::from_hash(tree_hash, PathBuf::from(env!("CARGO_MANIFEST_DIR").to_string() + "/.gir/objects")).unwrap();

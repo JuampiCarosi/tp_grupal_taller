@@ -253,8 +253,8 @@ where
 pub fn leer_bytes<P>(archivo: P) -> Result<Vec<u8>, String>
 where
     P: AsRef<Path>,
-{
-    println!("archivo: {:?}", archivo.as_ref().display());
+{       
+    println!("archivo: {}", archivo.as_ref().display());
     match fs::read(&archivo) {
         Ok(contenido) => Ok(contenido),
         Err(_) => Err(format!(
