@@ -352,6 +352,7 @@ mod tests {
         let staging = status.obtener_staging().unwrap();
         let trackeados = status.obtener_trackeados().unwrap();
         let untrackeados = status.obtener_untrackeados().unwrap();
+        modicar_test_file();
         assert_eq!(staging.len(), 1);
         assert_eq!(trackeados.len(), 1);
         assert_eq!(staging[0], "modificado: test_file.txt");
