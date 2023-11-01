@@ -346,11 +346,12 @@ pub fn obtener_ack(nombres_archivos: Vec<String>, dir: String) -> Vec<String>{
     ack
 }
 
-pub fn escribir_referencia(referencia: &String, dir: PathBuf) {
+
+// las referencias vienen en formato "hash referencia"
+pub fn escribir_referencia(referencia: &str, dir: PathBuf) {
     let referencia_y_contenido = referencia.split_whitespace().collect::<Vec<&str>>();
     if !&referencia_y_contenido[1].contains("HEAD"){
         let dir = dir.join(referencia_y_contenido[1]);
-        // let dir = PathBuf::from("./.gir/".to_string() + referencia_y_contenido[1]);
         println!("Voy a escribir en: {:?}", dir);
         escribir_bytes(dir, referencia_y_contenido[0]).unwrap();
 }   

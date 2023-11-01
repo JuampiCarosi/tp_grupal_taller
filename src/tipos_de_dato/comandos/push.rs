@@ -49,7 +49,7 @@ impl Push {
         // 4) en algun lugar hay que checkear que no se modifica el repositorio mientras ocurre esta negociacion, en cuyo caso se debe abortar el push
     
         // voy a suponer el caso base, que es cuando hay que mandar actualizaciones al servidor
-        for referencia in refs_recibidas {
+        for referencia in &refs_recibidas {
             let obj_id = referencia.split(' ').collect::<Vec<&str>>()[0];
             let referencia = referencia.split(' ').collect::<Vec<&str>>()[1];
             match self.hash_refs.get_mut(referencia) { 
@@ -67,17 +67,23 @@ impl Push {
 
             }
         }
+        println!("hash refs: {:?}", self.hash_refs);
         // falta contemplar creado y borrado
         // cuando es update se manda viejo, nuevo, ref
         let mut actualizaciones = Vec::new();
+        let mut objetos_a_enviar: Vec<String> = Vec::new();
         for (key, value) in &self.hash_refs {
-            println!("{} / {}", key, value.0);
             actualizaciones.push(io::obtener_linea_con_largo_hex(&format!("{} {} {}\n", value.1, value.0, key))); // viejo (el del sv), nuevo (cliente), ref
+            objetos_a_enviar.append(&mut obtener_listas_de_commits(key, &value.1).unwrap());
         }
-        comunicacion.responder(actualizaciones).unwrap();
-        // actualizaciones.push(String::from("0000"));
+        println!("objetos a enviar: {:?}", objetos_a_enviar);
+        if !actualizaciones.is_empty(){
+            comunicacion.responder(actualizaciones).unwrap();
+            
 
-        println!("hash: {:?}", self.hash_refs);
+        } else {
+            //error 
+        }
         // let archivos_faltantes = obtener_archivos_faltantes(refs_recibidas, "./.gir/refs".to_string());
 
         // println!("Refs recibidas: {:?}", refs_recibidas);
@@ -86,19 +92,18 @@ impl Push {
   
 }
 
-fn obtener_listas_de_commits(branch: &String) -> Result<Vec<String>, String> {
-    let ruta = format!(".gir/refs/heads/{}", branch);
+fn obtener_listas_de_commits(referencia: &String, commit_limite: &String) -> Result<Vec<String>, String> {
+    let ruta = format!(".gir/{}", referencia);
     let mut ultimo_commit = leer_a_string(Path::new(&ruta))?;
-
     if ultimo_commit.is_empty() {
         return Ok(Vec::new());
     }   
     let mut historial_commits: Vec<String> = Vec::new();
     loop {
-        let contenido = utilidades_de_compresion::descomprimir_objeto(ultimo_commit.clone(), ruta.clone())?;
+        let contenido = utilidades_de_compresion::descomprimir_objeto(ultimo_commit.clone(), String::from("./.gir/objects/"))?;
         let siguiente_padre = Log::conseguir_padre_desde_contenido_commit(&contenido);
         historial_commits.push(ultimo_commit.clone());
-        if siguiente_padre.is_empty() {
+        if siguiente_padre.is_empty() || siguiente_padre == commit_limite.to_string() {
             break;
         }
         ultimo_commit = siguiente_padre.to_string();
