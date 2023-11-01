@@ -1,3 +1,4 @@
+use crate::packfile::Packfile;
 use crate::{comunicacion::Comunicacion, io};
 use std::io::Write;
 use std::path::PathBuf;
@@ -7,6 +8,7 @@ use crate::io::leer_a_string;
 use crate::utilidades_de_compresion;
 use crate::tipos_de_dato::comandos::log::Log;
 use std::collections::HashMap;
+use std::collections::HashSet;
 
 
 // idea: Key -> (String, String) , primera entrada la ref que tiene el cliente, segunda la que tiene el sv.
@@ -20,9 +22,10 @@ impl Push {
         for referencia in refs {
             hash_refs.insert(
                 referencia.split(' ').collect::<Vec<&str>>()[1].to_string(),
-                (referencia.split(' ').collect::<Vec<&str>>()[0].to_string(), String::new()),
+                (referencia.split(' ').collect::<Vec<&str>>()[0].to_string(), "0".repeat(20)),
             );
         }        
+        println!("hash refs: {:?}", hash_refs)  ;
         Push { hash_refs }
     }
     pub fn ejecutar(&mut self) -> Result<String, String> { 
@@ -71,20 +74,19 @@ impl Push {
         // falta contemplar creado y borrado
         // cuando es update se manda viejo, nuevo, ref
         let mut actualizaciones = Vec::new();
-        let mut objetos_a_enviar: Vec<String> = Vec::new();
+        let mut objetos_a_enviar  = HashSet::new();
         for (key, value) in &self.hash_refs {
             actualizaciones.push(io::obtener_linea_con_largo_hex(&format!("{} {} {}\n", value.1, value.0, key))); // viejo (el del sv), nuevo (cliente), ref
-            objetos_a_enviar.append(&mut obtener_listas_de_commits(key, &value.1).unwrap());
+            // checkear que no existan los objetos antes de appendear
+            objetos_a_enviar.extend(obtener_listas_de_commits(key, &value.1).unwrap());
         }
-        println!("objetos a enviar: {:?}", objetos_a_enviar);
         if !actualizaciones.is_empty(){
             comunicacion.responder(actualizaciones).unwrap();
-            
+            Packfile::new().obtener_pack_con_archivos(objetos_a_enviar.into_iter().collect());            
 
         } else {
             //error 
         }
-        // let archivos_faltantes = obtener_archivos_faltantes(refs_recibidas, "./.gir/refs".to_string());
 
         // println!("Refs recibidas: {:?}", refs_recibidas);
         Ok(String::from("Push ejecutado con exito"))
@@ -100,7 +102,7 @@ fn obtener_listas_de_commits(referencia: &String, commit_limite: &String) -> Res
     }   
     let mut historial_commits: Vec<String> = Vec::new();
     loop {
-        let contenido = utilidades_de_compresion::descomprimir_objeto(ultimo_commit.clone(), String::from("./.gir/objects/"))?;
+        let contenido = utilidades_de_compresion::descomprimir_objeto(ultimo_commit.clone(), String::from("./.gir/objects"))?;
         let siguiente_padre = Log::conseguir_padre_desde_contenido_commit(&contenido);
         historial_commits.push(ultimo_commit.clone());
         if siguiente_padre.is_empty() || siguiente_padre == commit_limite.to_string() {
