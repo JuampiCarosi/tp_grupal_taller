@@ -115,9 +115,10 @@ fn estilar_lista_archivos(builder: &gtk::Builder) {
            scrolledwindow  {
               font-size: 12px;
               font-family: monospace;
-              color: #00FF00;
-
-              border: 0px solid #000000;
+              background-color: #DDDDDD;
+              border-radius: 8px;
+              border: 1px solid #9A9A9A;
+              padding: 8px;
           }
 
       "
@@ -160,14 +161,42 @@ fn escribir_archivos_modificados(builder: &gtk::Builder, logger: Rc<Logger>, win
                 Add::from(vec![nombre_callback.clone()], logger_callback.clone()).unwrap();
             add.ejecutar().unwrap();
 
-            limpiar_archivos(&builder_callback);
-            escribir_archivos_index(&builder_callback, logger_callback.clone());
-            escribir_archivos_modificados(
-                &builder_callback,
-                logger_callback.clone(),
-                &window_callback,
-            );
-            window_callback.show_all();
+            render(&builder_callback, logger_callback.clone(), &window_callback);
+
+            gtk::glib::Propagation::Proceed
+        });
+
+        container.pack_start(&label, false, true, 0);
+    }
+}
+
+fn escribir_archivos_untrackeados(
+    builder: &gtk::Builder,
+    logger: Rc<Logger>,
+    window: &gtk::Window,
+) {
+    let status = Status::from(logger.clone()).unwrap();
+    let lineas = status.obtener_untrackeados().unwrap();
+
+    let container: gtk::Box = builder.object("staging").unwrap();
+
+    let label = crear_label_rojo("\nArchivos sin trackear:");
+    container.pack_start(&label, false, false, 0);
+
+    for linea in lineas {
+        let label = crear_label_rojo(&format!("+ {linea}",));
+
+        let logger_callback = logger.clone();
+        let nombre_callback = linea.to_string();
+        let builder_callback = builder.clone();
+        let window_callback = window.clone();
+        label.connect_button_press_event(move |_, _| {
+            logger_callback.log("Gui: Agregando archivo a staging".to_string());
+            let mut add =
+                Add::from(vec![nombre_callback.clone()], logger_callback.clone()).unwrap();
+            add.ejecutar().unwrap();
+
+            render(&builder_callback, logger_callback.clone(), &window_callback);
 
             gtk::glib::Propagation::Proceed
         });
@@ -185,7 +214,10 @@ fn limpiar_archivos(builder: &gtk::Builder) {
 
 pub fn render(builder: &gtk::Builder, logger: Rc<Logger>, window: &gtk::Window) {
     logger.log("Gui: Renderizando staging area".to_string());
+    limpiar_archivos(&builder);
     estilar_lista_archivos(&builder);
     escribir_archivos_index(&builder, logger.clone());
-    escribir_archivos_modificados(&builder, logger, window);
+    escribir_archivos_modificados(&builder, logger.clone(), window);
+    escribir_archivos_untrackeados(&builder, logger, window);
+    window.show_all();
 }

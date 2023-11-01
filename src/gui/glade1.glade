@@ -203,6 +203,7 @@
         </child>
         <child>
           <object class="GtkBox" id="log-container">
+            <property name="width-request">350</property>
             <property name="visible">True</property>
             <property name="can-focus">False</property>
             <property name="orientation">vertical</property>

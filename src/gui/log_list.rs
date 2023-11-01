@@ -56,6 +56,7 @@ fn crear_label(string: &str) -> gtk::EventBox {
     let event_box = gtk::EventBox::new();
     let label = gtk::Label::new(Some(string));
     label.set_xalign(0.0);
+    label.set_margin_bottom(4);
     event_box.add(&label);
 
     let css_provider = gtk::CssProvider::new();
@@ -65,6 +66,7 @@ fn crear_label(string: &str) -> gtk::EventBox {
              .custom-label  {
                 font-size: 14px;
                 font-family: monospace;
+                border-bottom: 1px solid #ccc;
             }
 
         "

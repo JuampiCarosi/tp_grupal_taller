@@ -14,6 +14,7 @@ pub struct Add {
 }
 
 impl Add {
+    // Devuelve un vector con las ubicaciones de cada archivo dentro de las ubicaciones que se le pasaron
     pub fn obtener_ubicaciones_hoja(ubicaciones: Vec<PathBuf>) -> Result<Vec<PathBuf>, String> {
         let mut ubicaciones_hoja: Vec<PathBuf> = Vec::new();
         for ubicacion in ubicaciones {
@@ -49,7 +50,7 @@ impl Add {
     }
 
     pub fn ejecutar(&mut self) -> Result<String, String> {
-        self.logger.log("Ejecutando update-index".to_string());
+        self.logger.log("Ejecutando add".to_string());
 
         for ubicacion in self.ubicaciones.clone() {
             let nuevo_objeto = Objeto::from_directorio(ubicacion.clone(), None)?;

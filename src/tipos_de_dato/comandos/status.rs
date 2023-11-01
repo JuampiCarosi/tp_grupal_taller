@@ -101,10 +101,21 @@ impl Status {
         Ok(trackeados)
     }
 
-    fn obtener_hijos_untrackeados(tree: &Tree, tree_head: &Tree) -> Result<Vec<String>, String> {
+    fn obtener_hijos_untrackeados(
+        &self,
+        tree: &Tree,
+        tree_head: &Tree,
+    ) -> Result<Vec<String>, String> {
         let mut untrackeados = Vec::new();
 
         for objeto in tree.objetos.iter() {
+            if !self
+                .index
+                .iter()
+                .any(|objeto_index| objeto_index.objeto.obtener_hash() == objeto.obtener_hash())
+            {
+                continue;
+            }
             match objeto {
                 Objeto::Blob(_) => {
                     if !tree_head.contiene_hijo_por_ubicacion(objeto.obtener_path()) {
@@ -116,7 +127,7 @@ impl Status {
                         untrackeados.push(format!("{}/", objeto.obtener_path().display()));
                     } else {
                         let mut untrackeados_hijos =
-                            Self::obtener_hijos_untrackeados(&tree, &tree_head)?;
+                            self.obtener_hijos_untrackeados(&tree, &tree_head)?;
                         untrackeados.append(&mut untrackeados_hijos);
                     }
                 }
@@ -125,7 +136,7 @@ impl Status {
         Ok(untrackeados)
     }
 
-    fn obtener_untrackeados(&self) -> Result<Vec<String>, String> {
+    pub fn obtener_untrackeados(&self) -> Result<Vec<String>, String> {
         let tree_head = match self.tree_commit_head {
             Some(ref tree) => tree,
             None => {
@@ -138,7 +149,7 @@ impl Status {
         };
 
         let untrackeados =
-            Self::obtener_hijos_untrackeados(&self.tree_directorio_actual, &tree_head)?;
+            self.obtener_hijos_untrackeados(&self.tree_directorio_actual, &tree_head)?;
 
         Ok(untrackeados)
     }
