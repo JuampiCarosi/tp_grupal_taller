@@ -1,4 +1,5 @@
 use crate::err_comunicacion::ErrorDeComunicacion;
+use crate::io::crear_directorio;
 use crate::{comunicacion::Comunicacion, io as git_io};
 use std::env;
 use std::io;
@@ -63,16 +64,22 @@ impl Servidor {
         // veo si es un comando git
         let args: Vec<_> = pedido[1].split('\0').collect();
         let path = PathBuf::from(self.dir.clone() + args[0]);
-
         let refs: Vec<String>;
         match pedido[0] {
             "git-upload-pack" => {
                 refs = self.obtener_refs_de(path);
-                upload_pack(refs, self.dir.clone(), comunicacion)
+                comunicacion.responder(refs).unwrap();
+                upload_pack(self.dir.clone(), comunicacion)
             },
             "git-receive-pack" => {
+                if !path.exists() { 
+                    crear_directorio(&path.join("refs/")).unwrap();
+                    crear_directorio(&path.join("refs/heads/")).unwrap();
+                    crear_directorio(&path.join("refs/tags/")).unwrap();
+                }
                 refs = self.obtener_refs_de(path);
-                receive_pack(refs, self.dir.clone(), comunicacion)
+                comunicacion.responder(refs).unwrap(); 
+                receive_pack(self.dir.clone(), comunicacion)
                 // Ok(())
             },
             _ => {
@@ -94,7 +101,9 @@ impl Servidor {
         }
         refs.append(&mut git_io::obtener_refs_con_largo_hex(dir.join("refs/heads/"), String::from("/home/juani/23C2-Cangrejos-Tacticos/srv/.gir/")).unwrap());
         refs.append(&mut git_io::obtener_refs_con_largo_hex(dir.join("refs/tags/"), String::from("/home/juani/23C2-Cangrejos-Tacticos/srv/.gir/")).unwrap());
-        refs[0] = self.agregar_capacidades(refs[0].clone());
+        if !refs.is_empty(){
+            refs[0] = self.agregar_capacidades(refs[0].clone());
+        }
         refs
     }
 

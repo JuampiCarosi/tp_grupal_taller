@@ -263,11 +263,12 @@ where
         )),
     }
 }
-fn si_no_existe_directorio_de_archivo_crearlo<P>(dir_archivo: &P) -> Result<(), String>
+pub fn si_no_existe_directorio_de_archivo_crearlo<P>(dir_archivo: &P) -> Result<(), String>
 where
     P: AsRef<Path>,
 {
     let dir = dir_archivo.as_ref().parent();
+    println!("DIRECCION: {:?}", dir);
     if let Some(parent_dir) = dir {
         let parent_str = parent_dir
             .to_str()

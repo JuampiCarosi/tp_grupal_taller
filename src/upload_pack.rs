@@ -1,11 +1,10 @@
 use crate::err_comunicacion::ErrorDeComunicacion;
 use crate::io::obtener_archivos_faltantes;
-use crate::{packfile, comunicacion};
+use crate::packfile;
 use crate::{comunicacion::Comunicacion, io as git_io};
 use crate::utilidades_strings;
 
-pub fn upload_pack(refs: Vec<String>, dir: String, comunicacion: &mut Comunicacion) -> Result<(), ErrorDeComunicacion> {
-    comunicacion.responder(refs)?; // respondo con las refs 
+pub fn upload_pack(dir: String, comunicacion: &mut Comunicacion) -> Result<(), ErrorDeComunicacion> {
     // caso push 
     // let refs_a_actualizar = comunicacion.obtener_lineas().unwrap();
     
@@ -19,7 +18,7 @@ pub fn upload_pack(refs: Vec<String>, dir: String, comunicacion: &mut Comunicaci
         // let want_obj_ids = utilidades_strings::eliminar_prefijos(&mut wants, "want");
         // println!("want_obj_ids: {:?}", want_obj_ids);
         let packfile =
-            packfile::Packfile::new().obtener_pack_entero(dir.clone() + "/.gir/"); // obtengo el packfile
+            packfile::Packfile::new().obtener_pack_entero(&(dir.clone().to_string() + "/.gir/")); // obtengo el packfile
             // git_io::leer_bytes("./.git/objects/pack/pack-31897a1f902980a7e540e812b54f5702f449af8b.pack").unwrap();
         comunicacion.responder_con_bytes(packfile).unwrap();
         return Ok(());
@@ -37,7 +36,7 @@ pub fn upload_pack(refs: Vec<String>, dir: String, comunicacion: &mut Comunicaci
     // println!("lineas: {:?}", lineas);
     let faltantes = obtener_archivos_faltantes(have_objs_ids, dir.clone());
     // obtener un packfile de los faltantes...
-    let packfile = packfile::Packfile::new().obtener_pack_con_archivos(faltantes);
+    let packfile = packfile::Packfile::new().obtener_pack_con_archivos(faltantes, &(dir.clone() + "/.gir/objects"));
     comunicacion.responder_con_bytes(packfile).unwrap();
     Ok(())
 }

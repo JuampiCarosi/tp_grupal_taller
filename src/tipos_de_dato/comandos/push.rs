@@ -43,15 +43,10 @@ impl Push {
 
         client.write_all(request_data_con_largo_hex.as_bytes()).unwrap();
         let mut refs_recibidas = comunicacion.obtener_lineas().unwrap();
-        let first_ref = refs_recibidas.remove(0);
+        if !refs_recibidas.is_empty() {
+            let first_ref = refs_recibidas.remove(0);
+        }
 
-        // pasos a seguir: 
-        // 1) obtener los commits que no estan en el server (esto se hace comparando los hashes de las refs recibidas con los locales)
-        // 2) especificar cuales refs tienen nuevos commits como referencia para que el server lo actualice
-        // 3) enviar los objetos que no estan en el server como packfiles (para eso usar la funcion de mateo)
-        // 4) en algun lugar hay que checkear que no se modifica el repositorio mientras ocurre esta negociacion, en cuyo caso se debe abortar el push
-    
-        // voy a suponer el caso base, que es cuando hay que mandar actualizaciones al servidor
         for referencia in &refs_recibidas {
             let obj_id = referencia.split(' ').collect::<Vec<&str>>()[0];
             let referencia = referencia.split(' ').collect::<Vec<&str>>()[1];
@@ -70,7 +65,6 @@ impl Push {
 
             }
         }
-        println!("hash refs: {:?}", self.hash_refs);
         // falta contemplar creado y borrado
         // cuando es update se manda viejo, nuevo, ref
         let mut actualizaciones = Vec::new();
@@ -80,16 +74,17 @@ impl Push {
             // checkear que no existan los objetos antes de appendear
             objetos_a_enviar.extend(obtener_listas_de_commits(key, &value.1).unwrap());
         }
+        println!("actualizaciones: {:?}", actualizaciones);
         if !actualizaciones.is_empty(){
             comunicacion.responder(actualizaciones).unwrap();
-            Packfile::new().obtener_pack_con_archivos(objetos_a_enviar.into_iter().collect());            
-
+            comunicacion.responder_con_bytes(Packfile::new().obtener_pack_con_archivos(objetos_a_enviar.into_iter().collect(), "./.gir/objects")).unwrap();            
+            Ok(String::from("Push ejecutado con exito"))
         } else {
             //error 
+            return Err("No hay actualizaciones".to_string());
         }
 
         // println!("Refs recibidas: {:?}", refs_recibidas);
-        Ok(String::from("Push ejecutado con exito"))
     }
   
 }

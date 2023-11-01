@@ -1,6 +1,9 @@
+use std::rc::Rc;
+
 use crate::err_comunicacion::ErrorDeComunicacion;
-use crate::{io, utilidades_de_compresion};
-use crate::tipos_de_dato::comandos::cat_file::conseguir_tipo_objeto;
+use crate::tipos_de_dato::logger::Logger;
+use crate::{io, utilidades_de_compresion, tipos_de_dato};
+use crate::tipos_de_dato::comandos::cat_file;
 
 use sha1::{Digest, Sha1};
 
@@ -19,15 +22,16 @@ impl Packfile {
         }
     }
 
-    fn aniadir_objeto(&mut self, objeto: String) -> Result<(), String> {
+    fn aniadir_objeto(&mut self, objeto: String, dir: &str) -> Result<(), String> {
         // let logger = Rc::new(Logger::new(PathBuf::from("log.txt"))?);
         println!("Aniadiendo objeto: {}", objeto);
         // DESHARCODEAR EL ./.GIR
-        let ruta_objeto = format!("./srv/.gir/objects/{}/{}", &objeto[..2], &objeto[2..]);
+        let ruta_objeto = format!("{}/{}/{}", dir, &objeto[..2], &objeto[2..]);
+        println!("ruta objeto: {}", ruta_objeto);
         let objeto_comprimido = io::leer_bytes(&ruta_objeto).unwrap();
         let tamanio_objeto = utilidades_de_compresion::descomprimir_contenido_u8(&objeto_comprimido)?.len() as u32;
-        let tipo_objeto = conseguir_tipo_objeto(objeto.clone())?;
-        println!("tipo_objeto: {}", tipo_objeto);
+        let tipo_objeto = cat_file::obtener_tipo_objeto_de(&objeto, "./.gir/objects")?;
+
         // codifica el tamanio del archivo descomprimido y su tipo en un tipo variable de longitud
         let nbyte = match tipo_objeto.as_str() {
             "commit" => codificar_bytes(1, tamanio_objeto), //1
@@ -51,14 +55,14 @@ impl Packfile {
     
     // fijarse en commit que algo se manda incompleto, creo 
     // funcion que recorrer el directorio y aniade los objetos al packfile junto a su indice correspondiente
-    fn obtener_objetos_del_dir(&mut self, dir: String) -> Result<(), ErrorDeComunicacion> {
+    fn obtener_objetos_del_dir(&mut self, dir: &str) -> Result<(), ErrorDeComunicacion> {
         // esto porque es un clone, deberia pasarle los objetos que quiero
-        let objetos = io::obtener_objetos_del_directorio(dir + "objects/")?;
+        let objetos = io::obtener_objetos_del_directorio(dir.to_string() + "objects/")?;
         // --- 
         
         for objeto in objetos {
             let inicio = self.objetos.len() as u32; // obtengo el len previo a aniadir el objeto
-            self.aniadir_objeto(objeto.clone()).unwrap();
+            self.aniadir_objeto(objeto.clone(), dir).unwrap();
 
             let offset = self.objetos.len() as u32 - inicio;
             self.indice.extend(&offset.to_be_bytes());
@@ -70,7 +74,7 @@ impl Packfile {
     pub fn obtener_indice(&mut self) -> Vec<u8> {
         self.indice.clone()
     }
-    pub fn obtener_pack_entero(&mut self, dir: String) -> Vec<u8> {
+    pub fn obtener_pack_entero(&mut self, dir: &str) -> Vec<u8> {
         println!("Despachando packfile");
         self.obtener_objetos_del_dir(dir).unwrap();
         let mut packfile = Vec::new();
@@ -111,9 +115,9 @@ impl Packfile {
     }
 
 
-    pub fn obtener_pack_con_archivos(&mut self, objetos: Vec<String>) -> Vec<u8> {
+    pub fn obtener_pack_con_archivos(&mut self, objetos: Vec<String>, dir: &str) -> Vec<u8> {
         for objeto in objetos {
-            self.aniadir_objeto(objeto).unwrap();
+            self.aniadir_objeto(objeto, dir).unwrap();
         }
         let mut packfile: Vec<u8> = Vec::new();
         packfile.extend("PACK".as_bytes());

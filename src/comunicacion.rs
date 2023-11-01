@@ -60,6 +60,10 @@ impl Comunicacion {
     }
 
     pub fn responder(&mut self, lineas: Vec<String>) -> Result<(), ErrorDeComunicacion> {
+        if lineas.is_empty() {
+            self.flujo.write_all(String::from("0000").as_bytes())?;
+            return Ok(());
+        }
         for linea in &lineas {
             self.flujo.write_all(linea.as_bytes())?;
         }
