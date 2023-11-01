@@ -30,11 +30,6 @@ impl Add {
                         ubicaciones_hoja.append(&mut Self::obtener_ubicaciones_hoja(vec![path])?);
                     }
                 }
-            } else {
-                return Err(format!(
-                    "{} no es un archivo o directorio",
-                    ubicacion.display()
-                ));
             }
         }
         Ok(ubicaciones_hoja)
@@ -103,8 +98,12 @@ mod test {
     use std::{io::Write, path::PathBuf, rc::Rc};
 
     use crate::{
-        io,
-        tipos_de_dato::{comandos::add::Add, logger::Logger, objeto::Objeto},
+        io::{self, rm_directorio},
+        tipos_de_dato::{
+            comandos::{add::Add, init::Init},
+            logger::Logger,
+            objeto::Objeto,
+        },
     };
 
     fn create_test_file() {
@@ -124,8 +123,19 @@ mod test {
         let _ = std::fs::remove_file("./.gir/index");
     }
 
+    fn limpiar_archivo_gir() {
+        rm_directorio(".gir").unwrap();
+        let logger = Rc::new(Logger::new(PathBuf::from("tmp/branch_init")).unwrap());
+        let init = Init {
+            path: "./.gir".to_string(),
+            logger,
+        };
+        init.ejecutar().unwrap();
+    }
+
     #[test]
     fn test01_archivo_vacio_se_llena_con_objeto_agregado() {
+        limpiar_archivo_gir();
         clear_index();
         create_test_file();
         let logger = Rc::new(Logger::new(PathBuf::from("tmp/add_test01")).unwrap());
@@ -249,7 +259,7 @@ mod test {
     }
 
     #[test]
-    fn test07_agregar_dos_archivos_de_una() {
+    fn test06_agregar_dos_archivos_de_una() {
         clear_index();
         let logger = Rc::new(Logger::new(PathBuf::from("tmp/add_test07")).unwrap());
         let ubicacion = "test_file.txt".to_string();
