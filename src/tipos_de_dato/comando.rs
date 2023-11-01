@@ -3,8 +3,8 @@ use std::rc::Rc;
 use super::{
     comandos::{
         add::Add, branch::Branch, cat_file::CatFile, checkout::Checkout, commit::Commit,
-        hash_object::HashObject, init::Init, log::Log, remote::Remote, rm::Remove, status::Status,
-        version::Version,
+        hash_object::HashObject, init::Init, log::Log, merge::Merge, remote::Remote, rm::Remove,
+        status::Status, version::Version,
     },
     logger::Logger,
 };
@@ -22,6 +22,7 @@ pub enum Comando {
     Log(Log),
     Status(Status),
     Remote(Remote),
+    Merge(Merge),
     Unknown,
 }
 
@@ -45,6 +46,7 @@ impl Comando {
             "log" => Comando::Log(Log::from(&mut vector_args, logger)?),
             "status" => Comando::Status(Status::from(logger)?),
             "remote" => Comando::Remote(Remote::from(&mut vector_args, logger)?),
+            "merge" => Comando::Merge(Merge::from(&mut vector_args, logger)?),
             _ => Comando::Unknown,
         };
 
@@ -66,8 +68,9 @@ impl Comando {
             Comando::Commit(ref mut commit) => commit.ejecutar(),
             Comando::Log(ref mut log) => log.ejecutar(),
             Comando::Status(ref mut status) => status.ejecutar(),
-            Comando::Unknown => Err("Comando desconocido".to_string()),
             Comando::Remote(ref mut remote) => remote.ejecutar(),
+            Comando::Merge(ref mut merge) => merge.ejecutar(),
+            Comando::Unknown => Err("Comando desconocido".to_string()),
         }
     }
 }

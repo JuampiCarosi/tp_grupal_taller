@@ -1,5 +1,5 @@
 use std::{
-    path::{self, PathBuf},
+    path::{self, Path, PathBuf},
     rc::Rc,
 };
 
@@ -11,7 +11,7 @@ use crate::{
 
 use super::{
     cat_file,
-    commit::Commit,
+    commit::{self, Commit},
     log::Log,
     write_tree::{self, conseguir_arbol_from_hash_commit},
 };
@@ -69,10 +69,10 @@ impl Merge {
         loop {
             let contenido = utilidades_de_compresion::descomprimir_objeto(ultimo_commit.clone())?;
             let siguiente_padre = Log::conseguir_padre_desde_contenido_commit(&contenido);
+            historial_commits.push(ultimo_commit.clone());
             if siguiente_padre.is_empty() {
                 break;
             }
-            historial_commits.push(ultimo_commit.clone());
             ultimo_commit = siguiente_padre.to_string();
         }
         Ok(historial_commits)
@@ -292,10 +292,7 @@ impl Merge {
         contenido_final
     }
 
-    pub fn ejecutar(&self) -> Result<String, String> {
-        self.logger.log("Ejecutando comando merge".to_string());
-
-        let commit_base = self.obtener_commit_base_entre_dos_branches()?;
+    fn automerge(&self, commit_base: String) -> Result<(), String> {
         let hash_tree_base = write_tree::conseguir_arbol_from_hash_commit(commit_base.clone());
         let tree_base = Tree::from_hash(hash_tree_base, PathBuf::from("."))?;
 
@@ -333,9 +330,43 @@ impl Merge {
                 objeto_actual.obtener_hash(),
             )?;
         }
+        Ok(())
+    }
+
+    pub fn fast_forward(&self) -> Result<(), String> {
+        let commit_banch_a_mergear = leer_a_string(Path::new(&format!(
+            ".gir/refs/heads/{}",
+            self.branch_a_mergear
+        )))?;
+
+        io::escribir_bytes(
+            Path::new(&format!(".gir/refs/heads/{}", self.branch_actual)),
+            commit_banch_a_mergear,
+        )?;
+
+        let tree_branch_a_mergear =
+            Self::obtener_arbol_commit_actual(self.branch_a_mergear.clone())?;
+
+        tree_branch_a_mergear.escribir_en_directorio()?;
+
+        Ok(())
+    }
+
+    pub fn ejecutar(&self) -> Result<String, String> {
+        self.logger.log("Ejecutando comando merge".to_string());
+
+        let commit_base = self.obtener_commit_base_entre_dos_branches()?;
+        let commit_actual = Commit::obtener_hash_del_padre_del_commit()?;
+
+        if commit_base == commit_actual {
+            self.fast_forward()?
+        } else {
+            self.automerge(commit_base)?
+        };
+
         self.logger
             .log("Comando merge ejecutado correctamente".to_string());
-        Ok("".to_string())
+        Ok("Merge completado".to_string())
     }
 }
 

@@ -106,7 +106,7 @@ impl Commit {
         Ok(ruta)
     }
 
-    fn obtener_hash_del_padre_del_commit() -> Result<String, String> {
+    pub fn obtener_hash_del_padre_del_commit() -> Result<String, String> {
         let ruta = Self::obtener_ruta_branch_commit()?;
         let padre_commit = leer_a_string(path::Path::new(&ruta)).unwrap_or_else(|_| "".to_string());
         Ok(padre_commit)
