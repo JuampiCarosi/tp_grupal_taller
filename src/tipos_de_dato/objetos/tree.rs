@@ -1,6 +1,4 @@
 use std::{
-    env::consts::OS,
-    ffi::OsStr,
     fmt::{Display, Write},
     fs,
     num::ParseIntError,
@@ -26,6 +24,7 @@ pub struct Tree {
     pub objetos: Vec<Objeto>,
 }
 impl Tree {
+    /// Devuelve un vector con todos los objetos de tipo Blob que se encuentran en el arbol
     fn obtener_objetos_hoja(&self) -> Vec<Objeto> {
         let mut objetos: Vec<Objeto> = Vec::new();
         for objeto in &self.objetos {
@@ -39,6 +38,7 @@ impl Tree {
         objetos
     }
 
+    /// Escribe en el directorio actual los archivos que se encuentran en el arbol
     pub fn escribir_en_directorio(&self) -> Result<(), String> {
         println!("escribiendo en directorio: {}", self.directorio.display());
         let objetos = self.obtener_objetos_hoja();
@@ -56,6 +56,7 @@ impl Tree {
         Ok(())
     }
 
+    /// Pasa un string de hexadecimal a un vector de u8
     pub fn decode_hex(s: &str) -> Result<Vec<u8>, String> {
         match (0..s.len())
             .step_by(2)
@@ -67,6 +68,7 @@ impl Tree {
         }
     }
 
+    /// Pasa un vector de u8 a un string de hexadecimal
     pub fn encode_hex(bytes: &[u8]) -> String {
         let mut s = String::with_capacity(bytes.len() * 2);
         for &b in bytes {
@@ -75,6 +77,7 @@ impl Tree {
         s
     }
 
+    /// Devuelve el hash completo de un objeto
     pub fn obtener_hash(&self) -> Result<String, String> {
         let contenido = Self::obtener_contenido(&self.objetos)?;
         let mut sha1 = Sha1::new();
@@ -86,6 +89,7 @@ impl Tree {
         Ok(format!("{:x}", hash))
     }
 
+    /// Devuelve el contenido de un objeto tree en u8 para poder ser comprimido
     pub fn obtener_contenido(objetos: &[Objeto]) -> Result<Vec<u8>, String> {
         let objetos_ordenados = Self::ordenar_objetos_alfabeticamente(&objetos);
 
@@ -112,51 +116,7 @@ impl Tree {
         Ok(contenido)
     }
 
-    fn obtener_hash_completo(hash_incompleto: String) -> Result<String, String> {
-        let dir_candidatos = format!(".gir/objects/{}/", &hash_incompleto[..2]);
-        let candidatos = match fs::read_dir(&dir_candidatos) {
-            Ok(candidatos) => candidatos,
-            Err(_) => {
-                return Err(format!(
-                    "No se econtro el objeto con hash {}",
-                    hash_incompleto
-                ))
-            }
-        };
-
-        for candidato in candidatos {
-            let candidato_string = candidato
-                .map_err(|_| {
-                    format!(
-                        "Error al extraer el hash {} de la carpeta padre",
-                        hash_incompleto
-                    )
-                })?
-                .path()
-                .display()
-                .to_string();
-            let candidato_hash = candidato_string
-                .split('/')
-                .last()
-                .ok_or_else(|| {
-                    format!(
-                        "Error al extraer carpeta hijo del padre {}, existe dicho hash?",
-                        hash_incompleto
-                    )
-                })?
-                .to_string();
-            let (prefijo, hash_a_comparar) = hash_incompleto.split_at(2);
-            if candidato_hash.starts_with(hash_a_comparar) {
-                return Ok(format!("{}{}", prefijo, candidato_hash));
-            }
-        }
-
-        Err(format!(
-            "No se econtro el objeto con hash {}",
-            hash_incompleto
-        ))
-    }
-
+    /// Devuelve un objeto Tree a partir de un directorio y un vector de directorios que se quieren
     pub fn from_directorio(
         directorio: PathBuf,
         hijos_especificados: Option<&Vec<PathBuf>>,
@@ -232,7 +192,7 @@ impl Tree {
         let mut lineas = contenido.split('\0').collect::<Vec<&str>>();
         lineas.remove(0);
         let mut lineas_separadas: Vec<&str> = Vec::new();
-        lineas_separadas.push(lineas[0].clone());
+        lineas_separadas.push(lineas[0]);
         let ultima_linea = lineas.pop().unwrap();
         lineas.iter().skip(1).for_each(|x| {
             let (hash, modo_y_nombre) = x.split_at(40);
@@ -261,6 +221,8 @@ impl Tree {
         Ok(contenido_parseado)
     }
 
+    /// Lee el objeto tree de la base de datos en base a un hash pasado por parametro y
+    ///  el directorio en el que se encuentra el tree y lo devuelve como un objeto Tree
     pub fn from_hash(hash: String, directorio: PathBuf) -> Result<Tree, String> {
         // let hash_completo = Self::obtener_hash_completo(hash)?;
         let contenido = descomprimir_objeto(hash, "/home/juani/git/objects".to_string())?;
@@ -444,6 +406,23 @@ impl Tree {
         }
 
         Ok(())
+    }
+
+    pub fn rearmar_contenido_descomprimido(contenido: String) -> Result<String, String> {
+        let mut contenido_pretty: Vec<String> = Vec::new();
+        let mut contenido_splitteado_null = contenido.split('\0').collect::<Vec<&str>>();
+        contenido_pretty.push(contenido_splitteado_null[0].to_string() + " ");
+        let ultimo_hash = match contenido_splitteado_null.pop() {
+            Some(hash) => hash,
+            None => return Err("Error al parsear el contenido del tree".to_string()),
+        };
+        contenido_splitteado_null.iter().skip(1).for_each(|x| {
+            let (hash, modo_y_nombre) = x.split_at(40);
+            contenido_pretty.push(hash.to_string() + "\n");
+            contenido_pretty.push(modo_y_nombre.to_string() + " ");
+        });
+        contenido_pretty.push(ultimo_hash.to_string());
+        Ok(contenido_pretty.concat())
     }
 
     fn mostrar_contenido(objetos: &[Objeto]) -> Result<String, String> {
