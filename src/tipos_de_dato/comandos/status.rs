@@ -109,7 +109,7 @@ impl Status {
         let mut untrackeados = Vec::new();
 
         for objeto in tree.objetos.iter() {
-            if !self
+            if self
                 .index
                 .iter()
                 .any(|objeto_index| objeto_index.objeto.obtener_hash() == objeto.obtener_hash())

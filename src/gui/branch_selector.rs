@@ -39,11 +39,10 @@ pub fn render(builder: &gtk::Builder, window: &gtk::Window) {
             None => return,
         };
 
-        log_seleccionado::render(&builder_clone, Some(active.as_str()));
-        Checkout::from(vec![active.to_string()], logger)
+        log_seleccionado::render(&builder_clone, None);
+        let _ = Checkout::from(vec![active.to_string()], logger)
             .unwrap()
-            .ejecutar()
-            .unwrap();
+            .ejecutar();
         window_clone.show_all();
     });
 }
