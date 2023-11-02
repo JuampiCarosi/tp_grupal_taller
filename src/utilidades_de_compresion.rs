@@ -5,8 +5,8 @@ use std::io::{Read, Write};
 // CAMBIAR GIT POR GIR
 
 pub fn descomprimir_objeto(hash: String, ruta: String) -> Result<String, String> {
-    let ruta_objeto = format!("{}/{}/{}", ruta.clone(), &hash[..2], &hash[2..]);
-    println!("gonna decompress {} from: {}", hash,ruta_objeto);
+    let ruta_objeto = format!("{}{}/{}", ruta.clone(), &hash[..2], &hash[2..]);
+    // println!("gonna decompress {} from: {}", hash,ruta_objeto);
 
     let contenido_leido = io::leer_bytes(ruta_objeto)?;
     let contenido_descomprimido = descomprimir_contenido_u8(&contenido_leido)?;

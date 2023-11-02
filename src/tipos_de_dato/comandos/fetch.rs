@@ -41,19 +41,11 @@ impl Fetch {
             comunicacion.enviar_flush_pkt().unwrap();
             return Ok(String::from("El cliente esta actualizado"));
         }
-        // refs_recibidas.push(referencia_y_capacidades[0].to_string());
-        // let first_ref = refs_recibidas.remove(0);
-        
-        
-        
-        // let capacidades = first_ref.split("\0").collect::<Vec<&str>>()[1];
-        // envio
-        // println!("capacidades: {:?}", capacidades);
-
         let wants = comunicacion.obtener_wants_pkt(&diferencias, capacidades.to_string()).unwrap();
         comunicacion.responder(wants.clone()).unwrap();
         
         let objetos_directorio = io::obtener_objetos_del_directorio("./.gir/objects/".to_string()).unwrap();
+
         let haves = comunicacion.obtener_haves_pkt(&objetos_directorio);    
         if !haves.is_empty() {
             comunicacion.responder(haves).unwrap();
