@@ -1,3 +1,6 @@
 hola 
 jose
 messi
+jose 
+pedro 
+juan

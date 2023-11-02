@@ -35,7 +35,39 @@ enum DiffType {
     Removed(String),
     Unchanged(String),
 }
-type Conflicto = Vec<(DiffType, LadoConflicto)>;
+type ConflictoAtomico = Vec<(DiffType, LadoConflicto)>;
+
+#[derive(Clone)]
+
+enum Region {
+    Normal(String),
+    Conflicto(String, String),
+}
+
+impl std::fmt::Debug for Region {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Region::Normal(contenido) => write!(f, "Normal({})", contenido),
+            Region::Conflicto(contenido_head, contenido_entrante) => {
+                write!(f, "Conflicto({},{})", contenido_head, contenido_entrante)
+            }
+        }
+    }
+}
+impl std::fmt::Display for Region {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Region::Normal(contenido) => write!(f, "{}", contenido),
+            Region::Conflicto(contenido_head, contenido_entrante) => {
+                write!(
+                    f,
+                    "<<<<<< HEAD\n{}\n======\n{}\n>>>>>> Entrante\n)",
+                    contenido_head, contenido_entrante
+                )
+            }
+        }
+    }
+}
 
 type DiffGrid = Vec<Vec<usize>>;
 
@@ -186,8 +218,7 @@ impl Merge {
                 i -= 1;
                 j -= 1;
             } else if diff_grid[i - 1][j] <= diff_grid[i][j - 1] {
-                println!("{} {}", i, j);
-                resultado_diff.push((j, DiffType::Added(texto2[j - 1].trim().to_string())));
+                resultado_diff.push((i, DiffType::Added(texto2[j - 1].trim().to_string())));
                 j -= 1;
             } else {
                 resultado_diff.push((i, DiffType::Removed(texto1[i - 1].trim().to_string())));
@@ -212,9 +243,7 @@ impl Merge {
         })
     }
 
-    fn conflicto_len_4(conflicto: &Conflicto) -> String {
-        let mut contenido_final = String::from("<<<<<<< HEAD\n");
-
+    fn conflicto_len_4(conflicto: &ConflictoAtomico) -> Region {
         let mut lado_head = String::new();
         let mut lado_entrante = String::new();
 
@@ -227,11 +256,7 @@ impl Merge {
             }
         }
 
-        contenido_final.push_str(&format!(
-            "{lado_head}=======\n{lado_entrante}>>>>>>> entrante\n"
-        ));
-
-        contenido_final
+        Region::Conflicto(lado_head, lado_entrante)
     }
 
     fn lado_conflicto_len_3(conflicto: Vec<&DiffType>, linea_base: &str) -> String {
@@ -253,7 +278,7 @@ impl Merge {
         lado
     }
 
-    fn conflicto_len_3(conflicto: &Conflicto, linea_base: &str) -> String {
+    fn conflicto_len_3<'a>(conflicto: &'a ConflictoAtomico, linea_base: &'a str) -> Region {
         let head = conflicto
             .iter()
             .filter_map(|(diff, lado)| match lado {
@@ -274,10 +299,10 @@ impl Merge {
 
         let lado_entrante = Self::lado_conflicto_len_3(entrante, linea_base);
 
-        format!("{lado_head}=======\n{lado_entrante}>>>>>>> entrante\n",)
+        Region::Conflicto(lado_head, lado_entrante)
     }
 
-    fn resolver_conflicto(conflicto: &Conflicto, linea_base: &str) -> String {
+    fn resolver_conflicto<'a>(conflicto: &'a ConflictoAtomico, linea_base: &'a str) -> Region {
         if conflicto.len() == 4 {
             Self::conflicto_len_4(conflicto)
         } else {
@@ -285,28 +310,27 @@ impl Merge {
         }
     }
 
-    fn resolver_merge_len_2(conflicto: &Conflicto, linea_base: &str) -> String {
+    fn resolver_merge_len_2<'a>(conflicto: &'a ConflictoAtomico, linea_base: &'a str) -> Region {
         match (&conflicto[0].0, &conflicto[1].0) {
             (DiffType::Added(linea_1), DiffType::Added(linea_2)) => {
                 if linea_1 != linea_2 {
-                    format!(
-                        "<<<<<<< HEAD\n{}=======\n{}>>>>>>> entrante\n",
-                        linea_1, linea_2
-                    )
+                    Region::Conflicto(linea_1.clone(), linea_2.clone())
                 } else {
-                    format!("{}\n", linea_1)
+                    Region::Normal(linea_1.clone())
                 }
             }
             (DiffType::Added(linea_1), DiffType::Removed(_)) => {
-                format!("<<<<<<< HEAD\n{linea_base}\n{linea_1}\n=======\n>>>>>>> entrante\n",)
+                Region::Conflicto(format!("{linea_base}\n{linea_1}\n"), "".to_string())
             }
-            (DiffType::Added(linea_1), DiffType::Unchanged(_)) => format!("{}\n", linea_1),
+            (DiffType::Added(linea_1), DiffType::Unchanged(_)) => Region::Normal(linea_1.clone()),
             (DiffType::Removed(_), DiffType::Added(linea_2)) => {
-                format!("<<<<<<< HEAD\n=======\n{linea_base}\n{linea_2}>>>>>>> entrante\n",)
+                Region::Conflicto("".to_string(), format!("{linea_base}\n{linea_2}\n"))
             }
-            (DiffType::Unchanged(_), DiffType::Added(linea_2)) => format!("{}\n", linea_2),
-            (DiffType::Unchanged(linea_1), DiffType::Unchanged(_)) => format!("{}\n", linea_1),
-            (_, _) => String::new(),
+            (DiffType::Unchanged(_), DiffType::Added(linea_2)) => Region::Normal(linea_2.clone()),
+            (DiffType::Unchanged(linea_1), DiffType::Unchanged(_)) => {
+                Region::Normal(linea_1.clone())
+            }
+            (_, _) => Region::Normal("".to_string()),
         }
     }
 
@@ -315,10 +339,9 @@ impl Merge {
         diff_a_mergear: Vec<(usize, DiffType)>,
         archivo_base: String,
     ) -> String {
-        println!("{:?}", diff_actual);
-        println!("{:?}", diff_a_mergear);
+        let mut posibles_conflictos: Vec<ConflictoAtomico> = Vec::new();
 
-        let mut posibles_conflictos: Vec<Conflicto> = Vec::new();
+        println!("{:?}", diff_actual);
 
         for diff in diff_actual {
             if diff.0 - 1 >= posibles_conflictos.len() {
@@ -334,35 +357,86 @@ impl Merge {
             posibles_conflictos[diff.0 - 1].push((diff.1, LadoConflicto::Entrante));
         }
 
-        println!("{:?}", posibles_conflictos);
-
-        let mut contenido_final = String::new();
+        let mut contenido_por_regiones: Vec<Region> = Vec::new();
         let lineas_archivo_base = archivo_base.split('\n').collect::<Vec<&str>>();
 
         for i in 0..posibles_conflictos.len() {
             let posible_conflicto = &posibles_conflictos[i];
             if Self::hay_conflicto(posible_conflicto) {
-                contenido_final.push_str(&Self::resolver_conflicto(
+                contenido_por_regiones.push(Self::resolver_conflicto(
                     posible_conflicto,
                     lineas_archivo_base.iter().nth(i).unwrap_or(&""),
                 ));
             } else {
                 if posible_conflicto.len() == 2 {
-                    contenido_final.push_str(&Self::resolver_merge_len_2(
+                    contenido_por_regiones.push(Self::resolver_merge_len_2(
                         posible_conflicto,
                         lineas_archivo_base[i],
                     ));
                 } else {
                     for (diff, _) in posible_conflicto {
                         if let DiffType::Added(linea) = diff {
-                            contenido_final.push_str(&format!("{}\n", linea))
+                            contenido_por_regiones.push(Region::Normal(linea.clone()))
                         }
                     }
                 }
             }
         }
 
-        contenido_final
+        let regiones_unificadas = Self::unificar_regiones(contenido_por_regiones);
+
+        let mut resultado = String::new();
+
+        for region in &regiones_unificadas {
+            resultado.push_str(&format!("{}\n", region));
+        }
+
+        resultado
+    }
+
+    fn unificar_conflictos(regiones: Vec<Region>) -> Region {
+        let mut buffer_head = String::new();
+        let mut buffer_entrante = String::new();
+        for region in regiones {
+            match region {
+                Region::Normal(_) => continue,
+                Region::Conflicto(contenido_head, contenido_entrante) => {
+                    buffer_head.push_str(&contenido_head);
+                    buffer_entrante.push_str(&contenido_entrante);
+                }
+            }
+        }
+        Region::Conflicto(buffer_head, buffer_entrante)
+    }
+
+    fn unificar_regiones(regiones: Vec<Region>) -> Vec<Region> {
+        let mut regiones_unificadas: Vec<Region> = Vec::new();
+        let mut i = 0;
+        while i < regiones.len() {
+            match &regiones[i] {
+                Region::Normal(_) => {
+                    regiones_unificadas.push(regiones[i].clone());
+                    i += 1;
+                }
+                Region::Conflicto(_, _) => {
+                    let mut j = i + 1;
+                    let mut regiones_a_unificar: Vec<Region> = Vec::new();
+                    regiones_a_unificar.push(regiones[i].clone());
+                    while j < regiones.len() {
+                        match &regiones[j] {
+                            Region::Normal(_) => break,
+                            Region::Conflicto(_, _) => {
+                                regiones_a_unificar.push(regiones[j].clone());
+                                j += 1;
+                            }
+                        }
+                    }
+                    regiones_unificadas.push(Self::unificar_conflictos(regiones_a_unificar));
+                    i = j;
+                }
+            }
+        }
+        regiones_unificadas
     }
 
     fn automerge(&self, commit_base: String) -> Result<(), String> {
