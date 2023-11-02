@@ -103,10 +103,10 @@ pub fn obtener_refs_con_largo_hex(refs_path: PathBuf, dir: String) -> Result<Vec
     if !refs_path.exists() {
         return Ok(refs);
     }
-   println!("Obteniendo referencias de: {:?}", refs_path);
-    if !refs_path.exists() {
-        io::Error::new(io::ErrorKind::NotFound, "No existe el repositorio");
-    }
+//    println!("Obteniendo referencias de: {:?}", refs_path);
+    // if !refs_path.exists() {
+    //     io::Error::new(io::ErrorKind::NotFound, "No existe el repositorio");
+    // }
     if refs_path.ends_with("HEAD") {
         refs.push(obtener_ref_head(refs_path.to_path_buf())?);
     } else {
@@ -130,7 +130,8 @@ pub fn obtener_refs_con_largo_hex(refs_path: PathBuf, dir: String) -> Result<Vec
 pub fn obtener_refs(refs_path: PathBuf, dir: String) -> Result<Vec<String>, ErrorDeComunicacion> {
     let mut refs: Vec<String> = Vec::new();
     if !refs_path.exists() {
-        io::Error::new(io::ErrorKind::NotFound, "No existe el repositorio");
+        return Ok(refs);
+        // io::Error::new(io::ErrorKind::NotFound, "No existe el repositorio");
     }
     if refs_path.ends_with("HEAD") {
         refs.push(obtener_ref_head(refs_path.to_path_buf())?);

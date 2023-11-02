@@ -111,13 +111,13 @@ fn obtener_commits_y_objetos_asociados(referencia: &String, commit_limite: &Stri
    
     loop {
         // obtengo el hash del tree que guarda el commit, le pido los objetos y los guardo en el set
-        let hash_tree = write_tree::conseguir_arbol_padre_from_ult_commit_de_dir(&ultimo_commit, "./.gir/objects".to_string()); 
+        let hash_tree = write_tree::conseguir_arbol_padre_from_ult_commit_de_dir(&ultimo_commit, "./.gir/objects/".to_string()); 
         println!("Consiguiendo los objetos para el hash tree: {}", hash_tree);
-        let tree = Tree::from_hash(hash_tree.clone(), PathBuf::from("./.gir/objects"))?;
+        let tree = Tree::from_hash(hash_tree.clone(), PathBuf::from("./.gir/objects/"))?;
         historial_commits.insert(hash_tree);
         historial_commits.extend(tree.objetos.iter().map(|objeto| objeto.obtener_hash()));
         // obtengo el padre del commit 
-        let contenido = utilidades_de_compresion::descomprimir_objeto(ultimo_commit.clone(), String::from("./.gir/objects"))?;
+        let contenido = utilidades_de_compresion::descomprimir_objeto(ultimo_commit.clone(), String::from("./.gir/objects/"))?;
         let siguiente_padre = Log::conseguir_padre_desde_contenido_commit(&contenido);
         historial_commits.insert(ultimo_commit.clone());
         if siguiente_padre.is_empty() || siguiente_padre == commit_limite.to_string() {

@@ -1,8 +1,7 @@
 use crate::io::escribir_bytes;
-use crate::{comunicacion::Comunicacion, io, packfile, tipos_de_dato::objetos::tree::Tree, tipos_de_dato::comandos::write_tree};
+use crate::{comunicacion::Comunicacion, io};
 use std::io::Write;
 use std::path::PathBuf;
-use std::rc::Rc;
 use std::net::TcpStream;
 
 
@@ -16,9 +15,9 @@ impl Fetch {
     pub fn ejecutar(&mut self) -> Result<String, String> { 
         println!("Se ejecutó el comando clone");
         // esto deberia llamar a fetch-pack
-        let server_address = "127.0.0.1:9418"; // Cambia la dirección IP si es necesario
-
-        let mut client = TcpStream::connect(server_address).unwrap();
+        let server_address = "127.0.0.1:9418"; // hardcodeado
+        let mut client = TcpStream::connect(("localhost", 9418)).unwrap();
+        println!("Hola");
         let mut comunicacion = Comunicacion::new(client.try_clone().unwrap());
 
         // si es un push, tengo que calcular los commits de diferencia entre el cliente y el server, y mandarlos como packfiles.
