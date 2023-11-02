@@ -1,4 +1,5 @@
 use std::{
+    collections::HashMap,
     path::{self, Path, PathBuf},
     rc::Rc,
 };
@@ -11,7 +12,7 @@ use crate::{
 
 use super::{
     cat_file,
-    commit::{self, Commit},
+    commit::Commit,
     log::Log,
     write_tree::{self, conseguir_arbol_from_hash_commit},
 };
@@ -21,6 +22,7 @@ pub struct Merge {
     pub branch_actual: String,
     pub branch_a_mergear: String,
 }
+#[derive(Debug, Clone)]
 
 enum LadoConflicto {
     Head,
@@ -122,6 +124,49 @@ impl Merge {
         }
         matriz_lcs
     }
+
+    fn cantidad_de_anteriores_solo_con_remove(
+        resultados: &Vec<(usize, DiffType)>,
+        i: usize,
+    ) -> usize {
+        let mut cantidad = 0;
+        let mut i = i;
+        let mut linea = resultados[i].0;
+        let mut tiene_solo_remove = true;
+        while i != 0 {
+            if linea != resultados[i].0 {
+                if tiene_solo_remove {
+                    cantidad += 1;
+                }
+                linea = resultados[i].0;
+                tiene_solo_remove = true;
+            }
+            if let DiffType::Removed(_) = resultados[i].1 {
+                i -= 1;
+                continue;
+            } else {
+                tiene_solo_remove = false;
+                i -= 1;
+            }
+        }
+        if tiene_solo_remove {
+            cantidad += 1;
+        }
+        cantidad
+    }
+
+    /// los resultados pueden venir con lineas donde solo hay removes, por lo que hay que mover el usize los add
+    /// en los casos donde la linea anterior solo tiene removes
+    fn reindexar_resultados(resultados: &mut Vec<(usize, DiffType)>) {
+        for i in 0..resultados.len() {
+            if let DiffType::Added(_) = resultados[i].1 {
+                let cantidad_anteriores_solo_con_remove =
+                    Self::cantidad_de_anteriores_solo_con_remove(&resultados, i);
+                resultados[i].0 -= cantidad_anteriores_solo_con_remove;
+            }
+        }
+    }
+
     //en texto 1 debe ir la base
     fn obtener_diff(texto1: Vec<&str>, texto2: Vec<&str>) -> Vec<(usize, DiffType)> {
         let diff_grid = Self::computar_lcs_grid(&texto1, &texto2);
@@ -131,7 +176,7 @@ impl Merge {
 
         while i != 0 || j != 0 {
             if i == 0 {
-                resultado_diff.push((i, DiffType::Added(texto2[j - 1].trim().to_string())));
+                resultado_diff.push((j, DiffType::Added(texto2[j - 1].trim().to_string())));
                 j -= 1;
             } else if j == 0 {
                 resultado_diff.push((i, DiffType::Removed(texto1[i - 1].trim().to_string())));
@@ -141,55 +186,181 @@ impl Merge {
                 i -= 1;
                 j -= 1;
             } else if diff_grid[i - 1][j] <= diff_grid[i][j - 1] {
-                resultado_diff.push((i, DiffType::Added(texto2[j - 1].trim().to_string())));
+                println!("{} {}", i, j);
+                resultado_diff.push((j, DiffType::Added(texto2[j - 1].trim().to_string())));
                 j -= 1;
             } else {
                 resultado_diff.push((i, DiffType::Removed(texto1[i - 1].trim().to_string())));
-                i -= 1;
+                i -= 1
             }
         }
         resultado_diff.reverse();
+        Self::reindexar_resultados(&mut resultado_diff);
         resultado_diff
     }
 
-    fn no_hay_conflicto(conflicto: &Vec<(DiffType, LadoConflicto)>) -> bool {
-        for diff in conflicto {
-            if let DiffType::Unchanged(_) = diff.0 {
-                continue;
-            } else {
+    fn hay_conflicto(posibles_conflictos: &Vec<(DiffType, LadoConflicto)>) -> bool {
+        if posibles_conflictos.len() == 1 {
+            if let DiffType::Added(_) = posibles_conflictos[0].0 {
                 return false;
             }
         }
 
-        return true;
+        posibles_conflictos.iter().all(|(diff, _)| match diff {
+            DiffType::Unchanged(_) => false,
+            _ => true,
+        })
+    }
+
+    fn conflicto_len_4(conflicto: &Conflicto) -> String {
+        let mut contenido_final = String::from("<<<<<<< HEAD\n");
+
+        let mut lado_head = String::new();
+        let mut lado_entrante = String::new();
+
+        for (diff, lado) in conflicto {
+            if let DiffType::Added(linea) = diff {
+                match lado {
+                    LadoConflicto::Head => lado_head.push_str(&format!("{}\n", linea)),
+                    LadoConflicto::Entrante => lado_entrante.push_str(&format!("{}\n", linea)),
+                };
+            }
+        }
+
+        contenido_final.push_str(&format!(
+            "{lado_head}=======\n{lado_entrante}>>>>>>> entrante\n"
+        ));
+
+        contenido_final
+    }
+
+    fn lado_conflicto_len_3(conflicto: Vec<&DiffType>, linea_base: &str) -> String {
+        let mut lado = String::new();
+        if conflicto.len() == 1 {
+            match conflicto[0] {
+                DiffType::Added(ref linea) => lado.push_str(&format!("{linea_base}\n{linea}\n")),
+                _ => {}
+            };
+        } else {
+            for diff in conflicto {
+                match diff {
+                    DiffType::Added(ref linea) => lado.push_str(&format!("{linea}\n")),
+                    _ => {}
+                };
+            }
+        }
+
+        lado
+    }
+
+    fn conflicto_len_3(conflicto: &Conflicto, linea_base: &str) -> String {
+        let head = conflicto
+            .iter()
+            .filter_map(|(diff, lado)| match lado {
+                LadoConflicto::Head => Some(diff),
+                _ => None,
+            })
+            .collect::<Vec<&DiffType>>();
+
+        let lado_head = Self::lado_conflicto_len_3(head, linea_base);
+
+        let entrante = conflicto
+            .iter()
+            .filter_map(|(diff, lado)| match lado {
+                LadoConflicto::Entrante => Some(diff),
+                _ => None,
+            })
+            .collect::<Vec<&DiffType>>();
+
+        let lado_entrante = Self::lado_conflicto_len_3(entrante, linea_base);
+
+        format!("{lado_head}=======\n{lado_entrante}>>>>>>> entrante\n",)
+    }
+
+    fn resolver_conflicto(conflicto: &Conflicto, linea_base: &str) -> String {
+        if conflicto.len() == 4 {
+            Self::conflicto_len_4(conflicto)
+        } else {
+            Self::conflicto_len_3(conflicto, linea_base)
+        }
+    }
+
+    fn resolver_merge_len_2(conflicto: &Conflicto, linea_base: &str) -> String {
+        match (&conflicto[0].0, &conflicto[1].0) {
+            (DiffType::Added(linea_1), DiffType::Added(linea_2)) => {
+                if linea_1 != linea_2 {
+                    format!(
+                        "<<<<<<< HEAD\n{}=======\n{}>>>>>>> entrante\n",
+                        linea_1, linea_2
+                    )
+                } else {
+                    format!("{}\n", linea_1)
+                }
+            }
+            (DiffType::Added(linea_1), DiffType::Removed(_)) => {
+                format!("<<<<<<< HEAD\n{linea_base}\n{linea_1}\n=======\n>>>>>>> entrante\n",)
+            }
+            (DiffType::Added(linea_1), DiffType::Unchanged(_)) => format!("{}\n", linea_1),
+            (DiffType::Removed(_), DiffType::Added(linea_2)) => {
+                format!("<<<<<<< HEAD\n=======\n{linea_base}\n{linea_2}>>>>>>> entrante\n",)
+            }
+            (DiffType::Unchanged(_), DiffType::Added(linea_2)) => format!("{}\n", linea_2),
+            (DiffType::Unchanged(linea_1), DiffType::Unchanged(_)) => format!("{}\n", linea_1),
+            (_, _) => String::new(),
+        }
     }
 
     fn mergear_archivos(
         diff_actual: Vec<(usize, DiffType)>,
         diff_a_mergear: Vec<(usize, DiffType)>,
+        archivo_base: String,
     ) -> String {
         println!("{:?}", diff_actual);
         println!("{:?}", diff_a_mergear);
 
-        let mut conflictos: Vec<Conflicto> = Vec::new();
+        let mut posibles_conflictos: Vec<Conflicto> = Vec::new();
 
         for diff in diff_actual {
-            if diff.0 - 1 >= conflictos.len() {
-                conflictos.push(Vec::new());
+            if diff.0 - 1 >= posibles_conflictos.len() {
+                posibles_conflictos.push(Vec::new());
             }
-            conflictos[diff.0 - 1].push((diff.1, LadoConflicto::Head));
+            posibles_conflictos[diff.0 - 1].push((diff.1, LadoConflicto::Head));
         }
 
         for diff in diff_a_mergear {
-            if diff.0 - 1 > conflictos.len() {
-                conflictos.push(Vec::new());
+            if diff.0 - 1 > posibles_conflictos.len() {
+                posibles_conflictos.push(Vec::new());
             }
-            conflictos[diff.0 - 1].push((diff.1, LadoConflicto::Entrante));
+            posibles_conflictos[diff.0 - 1].push((diff.1, LadoConflicto::Entrante));
         }
 
-        let mut contenido_final = String::new();
+        println!("{:?}", posibles_conflictos);
 
-        for conflicto in conflictos {}
+        let mut contenido_final = String::new();
+        let lineas_archivo_base = archivo_base.split('\n').collect::<Vec<&str>>();
+
+        for i in 0..posibles_conflictos.len() {
+            let posible_conflicto = &posibles_conflictos[i];
+            if Self::hay_conflicto(posible_conflicto) {
+                contenido_final.push_str(&Self::resolver_conflicto(
+                    posible_conflicto,
+                    lineas_archivo_base.iter().nth(i).unwrap_or(&""),
+                ));
+            } else {
+                if posible_conflicto.len() == 2 {
+                    contenido_final.push_str(&Self::resolver_merge_len_2(
+                        posible_conflicto,
+                        lineas_archivo_base[i],
+                    ));
+                } else {
+                    for (diff, _) in posible_conflicto {
+                        if let DiffType::Added(linea) = diff {
+                            contenido_final.push_str(&format!("{}\n", linea))
+                        }
+                    }
+                }
+            }
+        }
 
         contenido_final
     }
@@ -309,13 +480,14 @@ mod test {
         let mut args = vec!["-w".to_string(), "ccccc.txt".to_string()];
         let hash_object = HashObject::from(&mut args, logger).unwrap();
         let hash_c = hash_object.ejecutar().unwrap();
+        let contenido_base = leer_a_string("ccccc.txt").unwrap();
 
         let diff_a_c =
             Merge::obtener_diffs_entre_dos_objetos(hash_c.to_string(), hash_a.to_string()).unwrap();
         let diff_b_c =
             Merge::obtener_diffs_entre_dos_objetos(hash_c.to_string(), hash_b.to_string()).unwrap();
-        let contenido_final = Merge::mergear_archivos(diff_a_c, diff_b_c);
+        let contenido_final = Merge::mergear_archivos(diff_a_c, diff_b_c, contenido_base);
         println!("{:?}", contenido_final);
-        assert_eq!(contenido_final, "hola\nmateo\njuampi\n");
+        assert_eq!(contenido_final, "hola\njuampi\nronaldo\n");
     }
 }
