@@ -43,12 +43,16 @@ impl Push {
         let mut refs_recibidas = comunicacion.obtener_lineas().unwrap();
         let mut actualizaciones = Vec::new();
         let mut objetos_a_enviar  = HashSet::new();
-        if refs_recibidas.is_empty() {
-
-        }
         if !refs_recibidas.is_empty() {
             let first_ref = refs_recibidas.remove(0);
+            let referencia_y_capacidades = first_ref.split('\0').collect::<Vec<&str>>();
+            let capabilities = referencia_y_capacidades[1];
+            refs_recibidas.push(referencia_y_capacidades[0].to_string());
         }
+        if refs_recibidas.is_empty() {
+            // hay que actualizar todo
+        }
+
         // ----------------------------------------------------------
         // no se si esta hecho el caso de los creates, checkear el caso en el que no mandan refs 
         // ----------------------------------------------------------
@@ -73,8 +77,12 @@ impl Push {
         for (key, value) in &self.hash_refs {
             actualizaciones.push(io::obtener_linea_con_largo_hex(&format!("{} {} {}\n", &value.1, &value.0, &key))); // viejo (el del sv), nuevo (cliente), ref
             // checkear que no existan los objetos antes de appendear
-    
-            objetos_a_enviar.extend(obtener_commits_y_objetos_asociados(&key, &value.0).unwrap());
+            if !(value.1 == "0".repeat(20)){
+                objetos_a_enviar.extend(obtener_commits_y_objetos_asociados(&key, &value.1).unwrap());
+            } else {
+                objetos_a_enviar.extend(obtener_commits_y_objetos_asociados(&key, &value.0).unwrap());
+                
+            }
         }   
         println!("objetos: {:?}", objetos_a_enviar);
 
@@ -93,6 +101,7 @@ impl Push {
 }
 
 fn obtener_commits_y_objetos_asociados(referencia: &String, commit_limite: &String) -> Result<HashSet<String>, String> {
+    println!("Entro para la referencia {} y el commit limite: {}", referencia, commit_limite);
     let ruta = format!(".gir/{}", referencia);
     let mut ultimo_commit = leer_a_string(Path::new(&ruta))?;
     if ultimo_commit.is_empty() {
@@ -115,6 +124,7 @@ fn obtener_commits_y_objetos_asociados(referencia: &String, commit_limite: &Stri
             break;
         }
         ultimo_commit = siguiente_padre.to_string();
+        println!("Siguiente padre: {}", siguiente_padre);
     }
     Ok(historial_commits)
 }
@@ -129,5 +139,15 @@ fn obtener_refs_de(dir: PathBuf, prefijo: String) -> Vec<String> {
 
 
 
+
+// cargo run --bin client init
+// cargo run --bin client add archivezco.txt
+// cargo run --bin client commit -m "1st comm"
+// cargo run --bin client push
+
+
+// cargo run --bin client add test_file.txt
+// cargo run --bin client commit -m "2nd commit"
+// cargo run --bin client push
 
 
