@@ -29,14 +29,14 @@ pub fn upload_pack(dir: String, comunicacion: &mut Comunicacion) -> Result<(), E
     let have_objs_ids = utilidades_strings::eliminar_prefijos(&lineas_siguientes);
     println!("have_objs_ids: {:?}", have_objs_ids);
     // let have_obj_ids = utilidades_strings::eliminar_prefijos(&mut lineas_siguientes, "have");
-    let respuesta_acks_nak = git_io::obtener_ack(have_objs_ids.clone(), dir.clone() + "/.gir/objects");
+    let respuesta_acks_nak = git_io::obtener_ack(have_objs_ids.clone(), dir.clone() + "/.gir/objects/");
     println!("respuesta_acks_nak: {:?}", respuesta_acks_nak);
     comunicacion.responder(respuesta_acks_nak).unwrap();
     // let lineas = comunicacion.obtener_lineas().unwrap();
     // println!("lineas: {:?}", lineas);
     let faltantes = obtener_archivos_faltantes(have_objs_ids, dir.clone());
     // obtener un packfile de los faltantes...
-    let packfile = packfile::Packfile::new().obtener_pack_con_archivos(faltantes, &(dir.clone() + "/.gir/objects"));
+    let packfile = packfile::Packfile::new().obtener_pack_con_archivos(faltantes, &(dir.clone() + "/.gir/objects/"));
     comunicacion.responder_con_bytes(packfile).unwrap();
     Ok(())
 }

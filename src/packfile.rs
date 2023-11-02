@@ -25,6 +25,7 @@ impl Packfile {
     fn aniadir_objeto(&mut self, objeto: String, dir: &str) -> Result<(), String> {
         // let logger = Rc::new(Logger::new(PathBuf::from("log.txt"))?);
         println!("Aniadiendo objeto: {}", objeto);
+        println!("la dir que llega: {}", dir);
         // DESHARCODEAR EL ./.GIR
         let ruta_objeto = format!("{}{}/{}", dir, &objeto[..2], &objeto[2..]);
         println!("ruta objeto: {}", ruta_objeto);

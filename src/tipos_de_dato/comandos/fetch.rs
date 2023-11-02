@@ -39,7 +39,6 @@ impl Fetch {
         // let first_ref = refs_recibidas.remove(0);
         
         
-        escribir_en_remote_origin_las_referencias(&refs_recibidas);
         
         // let capacidades = first_ref.split("\0").collect::<Vec<&str>>()[1];
         // envio
@@ -64,6 +63,8 @@ impl Fetch {
         println!("Obteniendo paquete..");
         let mut packfile = comunicacion.obtener_lineas_como_bytes().unwrap();
         comunicacion.obtener_paquete_y_escribir(&mut packfile, String::from("./.gir/objects/")).unwrap();
+        escribir_en_remote_origin_las_referencias(&refs_recibidas);
+  
         Ok(String::from("Fetch ejecutado con exito"))
     }
 }

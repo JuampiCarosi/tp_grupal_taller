@@ -88,7 +88,7 @@ impl Push {
 
         if !actualizaciones.is_empty(){
             comunicacion.responder(actualizaciones).unwrap();
-            comunicacion.responder_con_bytes(Packfile::new().obtener_pack_con_archivos(objetos_a_enviar.into_iter().collect(), "./.gir/objects")).unwrap();            
+            comunicacion.responder_con_bytes(Packfile::new().obtener_pack_con_archivos(objetos_a_enviar.into_iter().collect(), "./.gir/objects/")).unwrap();            
             Ok(String::from("Push ejecutado con exito"))
         } else {
             //error 
