@@ -61,7 +61,7 @@ impl Commit {
     fn crear_contenido_commit(
         &self,
         hash_padre_commit: String,
-    ) -> Result<(String, String), String> {
+    ) -> Result<(String, String), String> { 
         let hash_arbol = match hash_padre_commit.as_str() {
             "" => write_tree::crear_arbol_commit(None)?,
             _ => write_tree::crear_arbol_commit(Some(hash_padre_commit.clone()))?,

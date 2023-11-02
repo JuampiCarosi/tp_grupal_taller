@@ -1,12 +1,13 @@
-use std::rc::Rc;
-
 use crate::err_comunicacion::ErrorDeComunicacion;
 use crate::tipos_de_dato::logger::Logger;
-use crate::{io, utilidades_de_compresion, tipos_de_dato};
+use crate::{io, utilidades_de_compresion};
 use crate::tipos_de_dato::comandos::cat_file;
-
+use crate::tipos_de_dato::objetos::tree::Tree;
+use std::path::PathBuf;
+use std::rc::Rc;
+use crate::tipos_de_dato::objetos::blob::Blob;
 use sha1::{Digest, Sha1};
-
+  
 pub struct Packfile {
     objetos: Vec<u8>,
     indice: Vec<u8>,
@@ -22,15 +23,20 @@ impl Packfile {
         }
     }
 
-    fn aniadir_objeto(&mut self, objeto: String, dir: &str) -> Result<(), String> {
+    fn  aniadir_objeto(&mut self, objeto: String, dir: &str) -> Result<(), String> {
         // let logger = Rc::new(Logger::new(PathBuf::from("log.txt"))?);
-        println!("Aniadiendo objeto: {}", objeto);
-        println!("la dir que llega: {}", dir);
+        // println!("Aniadiendo objeto: {}", objeto);
+        // println!("la dir que llega: {}", dir);
         // DESHARCODEAR EL ./.GIR
         let ruta_objeto = format!("{}{}/{}", dir, &objeto[..2], &objeto[2..]);
-        println!("ruta objeto: {}", ruta_objeto);
+        // println!("ruta objeto: {}", ruta_objeto);
         let objeto_comprimido = io::leer_bytes(&ruta_objeto).unwrap();
-        let tamanio_objeto = utilidades_de_compresion::descomprimir_contenido_u8(&objeto_comprimido)?.len() as u32;
+        // let tamanio_sin_split = utilidades_de_compresion::descomprimir_objeto(&objeto_comprimido, "./gir/objects/".to_string())?;
+        let log = Rc::new(Logger::new(PathBuf::from("log.txt")).unwrap());
+        let tamanio_objeto_str = cat_file::CatFile::from(&mut vec!["-s".to_string(), objeto.clone()], log).unwrap().ejecutar().unwrap();
+        let tamanio_objeto = tamanio_objeto_str.trim().parse::<u32>().unwrap_or(0);
+        println!("tamanio objeto: {}", tamanio_objeto);
+       // println!("tamano objeto: {}", tamanio_objeto);
         let tipo_objeto = cat_file::obtener_tipo_objeto_de(&objeto, dir)?;
 
         // codifica el tamanio del archivo descomprimido y su tipo en un tipo variable de longitud
@@ -45,9 +51,10 @@ impl Packfile {
                 return Err("Tipo de objeto invalido".to_string());
             }
         };
-
+        let obj = utilidades_de_compresion::obtener_contenido_comprimido_sin_header(objeto.clone())?;
+        // println!("objeto comprimido: {:?}", String::from_utf8(obj));
         self.objetos.extend(nbyte);
-        self.objetos.extend(objeto_comprimido);
+        self.objetos.extend(obj);
 
         self.cant_objetos += 1;
         Ok(())
@@ -60,7 +67,6 @@ impl Packfile {
         // esto porque es un clone, deberia pasarle los objetos que quiero
         let objetos = io::obtener_objetos_del_directorio(dir.to_string())?;
         // --- 
-        
         for objeto in objetos {
             let inicio = self.objetos.len() as u32; // obtengo el len previo a aniadir el objeto
             self.aniadir_objeto(objeto.clone(), dir).unwrap();
@@ -92,12 +98,12 @@ impl Packfile {
         packfile.extend(&self.objetos);
 
         // computa el hash SHA-1 del packfile
-        // let mut hasher = Sha1::new();
-        // hasher.update(&packfile);
-        // let hash = hasher.finalize();
+        let mut hasher = Sha1::new();
+        hasher.update(&packfile);
+        let hash = hasher.finalize();
 
         // // aniade el hash al final del packfile
-        // packfile.extend(&hash);
+        packfile.extend(&hash);
 
         packfile
     }
@@ -117,14 +123,24 @@ impl Packfile {
 
 
     pub fn obtener_pack_con_archivos(&mut self, objetos: Vec<String>, dir: &str) -> Vec<u8> {
+        // let objetos = vec!["ef55aae678e3a636dc72d68f3b10f60b2ad2c306".to_string(), "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391".to_string(), ];
+        // self.aniadir_objeto("ef55aae678e3a636dc72d68f3b10f60b2ad2c306".to_string(), "./.gir/objects/");
         for objeto in objetos {
             self.aniadir_objeto(objeto, dir).unwrap();
         }
         let mut packfile: Vec<u8> = Vec::new();
         packfile.extend("PACK".as_bytes());
-        packfile.extend(&[0, 0, 0, 2]);
+        // packfile.extend(&[0, 0, 0, 2]);
+        packfile.extend(2u32.to_be_bytes());
         packfile.extend(&self.cant_objetos.to_be_bytes());
         packfile.extend(&self.objetos);
+        println!("cant objetos: {}", self.cant_objetos);
+        let mut hasher = Sha1::new();
+        hasher.update(&packfile);
+        let hash = hasher.finalize();
+
+        // // aniade el hash al final del packfile
+        packfile.extend(&hash);
         packfile
     }
 }
@@ -191,3 +207,10 @@ pub fn decodificar_bytes(bytes: &mut Vec<u8>) -> (u8, u32, u32) {
     }
     (tipo, numero_decodificado, bytes_leidos)
 }
+
+
+// tree ef55aae678e3a636dc72d68f3b10f60b2ad2c306
+// author JuaniFIUBA <jperezd@fi.uba.ar> 1698954872 -0300
+// committer JuaniFIUBA <jperezd@fi.uba.ar> 1698954872 -0300
+
+// archivezco

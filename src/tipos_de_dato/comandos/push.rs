@@ -23,7 +23,7 @@ impl Push {
         for referencia in refs {
             hash_refs.insert(
                 referencia.split(' ').collect::<Vec<&str>>()[1].to_string(),
-                (referencia.split(' ').collect::<Vec<&str>>()[0].to_string(), "0".repeat(20)),
+                (referencia.split(' ').collect::<Vec<&str>>()[0].to_string(), "0".repeat(40)),
             );
         }        
         Push { hash_refs }
@@ -35,24 +35,28 @@ impl Push {
 
         let mut client = TcpStream::connect(server_address).unwrap();
         let mut comunicacion = Comunicacion::new(client.try_clone().unwrap());
+        let request_data = "git-receive-pack /home/juani/23C2-Cangrejos-Tacticos/srv/gir\0host=example.com\0\0version=1\0"; //en donde dice /.git/ va la dir del repo
 
-        let request_data = "git-receive-pack /.gir/\0host=example.com\0\0version=1\0"; //en donde dice /.git/ va la dir del repo
+        // let request_data = "git-receive-pack /.gir/\0host=example.com\0\0version=1\0"; //en donde dice /.git/ va la dir del repo
         let request_data_con_largo_hex = io::obtener_linea_con_largo_hex(request_data);
 
         client.write_all(request_data_con_largo_hex.as_bytes()).unwrap();
         let mut refs_recibidas = comunicacion.obtener_lineas().unwrap();
         let mut actualizaciones = Vec::new();
         let mut objetos_a_enviar  = HashSet::new();
-        if !refs_recibidas.is_empty() {
+        // la primera es version 1
+        let mut version = refs_recibidas.remove(0);
+        if !refs_recibidas.len() > 1 {
             let first_ref = refs_recibidas.remove(0);
             let referencia_y_capacidades = first_ref.split('\0').collect::<Vec<&str>>();
+            println!("referencia_y_capacidades: {:?}", referencia_y_capacidades);
             let capabilities = referencia_y_capacidades[1];
             refs_recibidas.push(referencia_y_capacidades[0].to_string());
         }
         if refs_recibidas.is_empty() {
             // hay que actualizar todo
         }
-
+        
         // ----------------------------------------------------------
         // no se si esta hecho el caso de los creates, checkear el caso en el que no mandan refs 
         // ----------------------------------------------------------
@@ -89,6 +93,7 @@ impl Push {
         if !actualizaciones.is_empty(){
             comunicacion.responder(actualizaciones).unwrap();
             comunicacion.responder_con_bytes(Packfile::new().obtener_pack_con_archivos(objetos_a_enviar.into_iter().collect(), "./.gir/objects/")).unwrap();            
+            println!("lineas recibidas: {:?}", comunicacion.obtener_lineas().unwrap());
             Ok(String::from("Push ejecutado con exito"))
         } else {
             //error 

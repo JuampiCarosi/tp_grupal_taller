@@ -46,10 +46,13 @@ impl Comunicacion {
             if tamanio == 0 {
                 break;
             }
+            println!("tamanio: {:?}", tamanio);
+
             // lee el resto del flujo
             let mut data = vec![0; (tamanio - 4) as usize];
-            self.flujo.read_exact(&mut data)?;
+            self.flujo.read(&mut data)?;
             let linea = str::from_utf8(&data)?;
+            println!("linea: {:?}", linea);
             lineas.push(linea.to_string());
             if linea.contains("NAK") || linea.contains("done") {
                 break;

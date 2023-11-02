@@ -15,19 +15,23 @@ impl Fetch {
     pub fn ejecutar(&mut self) -> Result<String, String> { 
         println!("Se ejecutó el comando clone");
         // esto deberia llamar a fetch-pack
-        let server_address = "127.0.0.1:9418"; // hardcodeado
+        // let server_address = "127.0.0.1:9418"; // hardcodeado
         let mut client = TcpStream::connect(("localhost", 9418)).unwrap();
-        println!("Hola");
         let mut comunicacion = Comunicacion::new(client.try_clone().unwrap());
 
         // si es un push, tengo que calcular los commits de diferencia entre el cliente y el server, y mandarlos como packfiles.
         // hay una funcion que hace el calculo 
         // obtener_listas_de_commits
-        let request_data = "git-upload-pack /.gir/\0host=example.com\0\0version=1\0"; //en donde dice /.git/ va la dir del repo
+        let request_data = "git-upload-pack /home/juani/23C2-Cangrejos-Tacticos/srv/gir\0host=example.com\0\0version=1\0"; //en donde dice /.git/ va la dir del repo
         let request_data_con_largo_hex = io::obtener_linea_con_largo_hex(request_data);
 
         client.write_all(request_data_con_largo_hex.as_bytes()).unwrap();
         let mut refs_recibidas = comunicacion.obtener_lineas().unwrap();
+
+        if refs_recibidas.len() == 1 {
+            return Ok(String::from("No hay refs"));
+        }
+        println!("refs: {:?}", refs_recibidas);
 
         if refs_recibidas.is_empty() {
             return Err(String::from("No se recibieron referencias"));
