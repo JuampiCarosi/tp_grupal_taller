@@ -3,7 +3,7 @@ use std::{collections::HashSet, path::PathBuf, sync::Arc};
 use crate::{
     io::rm_directorio,
     tipos_de_dato::{logger::Logger, objeto::Objeto},
-    utilidades_index::{crear_index, escribir_index, leer_index, ObjetoIndex},
+    utils::index::{crear_index, escribir_index, leer_index, ObjetoIndex},
 };
 
 pub struct Remove {

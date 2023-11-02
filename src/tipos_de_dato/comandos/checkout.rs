@@ -5,7 +5,7 @@ use crate::{
     tipos_de_dato::{
         comandos::branch::Branch, logger::Logger, objeto::Objeto, objetos::tree::Tree,
     },
-    utilidades_index, utilidades_path_buf,
+    utils::{self},
 };
 
 use super::write_tree::conseguir_arbol_padre_from_ult_commit;
@@ -34,13 +34,11 @@ impl Checkout {
 
     fn crearse_con_flags(args: Vec<String>, logger: Arc<Logger>) -> Result<Checkout, String> {
         match (args[0].as_str(), args[1].clone()) {
-            ("-b", rama) => {
-                Ok(Checkout {
-                    crear_rama: true,
-                    rama_a_cambiar: rama,
-                    logger,
-                })
-            }
+            ("-b", rama) => Ok(Checkout {
+                crear_rama: true,
+                rama_a_cambiar: rama,
+                logger,
+            }),
             _ => Err("Argumentos invalidos.\ngir chekcout [-b] <nombre-rama-cambiar>".to_string()),
         }
     }
@@ -70,7 +68,7 @@ impl Checkout {
             let entrada = entrada
                 .map_err(|_| format!("Error al leer entrada el directorio {directorio:#?}"))?;
 
-            let nombre = utilidades_path_buf::obtener_nombre(&entrada.path())?;
+            let nombre = utils::path_buf::obtener_nombre(&entrada.path())?;
             output.push(nombre)
         }
 
@@ -124,7 +122,7 @@ impl Checkout {
     }
 
     fn comprobar_que_no_haya_contenido_index(&self) -> Result<(), String> {
-        if !utilidades_index::esta_vacio_el_index()? {
+        if !utils::index::esta_vacio_el_index()? {
             Err("Fallo, tiene contendio sin guardar. Por favor, haga commit para no perder los cambios".to_string())
         } else {
             Ok(())
@@ -137,11 +135,7 @@ impl Checkout {
         let rama_actual = self.conseguir_rama_actual(ref_actual)?;
         let head_commit = io::leer_a_string(format!(".gir/refs/heads/{}", rama_actual))?;
         let hash_tree_padre = conseguir_arbol_padre_from_ult_commit(head_commit);
-        Tree::from_hash(
-            hash_tree_padre,
-            PathBuf::from("."),
-            self.logger.clone(),
-        )
+        Tree::from_hash(hash_tree_padre, PathBuf::from("."), self.logger.clone())
     }
 
     pub fn ejecutar(&self) -> Result<String, String> {

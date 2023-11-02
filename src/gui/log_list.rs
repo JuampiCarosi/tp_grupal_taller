@@ -3,8 +3,7 @@ use std::path::Path;
 use gtk::prelude::*;
 
 use crate::{
-    io::leer_a_string, tipos_de_dato::comandos::log::Log,
-    utilidades_de_compresion::descomprimir_objeto,
+    io::leer_a_string, tipos_de_dato::comandos::log::Log, utils::compresion::descomprimir_objeto,
 };
 
 use super::log_seleccionado;

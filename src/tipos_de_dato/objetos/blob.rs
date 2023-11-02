@@ -3,8 +3,8 @@ use crate::{
         comandos::{cat_file::conseguir_tamanio, hash_object::HashObject},
         logger::Logger,
     },
-    utilidades_de_compresion::descomprimir_objeto,
-    utilidades_path_buf::obtener_nombre,
+    utils::compresion::descomprimir_objeto,
+    utils::path_buf::obtener_nombre,
 };
 use std::{fmt::Display, path::PathBuf, sync::Arc};
 

@@ -5,13 +5,12 @@ use std::sync::Arc;
 use crate::tipos_de_dato::logger::Logger;
 use crate::tipos_de_dato::objeto::Objeto;
 use crate::tipos_de_dato::objetos::tree::Tree;
-use crate::utilidades_de_compresion;
-use crate::utilidades_index::{generar_objetos_raiz, leer_index, ObjetoIndex};
+use crate::utils::compresion::descomprimir_objeto;
+use crate::utils::index::{generar_objetos_raiz, leer_index, ObjetoIndex};
 
 /// Dado un commit padre, devuelve el hash del arbol del commit padre
 pub fn conseguir_arbol_padre_from_ult_commit(hash_commit_padre: String) -> String {
-    let contenido =
-        utilidades_de_compresion::descomprimir_objeto(hash_commit_padre.clone()).unwrap();
+    let contenido = descomprimir_objeto(hash_commit_padre.clone()).unwrap();
     let lineas_sin_null = contenido.replace('\0', "\n");
     let lineas = lineas_sin_null.split('\n').collect::<Vec<&str>>();
     let arbol_commit = lineas[1];
@@ -87,7 +86,7 @@ mod test {
     use crate::{
         io,
         tipos_de_dato::{comandos::add::Add, comandos::init::Init, logger::Logger},
-        utilidades_de_compresion,
+        utils::compresion::descomprimir_objeto,
     };
 
     use super::crear_arbol_commit;
@@ -113,7 +112,7 @@ mod test {
             .unwrap();
 
         let arbol_commit = crear_arbol_commit(None, logger.clone()).unwrap();
-        let contenido_commit = utilidades_de_compresion::descomprimir_objeto(arbol_commit).unwrap();
+        let contenido_commit = descomprimir_objeto(arbol_commit).unwrap();
 
         assert_eq!(
             contenido_commit,
@@ -134,7 +133,7 @@ mod test {
 
         assert_eq!(arbol_commit, "01c6c27fe31e9a4c3e64d3ab3489a2d3716a2b49");
 
-        let contenido_commit = utilidades_de_compresion::descomprimir_objeto(arbol_commit).unwrap();
+        let contenido_commit = descomprimir_objeto(arbol_commit).unwrap();
 
         assert_eq!(
             contenido_commit,

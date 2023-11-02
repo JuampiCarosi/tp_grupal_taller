@@ -1,6 +1,6 @@
 use std::{path::PathBuf, sync::Arc};
 
-use crate::{io, tipos_de_dato::logger::Logger, utilidades_path_buf::obtener_nombre};
+use crate::{io, tipos_de_dato::logger::Logger, utils::path_buf::obtener_nombre};
 
 pub struct Branch {
     pub mostrar: bool,
@@ -93,7 +93,7 @@ impl Branch {
 //     use crate::tipos_de_dato::comandos::commit::Commit;
 //     use crate::tipos_de_dato::comandos::init::Init;
 //     use crate::tipos_de_dato::logger::Logger;
-//     use crate::utilidades_de_compresion;
+//     use crate::utils::compresion;
 //     use std::path::PathBuf;
 //     use std::sync::Arc;
 
@@ -120,7 +120,7 @@ impl Branch {
 //     fn conseguir_arbol_commit(branch: String) -> String {
 //         let hash_hijo = std::fs::read_to_string(format!(".gir/refs/heads/{}", branch)).unwrap();
 //         let contenido_hijo =
-//             utilidades_de_compresion::descomprimir_objeto(hash_hijo.clone()).unwrap();
+//             utils::compresion::descomprimir_objeto(hash_hijo.clone()).unwrap();
 //         let lineas_sin_null = contenido_hijo.replace("\0", "\n");
 //         let lineas = lineas_sin_null.split("\n").collect::<Vec<&str>>();
 //         let arbol_commit = lineas[1];

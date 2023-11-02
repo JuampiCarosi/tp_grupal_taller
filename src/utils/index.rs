@@ -1,16 +1,17 @@
 use std::{
     collections::HashSet,
     fs::{self, OpenOptions},
-    io::{BufRead, Write},
+    io::BufRead,
     path::{Path, PathBuf},
     sync::Arc,
 };
 
 use crate::{
-    io,
+    io::{self, escribir_bytes},
     tipos_de_dato::{comandos::hash_object::HashObject, logger::Logger, objeto::Objeto},
-    utilidades_path_buf::obtener_directorio_raiz,
 };
+
+use super::path_buf::obtener_directorio_raiz;
 
 const PATH_INDEX: &str = "./.gir/index";
 
@@ -109,24 +110,6 @@ pub fn generar_objetos_raiz(
 }
 
 pub fn escribir_index(logger: Arc<Logger>, objetos_index: &Vec<ObjetoIndex>) -> Result<(), String> {
-    let mut file = match OpenOptions::new()
-        .write(true)
-        .truncate(true)
-        .open(PATH_INDEX)
-    {
-        Ok(file) => file,
-        Err(_) => return Err("No se pudo abrir el archivo index".to_string()),
-    };
-
-    if objetos_index.is_empty() {
-        OpenOptions::new()
-            .write(true)
-            .truncate(true)
-            .open(PATH_INDEX)
-            .unwrap();
-        return Ok(());
-    }
-
     let mut buffer = String::new();
 
     for objeto_index in objetos_index {
@@ -150,8 +133,7 @@ pub fn escribir_index(logger: Arc<Logger>, objetos_index: &Vec<ObjetoIndex>) -> 
         buffer.push_str(&line);
     }
 
-    file.write_all(buffer.as_bytes())
-        .map_err(|_| "No se pudo escribir el index".to_string())?;
+    escribir_bytes(PATH_INDEX, buffer)?;
     Ok(())
 }
 

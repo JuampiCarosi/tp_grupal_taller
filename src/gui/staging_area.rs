@@ -5,7 +5,7 @@ use crate::{
         comandos::{add::Add, status::Status},
         logger::Logger,
     },
-    utilidades_index::{leer_index, ObjetoIndex},
+    utils::index::{leer_index, ObjetoIndex},
 };
 use gtk::prelude::*;
 

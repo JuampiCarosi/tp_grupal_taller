@@ -2,7 +2,7 @@ use std::{path::PathBuf, sync::Arc};
 
 use crate::{
     tipos_de_dato::{logger::Logger, objeto::Objeto},
-    utilidades_index::{crear_index, escribir_index, leer_index, ObjetoIndex},
+    utils::index::{crear_index, escribir_index, leer_index, ObjetoIndex},
 };
 
 use super::status::obtener_arbol_del_commit_head;

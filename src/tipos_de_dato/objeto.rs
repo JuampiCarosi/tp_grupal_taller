@@ -77,7 +77,10 @@ impl Objeto {
         logger: Arc<Logger>,
     ) -> Result<Objeto, String> {
         if directorio.starts_with("./") && directorio != PathBuf::from("./") {
-            directorio = directorio.strip_prefix("./").unwrap().to_path_buf();
+            directorio = match directorio.strip_prefix("./") {
+                Ok(dir) => dir.to_path_buf(),
+                Err(_) => return Err(format!("No se pudo leer el directorio {directorio:#?}")),
+            };
         }
 
         if directorio.is_dir() {

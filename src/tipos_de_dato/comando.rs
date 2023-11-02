@@ -27,8 +27,12 @@ pub enum Comando {
 
 impl Comando {
     pub fn new(input: Vec<String>, logger: Arc<Logger>) -> Result<Comando, String> {
-        let (_, rest) = input.split_first().unwrap();
-        let (comando, args) = rest.split_first().unwrap();
+        let (_, rest) = match input.split_first() {
+            Some((first, rest)) => (first, rest),
+            None => return Err("No se ingreso ningun comando".to_string()),
+        };
+
+        let (comando, args) = rest.split_first().ok_or("No se ingreso ningun comando")?;
 
         let mut vector_args = Vec::from(args);
 

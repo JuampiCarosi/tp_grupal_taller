@@ -26,6 +26,11 @@ pub mod tipos_de_dato {
 }
 pub mod gui;
 pub mod io;
-pub mod utilidades_de_compresion;
-pub mod utilidades_index;
-pub mod utilidades_path_buf;
+
+pub mod utils {
+
+    pub mod compresion;
+    pub mod gir_config;
+    pub mod index;
+    pub mod path_buf;
+}

@@ -15,8 +15,8 @@ use crate::{
         logger::{self, Logger},
         objeto::Objeto,
     },
-    utilidades_de_compresion::{comprimir_contenido_u8, descomprimir_objeto},
-    utilidades_path_buf::{esta_directorio_habilitado, obtener_nombre},
+    utils::compresion::{comprimir_contenido_u8, descomprimir_objeto},
+    utils::path_buf::{esta_directorio_habilitado, obtener_nombre},
 };
 
 use super::blob::Blob;
@@ -528,7 +528,7 @@ mod test {
     use crate::io;
     use crate::tipos_de_dato::logger::Logger;
     use crate::tipos_de_dato::{objeto::Objeto, objetos::tree::Tree};
-    use crate::utilidades_de_compresion::descomprimir_contenido_u8;
+    use crate::utils::compresion::descomprimir_contenido_u8;
     use std::path::PathBuf;
     use std::sync::Arc;
 
@@ -655,7 +655,7 @@ mod test {
 
         let tree = Tree::from_directorio(PathBuf::from("src"), None, logger).unwrap();
 
-        assert!(tree.contiene_hijo_por_ubicacion(PathBuf::from("src/utilidades_index.rs")))
+        assert!(tree.contiene_hijo_por_ubicacion(PathBuf::from("src/utils::index.rs")))
     }
 
     #[test]

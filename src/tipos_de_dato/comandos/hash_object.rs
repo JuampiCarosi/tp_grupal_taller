@@ -1,4 +1,4 @@
-use crate::utilidades_de_compresion::comprimir_contenido;
+use crate::utils::compresion::comprimir_contenido;
 use crate::{io, tipos_de_dato::logger::Logger};
 use sha1::{Digest, Sha1};
 use std::path::PathBuf;

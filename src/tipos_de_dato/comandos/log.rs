@@ -4,8 +4,9 @@ use chrono::{FixedOffset, LocalResult, TimeZone};
 
 use crate::tipos_de_dato::logger::Logger;
 
+use crate::io;
 use crate::tipos_de_dato::comandos::checkout::Checkout;
-use crate::{io, utilidades_de_compresion};
+use crate::utils::compresion::descomprimir_objeto;
 
 use super::commit::Commit;
 
@@ -81,11 +82,7 @@ impl Log {
         let (horas, minutos) = offset.split_at(3);
         let offset_horas = horas[0..3].parse::<i32>().unwrap_or(-3);
         let offset_minutos = minutos.parse::<i32>().unwrap_or(0);
-        timestamp_archivo_log(
-            timestamp,
-            offset_horas,
-            offset_minutos,
-        )
+        timestamp_archivo_log(timestamp, offset_horas, offset_minutos)
     }
 
     fn armar_contenido_log(
@@ -121,7 +118,7 @@ impl Log {
         }
         let mut i = 1;
         loop {
-            let contenido = utilidades_de_compresion::descomprimir_objeto(hash_commit.clone())?;
+            let contenido = descomprimir_objeto(hash_commit.clone())?;
             let siguiente_padre = Self::conseguir_padre_desde_contenido_commit(&contenido);
             let contenido_a_mostrar = match i {
                 1 => {

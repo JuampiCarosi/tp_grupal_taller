@@ -1,6 +1,6 @@
-use crate::utilidades_de_compresion::descomprimir_objeto;
-
 use gtk::prelude::*;
+
+use crate::utils::compresion::descomprimir_objeto;
 
 fn estilar_log_info(builder: &gtk::Builder) {
     let text: gtk::TextView = builder.object("log-description").unwrap();

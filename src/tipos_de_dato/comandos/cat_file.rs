@@ -3,7 +3,7 @@ use crate::{
         logger::Logger, objeto::flag_es_un_objeto_, objetos::tree::Tree,
         visualizaciones::Visualizaciones,
     },
-    utilidades_de_compresion::descomprimir_objeto,
+    utils::compresion::descomprimir_objeto,
 };
 use std::sync::Arc;
 

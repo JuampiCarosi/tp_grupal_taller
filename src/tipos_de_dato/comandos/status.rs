@@ -5,12 +5,8 @@ use std::{
 
 use crate::{
     io::leer_a_string,
-    tipos_de_dato::{
-        logger::{Logger},
-        objeto::Objeto,
-        objetos::tree::Tree,
-    },
-    utilidades_index::{leer_index, ObjetoIndex},
+    tipos_de_dato::{logger::Logger, objeto::Objeto, objetos::tree::Tree},
+    utils::index::{leer_index, ObjetoIndex},
 };
 
 use super::{commit::Commit, write_tree::conseguir_arbol_padre_from_ult_commit};
@@ -92,8 +88,11 @@ impl Status {
             None => return Ok(trackeados),
         };
         for objeto in self.tree_directorio_actual.obtener_objetos_hoja() {
-            if tree_head.contiene_hijo_por_ubicacion(objeto.obtener_path()) && !tree_head
-                    .contiene_misma_version_hijo(objeto.obtener_hash(), objeto.obtener_path()) && !self.index_contiene_objeto(&objeto) {
+            if tree_head.contiene_hijo_por_ubicacion(objeto.obtener_path())
+                && !tree_head
+                    .contiene_misma_version_hijo(objeto.obtener_hash(), objeto.obtener_path())
+                && !self.index_contiene_objeto(&objeto)
+            {
                 trackeados.push(format!("modificado: {}", objeto.obtener_path().display()));
             }
         }
