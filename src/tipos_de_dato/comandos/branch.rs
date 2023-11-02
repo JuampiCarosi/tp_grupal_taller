@@ -1,15 +1,15 @@
-use std::{path::PathBuf, rc::Rc};
+use std::{path::PathBuf, sync::Arc};
 
 use crate::{io, tipos_de_dato::logger::Logger, utilidades_path_buf::obtener_nombre};
 
 pub struct Branch {
     pub mostrar: bool,
     pub rama_nueva: Option<String>,
-    pub logger: Rc<Logger>,
+    pub logger: Arc<Logger>,
 }
 
 impl Branch {
-    pub fn from(args: &mut Vec<String>, logger: Rc<Logger>) -> Result<Branch, String> {
+    pub fn from(args: &mut Vec<String>, logger: Arc<Logger>) -> Result<Branch, String> {
         if args.len() == 0 {
             return Ok(Branch {
                 mostrar: true,
@@ -95,7 +95,7 @@ impl Branch {
 //     use crate::tipos_de_dato::logger::Logger;
 //     use crate::utilidades_de_compresion;
 //     use std::path::PathBuf;
-//     use std::rc::Rc;
+//     use std::sync::Arc;
 
 //     fn craer_archivo_config_default() {
 //         let config_path = "~/.girconfig";
@@ -108,7 +108,7 @@ impl Branch {
 //             rm_directorio(".gir").unwrap();
 //         }
 
-//         let logger = Rc::new(Logger::new(PathBuf::from("tmp/branch_init")).unwrap());
+//         let logger = Arc::new(Logger::new(PathBuf::from("tmp/branch_init")).unwrap());
 //         let init = Init {
 //             path: "./.gir".to_string(),
 //             logger,
@@ -129,7 +129,7 @@ impl Branch {
 //         arbol_commit.to_string()
 //     }
 
-//     fn addear_archivos_y_comittear(args: Vec<String>, logger: Rc<Logger>) {
+//     fn addear_archivos_y_comittear(args: Vec<String>, logger: Arc<Logger>) {
 //         let mut add = Add::from(args, logger.clone()).unwrap();
 //         add.ejecutar().unwrap();
 //         let commit =
@@ -140,7 +140,7 @@ impl Branch {
 //     #[test]
 //     fn test01_mostrar_ramas() {
 //         limpiar_archivo_gir();
-//         let logger = Rc::new(Logger::new(PathBuf::from("tmp/branch_test01")).unwrap());
+//         let logger = Arc::new(Logger::new(PathBuf::from("tmp/branch_test01")).unwrap());
 //         let mut branch = Branch {
 //             mostrar: true,
 //             rama_nueva: None,
@@ -155,7 +155,7 @@ impl Branch {
 //     #[test]
 //     fn test02_crear_rama() {
 //         limpiar_archivo_gir();
-//         let logger = Rc::new(Logger::new(PathBuf::from("tmp/branch_test02")).unwrap());
+//         let logger = Arc::new(Logger::new(PathBuf::from("tmp/branch_test02")).unwrap());
 //         let mut branch = Branch {
 //             mostrar: false,
 //             rama_nueva: Some("nueva_rama".to_string()),
@@ -170,7 +170,7 @@ impl Branch {
 //     #[test]
 //     fn test03_crear_una_rama_y_mostrar_ramas() {
 //         limpiar_archivo_gir();
-//         let logger = Rc::new(Logger::new(PathBuf::from("tmp/branch_test03")).unwrap());
+//         let logger = Arc::new(Logger::new(PathBuf::from("tmp/branch_test03")).unwrap());
 //         Branch {
 //             mostrar: false,
 //             rama_nueva: Some("nueva_rama".to_string()),
@@ -192,7 +192,7 @@ impl Branch {
 //     #[test]
 //     fn test05_mostrar_from() {
 //         limpiar_archivo_gir();
-//         let logger = Rc::new(Logger::new(PathBuf::from("tmp/branch_test05")).unwrap());
+//         let logger = Arc::new(Logger::new(PathBuf::from("tmp/branch_test05")).unwrap());
 //         let mut branch = Branch::from(&mut vec![], logger).unwrap();
 
 //         let resultado = branch.ejecutar();
@@ -203,7 +203,7 @@ impl Branch {
 //     #[test]
 //     fn test06_crear_from() {
 //         limpiar_archivo_gir();
-//         let logger = Rc::new(Logger::new(PathBuf::from("tmp/branch_test06")).unwrap());
+//         let logger = Arc::new(Logger::new(PathBuf::from("tmp/branch_test06")).unwrap());
 //         let mut branch = Branch::from(&mut vec!["nueva_rama".to_string()], logger).unwrap();
 
 //         let resultado = branch.ejecutar();
@@ -215,7 +215,7 @@ impl Branch {
 //     #[should_panic(expected = "Demasiados argumentos\\ngir branch [<nombre-rama-nueva>]")]
 //     fn test07_muchos_argumentos() {
 //         limpiar_archivo_gir();
-//         let logger = Rc::new(Logger::new(PathBuf::from("tmp/branch_test07")).unwrap());
+//         let logger = Arc::new(Logger::new(PathBuf::from("tmp/branch_test07")).unwrap());
 //         let mut branch = Branch::from(
 //             &mut vec!["nueva_rama".to_string(), "otra_nueva_rama".to_string()],
 //             logger,
@@ -228,7 +228,7 @@ impl Branch {
 //     #[test]
 //     fn test08_la_branch_se_crea_apuntando_al_ultimo_commit() {
 //         limpiar_archivo_gir();
-//         let logger = Rc::new(Logger::new(PathBuf::from("tmp/branch_test08")).unwrap());
+//         let logger = Arc::new(Logger::new(PathBuf::from("tmp/branch_test08")).unwrap());
 //         addear_archivos_y_comittear(vec!["test_file.txt".to_string()], logger.clone());
 //         let mut branch = Branch {
 //             mostrar: false,

@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
+use std::sync::Arc;
 
+use crate::tipos_de_dato::logger::Logger;
 use crate::tipos_de_dato::objeto::Objeto;
 use crate::tipos_de_dato::objetos::tree::Tree;
 use crate::utilidades_de_compresion;
@@ -45,25 +47,33 @@ fn aplicar_index_a_arbol(arbol_index: &[ObjetoIndex], arbol_padre: &[Objeto]) ->
 
 /// Crea un arbol de commit a partir del index y su commit padre
 /// commit_padre es un option ya que puede ser None en caso de que sea el primer commit
-pub fn crear_arbol_commit(commit_padre: Option<String>) -> Result<String, String> {
-    let objetos_index = leer_index()?;
+pub fn crear_arbol_commit(
+    commit_padre: Option<String>,
+    logger: Arc<Logger>,
+) -> Result<String, String> {
+    let objetos_index = leer_index(logger.clone())?;
     if objetos_index.is_empty() {
         return Err("No hay archivos trackeados para commitear".to_string());
     }
 
     let objetos_a_utilizar = if let Some(hash) = commit_padre {
         let hash_arbol_padre = conseguir_arbol_padre_from_ult_commit(hash.clone());
-        let arbol_padre = Tree::from_hash(hash_arbol_padre.clone(), PathBuf::from("./"))?;
+        let arbol_padre = Tree::from_hash(
+            hash_arbol_padre.clone(),
+            PathBuf::from("./"),
+            logger.clone(),
+        )?;
         let objetos_arbol_nuevo_commit =
             aplicar_index_a_arbol(&objetos_index, &arbol_padre.objetos);
-        generar_objetos_raiz(&objetos_arbol_nuevo_commit)?
+        generar_objetos_raiz(&objetos_arbol_nuevo_commit, logger.clone())?
     } else {
-        generar_objetos_raiz(&objetos_index)?
+        generar_objetos_raiz(&objetos_index, logger.clone())?
     };
 
     let arbol_commit = Tree {
         directorio: PathBuf::from("./"),
         objetos: objetos_a_utilizar,
+        logger,
     };
 
     arbol_commit.escribir_en_base()?;
@@ -72,7 +82,7 @@ pub fn crear_arbol_commit(commit_padre: Option<String>) -> Result<String, String
 
 #[cfg(test)]
 mod test {
-    use std::{path::PathBuf, rc::Rc};
+    use std::{path::PathBuf, sync::Arc};
 
     use crate::{
         io,
@@ -84,7 +94,7 @@ mod test {
 
     fn limpiar_archivo_gir() {
         io::rm_directorio(".gir").unwrap();
-        let logger = Rc::new(Logger::new(PathBuf::from("tmp/branch_init")).unwrap());
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/branch_init")).unwrap());
         let init = Init {
             path: "./.gir".to_string(),
             logger,
@@ -96,13 +106,13 @@ mod test {
 
     fn test01_se_escribe_arbol_con_un_hijo() {
         limpiar_archivo_gir();
-        let logger = Rc::new(Logger::new(PathBuf::from("tmp/commit_test01")).unwrap());
-        Add::from(vec!["test_file.txt".to_string()], logger)
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/commit_test01")).unwrap());
+        Add::from(vec!["test_file.txt".to_string()], logger.clone())
             .unwrap()
             .ejecutar()
             .unwrap();
 
-        let arbol_commit = crear_arbol_commit(None).unwrap();
+        let arbol_commit = crear_arbol_commit(None, logger.clone()).unwrap();
         let contenido_commit = utilidades_de_compresion::descomprimir_objeto(arbol_commit).unwrap();
 
         assert_eq!(
@@ -114,13 +124,13 @@ mod test {
     #[test]
     fn test02_se_escribe_arbol_con_carpeta() {
         limpiar_archivo_gir();
-        let logger = Rc::new(Logger::new(PathBuf::from("tmp/commit_test01")).unwrap());
-        Add::from(vec!["test_dir/objetos".to_string()], logger)
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/commit_test01")).unwrap());
+        Add::from(vec!["test_dir/objetos".to_string()], logger.clone())
             .unwrap()
             .ejecutar()
             .unwrap();
 
-        let arbol_commit = crear_arbol_commit(None).unwrap();
+        let arbol_commit = crear_arbol_commit(None, logger.clone()).unwrap();
 
         assert_eq!(arbol_commit, "01c6c27fe31e9a4c3e64d3ab3489a2d3716a2b49");
 

@@ -1,24 +1,28 @@
 use std::{
     path::{self, PathBuf},
-    rc::Rc,
+    sync::Arc,
 };
 
 use crate::{
     io::leer_a_string,
-    tipos_de_dato::{logger::Logger, objeto::Objeto, objetos::tree::Tree},
+    tipos_de_dato::{
+        logger::{self, Logger},
+        objeto::Objeto,
+        objetos::tree::Tree,
+    },
     utilidades_index::{leer_index, ObjetoIndex},
 };
 
 use super::{commit::Commit, write_tree::conseguir_arbol_padre_from_ult_commit};
 
 pub struct Status {
-    logger: Rc<Logger>,
+    logger: Arc<Logger>,
     index: Vec<ObjetoIndex>,
     tree_commit_head: Option<Tree>,
     tree_directorio_actual: Tree,
 }
 
-pub fn obtener_arbol_del_commit_head() -> Option<Tree> {
+pub fn obtener_arbol_del_commit_head(logger: Arc<Logger>) -> Option<Tree> {
     let ruta = match Commit::obtener_ruta_branch_commit() {
         Ok(ruta) => ruta,
         Err(_) => return None,
@@ -28,16 +32,17 @@ pub fn obtener_arbol_del_commit_head() -> Option<Tree> {
         None
     } else {
         let hash_arbol_commit = conseguir_arbol_padre_from_ult_commit(padre_commit);
-        let tree = Tree::from_hash(hash_arbol_commit, PathBuf::from("./")).unwrap();
+        let tree = Tree::from_hash(hash_arbol_commit, PathBuf::from("./"), logger).unwrap();
         Some(tree)
     }
 }
 
 impl Status {
-    pub fn from(logger: Rc<Logger>) -> Result<Status, String> {
-        let index = leer_index()?;
-        let tree_commit_head = obtener_arbol_del_commit_head();
-        let tree_directorio_actual = Tree::from_directorio(PathBuf::from("./"), None)?;
+    pub fn from(logger: Arc<Logger>) -> Result<Status, String> {
+        let index = leer_index(logger.clone())?;
+        let tree_commit_head = obtener_arbol_del_commit_head(logger.clone());
+        let tree_directorio_actual =
+            Tree::from_directorio(PathBuf::from("./"), None, logger.clone())?;
         Ok(Status {
             logger,
             index,
@@ -202,7 +207,7 @@ impl Status {
 
 #[cfg(test)]
 mod tests {
-    use std::{io::Write, path::PathBuf, rc::Rc};
+    use std::{io::Write, path::PathBuf, sync::Arc};
 
     use crate::{
         io::{self, rm_directorio},
@@ -212,12 +217,12 @@ mod tests {
         },
     };
 
-    fn addear_archivos(args: Vec<String>, logger: Rc<Logger>) {
+    fn addear_archivos(args: Vec<String>, logger: Arc<Logger>) {
         let mut add = Add::from(args, logger.clone()).unwrap();
         add.ejecutar().unwrap();
     }
 
-    fn addear_archivos_y_comittear(args: Vec<String>, logger: Rc<Logger>) {
+    fn addear_archivos_y_comittear(args: Vec<String>, logger: Arc<Logger>) {
         let mut add = Add::from(args, logger.clone()).unwrap();
         add.ejecutar().unwrap();
         let commit =
@@ -227,7 +232,7 @@ mod tests {
 
     fn limpiar_archivo_gir() {
         rm_directorio(".gir").unwrap();
-        let logger = Rc::new(Logger::new(PathBuf::from("tmp/branch_init")).unwrap());
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/branch_init")).unwrap());
         let init = Init {
             path: "./.gir".to_string(),
             logger,
@@ -255,7 +260,7 @@ mod tests {
     #[test]
     fn test01_obtener_staging() {
         limpiar_archivo_gir();
-        let logger = Rc::new(Logger::new(PathBuf::from("tmp/status_test01")).unwrap());
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/status_test01")).unwrap());
         addear_archivos(
             vec![
                 "add".to_string(),
@@ -275,7 +280,7 @@ mod tests {
     #[test]
     fn test02_obtener_staging_con_archivos_multiples() {
         limpiar_archivo_gir();
-        let logger = Rc::new(Logger::new(PathBuf::from("tmp/status_test02")).unwrap());
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/status_test02")).unwrap());
         addear_archivos(
             vec!["add".to_string(), "test_dir/".to_string()],
             logger.clone(),
@@ -303,7 +308,7 @@ mod tests {
     #[test]
     fn test03_obtener_trackeados() {
         limpiar_archivo_gir();
-        let logger = Rc::new(Logger::new(PathBuf::from("tmp/status_test03")).unwrap());
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/status_test03")).unwrap());
         crear_test_file();
         addear_archivos_y_comittear(vec!["test_file.txt".to_string()], logger.clone());
         modicar_test_file();
@@ -316,7 +321,7 @@ mod tests {
     #[test]
     fn test04_obtener_trackeados_con_varios_archivos() {
         limpiar_archivo_gir();
-        let logger = Rc::new(Logger::new(PathBuf::from("tmp/status_test04")).unwrap());
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/status_test04")).unwrap());
         crear_test_file();
         addear_archivos(vec!["test_file2.txt".to_string()], logger.clone());
         addear_archivos_y_comittear(vec!["test_file.txt".to_string()], logger.clone());
@@ -337,7 +342,7 @@ mod tests {
     #[test]
     fn test05_addear_archivo_lo_elimina_de_untrackeados() {
         limpiar_archivo_gir();
-        let logger = Rc::new(Logger::new(PathBuf::from("tmp/status_test05")).unwrap());
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/status_test05")).unwrap());
         addear_archivos(vec!["test_file.txt".to_string()], logger.clone());
         let status = Status::from(logger).unwrap();
         let untrackeados = status.obtener_untrackeados().unwrap();
@@ -348,7 +353,7 @@ mod tests {
     #[test]
     fn test06_addear_y_luego_modificar_aparece_en_staging_y_trackeados() {
         limpiar_archivo_gir();
-        let logger = Rc::new(Logger::new(PathBuf::from("tmp/status_test06")).unwrap());
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/status_test06")).unwrap());
         crear_test_file();
         addear_archivos_y_comittear(vec!["test_file.txt".to_string()], logger.clone());
         modicar_test_file();

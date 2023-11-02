@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::sync::Arc;
 
 use chrono::{FixedOffset, LocalResult, TimeZone};
 
@@ -11,7 +11,7 @@ use super::commit::Commit;
 
 pub struct Log {
     branch: String,
-    logger: Rc<Logger>,
+    logger: Arc<Logger>,
 }
 
 fn timestamp_archivo_log(
@@ -43,7 +43,7 @@ fn timestamp_archivo_log(
 }
 
 impl Log {
-    pub fn from(args: &mut Vec<String>, logger: Rc<Logger>) -> Result<Log, String> {
+    pub fn from(args: &mut Vec<String>, logger: Arc<Logger>) -> Result<Log, String> {
         if args.len() > 2 {
             return Err("Cantidad de argumentos invalida".to_string());
         }
@@ -149,7 +149,7 @@ mod test {
     #[test]
     fn test01_creacion_de_log_sin_branch() {
         let mut args = vec![];
-        let logger = Rc::new(Logger::new(PathBuf::from("tmp/log")).unwrap());
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/log")).unwrap());
         let log = Log::from(&mut args, logger).unwrap();
         assert_eq!(log.branch, "master");
     }
@@ -158,7 +158,7 @@ mod test {
     fn test02_creacion_de_log_indicando_branch() {
         io::escribir_bytes(".gir/refs/heads/rama", "hash".as_bytes()).unwrap();
         let mut args = vec!["rama".to_string()];
-        let logger = Rc::new(Logger::new(PathBuf::from("tmp/log")).unwrap());
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/log")).unwrap());
         let log = Log::from(&mut args, logger).unwrap();
         assert_eq!(log.branch, "rama");
         std::fs::remove_file(".gir/refs/heads/rama").unwrap();
@@ -168,7 +168,7 @@ mod test {
     #[should_panic(expected = "La rama rama no existe")]
     fn test03_error_al_usar_branch_inexistente() {
         let mut args = vec!["rama".to_string()];
-        let logger = Rc::new(Logger::new(PathBuf::from("tmp/log")).unwrap());
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/log")).unwrap());
         let _ = Log::from(&mut args, logger).unwrap();
     }
 

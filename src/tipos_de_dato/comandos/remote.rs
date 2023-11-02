@@ -1,4 +1,4 @@
-use std::{collections::HashMap, rc::Rc};
+use std::{collections::HashMap, sync::Arc};
 
 use crate::{
     io::leer_a_string,
@@ -20,13 +20,13 @@ pub struct Remote {
     comando: ComandoRemote,
     nombre: Option<String>,
     url: Option<String>,
-    logger: Rc<Logger>,
+    logger: Arc<Logger>,
 }
 
 const INPUT_ERROR: &str = "gir remote add [<nombre-remote>] [<url-remote>]\ngir remote delete [<nombre-remote>] [<url-remote>]\ngir remote set-url [<nombre-remote>] [<url-remote>]\ngir remote show-url [<nombre-remote>] [<url-remote>]";
 
 impl Remote {
-    pub fn from(args: &mut Vec<String>, logger: Rc<Logger>) -> Result<Remote, String> {
+    pub fn from(args: &mut Vec<String>, logger: Arc<Logger>) -> Result<Remote, String> {
         if args.len() > 3 {
             return Err(format!("Demasiados argumentos\n{}", INPUT_ERROR));
         }

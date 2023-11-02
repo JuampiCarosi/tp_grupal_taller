@@ -1,4 +1,4 @@
-use std::{path::PathBuf, rc::Rc};
+use std::{path::PathBuf, sync::Arc};
 
 use crate::{
     io,
@@ -15,7 +15,7 @@ const PATH_HEAD: &str = "./.gir/HEAD";
 pub struct Checkout {
     crear_rama: bool,
     rama_a_cambiar: String,
-    logger: Rc<Logger>,
+    logger: Arc<Logger>,
 }
 
 impl Checkout {
@@ -32,7 +32,7 @@ impl Checkout {
         Ok(())
     }
 
-    fn crearse_con_flags(args: Vec<String>, logger: Rc<Logger>) -> Result<Checkout, String> {
+    fn crearse_con_flags(args: Vec<String>, logger: Arc<Logger>) -> Result<Checkout, String> {
         match (args[0].as_str(), args[1].clone()) {
             ("-b", rama) => {
                 return Ok(Checkout {
@@ -45,7 +45,7 @@ impl Checkout {
         }
     }
 
-    pub fn from(args: Vec<String>, logger: Rc<Logger>) -> Result<Checkout, String> {
+    pub fn from(args: Vec<String>, logger: Arc<Logger>) -> Result<Checkout, String> {
         Self::verificar_argumentos(&args)?;
 
         if Self::hay_flags(&args) {
@@ -137,7 +137,11 @@ impl Checkout {
         let rama_actual = self.conseguir_rama_actual(ref_actual)?;
         let head_commit = io::leer_a_string(format!(".gir/refs/heads/{}", rama_actual))?;
         let hash_tree_padre = conseguir_arbol_padre_from_ult_commit(head_commit);
-        Ok(Tree::from_hash(hash_tree_padre, PathBuf::from("."))?)
+        Ok(Tree::from_hash(
+            hash_tree_padre,
+            PathBuf::from("."),
+            self.logger.clone(),
+        )?)
     }
 
     pub fn ejecutar(&self) -> Result<String, String> {
@@ -199,7 +203,7 @@ impl Checkout {
 
 #[cfg(test)]
 mod test {
-    use std::{path::PathBuf, rc::Rc};
+    use std::{path::PathBuf, sync::Arc};
 
     use crate::{
         io::{self, escribir_bytes, rm_directorio},
@@ -221,7 +225,7 @@ mod test {
 
     fn limpiar_archivo_gir() {
         rm_directorio(".gir").unwrap();
-        let logger = Rc::new(Logger::new(PathBuf::from("tmp/branch_init")).unwrap());
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/branch_init")).unwrap());
         let init = Init {
             path: "./.gir".to_string(),
             logger,
@@ -230,7 +234,7 @@ mod test {
         craer_archivo_config_default();
     }
 
-    fn addear_archivos_y_comittear(args: Vec<String>, logger: Rc<Logger>) {
+    fn addear_archivos_y_comittear(args: Vec<String>, logger: Arc<Logger>) {
         let mut add = Add::from(args, logger.clone()).unwrap();
         add.ejecutar().unwrap();
         let commit =
@@ -241,7 +245,7 @@ mod test {
     #[test]
     fn test01_checkout_cambia_de_rama() {
         limpiar_archivo_gir();
-        let logger = Rc::new(Logger::new(PathBuf::from("tmp/checkout_test02")).unwrap());
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/checkout_test02")).unwrap());
         let args = vec!["test_dir/objetos/archivo.txt".to_string()];
         addear_archivos_y_comittear(args, logger.clone());
 
@@ -261,7 +265,7 @@ mod test {
 
     fn test02_checkout_crea_y_cambia_de_rama() {
         limpiar_archivo_gir();
-        let logger = Rc::new(Logger::new(PathBuf::from("tmp/checkout_test02")).unwrap());
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/checkout_test02")).unwrap());
         let args = vec!["test_dir/objetos/archivo.txt".to_string()];
         addear_archivos_y_comittear(args, logger.clone());
 
@@ -279,7 +283,7 @@ mod test {
     #[test]
     fn test03_al_hacer_checkout_actualiza_contenido() {
         limpiar_archivo_gir();
-        let logger = Rc::new(Logger::new(PathBuf::from("tmp/checkout_test03")).unwrap());
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/checkout_test03")).unwrap());
         io::escribir_bytes("tmp/checkout_test03_test", "contenido").unwrap();
         let args = vec!["tmp/checkout_test03_test".to_string()];
         addear_archivos_y_comittear(args, logger.clone());
@@ -306,7 +310,7 @@ mod test {
     #[test]
     fn test04_al_hacer_checkout_se_eliminan_no_trackeados() {
         limpiar_archivo_gir();
-        let logger = Rc::new(Logger::new(PathBuf::from("tmp/checkout_test03")).unwrap());
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/checkout_test03")).unwrap());
         io::escribir_bytes("tmp/checkout_test04_test", "contenido").unwrap();
         let args = vec!["tmp/checkout_test04_test".to_string()];
         addear_archivos_y_comittear(args, logger.clone());

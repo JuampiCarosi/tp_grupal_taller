@@ -1,4 +1,4 @@
-use std::{fs::OpenOptions, io::Write, path, rc::Rc};
+use std::{fs::OpenOptions, io::Write, path, sync::Arc};
 
 use chrono::TimeZone;
 use sha1::{Digest, Sha1};
@@ -13,7 +13,7 @@ use crate::{
 use super::write_tree;
 
 pub struct Commit {
-    logger: Rc<Logger>,
+    logger: Arc<Logger>,
     mensaje: String,
 }
 
@@ -35,7 +35,7 @@ fn armar_timestamp_commit() -> Result<String, String> {
 }
 
 impl Commit {
-    pub fn from(args: &mut Vec<String>, logger: Rc<Logger>) -> Result<Commit, String> {
+    pub fn from(args: &mut Vec<String>, logger: Arc<Logger>) -> Result<Commit, String> {
         if args.len() != 2 {
             return Err("La cantidad de argumentos es invalida".to_string());
         }
@@ -63,8 +63,11 @@ impl Commit {
         hash_padre_commit: String,
     ) -> Result<(String, String), String> {
         let hash_arbol = match hash_padre_commit.as_str() {
-            "" => write_tree::crear_arbol_commit(None)?,
-            _ => write_tree::crear_arbol_commit(Some(hash_padre_commit.clone()))?,
+            "" => write_tree::crear_arbol_commit(None, self.logger.clone())?,
+            _ => write_tree::crear_arbol_commit(
+                Some(hash_padre_commit.clone()),
+                self.logger.clone(),
+            )?,
         };
         let (nombre, mail) = Self::conseguir_nombre_y_mail_del_config()?;
         let linea_autor = format!("{} <{}>", nombre, mail);
@@ -216,7 +219,7 @@ impl Commit {
 
 #[cfg(test)]
 mod test {
-    use std::{path::PathBuf, rc::Rc};
+    use std::{path::PathBuf, sync::Arc};
 
     use crate::{
         io::{self, escribir_bytes, rm_directorio},
@@ -239,7 +242,7 @@ mod test {
 
     fn limpiar_archivo_gir() {
         rm_directorio(".gir").unwrap();
-        let logger = Rc::new(Logger::new(PathBuf::from("tmp/branch_init")).unwrap());
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/branch_init")).unwrap());
         let init = Init {
             path: "./.gir".to_string(),
             logger,
@@ -269,7 +272,7 @@ mod test {
         arbol_commit.to_string()
     }
 
-    fn addear_archivos_y_comittear(args: Vec<String>, logger: Rc<Logger>) {
+    fn addear_archivos_y_comittear(args: Vec<String>, logger: Arc<Logger>) {
         let mut add = Add::from(args, logger.clone()).unwrap();
         add.ejecutar().unwrap();
         let commit =
@@ -280,7 +283,7 @@ mod test {
     #[test]
     fn test01_se_actualiza_el_head_ref_correspondiente_con_el_hash_del_commit() {
         limpiar_archivo_gir();
-        let logger = Rc::new(Logger::new(PathBuf::from("tmp/commit_test01")).unwrap());
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/commit_test01")).unwrap());
         let mut add = Add::from(vec!["test_file.txt".to_string()], logger.clone()).unwrap();
         add.ejecutar().unwrap();
         let commit =
@@ -296,7 +299,7 @@ mod test {
     #[test]
     fn test02_al_hacer_dos_commits_el_primero_es_padre_del_segundo() {
         limpiar_archivo_gir();
-        let logger = Rc::new(Logger::new(PathBuf::from("tmp/commit_test02")).unwrap());
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/commit_test02")).unwrap());
 
         addear_archivos_y_comittear(vec!["test_file.txt".to_string()], logger.clone());
 
@@ -313,7 +316,7 @@ mod test {
     #[test]
     fn test03_al_hacer_commit_apunta_al_arbol_correcto() {
         limpiar_archivo_gir();
-        let logger = Rc::new(Logger::new(PathBuf::from("tmp/commit_test03")).unwrap());
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/commit_test03")).unwrap());
         addear_archivos_y_comittear(vec!["test_file.txt".to_string()], logger);
 
         let hash_arbol = conseguir_arbol_commit("master".to_string());
@@ -329,7 +332,7 @@ mod test {
     fn test04_al_hacer_commit_de_un_archivo_y_luego_hacer_otro_commit_de_ese_archivo_modificado_el_hash_tree_es_correcto(
     ) {
         limpiar_archivo_gir();
-        let logger = Rc::new(Logger::new(PathBuf::from("tmp/commit_test04")).unwrap());
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/commit_test04")).unwrap());
         addear_archivos_y_comittear(vec!["test_file.txt".to_string()], logger.clone());
 
         escribir_bytes("test_file.txt", "hola".to_string()).unwrap();
@@ -354,7 +357,7 @@ mod test {
     fn test05_al_hacer_commit_de_un_directorio_y_luego_hacer_otro_commit_de_ese_directorio_modificado_el_hash_tree_es_correcto(
     ) {
         limpiar_archivo_gir();
-        let logger = Rc::new(Logger::new(PathBuf::from("tmp/commit_test05")).unwrap());
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/commit_test05")).unwrap());
         addear_archivos_y_comittear(vec!["test_dir/muchos_objetos".to_string()], logger.clone());
 
         escribir_bytes("test_dir/muchos_objetos/archivo.txt", "hola".to_string()).unwrap();

@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::sync::Arc;
 
 use super::{
     comandos::{
@@ -26,7 +26,7 @@ pub enum Comando {
 }
 
 impl Comando {
-    pub fn new(input: Vec<String>, logger: Rc<Logger>) -> Result<Comando, String> {
+    pub fn new(input: Vec<String>, logger: Arc<Logger>) -> Result<Comando, String> {
         let (_, rest) = input.split_first().unwrap();
         let (comando, args) = rest.split_first().unwrap();
 

@@ -20,6 +20,7 @@ pub enum Log {
     End,
 }
 
+#[derive(Debug)]
 /// A logger that writes messages to a file.
 pub struct Logger {
     tx: Sender<Log>,

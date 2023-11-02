@@ -6,14 +6,23 @@ use crate::{
     utilidades_de_compresion::descomprimir_objeto,
     utilidades_path_buf::obtener_nombre,
 };
-use std::{fmt::Display, path::PathBuf, rc::Rc};
+use std::{fmt::Display, path::PathBuf, sync::Arc};
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug)]
 pub struct Blob {
     pub hash: String,
     pub ubicacion: PathBuf,
     pub nombre: String,
+    pub logger: Arc<Logger>,
 }
+
+impl PartialEq for Blob {
+    fn eq(&self, other: &Self) -> bool {
+        self.hash == other.hash
+    }
+}
+
+impl Eq for Blob {}
 
 impl Blob {
     pub fn obtener_hash(&self) -> String {
@@ -28,10 +37,10 @@ impl Blob {
         }
     }
 
-    pub fn from_directorio(directorio: PathBuf) -> Result<Blob, String> {
-        let logger = Rc::new(Logger::new(PathBuf::from("tmp/objeto"))?);
+    pub fn from_directorio(directorio: PathBuf, logger: Arc<Logger>) -> Result<Blob, String> {
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/objeto"))?);
         let hash = HashObject {
-            logger,
+            logger: logger.clone(),
             escribir: false,
             ubicacion_archivo: directorio.clone(),
         }
@@ -43,6 +52,7 @@ impl Blob {
             nombre,
             hash,
             ubicacion: directorio,
+            logger,
         })
     }
 }
