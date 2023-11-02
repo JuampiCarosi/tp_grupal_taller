@@ -6,7 +6,11 @@ use sha1::{Digest, Sha1};
 use crate::{
     io::{self, leer_a_string},
     tipos_de_dato::logger::Logger,
-    utils::{compresion::comprimir_contenido, index::limpiar_archivo_index},
+    utils::{
+        compresion::comprimir_contenido,
+        gir_config::{armar_config_con_mail_y_nombre, conseguir_nombre_y_mail_del_config},
+        index::limpiar_archivo_index,
+    },
 };
 
 use super::write_tree;
@@ -68,7 +72,7 @@ impl Commit {
                 self.logger.clone(),
             )?,
         };
-        let (nombre, mail) = Self::conseguir_nombre_y_mail_del_config()?;
+        let (nombre, mail) = conseguir_nombre_y_mail_del_config()?;
         let linea_autor = format!("{} <{}>", nombre, mail);
         let timestamp = armar_timestamp_commit()?;
         let contenido_commit = format!(
@@ -130,17 +134,6 @@ impl Commit {
         Ok(())
     }
 
-    fn conseguir_nombre_y_mail_del_config() -> Result<(String, String), String> {
-        let home = std::env::var("HOME").unwrap();
-        let config_path = format!("{home}/.girconfig");
-        let contenido = io::leer_a_string(config_path)?;
-
-        let lineas = contenido.split('\n').collect::<Vec<&str>>();
-        let nombre = lineas[0].split('=').collect::<Vec<&str>>()[1].trim();
-        let mail = lineas[1].split('=').collect::<Vec<&str>>()[1].trim();
-        Ok((nombre.to_string(), mail.to_string()))
-    }
-
     fn ejecutar_wrapper(&self, contenido_total: String) -> Result<(), String> {
         let contenido_comprimido = comprimir_contenido(contenido_total.clone())?;
         let hash = self.hashear_contenido_objeto(&contenido_total);
@@ -154,51 +147,8 @@ impl Commit {
         Ok(())
     }
 
-    fn archivo_config_esta_vacio() -> bool {
-        let home = std::env::var("HOME").unwrap();
-        let config_path = format!("{home}/.girconfig");
-        let contenido = match io::leer_a_string(config_path) {
-            Ok(contenido) => contenido,
-            Err(_) => return true,
-        };
-        if contenido.is_empty() {
-            return true;
-        }
-        false
-    }
-
-    fn armar_config_con_mail_y_nombre() -> Result<(), String> {
-        if !Self::archivo_config_esta_vacio() {
-            return Ok(());
-        }
-        let mut nombre = String::new();
-        let mut mail = String::new();
-
-        println!("Por favor, ingrese su nombre:");
-        match std::io::stdin().read_line(&mut nombre) {
-            Ok(_) => (),
-            Err(_) => return Err("No se pudo leer el nombre ingresado".to_string()),
-        };
-
-        println!("Por favor, ingrese su correo electrónico:");
-        match std::io::stdin().read_line(&mut mail) {
-            Ok(_) => (),
-            Err(_) => return Err("No se pudo leer el mail ingresado".to_string()),
-        };
-
-        nombre = nombre.trim().to_string();
-        mail = mail.trim().to_string();
-
-        let home = std::env::var("HOME").unwrap();
-        let config_path = format!("{home}/.girconfig");
-        let contenido = format!("nombre ={}\nmail ={}\n", nombre, mail);
-        io::escribir_bytes(config_path, contenido)?;
-        println!("Información de usuario guardada en ~/.girconfig.");
-        Ok(())
-    }
-
     pub fn ejecutar(&self) -> Result<String, String> {
-        Self::armar_config_con_mail_y_nombre()?;
+        armar_config_con_mail_y_nombre()?;
         let hash_padre_commit = Self::obtener_hash_del_padre_del_commit()?;
         let (hash_arbol, contenido_total) = self.crear_contenido_commit(hash_padre_commit)?;
         match self.ejecutar_wrapper(contenido_total) {
