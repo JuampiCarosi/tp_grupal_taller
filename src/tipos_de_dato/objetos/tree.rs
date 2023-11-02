@@ -655,12 +655,12 @@ mod test {
 
         let tree = Tree::from_directorio(PathBuf::from("src"), None, logger).unwrap();
 
-        assert!(tree.contiene_hijo_por_ubicacion(PathBuf::from("src/utils::index.rs")))
+        assert!(tree.contiene_hijo_por_ubicacion(PathBuf::from("src/io.rs")))
     }
 
     #[test]
 
-    fn test07_contiene_hijo_por_ubicacion_rec() {
+    fn test08_contiene_hijo_por_ubicacion_rec() {
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/tree_test08")).unwrap());
 
         let tree = Tree::from_directorio(PathBuf::from("src"), None, logger).unwrap();
