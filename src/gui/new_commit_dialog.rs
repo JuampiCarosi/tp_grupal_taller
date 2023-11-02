@@ -7,7 +7,7 @@ use crate::tipos_de_dato::{
     logger::{self, Logger},
 };
 
-use super::log_list;
+use super::{log_list, staging_area};
 
 fn run_dialog(builder: &gtk::Builder) {
     let commit_button: gtk::Button = builder.object("commit-button").unwrap();
@@ -49,6 +49,7 @@ fn boton_confimar_dialog(builder: &gtk::Builder, window: &gtk::Window, logger: R
         let branch_actual = Commit::obtener_branch_actual().unwrap();
 
         log_list::render(&builder_clone, branch_actual);
+        staging_area::render(&builder_clone, logger.clone(), &window_clone);
         input.set_text("");
         window_clone.show_all();
         dialog.hide();
