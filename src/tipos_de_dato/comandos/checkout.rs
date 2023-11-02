@@ -10,7 +10,7 @@ use crate::{
 
 use super::write_tree::conseguir_arbol_padre_from_ult_commit;
 
-const PATH_HEAD: &str = "./.gir/HEAD";
+const PATH_HEAD: &str = "/home/juani/.gir/HEAD";
 
 pub struct Checkout {
     crear_rama: bool,

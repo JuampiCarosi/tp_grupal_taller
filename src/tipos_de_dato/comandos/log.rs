@@ -67,7 +67,7 @@ impl Log {
         Ok(hash_commit.to_string())
     }
 
-    fn conseguir_padre_desde_contenido_commit(contenido: &str) -> String {
+    pub fn conseguir_padre_desde_contenido_commit(contenido: &str) -> String {
         let contenido_spliteado = contenido.split('\n').collect::<Vec<&str>>();
         let siguiente_padre = contenido_spliteado[1].split(' ').collect::<Vec<&str>>()[1];
         siguiente_padre.to_string()
@@ -103,7 +103,7 @@ impl Log {
             return Err(format!("La rama {} no tiene commits", self.branch));
         }
         loop {
-            let contenido = utilidades_de_compresion::descomprimir_objeto(hash_commit.clone())?;
+            let contenido = utilidades_de_compresion::descomprimir_objeto(hash_commit.clone() ,String::from("gir/objects/"))?;
             let siguiente_padre = Self::conseguir_padre_desde_contenido_commit(&contenido);
             let contenido_a_mostrar =
                 Self::armar_contenido_log(&contenido, &self.branch, hash_commit)?;

@@ -249,8 +249,8 @@ mod test {
     }
 
     fn conseguir_hash_padre(branch: String) -> String {
-        let hash = io::leer_a_string(format!(".gir/refs/heads/{}", branch)).unwrap();
-        let contenido = utilidades_de_compresion::descomprimir_objeto(hash.clone()).unwrap();
+        let hash = std::fs::read_to_string(format!(".gir/refs/heads/{}", branch)).unwrap();
+        let contenido = utilidades_de_compresion::descomprimir_objeto(hash.clone(), String::from(".gir/refs/heads")).unwrap();
         let lineas_sin_null = contenido.replace("\0", "\n");
         let lineas = lineas_sin_null.split("\n").collect::<Vec<&str>>();
         let hash_padre = lineas[2];
@@ -260,7 +260,7 @@ mod test {
     fn conseguir_arbol_commit(branch: String) -> String {
         let hash_hijo = io::leer_a_string(format!(".gir/refs/heads/{}", branch)).unwrap();
         let contenido_hijo =
-            utilidades_de_compresion::descomprimir_objeto(hash_hijo.clone()).unwrap();
+            utilidades_de_compresion::descomprimir_objeto(hash_hijo.clone(), String::from(".gir/refs/heads")).unwrap();
         let lineas_sin_null = contenido_hijo.replace("\0", "\n");
         let lineas = lineas_sin_null.split("\n").collect::<Vec<&str>>();
         let arbol_commit = lineas[1];
@@ -317,7 +317,7 @@ mod test {
         addear_archivos_y_comittear(vec!["test_file.txt".to_string()], logger);
 
         let hash_arbol = conseguir_arbol_commit("master".to_string());
-        let contenido_arbol = utilidades_de_compresion::descomprimir_objeto(hash_arbol).unwrap();
+        let contenido_arbol = utilidades_de_compresion::descomprimir_objeto(hash_arbol, String::from(".gir/refs/heads")).unwrap();
 
         assert_eq!(
             contenido_arbol,
@@ -336,7 +336,7 @@ mod test {
         addear_archivos_y_comittear(vec!["test_file.txt".to_string()], logger.clone());
 
         let hash_arbol = conseguir_arbol_commit("master".to_string());
-        let contenido_arbol = utilidades_de_compresion::descomprimir_objeto(hash_arbol).unwrap();
+        let contenido_arbol = utilidades_de_compresion::descomprimir_objeto(hash_arbol, "./gir/objects/".to_string()).unwrap();
         let hash_correcto =
             HashObject::from(&mut vec!["test_file.txt".to_string()], logger.clone())
                 .unwrap()

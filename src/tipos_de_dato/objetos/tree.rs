@@ -40,11 +40,13 @@ impl Tree {
 
     /// Escribe en el directorio actual los archivos que se encuentran en el arbol
     pub fn escribir_en_directorio(&self) -> Result<(), String> {
+        println!("escribiendo en directorio: {}", self.directorio.display());
         let objetos = self.obtener_objetos_hoja();
         for objeto in objetos {
             match objeto {
                 Objeto::Blob(blob) => {
-                    let objeto = descomprimir_objeto(blob.hash)?;
+                    println!("blob: {:?}", blob);
+                    let objeto = descomprimir_objeto(blob.hash, String::from(self.directorio.to_string_lossy()))?;
                     let contenido = objeto.split('\0').collect::<Vec<&str>>()[1];
                     io::escribir_bytes(blob.ubicacion, contenido).unwrap();
                 }
@@ -185,10 +187,10 @@ impl Tree {
     fn obtener_datos_de_contenido(
         contenido: String,
     ) -> Result<Vec<(String, String, String)>, String> {
+        println!("{:#?}", contenido);
         let mut contenido_parseado: Vec<(String, String, String)> = Vec::new();
         let mut lineas = contenido.split('\0').collect::<Vec<&str>>();
         lineas.remove(0);
-
         let mut lineas_separadas: Vec<&str> = Vec::new();
         lineas_separadas.push(lineas[0]);
         let ultima_linea = lineas.pop().unwrap();
@@ -198,7 +200,7 @@ impl Tree {
             lineas_separadas.push(modo_y_nombre);
         });
         lineas_separadas.push(ultima_linea);
-
+        println!("{:#?}", lineas_separadas);
         for i in (0..lineas_separadas.len()).step_by(2) {
             if i + 1 < lineas_separadas.len() {
                 let linea = lineas_separadas[i].split_whitespace();
@@ -223,15 +225,14 @@ impl Tree {
     ///  el directorio en el que se encuentra el tree y lo devuelve como un objeto Tree
     pub fn from_hash(hash: String, directorio: PathBuf) -> Result<Tree, String> {
         // let hash_completo = Self::obtener_hash_completo(hash)?;
-
-        let contenido = descomprimir_objeto(hash)?;
-
+        let contenido = descomprimir_objeto(hash, "./.gir/objects".to_string())?;
+        println!("directorio del hash {:?}", directorio);
         let contenido_parseado = Self::obtener_datos_de_contenido(contenido)?;
+        // println!("{:#?}", contenido_parseado);
         let mut objetos: Vec<Objeto> = Vec::new();
 
         for (modo, nombre, hash_hijo) in contenido_parseado {
             let mut ubicacion = format!("{}/{}", directorio.display(), nombre);
-
             if directorio == PathBuf::from(".") {
                 ubicacion = nombre.clone()
             }
@@ -559,6 +560,7 @@ mod test {
     #[test]
     fn test06_escribir_en_base_con_anidados() -> Result<(), String> {
         let objeto = Objeto::from_directorio(PathBuf::from("test_dir"), None).unwrap();
+        println!("{:#?}", objeto.obtener_hash());
         if let Objeto::Tree(tree) = objeto {
             tree.escribir_en_base().unwrap();
 

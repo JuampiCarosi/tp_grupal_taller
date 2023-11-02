@@ -3,8 +3,7 @@ use std::rc::Rc;
 use super::{
     comandos::{
         add::Add, branch::Branch, cat_file::CatFile, checkout::Checkout, commit::Commit,
-        hash_object::HashObject, init::Init, log::Log, remote::Remote, rm::Remove,
-        version::Version,
+        hash_object::HashObject, init::Init, rm::Remove, version::Version, clone::Clone, fetch::Fetch, push::Push, log::Log, remote::Remote
     },
     logger::Logger,
 };
@@ -19,6 +18,10 @@ pub enum Comando {
     Checkout(Checkout),
     Branch(Branch),
     Commit(Commit),
+    Clone(Clone),
+    Fetch(Fetch),
+    Push(Push),
+    // Pull,
     Log(Log),
     Remote(Remote),
     Unknown,
@@ -41,6 +44,11 @@ impl Comando {
             "branch" => Comando::Branch(Branch::from(&mut vector_args, logger)?),
             "checkout" => Comando::Checkout(Checkout::from(vector_args, logger)?),
             "commit" => Comando::Commit(Commit::from(&mut vector_args, logger)?),
+            "fetch" => Comando::Fetch(Fetch::new()),
+            "clone" => Comando::Clone(Clone::new()),
+            "push" => Comando::Push(Push::new()),
+            // "pull",
+
             "log" => Comando::Log(Log::from(&mut vector_args, logger)?),
             "remote" => Comando::Remote(Remote::from(&mut vector_args, logger)?),
             _ => Comando::Unknown,
@@ -62,6 +70,9 @@ impl Comando {
             Comando::Checkout(ref mut checkout) => checkout.ejecutar(),
             Comando::Branch(ref mut branch) => branch.ejecutar(),
             Comando::Commit(ref mut commit) => commit.ejecutar(),
+            Comando::Fetch(ref mut fetch) => fetch.ejecutar(),
+            Comando::Clone(clone) => clone.ejecutar(),
+            Comando::Push(push) => push.ejecutar(),
             Comando::Log(ref mut log) => log.ejecutar(),
             Comando::Unknown => Err("Comando desconocido".to_string()),
             Comando::Remote(ref mut remote) => remote.ejecutar(),

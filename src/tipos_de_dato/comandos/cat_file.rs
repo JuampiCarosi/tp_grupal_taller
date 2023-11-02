@@ -12,9 +12,24 @@ pub struct CatFile {
     pub visualizacion: Visualizaciones,
     pub hash_objeto: String,
 }
+pub fn obtener_tipo_objeto_de(hash_objeto: &str, dir: &str) -> Result<String, String>{
+    let (header, _)  = obtener_contenido_objeto_de(hash_objeto.to_string(), dir)?;
+    let tipo_objeto = conseguir_tipo_objeto(header)?;
+    Ok(tipo_objeto)
+}
+
+fn obtener_contenido_objeto_de(hash: String, dir: &str) -> Result<(String, String), String> {
+    // sacar el hardcode de esto
+    let objeto = descomprimir_objeto(hash, dir.to_string())?;
+    match objeto.split_once('\0') {
+        Some((header, contenido)) => Ok((header.to_string(), contenido.to_string())),
+        None => Err("Objeto invalido".to_string()),
+    }
+}
 
 fn obtener_contenido_objeto(hash: String) -> Result<(String, String), String> {
-    let objeto = descomprimir_objeto(hash)?;
+    // sacar el hardcode de esto
+    let objeto = descomprimir_objeto(hash, String::from("./.gir/objects"))?;
     match objeto.split_once('\0') {
         Some((header, contenido)) => Ok((header.to_string(), contenido.to_string())),
         None => Err("Objeto invalido".to_string()),
@@ -68,7 +83,7 @@ pub fn conseguir_tamanio(header: String) -> Result<String, String> {
 }
 
 impl CatFile {
-    pub fn from(args: &mut Vec<String>, logger: Rc<Logger>) -> Result<CatFile, String> {
+    pub fn  from(args: &mut Vec<String>, logger: Rc<Logger>) -> Result<CatFile, String> {
         let objeto = args
             .pop()
             .ok_or_else(|| "No se especifico un objeto".to_string())?;

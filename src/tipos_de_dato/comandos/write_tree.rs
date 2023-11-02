@@ -6,10 +6,19 @@ use crate::tipos_de_dato::objetos::tree::Tree;
 use crate::utilidades_de_compresion;
 use crate::utilidades_index::{generar_objetos_raiz, leer_index, ObjetoIndex};
 
-/// Dado un commit padre, devuelve el hash del arbol del commit padre
+pub fn conseguir_arbol_padre_from_ult_commit_de_dir(hash_commit_padre: &str, dir: String) -> String {
+    let contenido =
+        utilidades_de_compresion::descomprimir_objeto(hash_commit_padre.to_string(), dir).unwrap();
+    let lineas_sin_null = contenido.replace("\0", "\n");
+    let lineas = lineas_sin_null.split("\n").collect::<Vec<&str>>();
+    let arbol_commit = lineas[1];
+    let lineas = arbol_commit.split(" ").collect::<Vec<&str>>();
+    let arbol_commit = lineas[1];
+    arbol_commit.to_string()
+}
 pub fn conseguir_arbol_padre_from_ult_commit(hash_commit_padre: String) -> String {
     let contenido =
-        utilidades_de_compresion::descomprimir_objeto(hash_commit_padre.clone()).unwrap();
+        utilidades_de_compresion::descomprimir_objeto(hash_commit_padre.clone(), String::from("./.gir/objects")).unwrap();
     let lineas_sin_null = contenido.replace("\0", "\n");
     let lineas = lineas_sin_null.split("\n").collect::<Vec<&str>>();
     let arbol_commit = lineas[1];
@@ -103,7 +112,7 @@ mod test {
             .unwrap();
 
         let arbol_commit = crear_arbol_commit(None).unwrap();
-        let contenido_commit = utilidades_de_compresion::descomprimir_objeto(arbol_commit).unwrap();
+        let contenido_commit = utilidades_de_compresion::descomprimir_objeto(arbol_commit, String::from(".git/{}/{}")).unwrap();
 
         assert_eq!(
             contenido_commit,
@@ -124,7 +133,7 @@ mod test {
 
         assert_eq!(arbol_commit, "01c6c27fe31e9a4c3e64d3ab3489a2d3716a2b49");
 
-        let contenido_commit = utilidades_de_compresion::descomprimir_objeto(arbol_commit).unwrap();
+        let contenido_commit = utilidades_de_compresion::descomprimir_objeto(arbol_commit, "test_dir/objectos".to_string()).unwrap();
 
         assert_eq!(
             contenido_commit,
