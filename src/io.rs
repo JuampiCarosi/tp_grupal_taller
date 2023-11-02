@@ -359,9 +359,13 @@ pub fn escribir_referencia(referencia: &str, dir: PathBuf) {
 
 pub fn obtener_diferencias_remote(referencias: Vec<String>, dir: String) -> Vec<String> {
     let mut diferencias: Vec<String> = Vec::new();
+    // si no existe devuelvo todas las refs
+    if !PathBuf::from(dir.clone() + "refs/remotes/origin/").exists() {
+        return referencias
+    }
     for referencia in referencias { 
         let referencia_y_contenido = referencia.split_whitespace().collect::<Vec<&str>>();
-        let referencia_remote = "/refs/remotes/origin/".to_string() + referencia_y_contenido[1].split('/').last().unwrap();
+        let referencia_remote = "refs/remotes/origin/".to_string() + referencia_y_contenido[1].split('/').last().unwrap();
         println!("referencia_remote: {}", referencia_remote);
         let referencia_local = leer_a_string(&mut Path::new(&(dir.clone() + &referencia_remote))).unwrap();
         if referencia_local != referencia_y_contenido[0] {

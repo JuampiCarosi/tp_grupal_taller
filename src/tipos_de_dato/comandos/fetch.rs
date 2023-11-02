@@ -29,6 +29,7 @@ impl Fetch {
 
         client.write_all(request_data_con_largo_hex.as_bytes()).unwrap();
         let mut refs_recibidas = comunicacion.obtener_lineas().unwrap();
+
         if refs_recibidas.is_empty() {
             return Err(String::from("No se recibieron referencias"));
         }
