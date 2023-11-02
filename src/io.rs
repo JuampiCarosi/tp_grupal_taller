@@ -101,6 +101,10 @@ pub fn obtener_objetos_con_nombre_carpeta(dir: PathBuf) -> Result<Vec<String>, E
 pub fn obtener_refs_con_largo_hex(refs_path: PathBuf, dir: String) -> Result<Vec<String>, ErrorDeComunicacion> {
     let mut refs: Vec<String> = Vec::new();
     if !refs_path.exists() {
+        return Ok(refs);
+    }
+   println!("Obteniendo referencias de: {:?}", refs_path);
+    if !refs_path.exists() {
         io::Error::new(io::ErrorKind::NotFound, "No existe el repositorio");
     }
     if refs_path.ends_with("HEAD") {
@@ -190,9 +194,9 @@ fn obtener_ref_head(path: PathBuf) -> Result<String, ErrorDeComunicacion> {
         )));
     }
     let contenido = leer_archivo(&mut path.clone())?;
-    let head_ref: Vec<&str> = contenido.split_whitespace().collect();
+    // let head_ref: Vec<&str> = contenido.split_whitespace().collect();
     if let Some(ruta) = path.clone().parent() {
-        let cont = leer_archivo(&mut ruta.join(head_ref[1]))? + " HEAD";
+        let cont = leer_archivo(&mut ruta.join(contenido))? + " HEAD";
         Ok(obtener_linea_con_largo_hex(&cont))
     } else {
         Err(ErrorDeComunicacion::IoError(io::Error::new(

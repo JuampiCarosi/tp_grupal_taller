@@ -99,6 +99,7 @@ impl Servidor {
         if let Ok(mut head) = git_io::obtener_refs_con_largo_hex(dir.join("HEAD"), "/home/juani/23C2-Cangrejos-Tacticos/srv/.gir/".to_string()) {
             refs.append(&mut head);
         }
+        println!("Hola!");
         refs.append(&mut git_io::obtener_refs_con_largo_hex(dir.join("refs/heads/"), String::from("/home/juani/23C2-Cangrejos-Tacticos/srv/.gir/")).unwrap());
         refs.append(&mut git_io::obtener_refs_con_largo_hex(dir.join("refs/tags/"), String::from("/home/juani/23C2-Cangrejos-Tacticos/srv/.gir/")).unwrap());
         if !refs.is_empty(){
