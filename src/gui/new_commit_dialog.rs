@@ -1,11 +1,8 @@
-use std::{path::PathBuf, sync::Arc};
+use std::sync::Arc;
 
 use gtk::prelude::*;
 
-use crate::tipos_de_dato::{
-    comandos::commit::Commit,
-    logger::{self, Logger},
-};
+use crate::tipos_de_dato::{comandos::commit::Commit, logger::Logger};
 
 use super::{log_list, staging_area};
 
@@ -57,8 +54,8 @@ fn boton_confimar_dialog(builder: &gtk::Builder, window: &gtk::Window, logger: A
 }
 
 pub fn render(builder: &gtk::Builder, window: &gtk::Window, logger: Arc<Logger>) {
-    run_dialog(&builder);
+    run_dialog(builder);
 
-    boton_cancel_dialog(&builder);
-    boton_confimar_dialog(&builder, &window, logger);
+    boton_cancel_dialog(builder);
+    boton_confimar_dialog(builder, window, logger);
 }

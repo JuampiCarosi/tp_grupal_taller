@@ -12,10 +12,10 @@ use crate::utilidades_index::{generar_objetos_raiz, leer_index, ObjetoIndex};
 pub fn conseguir_arbol_padre_from_ult_commit(hash_commit_padre: String) -> String {
     let contenido =
         utilidades_de_compresion::descomprimir_objeto(hash_commit_padre.clone()).unwrap();
-    let lineas_sin_null = contenido.replace("\0", "\n");
-    let lineas = lineas_sin_null.split("\n").collect::<Vec<&str>>();
+    let lineas_sin_null = contenido.replace('\0', "\n");
+    let lineas = lineas_sin_null.split('\n').collect::<Vec<&str>>();
     let arbol_commit = lineas[1];
-    let lineas = arbol_commit.split(" ").collect::<Vec<&str>>();
+    let lineas = arbol_commit.split(' ').collect::<Vec<&str>>();
     let arbol_commit = lineas[1];
     arbol_commit.to_string()
 }
@@ -77,7 +77,7 @@ pub fn crear_arbol_commit(
     };
 
     arbol_commit.escribir_en_base()?;
-    Ok(arbol_commit.obtener_hash()?)
+    arbol_commit.obtener_hash()
 }
 
 #[cfg(test)]

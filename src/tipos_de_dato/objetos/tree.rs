@@ -103,7 +103,7 @@ impl Tree {
 
     /// Devuelve el contenido de un objeto tree en u8 para poder ser comprimido
     pub fn obtener_contenido(objetos: &[Objeto]) -> Result<Vec<u8>, String> {
-        let objetos_ordenados = Self::ordenar_objetos_alfabeticamente(&objetos);
+        let objetos_ordenados = Self::ordenar_objetos_alfabeticamente(objetos);
 
         let mut contenido: Vec<u8> = Vec::new();
 
@@ -120,7 +120,7 @@ impl Tree {
                         obtener_nombre(&tree.directorio.clone())?
                     };
                     let hash = &Self::decode_hex(&tree.obtener_hash()?)?;
-                    [b"40000 ", nombre.as_bytes(), b"\0", &hash].concat()
+                    [b"40000 ", nombre.as_bytes(), b"\0", hash].concat()
                 }
             };
             contenido.append(&mut line);
@@ -333,7 +333,7 @@ impl Tree {
             match objeto {
                 Objeto::Blob(_) => {}
                 Objeto::Tree(tree) => {
-                    if tree.directorio == *directorio || tree.contiene_directorio(&directorio) {
+                    if tree.directorio == *directorio || tree.contiene_directorio(directorio) {
                         return true;
                     }
                 }
@@ -496,7 +496,7 @@ impl Tree {
     }
 
     pub fn es_vacio(&self) -> bool {
-        if self.objetos.len() == 0 {
+        if self.objetos.is_empty() {
             return true;
         }
         self.objetos.iter().all(|objeto| match objeto {

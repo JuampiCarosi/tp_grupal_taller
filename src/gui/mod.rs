@@ -8,7 +8,7 @@ mod staging_area;
 use std::sync::Arc;
 
 use crate::tipos_de_dato::comandos::commit::Commit;
-use crate::tipos_de_dato::logger::{self, Logger};
+use crate::tipos_de_dato::logger::Logger;
 use gtk::prelude::*;
 use gtk::{self};
 

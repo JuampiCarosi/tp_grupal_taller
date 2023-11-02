@@ -157,7 +157,7 @@ mod test {
 
     use crate::{
         io::{escribir_bytes, leer_a_string},
-        tipos_de_dato::comandos::{add::Add, commit::Commit, init::Init},
+        tipos_de_dato::comandos::{add::Add, commit::Commit},
     };
 
     use super::*;

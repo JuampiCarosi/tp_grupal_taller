@@ -79,13 +79,13 @@ impl Log {
             Err(_) => return Err("No se pudo obtener el timestamp".to_string()),
         };
         let (horas, minutos) = offset.split_at(3);
-        let offset_horas = horas[0..3].parse::<i32>().unwrap_or_else(|_| -3);
-        let offset_minutos = minutos.parse::<i32>().unwrap_or_else(|_| 0);
-        Ok(timestamp_archivo_log(
+        let offset_horas = horas[0..3].parse::<i32>().unwrap_or(-3);
+        let offset_minutos = minutos.parse::<i32>().unwrap_or(0);
+        timestamp_archivo_log(
             timestamp,
             offset_horas,
             offset_minutos,
-        )?)
+        )
     }
 
     fn armar_contenido_log(
@@ -104,7 +104,7 @@ impl Log {
             Self::calcular_date_desde_linea(linea_autor_splitteada[3], linea_autor_splitteada[4])?;
         let mensaje = lineas_contenido[5];
         let mut branch_format = format!("({})", branch_actual);
-        if branch_actual == "" {
+        if branch_actual.is_empty() {
             branch_format = "".to_string();
         }
         Ok(format!(

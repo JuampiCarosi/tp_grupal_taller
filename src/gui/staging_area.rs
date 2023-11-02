@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use crate::{
     tipos_de_dato::{
-        comandos::{add::Add, log, status::Status},
+        comandos::{add::Add, status::Status},
         logger::Logger,
     },
     utilidades_index::{leer_index, ObjetoIndex},
@@ -218,10 +218,10 @@ fn limpiar_archivos(builder: &gtk::Builder) {
 
 pub fn render(builder: &gtk::Builder, window: &gtk::Window, logger: Arc<Logger>) {
     logger.log("Gui: Renderizando staging area".to_string());
-    limpiar_archivos(&builder);
-    estilar_lista_archivos(&builder);
-    escribir_archivos_index(&builder, logger.clone());
-    escribir_archivos_modificados(&builder, logger.clone(), window);
-    escribir_archivos_untrackeados(&builder, logger, window);
+    limpiar_archivos(builder);
+    estilar_lista_archivos(builder);
+    escribir_archivos_index(builder, logger.clone());
+    escribir_archivos_modificados(builder, logger.clone(), window);
+    escribir_archivos_untrackeados(builder, logger, window);
     window.show_all();
 }

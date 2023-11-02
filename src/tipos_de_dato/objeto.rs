@@ -1,4 +1,4 @@
-use std::{hash::Hash, path::PathBuf, sync::Arc};
+use std::{path::PathBuf, sync::Arc};
 
 use super::{
     logger::Logger,
@@ -110,7 +110,7 @@ impl Objeto {
 
 mod test {
 
-    use crate::tipos_de_dato::{comandos::log, logger};
+    use crate::tipos_de_dato::logger;
 
     use super::*;
 
@@ -223,7 +223,7 @@ mod test {
 
         let hijo_2 = Objeto::Tree(Tree {
             directorio: PathBuf::from("test_dir/muchos_objetos"),
-            objetos: Tree::ordenar_objetos_alfabeticamente(&vec![nieto_2, nieto_3]),
+            objetos: Tree::ordenar_objetos_alfabeticamente(&[nieto_2, nieto_3]),
             logger: logger.clone(),
         });
 
@@ -231,7 +231,7 @@ mod test {
             objeto,
             Objeto::Tree(Tree {
                 directorio: PathBuf::from("test_dir"),
-                objetos: Tree::ordenar_objetos_alfabeticamente(&vec![hijo_1, hijo_2]),
+                objetos: Tree::ordenar_objetos_alfabeticamente(&[hijo_1, hijo_2]),
                 logger: logger.clone(),
             })
         );

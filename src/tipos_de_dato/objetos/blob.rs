@@ -37,7 +37,7 @@ impl Blob {
         }
     }
 
-    pub fn from_directorio(directorio: PathBuf, logger: Arc<Logger>) -> Result<Blob, String> {
+    pub fn from_directorio(directorio: PathBuf, _logger: Arc<Logger>) -> Result<Blob, String> {
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/objeto"))?);
         let hash = HashObject {
             logger: logger.clone(),

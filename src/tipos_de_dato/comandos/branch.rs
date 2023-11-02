@@ -10,7 +10,7 @@ pub struct Branch {
 
 impl Branch {
     pub fn from(args: &mut Vec<String>, logger: Arc<Logger>) -> Result<Branch, String> {
-        if args.len() == 0 {
+        if args.is_empty() {
             return Ok(Branch {
                 mostrar: true,
                 rama_nueva: None,
@@ -56,7 +56,7 @@ impl Branch {
         let branch_actual = direccion_branch_actual
             .split('/')
             .last()
-            .ok_or(format!("No se pudo obtener el hash del commit"))?;
+            .ok_or("No se pudo obtener el hash del commit".to_string())?;
         let hash_commit = io::leer_a_string(format!(".gir/refs/heads/{}", branch_actual))?;
         Ok(hash_commit.to_string())
     }
@@ -79,9 +79,9 @@ impl Branch {
 
     pub fn ejecutar(&mut self) -> Result<String, String> {
         if self.mostrar {
-            return Ok(Self::mostrar_ramas()?);
+            return Self::mostrar_ramas();
         }
-        Ok(self.crear_rama()?)
+        self.crear_rama()
     }
 }
 

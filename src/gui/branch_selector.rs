@@ -1,4 +1,4 @@
-use std::{path::PathBuf, sync::Arc};
+use std::sync::Arc;
 
 use gtk::prelude::*;
 
@@ -15,11 +15,11 @@ pub fn render(builder: &gtk::Builder, window: &gtk::Window, logger: Arc<Logger>)
     select.remove_all();
 
     let binding = Branch::mostrar_ramas().unwrap();
-    let branches = binding.split("\n");
+    let branches = binding.split('\n');
 
     let mut i = 0;
     branches.for_each(|branch| {
-        if branch == "" {
+        if branch.is_empty() {
             return;
         }
         select.append_text(branch);

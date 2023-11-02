@@ -35,7 +35,7 @@ impl Checkout {
     fn crearse_con_flags(args: Vec<String>, logger: Arc<Logger>) -> Result<Checkout, String> {
         match (args[0].as_str(), args[1].clone()) {
             ("-b", rama) => {
-                return Ok(Checkout {
+                Ok(Checkout {
                     crear_rama: true,
                     rama_a_cambiar: rama,
                     logger,
@@ -137,11 +137,11 @@ impl Checkout {
         let rama_actual = self.conseguir_rama_actual(ref_actual)?;
         let head_commit = io::leer_a_string(format!(".gir/refs/heads/{}", rama_actual))?;
         let hash_tree_padre = conseguir_arbol_padre_from_ult_commit(head_commit);
-        Ok(Tree::from_hash(
+        Tree::from_hash(
             hash_tree_padre,
             PathBuf::from("."),
             self.logger.clone(),
-        )?)
+        )
     }
 
     pub fn ejecutar(&self) -> Result<String, String> {
@@ -218,7 +218,7 @@ mod test {
     fn craer_archivo_config_default() {
         let home = std::env::var("HOME").unwrap();
         let config_path = format!("{home}/.girconfig");
-        let contenido = format!("nombre = aaaa\nmail = bbbb\n");
+        let contenido = "nombre = aaaa\nmail = bbbb\n".to_string();
         println!("contenido: {}", contenido);
         escribir_bytes(config_path, contenido).unwrap();
     }

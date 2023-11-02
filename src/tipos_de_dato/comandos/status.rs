@@ -6,7 +6,7 @@ use std::{
 use crate::{
     io::leer_a_string,
     tipos_de_dato::{
-        logger::{self, Logger},
+        logger::{Logger},
         objeto::Objeto,
         objetos::tree::Tree,
     },
@@ -28,7 +28,7 @@ pub fn obtener_arbol_del_commit_head(logger: Arc<Logger>) -> Option<Tree> {
         Err(_) => return None,
     };
     let padre_commit = leer_a_string(path::Path::new(&ruta)).unwrap_or_else(|_| "".to_string());
-    if padre_commit == "" {
+    if padre_commit.is_empty() {
         None
     } else {
         let hash_arbol_commit = conseguir_arbol_padre_from_ult_commit(padre_commit);
@@ -92,13 +92,9 @@ impl Status {
             None => return Ok(trackeados),
         };
         for objeto in self.tree_directorio_actual.obtener_objetos_hoja() {
-            if tree_head.contiene_hijo_por_ubicacion(objeto.obtener_path()) {
-                if !tree_head
-                    .contiene_misma_version_hijo(objeto.obtener_hash(), objeto.obtener_path())
-                    && !self.index_contiene_objeto(&objeto)
-                {
-                    trackeados.push(format!("modificado: {}", objeto.obtener_path().display()));
-                }
+            if tree_head.contiene_hijo_por_ubicacion(objeto.obtener_path()) && !tree_head
+                    .contiene_misma_version_hijo(objeto.obtener_hash(), objeto.obtener_path()) && !self.index_contiene_objeto(&objeto) {
+                trackeados.push(format!("modificado: {}", objeto.obtener_path().display()));
             }
         }
         Ok(trackeados)
@@ -112,7 +108,7 @@ impl Status {
         let mut untrackeados = Vec::new();
 
         for objeto in tree.objetos.iter() {
-            if self.index_contiene_objeto(&objeto) {
+            if self.index_contiene_objeto(objeto) {
                 continue;
             }
             match objeto {
@@ -126,7 +122,7 @@ impl Status {
                         untrackeados.push(format!("{}/", objeto.obtener_path().display()));
                     } else {
                         let mut untrackeados_hijos =
-                            self.obtener_hijos_untrackeados(&tree, &tree_head)?;
+                            self.obtener_hijos_untrackeados(tree, tree_head)?;
 
                         untrackeados.append(&mut untrackeados_hijos);
                     }
@@ -154,7 +150,7 @@ impl Status {
             None => {
                 let mut untrackeados = Vec::new();
                 for objeto in self.tree_directorio_actual.objetos.iter() {
-                    if self.index_contiene_objeto(&objeto) {
+                    if self.index_contiene_objeto(objeto) {
                         continue;
                     }
                     untrackeados.push(format!("{}", objeto.obtener_path().display()));
@@ -164,7 +160,7 @@ impl Status {
         };
 
         let untrackeados =
-            self.obtener_hijos_untrackeados(&self.tree_directorio_actual, &tree_head)?;
+            self.obtener_hijos_untrackeados(&self.tree_directorio_actual, tree_head)?;
 
         Ok(untrackeados)
     }
@@ -347,7 +343,7 @@ mod tests {
         let status = Status::from(logger).unwrap();
         let untrackeados = status.obtener_untrackeados().unwrap();
         assert_eq!(untrackeados.len(), 10);
-        assert_eq!(nombre_esta_en_vector(untrackeados, "test_file.txt"), false);
+        assert!(!nombre_esta_en_vector(untrackeados, "test_file.txt"));
     }
 
     #[test]
@@ -368,6 +364,6 @@ mod tests {
         assert_eq!(trackeados.len(), 1);
         assert_eq!(staging[0], "modificado: test_file.txt");
         assert_eq!(trackeados[0], "modificado: test_file.txt");
-        assert_eq!(nombre_esta_en_vector(untrackeados, "test_file.txt"), false);
+        assert!(!nombre_esta_en_vector(untrackeados, "test_file.txt"));
     }
 }

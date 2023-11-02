@@ -1,7 +1,6 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{sync::Arc};
 
 use crate::{
-    io::leer_a_string,
     tipos_de_dato::{
         config::{Config, RemoteInfo},
         logger::Logger,
@@ -31,7 +30,7 @@ impl Remote {
             return Err(format!("Demasiados argumentos\n{}", INPUT_ERROR));
         }
 
-        if args.len() == 0 {
+        if args.is_empty() {
             return Ok(Remote {
                 comando: ComandoRemote::Mostrar,
                 logger,
@@ -98,7 +97,7 @@ impl Remote {
         let remote_encontrada = config.remotes.iter().find(|r| r.nombre == remote.nombre);
 
         if remote_encontrada.is_some() {
-            return Err(format!("Ya existe un remote con ese nombre"));
+            return Err("Ya existe un remote con ese nombre".to_string());
         }
 
         config.remotes.push(remote);
@@ -124,7 +123,7 @@ impl Remote {
             .position(|r| r.nombre == nombre.clone());
 
         if indice.is_none() {
-            return Err(format!("No existe un remote con ese nombre"));
+            return Err("No existe un remote con ese nombre".to_string());
         }
 
         config.remotes.remove(indice.unwrap());
@@ -150,7 +149,7 @@ impl Remote {
 
         let indice = match indice_result {
             Some(indice) => indice,
-            None => return Err(format!("No existe un remote con ese nombre")),
+            None => return Err("No existe un remote con ese nombre".to_string()),
         };
 
         config.remotes[indice] = RemoteInfo {
@@ -173,7 +172,7 @@ impl Remote {
         let remote = config.remotes.iter().find(|r| r.nombre == nombre);
 
         if remote.is_none() {
-            return Err(format!("No existe un remote con ese nombre"));
+            return Err("No existe un remote con ese nombre".to_string());
         }
 
         config.guardar_config()?;

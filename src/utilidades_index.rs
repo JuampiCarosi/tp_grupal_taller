@@ -3,7 +3,6 @@ use std::{
     fs::{self, OpenOptions},
     io::{BufRead, Write},
     path::{Path, PathBuf},
-    rc::Rc,
     sync::Arc,
 };
 

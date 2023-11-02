@@ -50,8 +50,8 @@ fn boton_confimar_dialog(builder: &gtk::Builder, window: &gtk::Window, logger: A
 }
 
 pub fn render(builder: &gtk::Builder, window: &gtk::Window, logger: Arc<Logger>) {
-    run_dialog(&builder);
+    run_dialog(builder);
 
-    boton_cancel_dialog(&builder);
-    boton_confimar_dialog(&builder, &window, logger);
+    boton_cancel_dialog(builder);
+    boton_confimar_dialog(builder, window, logger);
 }
