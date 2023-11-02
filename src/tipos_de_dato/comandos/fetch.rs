@@ -54,9 +54,9 @@ impl Fetch {
             comunicacion.responder(haves).unwrap();
             let acks_nak = comunicacion.obtener_lineas().unwrap();
             println!("acks_nack: {:?}", acks_nak);
-            comunicacion.responder(vec![io::obtener_linea_con_largo_hex("done")]).unwrap();
+            comunicacion.responder(vec![io::obtener_linea_con_largo_hex("done\n")]).unwrap();
         } else { 
-            comunicacion.responder(vec![io::obtener_linea_con_largo_hex("done")]).unwrap();
+            comunicacion.responder(vec![io::obtener_linea_con_largo_hex("done\n")]).unwrap();
             let acks_nak = comunicacion.obtener_lineas().unwrap();
             println!("acks_nack: {:?}", acks_nak);
         }

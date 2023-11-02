@@ -46,8 +46,6 @@ impl Comunicacion {
             if tamanio == 0 {
                 break;
             }
-            println!("tamanio: {:?}", tamanio);
-
             // lee el resto del flujo
             let mut data = vec![0; (tamanio - 4) as usize];
             self.flujo.read(&mut data)?;
@@ -115,7 +113,10 @@ impl Comunicacion {
         let mut lista_wants: Vec<String> = Vec::new();
         let mut obj_ids = self.obtener_obj_ids(lineas);
         println!("obj_ids: {:?}", obj_ids);
-        obj_ids[0].push_str(&(" ".to_string() + &capacidades)); // le aniado las capacidades
+        
+        if !capacidades.is_empty() {
+            obj_ids[0].push_str(&(" ".to_string() + &capacidades)); // le aniado las capacidades
+        }
         for linea in obj_ids {
             lista_wants.push(io::obtener_linea_con_largo_hex(
                 &("want ".to_string() + &linea + "\n"),

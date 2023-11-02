@@ -35,7 +35,7 @@ impl Packfile {
         let log = Rc::new(Logger::new(PathBuf::from("log.txt")).unwrap());
         let tamanio_objeto_str = cat_file::CatFile::from(&mut vec!["-s".to_string(), objeto.clone()], log).unwrap().ejecutar().unwrap();
         let tamanio_objeto = tamanio_objeto_str.trim().parse::<u32>().unwrap_or(0);
-        println!("tamanio objeto: {}", tamanio_objeto);
+        // println!("tamanio objeto: {}", tamanio_objeto);
        // println!("tamano objeto: {}", tamanio_objeto);
         let tipo_objeto = cat_file::obtener_tipo_objeto_de(&objeto, dir)?;
 

@@ -37,7 +37,6 @@ impl Push {
         let mut comunicacion = Comunicacion::new(client.try_clone().unwrap());
         let request_data = "git-receive-pack /home/juani/23C2-Cangrejos-Tacticos/srv/gir\0host=example.com\0\0version=1\0"; //en donde dice /.git/ va la dir del repo
 
-        // let request_data = "git-receive-pack /.gir/\0host=example.com\0\0version=1\0"; //en donde dice /.git/ va la dir del repo
         let request_data_con_largo_hex = io::obtener_linea_con_largo_hex(request_data);
 
         client.write_all(request_data_con_largo_hex.as_bytes()).unwrap();
@@ -79,7 +78,7 @@ impl Push {
             }
         }
         for (key, value) in &self.hash_refs {
-            actualizaciones.push(io::obtener_linea_con_largo_hex(&format!("{} {} {}\n", &value.1, &value.0, &key))); // viejo (el del sv), nuevo (cliente), ref
+            actualizaciones.push(io::obtener_linea_con_largo_hex(&format!("{} {} {}", &value.1, &value.0, &key))); // viejo (el del sv), nuevo (cliente), ref
             // checkear que no existan los objetos antes de appendear
             if !(value.1 == "0".repeat(20)){
                 objetos_a_enviar.extend(obtener_commits_y_objetos_asociados(&key, &value.1).unwrap());
@@ -88,8 +87,10 @@ impl Push {
                 
             }
         }   
-        println!("objetos: {:?}", objetos_a_enviar);
-
+        
+        println!("actualizaciones: {:?}", actualizaciones);
+        // let aaa = vec![io::obtener_linea_con_largo_hex(&(actualizaciones[0].clone() + "\0report-status\n"))];
+        // println!("aaa: {:?}", aaa);
         if !actualizaciones.is_empty(){
             comunicacion.responder(actualizaciones).unwrap();
             comunicacion.responder_con_bytes(Packfile::new().obtener_pack_con_archivos(objetos_a_enviar.into_iter().collect(), "./.gir/objects/")).unwrap();            
