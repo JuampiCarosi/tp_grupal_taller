@@ -20,8 +20,6 @@ pub fn obtener_tipo_objeto_de(hash_objeto: &str, dir: &str) -> Result<String, St
 
 fn obtener_contenido_objeto_de(hash: String, dir: &str) -> Result<(String, String), String> {
     // sacar el hardcode de esto
-
-    println!("dir: {}", dir);
     let objeto = descomprimir_objeto(hash, dir.to_string())?;
     match objeto.split_once('\0') {
         Some((header, contenido)) => Ok((header.to_string(), contenido.to_string())),

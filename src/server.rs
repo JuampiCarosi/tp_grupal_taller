@@ -94,7 +94,7 @@ impl Servidor {
     }
     // devuelve las refs de un directorio valido
     fn obtener_refs_de(&self, dir: PathBuf) -> Vec<String> {
-        println!("path del comando: {:?}", dir);
+        // println!("path del comando: {:?}", dir);
         let mut refs: Vec<String> = Vec::new();
         if let Ok(mut head) = git_io::obtener_refs_con_largo_hex(dir.join("HEAD"), "/home/juani/23C2-Cangrejos-Tacticos/srv/.gir/".to_string()) {
             refs.append(&mut head);
@@ -102,7 +102,7 @@ impl Servidor {
         refs.append(&mut git_io::obtener_refs_con_largo_hex(dir.join("refs/heads/"), String::from("/home/juani/23C2-Cangrejos-Tacticos/srv/.gir/")).unwrap());
         refs.append(&mut git_io::obtener_refs_con_largo_hex(dir.join("refs/tags/"), String::from("/home/juani/23C2-Cangrejos-Tacticos/srv/.gir/")).unwrap());
         if !refs.is_empty(){
-            refs[0] = self.agregar_capacidades(refs[0].clone());
+            refs.insert(0, self.agregar_capacidades(refs[0].clone()));
         }
         refs
     }

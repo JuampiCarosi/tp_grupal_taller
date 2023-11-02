@@ -128,6 +128,10 @@ impl Comunicacion {
         haves
     }
 
+    pub fn enviar_flush_pkt(&mut self) -> Result<(), ErrorDeComunicacion> {
+        self.flujo.write_all(b"0000")?;
+        Ok(())
+    }
 
     pub fn obtener_paquete_y_escribir(&mut self, bytes: &mut Vec<u8>, ubicacion: String) -> Result<(), ErrorDeComunicacion> {
         // a partir de aca obtengo el paquete
