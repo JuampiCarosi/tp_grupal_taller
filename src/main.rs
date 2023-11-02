@@ -30,6 +30,16 @@ fn main() -> Result<(), String> {
     let args = std::env::args().collect::<Vec<String>>();
     let logger = Arc::new(Logger::new(PathBuf::from("log.txt"))?);
 
+    if args.len() < 2 {
+        println!("ERROR: No se ingreso ningun comando");
+        return Ok(());
+    }
+
+    if args[1] == "gui" {
+        gir::gui::ejecutar(logger.clone());
+        return Ok(());
+    }
+
     let mut comando = match Comando::new(args, logger.clone()) {
         Ok(comando) => comando,
         Err(err) => {

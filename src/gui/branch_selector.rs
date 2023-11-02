@@ -9,7 +9,7 @@ use crate::tipos_de_dato::{
 
 use super::{log_list, log_seleccionado};
 
-pub fn render(builder: &gtk::Builder, window: &gtk::Window) {
+pub fn render(builder: &gtk::Builder, window: &gtk::Window, logger: Arc<Logger>) {
     let select: gtk::ComboBoxText = builder.object("select-branch").unwrap();
     let branch_actual = Commit::obtener_branch_actual().unwrap();
     select.remove_all();
@@ -32,8 +32,6 @@ pub fn render(builder: &gtk::Builder, window: &gtk::Window) {
     let builder_clone = builder.clone();
     let window_clone = window.clone();
     select.connect_changed(move |a| {
-        let logger = Arc::new(Logger::new(PathBuf::from("log.txt")).unwrap());
-
         let active = match a.active_text() {
             Some(text) => text,
             None => return,
@@ -41,7 +39,7 @@ pub fn render(builder: &gtk::Builder, window: &gtk::Window) {
 
         log_list::render(&builder_clone, active.to_string());
         log_seleccionado::render(&builder_clone, None);
-        let _ = Checkout::from(vec![active.to_string()], logger)
+        let _ = Checkout::from(vec![active.to_string()], logger.clone())
             .unwrap()
             .ejecutar();
         window_clone.show_all();

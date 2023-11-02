@@ -27,7 +27,7 @@ fn boton_cancel_dialog(builder: &gtk::Builder) {
     });
 }
 
-fn boton_confimar_dialog(builder: &gtk::Builder, window: &gtk::Window) {
+fn boton_confimar_dialog(builder: &gtk::Builder, window: &gtk::Window, logger: Arc<Logger>) {
     let confirm: gtk::Button = builder.object("confirm-branch").unwrap();
     let dialog: gtk::MessageDialog = builder.object("branch").unwrap();
     let input: gtk::Entry = builder.object("branch-input").unwrap();
@@ -43,15 +43,15 @@ fn boton_confimar_dialog(builder: &gtk::Builder, window: &gtk::Window) {
         .ejecutar()
         .unwrap();
 
-        branch_selector::render(&builder_clone, &window_clone);
+        branch_selector::render(&builder_clone, &window_clone, logger.clone());
         input.set_text("");
         dialog.hide();
     });
 }
 
-pub fn render(builder: &gtk::Builder, window: &gtk::Window) {
+pub fn render(builder: &gtk::Builder, window: &gtk::Window, logger: Arc<Logger>) {
     run_dialog(&builder);
 
     boton_cancel_dialog(&builder);
-    boton_confimar_dialog(&builder, &window);
+    boton_confimar_dialog(&builder, &window, logger);
 }

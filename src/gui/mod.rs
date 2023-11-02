@@ -25,11 +25,11 @@ pub fn ejecutar(logger: Arc<Logger>) {
     let window: gtk::Window = builder.object("home").unwrap();
     window.set_position(gtk::WindowPosition::Center);
 
-    new_branch_dialog::render(&builder, &window);
-    branch_selector::render(&builder, &window);
+    new_branch_dialog::render(&builder, &window, logger.clone());
+    branch_selector::render(&builder, &window, logger.clone());
     log_list::render(&builder, branch_actual);
     log_seleccionado::render(&builder, None);
-    staging_area::render(&builder, logger.clone(), &window);
+    staging_area::render(&builder, &window, logger.clone());
     new_commit_dialog::render(&builder, &window, logger.clone());
 
     window.show_all();

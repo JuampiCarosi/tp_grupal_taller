@@ -19,11 +19,12 @@ pub mod tipos_de_dato {
         pub mod log;
         pub mod remote;
         pub mod rm;
+        pub mod status;
         pub mod version;
         pub mod write_tree;
-        pub mod status;
     }
 }
+pub mod gui;
 pub mod io;
 pub mod utilidades_de_compresion;
 pub mod utilidades_index;

@@ -199,6 +199,11 @@ impl Tree {
     ) -> Result<Vec<(String, String, String)>, String> {
         let mut contenido_parseado: Vec<(String, String, String)> = Vec::new();
         let mut lineas = contenido.split('\0').collect::<Vec<&str>>();
+
+        if lineas[0] == "tree 0" {
+            return Ok(vec![]);
+        }
+
         lineas.remove(0);
 
         let mut lineas_separadas: Vec<&str> = Vec::new();
@@ -215,6 +220,7 @@ impl Tree {
             if i + 1 < lineas_separadas.len() {
                 let linea = lineas_separadas[i].split_whitespace();
                 let linea_spliteada = linea.clone().collect::<Vec<&str>>();
+
                 let modo = linea_spliteada[0];
                 let nombre = linea_spliteada[1];
                 let tupla = (

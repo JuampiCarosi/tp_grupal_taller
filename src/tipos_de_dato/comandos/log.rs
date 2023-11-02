@@ -67,7 +67,7 @@ impl Log {
         Ok(hash_commit.to_string())
     }
 
-    fn conseguir_padre_desde_contenido_commit(contenido: &str) -> String {
+    pub fn conseguir_padre_desde_contenido_commit(contenido: &str) -> String {
         let contenido_spliteado = contenido.split('\n').collect::<Vec<&str>>();
         let siguiente_padre = contenido_spliteado[1].split(' ').collect::<Vec<&str>>()[1];
         siguiente_padre.to_string()

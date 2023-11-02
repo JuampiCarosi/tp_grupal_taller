@@ -49,7 +49,7 @@ fn boton_confimar_dialog(builder: &gtk::Builder, window: &gtk::Window, logger: A
         let branch_actual = Commit::obtener_branch_actual().unwrap();
 
         log_list::render(&builder_clone, branch_actual);
-        staging_area::render(&builder_clone, logger.clone(), &window_clone);
+        staging_area::render(&builder_clone, &window_clone, logger.clone());
         input.set_text("");
         window_clone.show_all();
         dialog.hide();
