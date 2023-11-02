@@ -290,22 +290,23 @@ impl Tree {
                     }
                 }
                 Objeto::Tree(tree) => {
-                    return tree.contiene_hijo_por_ubicacion(ubicacion_hijo.clone());
+                    if tree.contiene_hijo_por_ubicacion(ubicacion_hijo.clone()) {
+                        return true;
+                    }
                 }
             }
         }
         false
     }
 
-    pub fn contiene_directorio(&self, directorio: PathBuf) -> bool {
+    pub fn contiene_directorio(&self, directorio: &PathBuf) -> bool {
         for objeto in &self.objetos {
             match objeto {
                 Objeto::Blob(_) => {}
                 Objeto::Tree(tree) => {
-                    if tree.directorio == directorio {
+                    if tree.directorio == *directorio || tree.contiene_directorio(&directorio) {
                         return true;
                     }
-                    return tree.contiene_directorio(directorio);
                 }
             }
         }
@@ -600,5 +601,21 @@ mod test {
             assert!(false);
             Err("No se pudo leer el directorio".to_string())
         }
+    }
+
+    #[test]
+
+    fn test07_contiene_hijo_por_ubicacion() {
+        let tree = Tree::from_directorio(PathBuf::from("src"), None).unwrap();
+
+        assert!(tree.contiene_hijo_por_ubicacion(PathBuf::from("src/utilidades_index.rs")))
+    }
+
+    #[test]
+
+    fn test07_contiene_hijo_por_ubicacion_rec() {
+        let tree = Tree::from_directorio(PathBuf::from("src"), None).unwrap();
+
+        assert!(tree.contiene_directorio(&PathBuf::from("src/tipos_de_dato")))
     }
 }

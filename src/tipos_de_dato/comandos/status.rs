@@ -90,9 +90,7 @@ impl Status {
             if tree_head.contiene_hijo_por_ubicacion(objeto.obtener_path()) {
                 if !tree_head
                     .contiene_misma_version_hijo(objeto.obtener_hash(), objeto.obtener_path())
-                    && !self.index.iter().any(|objeto_index| {
-                        objeto_index.objeto.obtener_hash() == objeto.obtener_hash()
-                    })
+                    && !self.index_contiene_objeto(&objeto)
                 {
                     trackeados.push(format!("modificado: {}", objeto.obtener_path().display()));
                 }
@@ -107,12 +105,9 @@ impl Status {
         tree_head: &Tree,
     ) -> Result<Vec<String>, String> {
         let mut untrackeados = Vec::new();
+
         for objeto in tree.objetos.iter() {
-            if self
-                .index
-                .iter()
-                .any(|objeto_index| objeto_index.objeto.obtener_hash() == objeto.obtener_hash())
-            {
+            if self.index_contiene_objeto(&objeto) {
                 continue;
             }
             match objeto {
@@ -122,11 +117,12 @@ impl Status {
                     }
                 }
                 Objeto::Tree(ref tree) => {
-                    if !tree_head.contiene_directorio(objeto.obtener_path()) {
+                    if !tree_head.contiene_directorio(&objeto.obtener_path()) {
                         untrackeados.push(format!("{}/", objeto.obtener_path().display()));
                     } else {
                         let mut untrackeados_hijos =
                             self.obtener_hijos_untrackeados(&tree, &tree_head)?;
+
                         untrackeados.append(&mut untrackeados_hijos);
                     }
                 }
@@ -135,15 +131,25 @@ impl Status {
         Ok(untrackeados)
     }
 
-    fn obtener_untrackeados(&self) -> Result<Vec<String>, String> {
+    fn index_contiene_objeto(&self, objeto: &Objeto) -> bool {
+        let bool = self.index.iter().any(|objeto_index| match objeto {
+            Objeto::Blob(ref blob) => blob.obtener_hash() == objeto_index.objeto.obtener_hash(),
+            Objeto::Tree(ref tree) => tree.contiene_misma_version_hijo(
+                objeto_index.objeto.obtener_hash(),
+                objeto_index.objeto.obtener_path(),
+            ),
+        });
+
+        bool
+    }
+
+    pub fn obtener_untrackeados(&self) -> Result<Vec<String>, String> {
         let tree_head = match self.tree_commit_head {
             Some(ref tree) => tree,
             None => {
                 let mut untrackeados = Vec::new();
                 for objeto in self.tree_directorio_actual.objetos.iter() {
-                    if self.index.iter().any(|objeto_index| {
-                        objeto_index.objeto.obtener_hash() == objeto.obtener_hash()
-                    }) {
+                    if self.index_contiene_objeto(&objeto) {
                         continue;
                     }
                     untrackeados.push(format!("{}", objeto.obtener_path().display()));
