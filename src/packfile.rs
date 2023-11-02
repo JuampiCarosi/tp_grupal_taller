@@ -26,11 +26,11 @@ impl Packfile {
         // let logger = Rc::new(Logger::new(PathBuf::from("log.txt"))?);
         println!("Aniadiendo objeto: {}", objeto);
         // DESHARCODEAR EL ./.GIR
-        let ruta_objeto = format!("{}/{}/{}", dir, &objeto[..2], &objeto[2..]);
+        let ruta_objeto = format!("{}{}/{}", dir, &objeto[..2], &objeto[2..]);
         println!("ruta objeto: {}", ruta_objeto);
         let objeto_comprimido = io::leer_bytes(&ruta_objeto).unwrap();
         let tamanio_objeto = utilidades_de_compresion::descomprimir_contenido_u8(&objeto_comprimido)?.len() as u32;
-        let tipo_objeto = cat_file::obtener_tipo_objeto_de(&objeto, "./.gir/objects")?;
+        let tipo_objeto = cat_file::obtener_tipo_objeto_de(&objeto, dir)?;
 
         // codifica el tamanio del archivo descomprimido y su tipo en un tipo variable de longitud
         let nbyte = match tipo_objeto.as_str() {
@@ -57,7 +57,7 @@ impl Packfile {
     // funcion que recorrer el directorio y aniade los objetos al packfile junto a su indice correspondiente
     fn obtener_objetos_del_dir(&mut self, dir: &str) -> Result<(), ErrorDeComunicacion> {
         // esto porque es un clone, deberia pasarle los objetos que quiero
-        let objetos = io::obtener_objetos_del_directorio(dir.to_string() + "objects/")?;
+        let objetos = io::obtener_objetos_del_directorio(dir.to_string())?;
         // --- 
         
         for objeto in objetos {

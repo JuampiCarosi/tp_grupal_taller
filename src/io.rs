@@ -24,7 +24,6 @@ use std::str;
 pub fn obtener_objetos_del_directorio(dir: String) -> Result<Vec<String>, ErrorDeComunicacion> {
     let path = PathBuf::from(dir);
     let mut objetos: Vec<String> = Vec::new();
-    println!("Voy a obtener objetos del directorio: {:?}", path);
     let dir_abierto = fs::read_dir(path.clone())?;
     // println!("dir_abierto: {:?}", dir_abierto);
     for archivo in dir_abierto {

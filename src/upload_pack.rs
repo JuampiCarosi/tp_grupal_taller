@@ -18,7 +18,7 @@ pub fn upload_pack(dir: String, comunicacion: &mut Comunicacion) -> Result<(), E
         // let want_obj_ids = utilidades_strings::eliminar_prefijos(&mut wants, "want");
         // println!("want_obj_ids: {:?}", want_obj_ids);
         let packfile =
-            packfile::Packfile::new().obtener_pack_entero(&(dir.clone().to_string() + "/.gir/")); // obtengo el packfile
+            packfile::Packfile::new().obtener_pack_entero(&(dir.clone().to_string() + "/.gir/objects/")); // obtengo el packfile
             // git_io::leer_bytes("./.git/objects/pack/pack-31897a1f902980a7e540e812b54f5702f449af8b.pack").unwrap();
         comunicacion.responder_con_bytes(packfile).unwrap();
         return Ok(());

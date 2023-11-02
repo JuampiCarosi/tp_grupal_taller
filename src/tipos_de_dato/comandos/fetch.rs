@@ -29,14 +29,25 @@ impl Fetch {
 
         client.write_all(request_data_con_largo_hex.as_bytes()).unwrap();
         let mut refs_recibidas = comunicacion.obtener_lineas().unwrap();
+        if refs_recibidas.is_empty() {
+            return Err(String::from("No se recibieron referencias"));
+        }
         let first_ref = refs_recibidas.remove(0);
+        let referencia_y_capacidades = first_ref.split('\0').collect::<Vec<&str>>();
+        let capacidades = referencia_y_capacidades[1];
+        refs_recibidas.push(referencia_y_capacidades[0].to_string());
+        // let first_ref = refs_recibidas.remove(0);
+        
+        
         escribir_en_remote_origin_las_referencias(&refs_recibidas);
-
-        let capacidades = first_ref.split("\0").collect::<Vec<&str>>()[1];
+        
+        // let capacidades = first_ref.split("\0").collect::<Vec<&str>>()[1];
         // envio
+        // println!("capacidades: {:?}", capacidades);
+
         let wants = comunicacion.obtener_wants_pkt(&refs_recibidas, capacidades.to_string()).unwrap();
         comunicacion.responder(wants.clone()).unwrap();
-
+        
         let objetos_directorio = io::obtener_objetos_del_directorio("./.gir/objects/".to_string()).unwrap();
         let haves = comunicacion.obtener_haves_pkt(&objetos_directorio);    
         if !haves.is_empty() {
@@ -49,7 +60,6 @@ impl Fetch {
             let acks_nak = comunicacion.obtener_lineas().unwrap();
             println!("acks_nack: {:?}", acks_nak);
         }
-
         // aca para git daemon hay que poner un recibir linea mas porque envia un ACK repetido (No entiendo por que...)
         println!("Obteniendo paquete..");
         let mut packfile = comunicacion.obtener_lineas_como_bytes().unwrap();
