@@ -40,11 +40,10 @@ pub fn decodificar_contenido(contenido: Vec<u8>) -> Result<String, String> {
         }
         spliteado_por_null.push(buffer);
 
-
         let mut spliteado_por_null_separado_por_linea: Vec<Vec<u8>> = Vec::new();
-        spliteado_por_null_separado_por_linea.push(spliteado_por_null[0].clone()); // tree 
+        spliteado_por_null_separado_por_linea.push(spliteado_por_null[0].clone()); // tree
         spliteado_por_null_separado_por_linea.push(spliteado_por_null[1].clone()); // size
-        
+
         let last_line = spliteado_por_null.pop(); // saco ultima que es hash
 
         spliteado_por_null.iter().skip(2).for_each(|x| {
@@ -111,12 +110,12 @@ pub fn descomprimir_contenido_u8(contenido: &[u8]) -> Result<Vec<u8>, String> {
     Ok(contenido_descomprimido)
 }
 
-
 pub fn obtener_contenido_comprimido_sin_header(hash: String) -> Result<Vec<u8>, String> {
     let ruta_objeto = format!(".gir/objects/{}/{}", &hash[..2], &hash[2..]);
     let contenido_leido = io::leer_bytes(ruta_objeto)?;
     // println!("contenido_leido: {:?}", String::from_utf8_lossy(contenido_leido.as_slice()));
-    let cont_descomprimido = utilidades_de_compresion::descomprimir_contenido_u8(&contenido_leido).unwrap();
+    let cont_descomprimido =
+        utilidades_de_compresion::descomprimir_contenido_u8(&contenido_leido).unwrap();
     let vec: Vec<&[u8]> = cont_descomprimido.splitn(2, |&x| x == 0).collect();
 
     let contenido = vec[1];
@@ -124,4 +123,3 @@ pub fn obtener_contenido_comprimido_sin_header(hash: String) -> Result<Vec<u8>, 
     let contenido_comprimido = comprimir_contenido_u8(&contenido.to_vec())?;
     Ok(contenido_comprimido)
 }
-
