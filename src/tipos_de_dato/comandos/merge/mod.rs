@@ -18,6 +18,7 @@ use crate::{
         objetos::tree::Tree,
     },
     utilidades_de_compresion::{self, descomprimir_objeto},
+    utilidades_index::{escribir_index, ObjetoIndex},
 };
 
 use self::estrategias_conflictos::{conflicto_len_3, conflicto_len_4};
@@ -293,7 +294,7 @@ impl Merge {
         (resultado, hubo_conflictos)
     }
 
-    fn automerge(&self, commit_base: String) -> Result<(), String> {
+    fn automerge(&self, commit_base: String) -> Result<String, String> {
         let hash_tree_base = write_tree::conseguir_arbol_from_hash_commit(commit_base.clone());
         let tree_base = Tree::from_hash(hash_tree_base, PathBuf::from("."))?;
 
@@ -304,6 +305,9 @@ impl Merge {
         let nodos_hoja_base = tree_base.obtener_objetos_hoja();
         let nodos_hoja_branch_actual = tree_branch_actual.obtener_objetos_hoja();
         let nodos_hoja_branch_a_mergear = tree_branch_a_mergear.obtener_objetos_hoja();
+
+        let mut objetos_index: Vec<ObjetoIndex> = Vec::new();
+        let mut paths_con_conflictos: Vec<String> = Vec::new();
 
         for objeto in nodos_hoja_base {
             let nombre_objeto = objeto.obtener_path();
@@ -338,16 +342,30 @@ impl Merge {
 
             escribir_bytes(objeto.obtener_path(), resultado)?;
             if hubo_conflictos {
-                println!(
-                    "Hubo conflictos en el archivo {}",
-                    objeto.obtener_path().display()
-                );
+                paths_con_conflictos.push(format!("{}\n", objeto.obtener_path().display()));
             }
+
+            let objeto = ObjetoIndex {
+                objeto: objeto,
+                es_eliminado: false,
+                merge: hubo_conflictos,
+            };
+
+            objetos_index.push(objeto);
         }
-        Ok(())
+
+        escribir_index(self.logger.clone(), &objetos_index)?;
+        if paths_con_conflictos.len() > 0 {
+            Ok(format!(
+                "Se encontraron conflictos en los siguientes archivos: {:?}",
+                paths_con_conflictos
+            ))
+        } else {
+            Ok("Merge completado".to_string())
+        }
     }
 
-    pub fn fast_forward(&self) -> Result<(), String> {
+    pub fn fast_forward(&self) -> Result<String, String> {
         let commit_banch_a_mergear = leer_a_string(Path::new(&format!(
             ".gir/refs/heads/{}",
             self.branch_a_mergear
@@ -363,7 +381,7 @@ impl Merge {
 
         tree_branch_a_mergear.escribir_en_directorio()?;
 
-        Ok(())
+        Ok("Merge con fast-forward completado".to_string())
     }
 
     pub fn ejecutar(&self) -> Result<String, String> {
@@ -373,14 +391,12 @@ impl Merge {
         let commit_actual = Commit::obtener_hash_del_padre_del_commit()?;
 
         if commit_base == commit_actual {
-            self.fast_forward()?
+            self.logger.log("Haciendo fast-forward".to_string());
+            self.fast_forward()
         } else {
-            self.automerge(commit_base)?
-        };
-
-        self.logger
-            .log("Comando merge ejecutado correctamente".to_string());
-        Ok("Merge completado".to_string())
+            self.logger.log("Realizando auto-merge".to_string());
+            self.automerge(commit_base)
+        }
     }
 }
 
