@@ -10,6 +10,7 @@ pub fn conseguir_arbol_padre_from_ult_commit_de_dir(
     hash_commit_padre: &str,
     dir: String,
 ) -> String {
+    println!("hash_commit_padre: {:?}", hash_commit_padre);
     let contenido =
         utilidades_de_compresion::descomprimir_objeto(hash_commit_padre.to_string(), dir).unwrap();
     let lineas_sin_null = contenido.replace("\0", "\n");

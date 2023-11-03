@@ -176,8 +176,7 @@ impl Packfile {
             // println!("cant bytes post decodificacion: {:?}", bytes.len());
             // println!("tipo: {:?}", tipo);
             // println!("tamanio: {:?}", tamanio);
-            
-            // // -- leo el contenido comprimido --
+                // // -- leo el contenido comprimido --
             let mut objeto_descomprimido = vec![0; tamanio as usize];
 
             let mut descompresor = Decompress::new(true);
@@ -185,29 +184,44 @@ impl Packfile {
             descompresor
                 .decompress(&bytes, &mut objeto_descomprimido, FlushDecompress::None)
                 .unwrap();
-
+        
+            // calculo el hash
+            let objeto = Self::obtener_y_escribir_objeto(tipo, tamanio, &mut objeto_descomprimido);
             let mut hasher = Sha1::new();
-            hasher.update(objeto_descomprimido.clone());
+            hasher.update(objeto.clone());
             let _hash = hasher.finalize();
             let hash = format!("{:x}", _hash);
             
             println!("hash: {:?}", hash);
+
             let ruta = format!("{}{}/{}", &ubicacion, &hash[..2], &hash[2..]);
             println!("rutarda donde pongo objetos: {:?}", ruta);
 
             let total_out = descompresor.total_out(); // esto es lo que debe matchear el tamanio que se pasa en el header
             let total_in = descompresor.total_in(); // esto es para calcular el offset
             println!("total in: {:?}, total out: {:?} ", total_in as usize, total_out as usize);
-            
-            io::escribir_bytes(ruta, bytes.drain(0..total_in as usize)).unwrap();
+            bytes.drain(0..total_in as usize);
+            io::escribir_bytes(ruta, utilidades_de_compresion::comprimir_contenido_u8(&objeto).unwrap()).unwrap();
 
             println!("cant bytes restantes: {:?}", bytes.len());
         }
-        let _checksum_obtenido = bytes;
-        // println!("Checksum obtenido: {:?}", checksum, checksum_obtenido);
+        bytes.drain(0..20); // el checksum
         Ok(())
     }
-    fn obtener_y_escribir_objeto(){}
+
+    fn obtener_y_escribir_objeto(tipo: u8, tamanio: u32, contenido_descomprimido: &mut Vec<u8>) -> Vec<u8>{
+        let mut header: Vec<u8> = Vec::new();
+        match tipo {
+            1 => {header = format!("{} {}\0", "commit", tamanio).as_bytes().to_vec();},
+            2 => {header = format!("{} {}\0", "tree", tamanio).as_bytes().to_vec();},
+            3 => {header = format!("{} {}\0", "blob", tamanio).as_bytes().to_vec();},
+            _ => {eprintln!("Tipo de objeto invalido");} 
+        }            
+        header.append(contenido_descomprimido);
+        header
+    }
+
+
 
 
 }

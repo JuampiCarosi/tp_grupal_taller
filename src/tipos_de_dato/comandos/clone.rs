@@ -38,6 +38,7 @@ impl Clone {
         // escribo las refs
         let version = refs_recibidas.remove(0);
         let primera_ref = refs_recibidas.remove(0);
+        // escribir esto al final
         for referencia in &refs_recibidas { 
             io::escribir_referencia(referencia, PathBuf::from("./.gir/"));
         }
@@ -71,9 +72,8 @@ impl Clone {
         //     refs_recibidas[0].split("\0").collect::<Vec<&str>>()[0].to_string()
         // };
         let ref_head = refs_recibidas[0].split_whitespace().collect::<Vec<&str>>()[0].to_string();
-        io::escribir_bytes(PathBuf::from(head_dir), b"refs/heads/master").unwrap();
-        // println!("ref_head: {:?}", ref_head);
-        
+        io::escribir_bytes(PathBuf::from(head_dir), b"refs/heads/master\n").unwrap();
+        println!("ref_head: {:?}", ref_head);
         let tree_hash = write_tree::conseguir_arbol_padre_from_ult_commit_de_dir(&ref_head, String::from("./.gir/objects/"));
         println!("tree_hash: {:?}", tree_hash);
 
