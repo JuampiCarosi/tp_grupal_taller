@@ -46,9 +46,8 @@ impl Comunicacion {
             let mut data = vec![0; (tamanio - 4) as usize];
             self.flujo.read(&mut data)?;
             let linea = str::from_utf8(&data)?;
-            println!("linea: {:?}", linea);
             lineas.push(linea.to_string());
-            if linea.contains("NAK") || linea.contains("done") {
+            if linea.contains("NAK") || linea.contains("done") || linea.contains("ACK") {
                 break;
             }
         }

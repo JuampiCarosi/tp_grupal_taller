@@ -168,8 +168,8 @@ impl Packfile {
         let largo = u32::from_be_bytes(largo_packfile);
         println!("largo: {:?}", largo);
         bytes.drain(0..4);
-
-        while bytes.len() > 20 {
+        let mut contador: u32 = 0;
+        while contador < largo {
             // println!("cant bytes: {:?}", bytes.len());
             let (tipo, tamanio, _bytes_leidos) = decodificar_bytes(bytes);
             println!("tipo: {:?}, tamanio: {}", tipo, tamanio);
@@ -204,6 +204,7 @@ impl Packfile {
             io::escribir_bytes(ruta, utilidades_de_compresion::comprimir_contenido_u8(&objeto).unwrap()).unwrap();
 
             println!("cant bytes restantes: {:?}", bytes.len());
+            contador += 1;
         }
         bytes.drain(0..20); // el checksum
         Ok(())
