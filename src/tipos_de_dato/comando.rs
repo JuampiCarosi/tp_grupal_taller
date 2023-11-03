@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::{rc::Rc, io::Write, io::Read, net::TcpStream};
 
 use super::{
     comandos::{
@@ -8,7 +8,7 @@ use super::{
     logger::Logger,
 };
 
-pub enum Comando {
+pub enum Comando{
     Init(Init),
     Version(Version),
     HashObject(HashObject),
@@ -27,7 +27,7 @@ pub enum Comando {
     Unknown,
 }
 
-impl Comando {
+impl Comando{
     pub fn new(input: Vec<String>, logger: Rc<Logger>) -> Result<Comando, String> {
         let (_, rest) = input.split_first().unwrap();
         let (comando, args) = rest.split_first().unwrap();
@@ -58,7 +58,7 @@ impl Comando {
     }
 }
 
-impl Comando {
+impl Comando{
     pub fn ejecutar(&mut self) -> Result<String, String> {
         match self {
             Comando::Init(init) => init.ejecutar(),

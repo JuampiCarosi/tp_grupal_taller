@@ -1,24 +1,20 @@
 use crate::err_comunicacion::ErrorDeComunicacion;
 use crate::io;
 use crate::packfile;
-use crate::tipos_de_dato::comandos::hash_object::HashObject;
-use crate::tipos_de_dato::logger;
-use crate::utilidades_de_compresion::comprimir_contenido;
-use crate::utilidades_de_compresion::decodificar_contenido;
-use chrono::format::format;
 use flate2::{Decompress, FlushDecompress};
 use std::convert::TryInto;
 use std::io::{Read, Write};
 use std::net::TcpStream;
 use std::str;
+use std::sync::Mutex;
 
 use sha1::{Digest, Sha1};
 
-pub struct Comunicacion {
-    flujo: TcpStream,
+pub struct Comunicacion<T: Read + Write> {
+    flujo: Mutex<T>,
 }
 
-impl Comunicacion {
+impl<T: Write + Read> Comunicacion<T> {
     ///Inicia el flujo de comunicacion con la direccion de servidor recivida.
     ///Pensanda para ser usada desde el cliente
     ///
@@ -28,44 +24,51 @@ impl Comunicacion {
     ///
     /// Errores:
     /// -Puede fallar el flujo
-    pub fn new_desde_direccion_servidor(direccion_servidor: &str) -> Result<Comunicacion, String> {
-        let flujo = TcpStream::connect(direccion_servidor)
-            .map_err(|e| format!("Fallo en en la conecciion con el servido.\n{}\n", e))?;
+    pub fn new_desde_direccion_servidor(
+        direccion_servidor: &str,
+    ) -> Result<Comunicacion<TcpStream>, String> {
+        let flujo = Mutex::new(
+            TcpStream::connect(direccion_servidor)
+                .map_err(|e| format!("Fallo en en la conecciion con el servido.\n{}\n", e))?,
+        );
 
         Ok(Comunicacion { flujo })
     }
 
-    pub fn new(flujo: TcpStream) -> Comunicacion {
-        Comunicacion { flujo }
+    pub fn new(flujo: T) -> Comunicacion<T> {
+        Comunicacion { flujo: Mutex::new(flujo) }
     }
 
-    pub fn enviar(&mut self, mensaje: &str) -> Result<(), String> {
+    pub fn enviar(&self, mensaje: &str) -> Result<(), String> {
         self.flujo
+            .lock()
+            .map_err(|e| format!("Fallo en el envio del mensaje.\n{}\n", e))?
             .write_all(mensaje.as_bytes())
             .map_err(|e| format!("Fallo en el envio del mensaje.\n{}\n", e))
     }
 
-    pub fn aceptar_pedido(&mut self) -> Result<String, ErrorDeComunicacion> {
+    pub fn aceptar_pedido(&self) -> Result<String, ErrorDeComunicacion> {
         // lee primera parte, 4 bytes en hexadecimal indican el largo del stream
         let mut tamanio_bytes = [0; 4];
-        self.flujo.read_exact(&mut tamanio_bytes)?;
+        self.flujo.lock().unwrap().read_exact(&mut tamanio_bytes)?;
         // largo de bytes a str
         let tamanio_str = str::from_utf8(&tamanio_bytes)?;
         // transforma str a u32
         let tamanio = u32::from_str_radix(tamanio_str, 16).unwrap();
         // lee el resto del flujo
         let mut data = vec![0; (tamanio - 4) as usize];
-        self.flujo.read_exact(&mut data)?;
+        self.flujo.lock().unwrap().read_exact(&mut data)?;
         let linea = str::from_utf8(&data)?;
         Ok(linea.to_string())
     }
 
     fn leer_del_flujo_tantos_bytes(
-        &mut self,
+        &self,
         cantida_bytes_a_leer: u32,
     ) -> Result<Vec<u8>, String> {
         let mut data = vec![0; cantida_bytes_a_leer as usize];
-        self.flujo.read_exact(&mut data).map_err(|e| {
+        self.flujo.lock()
+        .map_err(|e| format!("Fallo en el mutex de la lectura.\n{}\n", e))?.read_exact(&mut data).map_err(|e| {
             format!(
                 "Fallo en obtener la linea al leer los priemeros 4 bytes.\n{}\n",
                 e
@@ -75,7 +78,7 @@ impl Comunicacion {
     }
 
     fn leer_del_flujo_tantos_bytes_en_string(
-        &mut self,
+        &self,
         cantida_bytes_a_leer: u32,
     ) -> Result<String, String> {
         let data = self.leer_del_flujo_tantos_bytes(cantida_bytes_a_leer)?;
@@ -94,7 +97,7 @@ impl Comunicacion {
     /// # Resultado:
     /// -Devuelve el largo de la linea actual (ojo !!contando todavia los primeros 4 bytes
     /// de la linea donde dice el largo) en u32
-    fn obtener_largo_de_la_linea(&mut self) -> Result<u32, String> {
+    fn obtener_largo_de_la_linea(&self) -> Result<u32, String> {
         let bytes_tamanio_linea = 4;
         let tamanio = self.leer_del_flujo_tantos_bytes(bytes_tamanio_linea)?;
         let tamanio_u32 = u32::from_be_bytes([tamanio[0], tamanio[1], tamanio[2], tamanio[3]]);
@@ -110,7 +113,7 @@ impl Comunicacion {
     ///
     /// # Resultado
     /// - Devuelve el contendio de la linea actual
-    fn obtener_contenido_linea(&mut self, tamanio: u32) -> Result<String, String> {
+    fn obtener_contenido_linea(&self, tamanio: u32) -> Result<String, String> {
         let tamanio_sin_largo = tamanio - 4;
         let linea = self.leer_del_flujo_tantos_bytes_en_string(tamanio_sin_largo)?;
         Ok(linea)
@@ -122,7 +125,7 @@ impl Comunicacion {
     /// # Resultado
     /// - Devuelve cada linea envia por el servidor (sin el largo)
     ///
-    pub fn obtener_lineas(&mut self) -> Result<Vec<String>, String> {
+    pub fn obtener_lineas(&self) -> Result<Vec<String>, String> {
         let mut lineas: Vec<String> = Vec::new();
         loop {
             let tamanio = self.obtener_largo_de_la_linea()?;
@@ -139,33 +142,34 @@ impl Comunicacion {
         Ok(lineas)
     }
 
-    pub fn responder(&mut self, lineas: Vec<String>) -> Result<(), ErrorDeComunicacion> {
+    pub fn responder(&self, lineas: Vec<String>) -> Result<(), ErrorDeComunicacion> {
         for linea in &lineas {
-            self.flujo.write_all(linea.as_bytes())?;
+            self.flujo.lock().unwrap().write_all(linea.as_bytes())?;
         }
         if !lineas[0].contains(&"NAK".to_string())
             && !lineas[0].contains(&"ACK".to_string())
             && !lineas[0].contains(&"done".to_string())
         {
-            self.flujo.write_all(String::from("0000").as_bytes())?;
+            self.flujo.lock().unwrap().write_all(String::from("0000").as_bytes())?;
         }
         Ok(())
     }
 
-    pub fn responder_con_bytes(&mut self, lineas: Vec<u8>) -> Result<(), ErrorDeComunicacion> {
-        self.flujo.write_all(&lineas)?;
+    pub fn responder_con_bytes(&self, lineas: Vec<u8>) -> Result<(), ErrorDeComunicacion> {
+        self.flujo.lock().unwrap().write_all(&lineas)?;
         if !lineas.starts_with(b"PACK") {
-            self.flujo.write_all(String::from("0000").as_bytes())?;
+            self.flujo.lock().unwrap().write_all(String::from("0000").as_bytes())?;
         }
         Ok(())
     }
 
-    pub fn obtener_lineas_como_bytes(&mut self) -> Result<Vec<u8>, String> {
+    pub fn obtener_lineas_como_bytes(&self) -> Result<Vec<u8>, String> {
         let mut buffer = Vec::new();
         let mut temp_buffer = [0u8; 1024]; // Tamaño del búfer de lectura
 
         loop {
-            let bytes_read = self.flujo.read(&mut temp_buffer).map_err(|e| {
+            let bytes_read = self.flujo.lock()
+            .map_err(|e| format!("Fallo en el mutex.\n{}\n", e))?.read(&mut temp_buffer).map_err(|e| {
                 format!("Fallo en la lectura de la respuesta del servidor.\n{}\n", e)
             })?;
 
@@ -178,7 +182,7 @@ impl Comunicacion {
         Ok(buffer)
     }
 
-    pub fn obtener_obj_ids(&mut self, lineas: &Vec<String>) -> Vec<String> {
+    pub fn obtener_obj_ids(&self, lineas: &Vec<String>) -> Vec<String> {
         println!("lineas: {:?}", lineas);
         let mut obj_ids: Vec<String> = Vec::new();
         for linea in lineas {
@@ -188,7 +192,7 @@ impl Comunicacion {
     }
 
     pub fn obtener_wants_pkt(
-        &mut self,
+        &self,
         lineas: &Vec<String>,
         capacidades: String,
     ) -> Result<Vec<String>, ErrorDeComunicacion> {
@@ -219,13 +223,13 @@ impl Comunicacion {
     ///     con respecto a las del servidor
     /// - capacidades: las capacidades que va a ver en la comunicacion con el servidor  
     pub fn enviar_pedidos_al_servidor_pkt(
-        &mut self,
-        pedidos: &Vec<String>,
+        &self,
+        mut pedidos: Vec<String>,
         capacidades: String,
     ) -> Result<(), String> {
-        self.anadir_capacidades_primer_pedido(*pedidos, capacidades);
+        self.anadir_capacidades_primer_pedido(&mut pedidos, capacidades);
 
-        for pedido in pedidos {
+        for pedido in &mut pedidos {
             let pedido_con_formato = self.dar_formato_de_solicitud(pedido);
             self.enviar(&pedido_con_formato)?;
         }
@@ -240,15 +244,15 @@ impl Comunicacion {
     }
 
     ///Le añade las capadcidades al primer objeto para cumplir con el protocolo
-    fn anadir_capacidades_primer_pedido(&self, mut pedidos: Vec<String>, capacidades: String) {
+    fn anadir_capacidades_primer_pedido(&self, pedidos: &mut Vec<String>, capacidades: String) {
         pedidos[0].push_str(&(" ".to_string() + &capacidades));
     }
     ///recibi el hash de un commit y le da el formato correcto para hacer el want
-    fn dar_formato_de_solicitud(&self, hash_commit: &String) -> String {
+    fn dar_formato_de_solicitud(&self, hash_commit: &mut String) -> String {
         io::obtener_linea_con_largo_hex(&("want ".to_string() + &hash_commit + "\n"))
     }
 
-    pub fn obtener_haves_pkt(&mut self, lineas: &Vec<String>) -> Vec<String> {
+    pub fn obtener_haves_pkt(&self, lineas: &Vec<String>) -> Vec<String> {
         let mut haves: Vec<String> = Vec::new();
         for linea in lineas {
             haves.push(io::obtener_linea_con_largo_hex(
@@ -266,7 +270,7 @@ impl Comunicacion {
     /// - hash_objetos: lista con todos los hash de los objetos que ya se tiene y que no debe mandar
     ///     el servidor
     pub fn enviar_lo_que_tengo_al_servidor_pkt(
-        &mut self,
+        &self,
         hash_objetos: &Vec<String>,
     ) -> Result<(), String> {
         for hash_objeto in hash_objetos {
@@ -291,7 +295,7 @@ impl Comunicacion {
     }
 
     pub fn obtener_paquete_y_escribir(
-        &mut self,
+        &self,
         bytes: &mut Vec<u8>,
         ubicacion: String,
     ) -> Result<(), ErrorDeComunicacion> {
@@ -353,4 +357,74 @@ impl Comunicacion {
         }
         Ok(())
     }
+}
+
+#[cfg(test)]
+mod test {
+    use std::{io::Read, io::Write, rc::Rc};
+
+    use super::Comunicacion;
+
+    struct MockTcpStream {
+        lectura_data: Vec<u8>,
+        escritura_data: Vec<u8>,
+    }
+
+    impl Read for MockTcpStream {
+        fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+            self.lectura_data.as_slice().read(buf)
+        }
+    }
+
+    impl Write for MockTcpStream {
+        fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+            self.escritura_data.write(buf)
+        }
+
+        fn flush(&mut self) -> std::io::Result<()> {
+            self.escritura_data.flush()
+        }
+    }
+    #[test]
+
+    fn test01_se_envia_mensajes_de_forma_correcta() {
+        let mut mock = MockTcpStream {
+            lectura_data: Vec::new(),
+            escritura_data: Vec::new(),
+        };
+
+        Comunicacion::new(&mut mock).enviar("Hola server, soy siro. Todo bien ??").unwrap();
+
+        assert_eq!(
+            "Hola server, soy siro. Todo bien ??".as_bytes(),
+            mock.escritura_data.as_slice()
+        )
+    }
+
+    fn test02_se_obtiene_el_contenido_del_server_de_forma_correcta() {
+        let contenido_mock = " 00887217a7c7e582c46cec22a130adf4b9d7d950fba0 HEAD\0multi_ack thin-pack\n
+        side-band side-band-64k ofs-delta shallow no-progress include-tag\n
+         00441d3fcd5ced445d1abc402225c0b8a1299641f497 refs/heads/integration\n
+         003f7217a7c7e582c46cec22a130adf4b9d7d950fba0 refs/heads/master\n
+         003cb88d2441cac0977faf98efc80305012112238d9d refs/tags/v0.9\n
+         003c525128480b96c89e6418b1e40909bf6c5b2d580f refs/tags/v1.0\n
+         003fe92df48743b7bc7d26bcaabfddde0a1e20cae47c refs/tags/v1.0^{}\n
+         0000";
+        
+        let mut mock = MockTcpStream {
+            lectura_data: contenido_mock.as_bytes().to_vec(),
+            escritura_data: Vec::new(),
+        };
+
+        
+        Comunicacion::new(&mut mock).enviar("Hola server, soy siro. Todo bien ??").unwrap();
+
+        assert_eq!(
+            "Hola server, soy siro. Todo bien ??".as_bytes(),
+            mock.escritura_data.as_slice()
+        )
+    }
+
+
+    
 }

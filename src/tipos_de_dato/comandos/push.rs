@@ -17,7 +17,7 @@ impl Push {
     }
     pub fn ejecutar(&mut self) -> Result<String, String> {
         let server_address = "127.0.0.1:9418"; // Cambia la dirección IP si es necesario
-        let mut comunicacion = Comunicacion::new_desde_direccion_servidor(server_address)?;
+        let mut comunicacion = Comunicacion::<TcpStream>::new_desde_direccion_servidor(server_address)?;
 
         // si es un push, tengo que calcular los commits de diferencia entre el cliente y el server, y mandarlos como packfiles.
         // hay una funcion que hace el calculo

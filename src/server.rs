@@ -1,22 +1,20 @@
 use crate::err_comunicacion::ErrorDeComunicacion;
-use crate::io::obtener_archivos_faltantes;
-use crate::packfile;
 use crate::{comunicacion::Comunicacion, io as git_io};
 use std::env;
 use std::io;
-use std::net::TcpListener;
+use std::net::{TcpListener, TcpStream};
 use std::path::PathBuf;
 use std::str;
-use crate::utilidades_strings;
+
 use crate::upload_pack::upload_pack;
 use crate::receive_pack::receive_pack;
-pub struct Servidor {
+pub struct Servidor{
     listener: TcpListener,
     dir: String,
     capacidades: Vec<String>,
 }
 
-impl Servidor {
+impl Servidor{
     pub fn new(address: &str) -> std::io::Result<Servidor> {
         let listener = TcpListener::bind(address)?;
         // busca la carpeta raiz del proyecto (evita hardcodear la ruta)
@@ -47,13 +45,13 @@ impl Servidor {
         //     self.com.procesar_datos()?;
         // }
         let (stream, _) = self.listener.accept()?;
-        self.manejar_cliente(&mut Comunicacion::new(stream))?;
+        self.manejar_cliente(&mut Comunicacion::<TcpStream>::new(stream))?;
         Ok(())
     }
 
     pub fn manejar_cliente(
         &mut self,
-        comunicacion: &mut Comunicacion,
+        comunicacion: &mut Comunicacion<TcpStream>,
     ) -> Result<(), ErrorDeComunicacion> {
         let pedido = comunicacion.aceptar_pedido()?; // acepto la primera linea
         self.parse_line(&pedido, comunicacion)?; // parse de la liena para ver que se pide
@@ -61,7 +59,7 @@ impl Servidor {
         Ok(())
     }
 
-    fn parse_line(&mut self, linea: &str, comunicacion: &mut Comunicacion) -> Result<(), ErrorDeComunicacion> {
+    fn parse_line(&mut self, linea: &str, comunicacion: &mut Comunicacion<TcpStream>) -> Result<(), ErrorDeComunicacion> {
         let pedido: Vec<&str> = linea.split_whitespace().collect();
         // veo si es un comando git
         let args: Vec<_> = pedido[1].split('\0').collect();
