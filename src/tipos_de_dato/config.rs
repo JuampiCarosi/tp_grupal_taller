@@ -127,7 +127,7 @@ mod tests {
 
         config.guardar_config().unwrap();
 
-        let file = io::leer_a_string("~/.girconfig").unwrap();
+        let file = io::leer_a_string(".gir/config").unwrap();
 
         assert_eq!(file, "[remote \"origin\"]\n   url = localhost:3000\n");
     }
