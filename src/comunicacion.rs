@@ -113,7 +113,7 @@ impl Comunicacion {
     }
 
     
-    /// Obtiene todo el contendio envio por el servidor hasta un NAK o done() sacando 
+    /// Obtiene todo el contenido envio por el servidor hasta un NAK o done( sacando 
     /// los bytes referentes al contendio),obtiene lineas en formato PKT.
     /// 
     /// # Resultado 
@@ -199,6 +199,52 @@ impl Comunicacion {
         }
         Ok(lista_wants)
     }
+
+    ///Envia al servidor todos los pedidos en el formato correspondiente, junto con las capacidades para la 
+    /// comunicacion y finaliza con un '0000' de ser necesario. 
+    /// 
+    /// El objetivo es enviar las commits pertenecientes a las cabeza de rama que es necesario actualizar
+    /// El formato seguido para cada linea es la siguiente:
+    /// - ''4 bytes con el largo'want 'hash de un commit cabeza de rama'  
+    /// Y la primera linea, ademas contien las capacidades separadas por espacio 
+    /// 
+    /// # Argumentos 
+    /// 
+    /// - pedidos: lista con los hash de los commits cabeza de rama de las ramas que se quieren actualizar en local 
+    ///     con respecto a las del servidor 
+    /// - capacidades: las capacidades que va a ver en la comunicacion con el servidor  
+    pub fn enviar_pedidos_al_servidor_pkt(
+        &mut self,
+        pedidos: &Vec<String>,
+        capacidades: String,
+    ) -> Result<(), String> {
+        self.anadir_capacidades_primer_pedido(*pedidos, capacidades);
+
+        for pedido in pedidos {
+            let pedido_con_formato = self.dar_formato_de_solicitud(pedido);
+            self.enviar(&pedido_con_formato)?;
+        }
+
+        if !pedidos[0].contains(&"NAK".to_string())
+            && !pedidos[0].contains(&"ACK".to_string())
+            && !pedidos[0].contains(&"done".to_string())
+        {
+            self.enviar("0000")?;
+        }
+        Ok(())
+    }
+
+    ///Le añade las capadcidades al primer objeto para cumplir con el protocolo 
+    fn anadir_capacidades_primer_pedido(&self, mut pedidos: Vec<String>, capacidades: String){
+        pedidos[0].push_str(&(" ".to_string() + &capacidades));
+    }
+    ///recibi el hash de un commit y le da el formato correcto para hacer el want
+    fn dar_formato_de_solicitud(&self, hash_commit:&String)->String{
+        io::obtener_linea_con_largo_hex(
+            &("want ".to_string() + &hash_commit + "\n"),
+        )
+    }
+
     pub fn obtener_haves_pkt(&mut self, lineas: &Vec<String>) -> Vec<String> {
         let mut haves: Vec<String> = Vec::new();
         for linea in lineas {

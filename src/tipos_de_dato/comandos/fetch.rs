@@ -38,18 +38,13 @@ impl Fetch {
         // obtener_listas_de_commits
         self.iniciar_git_upload_pack_con_servidor()?;
 
-        let mut refs_recibidas = self.comunicacion.obtener_lineas()?;
-
         let (capacidades_servidor, commit_head_remoto, commits_cabezas_y_dir_rama_asosiado) =
             self.fase_de_descubrimiento()?;
 
         self.actualizar_ramas_locales_del_remoto(&commits_cabezas_y_dir_rama_asosiado);
-        let wats = self.obetener_wants_pkt(&capacidades_servidor, &commits_cabezas_y_dir_rama_asosiado);
+
         // envio
-        let wants = self.comunicacion
-            .obtener_wants_pkt(&refs_recibidas, capacidades_servidor.to_string())
-            .unwrap();
-        self.comunicacion.responder(wants.clone()).unwrap();
+        self.enviar_pedidos(&capacidades_servidor, &commits_cabezas_y_dir_rama_asosiado);
 
         let objetos_directorio =
             io::obtener_objetos_del_directorio("./.gir/objects/".to_string()).unwrap();
@@ -78,12 +73,41 @@ impl Fetch {
         Ok(String::from("Fetch ejecutado con exito"))
     }
 
-    fn obetener_wants_pkt(&self, capacidades_servidor: &Vec<&str>, commits_cabezas_y_dir_rama_asosiado: &Vec<(&str,&str)>){
+    fn enviar_pedidos(&self, capacidades_servidor: &Vec<&str>, commits_cabezas_y_dir_rama_asosiado: &Vec<(&str,PathBuf)>)->Result<(), String>{
         let capacidades_a_usar_en_la_comunicacion = self.obtener_capacidades_en_comun_con_el_servidor(capacidades_servidor);
+        let commits_de_cabeza_de_rama_faltantes = self.obtener_commits_cabeza_de_rama_faltantes(commits_cabezas_y_dir_rama_asosiado)?;
+
+        self.comunicacion.enviar_pedidos_al_servidor_pkt(&commits_de_cabeza_de_rama_faltantes, capacidades_a_usar_en_la_comunicacion)?;
+        Ok(())
+    }
+
+    ///Obtiene los commits que son necesarios a actulizar y por lo tanto hay que pedirle al servidor esas ramas. 
+    /// Obtiene aquellos commits que pertenecesen a ramas cuyas cabezas en el servidor apuntan commits distintos 
+    /// que sus equivalencias en el repositorio local, implicando que la rama local esta desacululizada.
+    /// 
+    /// # Resultado 
+    /// 
+    /// - Devuleve un vector con los commits cabezas de las ramas que son necearias actualizar con 
+    ///     respecto a las del servidor 
+    fn obtener_commits_cabeza_de_rama_faltantes(&self, commits_cabezas_y_dir_rama_asosiado: &Vec<(&str, PathBuf)>)->Result<Vec<String>,String>{
+        let mut commits_de_cabeza_de_rama_faltantes:Vec<String> = Vec::new();
         
-        let wants = self.comunicacion
-            .obtener_wants_pkt(commits_cabezas_y_dir_rama_asosiado, capacidades_a_usar_en_la_comunicacion)
-            .unwrap();
+        for (commit_cabeza_remoto, dir_rama_asosiada) in commits_cabezas_y_dir_rama_asosiado{
+            let dir_rama_asosiada_local = self.convertir_de_dir_rama_remota_a_dir_rama_local(dir_rama_asosiada)?;
+            
+            if !dir_rama_asosiada_local.exists(){
+                commits_de_cabeza_de_rama_faltantes.push(commit_cabeza_remoto.to_string());
+                
+            }
+
+            let commit_cabeza_local = io::leer_a_string(dir_rama_asosiada_local)?;
+
+            if commit_cabeza_local != commit_cabeza_remoto.to_string(){
+                commits_de_cabeza_de_rama_faltantes.push(commit_cabeza_remoto.to_string());
+            }
+        };
+
+        Ok(commits_de_cabeza_de_rama_faltantes)
     }
 
     ///compara las capacidades del servidor con las locales y devulve un string con las capacidades en comun 
@@ -91,9 +115,9 @@ impl Fetch {
     fn obtener_capacidades_en_comun_con_el_servidor(&self, capacidades_servidor: &Vec<&str>)->String{
         let mut capacidades_a_usar_en_la_comunicacion: Vec<&str> = Vec::new();
 
-        capacidades_servidor.into_iter().for_each(|s| {
-            if self.capacidades_local.contains(&s.to_string()) {
-                capacidades_a_usar_en_la_comunicacion.push(s);
+        capacidades_servidor.into_iter().for_each(|capacidad| {
+            if self.capacidades_local.contains(&capacidad.to_string()) {
+                capacidades_a_usar_en_la_comunicacion.push(capacidad);
             }
         });
 
@@ -112,7 +136,7 @@ impl Fetch {
     ///     carpeta de la rama en el servidor(ojo!! la direccion para el servidor no para el local)
     fn fase_de_descubrimiento(
         &mut self,
-    ) -> Result<(Vec<&str>, &str, Vec<(&str, &str)>), String> {
+    ) -> Result<(Vec<&str>, &str, Vec<(&str, PathBuf)>), String> {
         let mut lineas_recibidas = self.comunicacion.obtener_lineas()?;
 
         let primera_linea = lineas_recibidas.remove(0);
@@ -154,8 +178,8 @@ impl Fetch {
     fn obtener_commits_cabezas_y_dirs_ramas_asosiadas(
         &mut self,
         lineas_recibidas: &Vec<String>,
-    ) -> Result<Vec<(&str, &str)>, String> {
-        let mut commits_cabezas_y_dir_rama_asosiado: Vec<(&str, &str)> = Vec::new();
+    ) -> Result<Vec<(&str, PathBuf)>, String> {
+        let mut commits_cabezas_y_dir_rama_asosiado: Vec<(&str, PathBuf)> = Vec::new();
         for linea in *lineas_recibidas {
             let (commit_cabeza, dir_rama) =
                 self.obtener_commit_cabeza_y_dir_rama_asosiado(&linea)?;
@@ -168,12 +192,12 @@ impl Fetch {
 
     fn convertir_de_dir_rama_remota_a_dir_rama_local(
         &self,
-        dir_rama_remota: &str,
+        dir_rama_remota: &PathBuf,
     ) -> Result<PathBuf, String> {
         let carpeta_del_remoto = format!("./.gir/refs/remotes/{}/", self.remoto);
         //"./.gir/refs/remotes/origin/";
 
-        let rama_remota = utilidades_path_buf::obtener_nombre(&PathBuf::from(dir_rama_remota))?;
+        let rama_remota = utilidades_path_buf::obtener_nombre(dir_rama_remota)?;
         let dir_rama_local = PathBuf::from(carpeta_del_remoto + rama_remota.as_str());
 
         Ok(dir_rama_local)
@@ -194,21 +218,23 @@ impl Fetch {
     fn obtener_commit_cabeza_y_dir_rama_asosiado(
         &self,
         referencia: &String,
-    ) -> Result<(&str, &str), String> {
-        let (commit_cabeza_de_rama, dir_rama_remota) = referencia.split_once(' ').ok_or(
+    ) -> Result<(&str, PathBuf), String> {
+        let (commit_cabeza_de_rama, rama_remota) = referencia.split_once(' ').ok_or(
             format!("Fallo al separar el conendio en actualizar referencias\n"),
         )?;
-        Ok((commit_cabeza_de_rama, dir_rama_remota))
+
+        let rama_remota_path = PathBuf::from(rama_remota);
+        Ok((commit_cabeza_de_rama, rama_remota_path))
     }
 
     ///actuliza a donde apuntan las cabeza del rama de las ramas locales pertenecientes al remoto
     fn actualizar_ramas_locales_del_remoto(
         &self,
-        commits_cabezas_y_dir_rama_asosiado: &Vec<(&str, &str)>,
+        commits_cabezas_y_dir_rama_asosiado: &Vec<(&str, PathBuf)>,
     ) -> Result<(), String> {
         for (commit_cabeza_de_rama, dir_rama_remota) in commits_cabezas_y_dir_rama_asosiado {
             let dir_rama_local_del_remoto =
-                self.convertir_de_dir_rama_remota_a_dir_rama_local(dir_rama_remota)?;
+                self.convertir_de_dir_rama_remota_a_dir_rama_local(&dir_rama_remota)?;
 
             io::escribir_bytes(dir_rama_local_del_remoto, commit_cabeza_de_rama)?;
         }
