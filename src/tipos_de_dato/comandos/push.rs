@@ -94,7 +94,6 @@ impl Push {
         if !actualizaciones.is_empty(){
             comunicacion.responder(actualizaciones).unwrap();
             comunicacion.responder_con_bytes(Packfile::new().obtener_pack_con_archivos(objetos_a_enviar.into_iter().collect(), "./.gir/objects/")).unwrap();            
-            println!("lineas recibidas: {:?}", comunicacion.obtener_lineas().unwrap());
             Ok(String::from("Push ejecutado con exito"))
         } else {
             //error 
@@ -106,6 +105,7 @@ impl Push {
   
 }
 
+// funcion que aniade commits y sus objetos asociados hasta llegar al commit limite (criterio de parada)
 fn obtener_commits_y_objetos_asociados(referencia: &String, commit_limite: &String) -> Result<HashSet<String>, String> {
     println!("Entro para la referencia {} y el commit limite: {}", referencia, commit_limite);
     let ruta = format!(".gir/{}", referencia);
@@ -139,21 +139,9 @@ fn obtener_refs_de(dir: PathBuf, prefijo: String) -> Vec<String> {
     let mut refs: Vec<String> = Vec::new();
     refs.append(&mut io::obtener_refs(dir.join("heads/"), prefijo.clone()).unwrap());
     refs.append(&mut io::obtener_refs(dir.join("tags/"), prefijo).unwrap());
-    // refs[0] = self.agregar_capacidades(refs[0].clone());
+    // refs[0] = self.agregar_capacidades(refs[0].clone ());
     refs
 }
 
-
-
-
-// cargo run --bin client init
-// cargo run --bin client add archivezco.txt
-// cargo run --bin client commit -m "1st comm"
-// cargo run --bin client push
-
-
-// cargo run --bin client add test_file.txt
-// cargo run --bin client commit -m "2nd commit"
-// cargo run --bin client push
 
 
