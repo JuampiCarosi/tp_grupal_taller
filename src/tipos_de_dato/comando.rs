@@ -44,7 +44,7 @@ impl Comando {
             "branch" => Comando::Branch(Branch::from(&mut vector_args, logger)?),
             "checkout" => Comando::Checkout(Checkout::from(vector_args, logger)?),
             "commit" => Comando::Commit(Commit::from(&mut vector_args, logger)?),
-            "fetch" => Comando::Fetch(Fetch::new()?),
+            "fetch" => Comando::Fetch(Fetch::new(logger)?),
             "clone" => Comando::Clone(Clone::new()),
             "push" => Comando::Push(Push::new()),
             // "pull",

@@ -60,7 +60,10 @@ impl Comunicacion {
         Ok(linea.to_string())
     }
 
-    fn leer_del_flujo_tantos_bytes(&mut self, cantida_bytes_a_leer: u32) -> Result<Vec<u8>, String> {
+    fn leer_del_flujo_tantos_bytes(
+        &mut self,
+        cantida_bytes_a_leer: u32,
+    ) -> Result<Vec<u8>, String> {
         let mut data = vec![0; cantida_bytes_a_leer as usize];
         self.flujo.read_exact(&mut data).map_err(|e| {
             format!(
@@ -70,8 +73,11 @@ impl Comunicacion {
         })?;
         Ok(data)
     }
-    
-    fn leer_del_flujo_tantos_bytes_en_string(&mut self, cantida_bytes_a_leer: u32) -> Result<String, String> {
+
+    fn leer_del_flujo_tantos_bytes_en_string(
+        &mut self,
+        cantida_bytes_a_leer: u32,
+    ) -> Result<String, String> {
         let data = self.leer_del_flujo_tantos_bytes(cantida_bytes_a_leer)?;
         let contendio = str::from_utf8(&data).map_err(|e| {
             format!(
@@ -81,14 +87,13 @@ impl Comunicacion {
         })?;
 
         Ok(contendio.to_string())
-
     }
 
-    ///lee la primera parte de la linea actual, obtiene el largo de la linea actual 
-    /// 
+    ///lee la primera parte de la linea actual, obtiene el largo de la linea actual
+    ///
     /// # Resultado:
-    /// -Devuelve el largo de la linea actual (ojo !!contando todavia los primeros 4 bytes 
-    /// de la linea donde dice el largo) en u32 
+    /// -Devuelve el largo de la linea actual (ojo !!contando todavia los primeros 4 bytes
+    /// de la linea donde dice el largo) en u32
     fn obtener_largo_de_la_linea(&mut self) -> Result<u32, String> {
         let bytes_tamanio_linea = 4;
         let tamanio = self.leer_del_flujo_tantos_bytes(bytes_tamanio_linea)?;
@@ -96,14 +101,13 @@ impl Comunicacion {
 
         Ok(tamanio_u32)
     }
-    
 
     /// lee el contendio de la linea actual, es decir, lee el resto del flujo que no incluye el
-    /// largo 
-    /// 
+    /// largo
+    ///
     /// # Argumentos
     /// - tamanio: Es el largo de la linea actual(contando los primeros 4 bytes del largo y el contedio)
-    /// 
+    ///
     /// # Resultado
     /// - Devuelve el contendio de la linea actual
     fn obtener_contenido_linea(&mut self, tamanio: u32) -> Result<String, String> {
@@ -112,17 +116,16 @@ impl Comunicacion {
         Ok(linea)
     }
 
-    
-    /// Obtiene todo el contenido envio por el servidor hasta un NAK o done( sacando 
+    /// Obtiene todo el contenido envio por el servidor hasta un NAK o done( sacando
     /// los bytes referentes al contendio),obtiene lineas en formato PKT.
-    /// 
-    /// # Resultado 
+    ///
+    /// # Resultado
     /// - Devuelve cada linea envia por el servidor (sin el largo)
-    /// 
+    ///
     pub fn obtener_lineas(&mut self) -> Result<Vec<String>, String> {
         let mut lineas: Vec<String> = Vec::new();
         loop {
-           let tamanio = self.obtener_largo_de_la_linea()?;
+            let tamanio = self.obtener_largo_de_la_linea()?;
             if tamanio == 0 {
                 break;
             }
@@ -157,12 +160,14 @@ impl Comunicacion {
         Ok(())
     }
 
-    pub fn obtener_lineas_como_bytes(&mut self) -> Result<Vec<u8>, ErrorDeComunicacion> {
+    pub fn obtener_lineas_como_bytes(&mut self) -> Result<Vec<u8>, String> {
         let mut buffer = Vec::new();
         let mut temp_buffer = [0u8; 1024]; // Tamaño del búfer de lectura
 
         loop {
-            let bytes_read = self.flujo.read(&mut temp_buffer)?;
+            let bytes_read = self.flujo.read(&mut temp_buffer).map_err(|e| {
+                format!("Fallo en la lectura de la respuesta del servidor.\n{}\n", e)
+            })?;
 
             if bytes_read == 0 {
                 break; // No hay más bytes disponibles, salir del bucle
@@ -200,18 +205,18 @@ impl Comunicacion {
         Ok(lista_wants)
     }
 
-    ///Envia al servidor todos los pedidos en el formato correspondiente, junto con las capacidades para la 
-    /// comunicacion y finaliza con un '0000' de ser necesario. 
-    /// 
+    ///Envia al servidor todos los pedidos en el formato correspondiente, junto con las capacidades para la
+    /// comunicacion y finaliza con un '0000' de ser necesario.
+    ///
     /// El objetivo es enviar las commits pertenecientes a las cabeza de rama que es necesario actualizar
     /// El formato seguido para cada linea es la siguiente:
     /// - ''4 bytes con el largo'want 'hash de un commit cabeza de rama'  
-    /// Y la primera linea, ademas contien las capacidades separadas por espacio 
-    /// 
-    /// # Argumentos 
-    /// 
-    /// - pedidos: lista con los hash de los commits cabeza de rama de las ramas que se quieren actualizar en local 
-    ///     con respecto a las del servidor 
+    /// Y la primera linea, ademas contien las capacidades separadas por espacio
+    ///
+    /// # Argumentos
+    ///
+    /// - pedidos: lista con los hash de los commits cabeza de rama de las ramas que se quieren actualizar en local
+    ///     con respecto a las del servidor
     /// - capacidades: las capacidades que va a ver en la comunicacion con el servidor  
     pub fn enviar_pedidos_al_servidor_pkt(
         &mut self,
@@ -234,15 +239,13 @@ impl Comunicacion {
         Ok(())
     }
 
-    ///Le añade las capadcidades al primer objeto para cumplir con el protocolo 
-    fn anadir_capacidades_primer_pedido(&self, mut pedidos: Vec<String>, capacidades: String){
+    ///Le añade las capadcidades al primer objeto para cumplir con el protocolo
+    fn anadir_capacidades_primer_pedido(&self, mut pedidos: Vec<String>, capacidades: String) {
         pedidos[0].push_str(&(" ".to_string() + &capacidades));
     }
     ///recibi el hash de un commit y le da el formato correcto para hacer el want
-    fn dar_formato_de_solicitud(&self, hash_commit:&String)->String{
-        io::obtener_linea_con_largo_hex(
-            &("want ".to_string() + &hash_commit + "\n"),
-        )
+    fn dar_formato_de_solicitud(&self, hash_commit: &String) -> String {
+        io::obtener_linea_con_largo_hex(&("want ".to_string() + &hash_commit + "\n"))
     }
 
     pub fn obtener_haves_pkt(&mut self, lineas: &Vec<String>) -> Vec<String> {
@@ -253,6 +256,38 @@ impl Comunicacion {
             ))
         }
         haves
+    }
+
+    ///Envia al servidor todo el contendio(los hash de los objetos) que ya se tiene y que no debe
+    /// mandarle
+    ///
+    /// # Argumentos
+    ///
+    /// - hash_objetos: lista con todos los hash de los objetos que ya se tiene y que no debe mandar
+    ///     el servidor
+    pub fn enviar_lo_que_tengo_al_servidor_pkt(
+        &mut self,
+        hash_objetos: &Vec<String>,
+    ) -> Result<(), String> {
+        for hash_objeto in hash_objetos {
+            let pedido_con_formato = self.dar_formato_have(hash_objeto);
+            self.enviar(&pedido_con_formato)?;
+        }
+
+        //esto if no se si va, el 0000 si
+        if !hash_objetos[0].contains(&"NAK".to_string())
+            && !hash_objetos[0].contains(&"ACK".to_string())
+            && !hash_objetos[0].contains(&"done".to_string())
+        {
+            self.enviar("0000")?;
+        }
+
+        Ok(())
+    }
+
+    ///recibi el hash de un objeto y le da el formato correcto para hacer el have
+    fn dar_formato_have(&self, hash_commit: &String) -> String {
+        io::obtener_linea_con_largo_hex(&("have ".to_string() + &hash_commit + "\n"))
     }
 
     pub fn obtener_paquete_y_escribir(

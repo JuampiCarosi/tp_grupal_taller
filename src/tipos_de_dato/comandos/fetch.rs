@@ -1,4 +1,5 @@
 use crate::io::escribir_bytes;
+use crate::tipos_de_dato::logger::Logger;
 use crate::utilidades_path_buf;
 use crate::{
     comunicacion::Comunicacion, io, packfile, tipos_de_dato::comandos::write_tree,
@@ -15,10 +16,11 @@ pub struct Fetch {
     remoto: String,
     comunicacion: Comunicacion,
     capacidades_local: Vec<String>,
+    logger: Rc<Logger>,
 }
 
 impl Fetch {
-    pub fn new() -> Result<Fetch, String> {
+    pub fn new(logger: Rc<Logger>) -> Result<Fetch, String> {
         let remoto = "origin".to_string();
         //"Por ahora lo hardcoedo necesito el config que no esta en esta rama";
 
@@ -29,50 +31,80 @@ impl Fetch {
 
         let capacidades_local = Vec::new();
             //esto lo deberia tener la comunicacion creo yo 
-        Ok(Fetch { remoto , comunicacion, capacidades_local})
+        Ok(Fetch { remoto , comunicacion, capacidades_local, logger})
     }
 
     //verificar si existe /.git
     pub fn ejecutar(&mut self) -> Result<String, String> {
-        //Iniciar la comunicacion con el servidor
-        // obtener_listas_de_commits
+        
         self.iniciar_git_upload_pack_con_servidor()?;
 
+        //en caso de clone el commit head se tiene que utilizar
         let (capacidades_servidor, commit_head_remoto, commits_cabezas_y_dir_rama_asosiado) =
             self.fase_de_descubrimiento()?;
 
-        self.actualizar_ramas_locales_del_remoto(&commits_cabezas_y_dir_rama_asosiado);
+        self.fase_de_negociacion(capacidades_servidor, commits_cabezas_y_dir_rama_asosiado)?;
+        
+        self.recivir_packfile_y_guardar_objetos()?;
 
-        // envio
-        self.enviar_pedidos(&capacidades_servidor, &commits_cabezas_y_dir_rama_asosiado);
+        self.actualizar_ramas_locales_del_remoto(&commits_cabezas_y_dir_rama_asosiado)?;
+        
+        let mensaje = format!("Fetch ejecutado con exito");
+        self.logger.log(mensaje);
+        Ok(mensaje)
+    }
 
-        let objetos_directorio =
-            io::obtener_objetos_del_directorio("./.gir/objects/".to_string()).unwrap();
-        let haves = self.comunicacion.obtener_haves_pkt(&objetos_directorio);
-        if !haves.is_empty() {
-            self.comunicacion.responder(haves).unwrap();
-            let acks_nak = self.comunicacion.obtener_lineas().unwrap();
-            println!("acks_nack: {:?}", acks_nak);
-            self.comunicacion
-                .responder(vec![io::obtener_linea_con_largo_hex("done")])
-                .unwrap();
-        } else {
-            self.comunicacion
-                .responder(vec![io::obtener_linea_con_largo_hex("done")])
-                .unwrap();
-            let acks_nak = self.comunicacion.obtener_lineas().unwrap();
-            println!("acks_nack: {:?}", acks_nak);
-        }
+    fn fase_de_negociacion(&mut self, capacidades_servidor: Vec<&str>, commits_cabezas_y_dir_rama_asosiado: Vec<(&str, PathBuf)>) -> Result<(), String> {
+        self.enviar_pedidos(&capacidades_servidor, &commits_cabezas_y_dir_rama_asosiado)?;
 
+        self.enviar_lo_que_tengo()?;
+
+        self.finalizar_pedido()
+
+    }
+
+    //ACA PARA MI HAY UN PROBLEMA DE RESPONSABILIADADES: COMUNICACION DEBERIA RECIBIR EL PACKETE Y FETCH 
+    //DEBERIA GUARDAR LAS COSAS, PERO COMO NO ENTIENDO EL CODIGO JAJA DENTRO DE COMUNICACION NO METO MANO 
+    fn recivir_packfile_y_guardar_objetos(&mut self) -> Result<(), String> {
         // aca para git daemon hay que poner un recibir linea mas porque envia un ACK repetido (No entiendo por que...)
         println!("Obteniendo paquete..");
-        let mut packfile = self.comunicacion.obtener_lineas_como_bytes().unwrap();
+        let mut packfile = self.comunicacion.obtener_lineas_como_bytes()?;
         self.comunicacion
             .obtener_paquete_y_escribir(&mut packfile, String::from("./.gir/objects/"))
             .unwrap();
-        Ok(String::from("Fetch ejecutado con exito"))
+
+        Ok(())
+    }
+    
+    ///Envia un mensaje al servidor para avisarle que ya se termino de de mandarle lineas. 
+    /// Para seguir el protocolo el mensaje que se envia es done 
+    fn finalizar_pedido(&self)->Result<(),String>{
+        self.comunicacion.enviar(&io::obtener_linea_con_largo_hex("done\n"))
+    }
+    
+    ///Envia todo los objetos (sus hash) que ya se tienen y por lo tanto no es necesario que el servidor manda
+    fn enviar_lo_que_tengo(&self) -> Result<(), String>{
+        let objetos_directorio =
+            io::obtener_objetos_del_directorio("./.gir/objects/".to_string()).unwrap();
+
+        if !objetos_directorio.is_empty(){
+            self.comunicacion.enviar_lo_que_tengo_al_servidor_pkt(&objetos_directorio)?;
+            self.recivir_nack();
+        }
+
+        Ok(())
     }
 
+    ///Recibe el la repusta Nack del servidor del envio de HAVE
+    fn recivir_nack(&self)->Result<(), String>{
+        //POR AHORA NO HACEMOS, NADA CON ESTO: EVALUAR QUE HACER. SOLO LEERMOS 
+        //PARA SEGUIR EL FLUJO
+        let acks_nak = self.comunicacion.obtener_lineas()?;
+        println!("acks_nack: {:?}", acks_nak);
+        Ok(())
+    }
+    ///Envia al servidor todos los commits cabeza de rama que se quieren actulizar junto con las capacidades del 
+    /// servidor. 
     fn enviar_pedidos(&self, capacidades_servidor: &Vec<&str>, commits_cabezas_y_dir_rama_asosiado: &Vec<(&str,PathBuf)>)->Result<(), String>{
         let capacidades_a_usar_en_la_comunicacion = self.obtener_capacidades_en_comun_con_el_servidor(capacidades_servidor);
         let commits_de_cabeza_de_rama_faltantes = self.obtener_commits_cabeza_de_rama_faltantes(commits_cabezas_y_dir_rama_asosiado)?;
