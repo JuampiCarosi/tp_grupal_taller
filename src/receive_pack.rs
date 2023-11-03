@@ -1,5 +1,6 @@
 use crate::err_comunicacion::ErrorDeComunicacion;
 use crate::io::obtener_archivos_faltantes;
+use crate::packfile::Packfile;
 use crate::{packfile, comunicacion};
 use crate::{comunicacion::Comunicacion, io};
 use crate::utilidades_strings;
@@ -21,7 +22,7 @@ pub fn receive_pack(dir: String, comunicacion: &mut Comunicacion) -> Result<(), 
         io::escribir_referencia(nueva_ref, PathBuf::from(format!("{}/{}", dir, ".gir")));
     }  
     let mut packfile = comunicacion.obtener_lineas_como_bytes().unwrap();
-    comunicacion.obtener_paquete_y_escribir(&mut packfile, "./srv/.gir/objects/".to_string())?;
+    Packfile::new().obtener_paquete_y_escribir(&mut packfile, "./srv/.gir/objects/".to_string())?;
 
     println!("Receive pack ejecutado con exito");
     Ok(())

@@ -2,13 +2,13 @@ use crate::err_comunicacion::ErrorDeComunicacion;
 use crate::tipos_de_dato::logger::Logger;
 use crate::{io, utilidades_de_compresion};
 use crate::tipos_de_dato::comandos::cat_file;
-use crate::tipos_de_dato::objetos::tree::Tree;
 use std::path::PathBuf;
 use std::rc::Rc;
-use crate::tipos_de_dato::objetos::blob::Blob;
 use sha1::{Digest, Sha1};
-  
-pub struct Packfile {
+use flate2::{Decompress, FlushDecompress};
+use std::convert::TryInto;
+use std::str;
+    pub struct Packfile {
     objetos: Vec<u8>,
     indice: Vec<u8>,
     cant_objetos: u32,
@@ -25,11 +25,11 @@ impl Packfile {
 
     fn  aniadir_objeto(&mut self, objeto: String, dir: &str) -> Result<(), String> {
         // let logger = Rc::new(Logger::new(PathBuf::from("log.txt"))?);
-        // println!("Aniadiendo objeto: {}", objeto);
-        // println!("la dir que llega: {}", dir);
+        println!("Aniadiendo objeto: {}", objeto);
+        println!("la dir que llega: {}", dir);
         // DESHARCODEAR EL ./.GIR
         let ruta_objeto = format!("{}{}/{}", dir, &objeto[..2], &objeto[2..]);
-        // println!("ruta objeto: {}", ruta_objeto);
+        println!("ruta objeto: {}", ruta_objeto);
         let objeto_comprimido = io::leer_bytes(&ruta_objeto).unwrap();
         // let tamanio_sin_split = utilidades_de_compresion::descomprimir_objeto(&objeto_comprimido, "./gir/objects/".to_string())?;
         let log = Rc::new(Logger::new(PathBuf::from("log.txt")).unwrap());
@@ -143,6 +143,73 @@ impl Packfile {
         packfile.extend(&hash);
         packfile
     }
+
+    pub fn obtener_paquete_y_escribir(&mut self, bytes: &mut Vec<u8>, ubicacion: String) -> Result<(), ErrorDeComunicacion> {
+        // a partir de aca obtengo el paquete
+        // println!("cant bytes: {:?}", bytes.len());
+        // println!("obteniendo firma");
+        let checksum = Self::verificar_checksum(bytes);
+        match checksum {
+            true => println!("Checksum correcto"),
+            false => println!("Checksum incorrecto"),
+        }
+        let firma = &bytes[0..4];
+        println!("firma: {:?}", str::from_utf8(&firma));
+        // assert_eq!("PACK", str::from_utf8(&firma).unwrap());
+        bytes.drain(0..4);
+        let version = &bytes[0..4];
+        println!("version: {:?}", str::from_utf8(&version)?);
+        // assert_eq!("0002", str::from_utf8(&version)?);
+
+        bytes.drain(0..4);
+        // println!("obteniendo largo");
+        let largo = &bytes[0..4];
+        let largo_packfile: [u8; 4] = largo.try_into().unwrap();
+        let largo = u32::from_be_bytes(largo_packfile);
+        println!("largo: {:?}", largo);
+        bytes.drain(0..4);
+
+        while bytes.len() > 20 {
+            // println!("cant bytes: {:?}", bytes.len());
+            let (tipo, tamanio, _bytes_leidos) = decodificar_bytes(bytes);
+            println!("tipo: {:?}, tamanio: {}", tipo, tamanio);
+            // println!("cant bytes post decodificacion: {:?}", bytes.len());
+            // println!("tipo: {:?}", tipo);
+            // println!("tamanio: {:?}", tamanio);
+            
+            // // -- leo el contenido comprimido --
+            let mut objeto_descomprimido = vec![0; tamanio as usize];
+
+            let mut descompresor = Decompress::new(true);
+
+            descompresor
+                .decompress(&bytes, &mut objeto_descomprimido, FlushDecompress::None)
+                .unwrap();
+
+            let mut hasher = Sha1::new();
+            hasher.update(objeto_descomprimido.clone());
+            let _hash = hasher.finalize();
+            let hash = format!("{:x}", _hash);
+            
+            println!("hash: {:?}", hash);
+            let ruta = format!("{}{}/{}", &ubicacion, &hash[..2], &hash[2..]);
+            println!("rutarda donde pongo objetos: {:?}", ruta);
+
+            let total_out = descompresor.total_out(); // esto es lo que debe matchear el tamanio que se pasa en el header
+            let total_in = descompresor.total_in(); // esto es para calcular el offset
+            println!("total in: {:?}, total out: {:?} ", total_in as usize, total_out as usize);
+            
+            io::escribir_bytes(ruta, bytes.drain(0..total_in as usize)).unwrap();
+
+            println!("cant bytes restantes: {:?}", bytes.len());
+        }
+        let _checksum_obtenido = bytes;
+        // println!("Checksum obtenido: {:?}", checksum, checksum_obtenido);
+        Ok(())
+    }
+    fn obtener_y_escribir_objeto(){}
+
+
 }
 
 pub fn codificar_bytes(tipo: u8, numero: u32) -> Vec<u8> {

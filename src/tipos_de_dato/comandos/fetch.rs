@@ -1,4 +1,5 @@
 use crate::io::escribir_bytes;
+use crate::packfile::Packfile;
 use crate::{comunicacion::Comunicacion, io};
 use std::io::Write;
 use std::path::PathBuf;
@@ -63,7 +64,7 @@ impl Fetch {
         // aca para git daemon hay que poner un recibir linea mas porque envia un ACK repetido (No entiendo por que...)
         println!("Obteniendo paquete..");
         let mut packfile = comunicacion.obtener_lineas_como_bytes().unwrap();
-        comunicacion.obtener_paquete_y_escribir(&mut packfile, String::from("./.gir/objects/")).unwrap();
+        Packfile::new().obtener_paquete_y_escribir(&mut packfile, String::from("./.gir/objects/")).unwrap();
         escribir_en_remote_origin_las_referencias(&diferencias);    
   
         Ok(String::from("Fetch ejecutado con exito"))

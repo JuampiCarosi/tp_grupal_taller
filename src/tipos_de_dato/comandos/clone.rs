@@ -1,4 +1,5 @@
 use crate::io::{escribir_bytes, escribir_referencia};
+use crate::packfile::Packfile;
 use crate::{comunicacion::Comunicacion, io, packfile, tipos_de_dato::objetos::tree::Tree, tipos_de_dato::comandos::write_tree};
 use std::io::Write;
 use std::path::PathBuf;
@@ -55,13 +56,12 @@ impl Clone {
         
         // Esto porque es un CLONE
         comunicacion.responder(vec![io::obtener_linea_con_largo_hex("done\n")]).unwrap();
-        println!("Hola");
         let acks_nak = comunicacion.obtener_lineas().unwrap();
         println!("acks_nack: {:?}", acks_nak);
 
         println!("Obteniendo paquete..");
         let mut packfile = comunicacion.obtener_lineas_como_bytes().unwrap();
-        comunicacion.obtener_paquete_y_escribir(&mut packfile, String::from("./.gir/objects/")).unwrap();
+        Packfile::new().obtener_paquete_y_escribir(&mut packfile, String::from("./.gir/objects/")).unwrap();
 
         let head_dir: String = String::from(".gir/HEAD");
         

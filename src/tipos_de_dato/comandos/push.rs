@@ -87,8 +87,9 @@ impl Push {
                 
             }
         }   
+        println!("objetos a enviar: {:?}", objetos_a_enviar);
         
-        println!("actualizaciones: {:?}", actualizaciones);
+        // println!("actualizaciones: {:?}", actualizaciones);
         // let aaa = vec![io::obtener_linea_con_largo_hex(&(actualizaciones[0].clone() + "\0report-status\n"))];
         // println!("aaa: {:?}", aaa);
         if !actualizaciones.is_empty(){
@@ -121,7 +122,8 @@ fn obtener_commits_y_objetos_asociados(referencia: &String, commit_limite: &Stri
         println!("Consiguiendo los objetos para el hash tree: {}", hash_tree);
         let tree = Tree::from_hash(hash_tree.clone(), PathBuf::from("./.gir/objects/"))?;
         historial_commits.insert(hash_tree);
-        historial_commits.extend(tree.objetos.iter().map(|objeto| objeto.obtener_hash()));
+        historial_commits.extend(tree.obtener_objetos().iter().map(|objeto| objeto.obtener_hash()));
+        // historial_commits.extend(tree.objetos.iter().map(|objeto| objeto.obtener_hash()));
         // obtengo el padre del commit 
         let contenido = utilidades_de_compresion::descomprimir_objeto(ultimo_commit.clone(), String::from("./.gir/objects/"))?;
         let siguiente_padre = Log::conseguir_padre_desde_contenido_commit(&contenido);

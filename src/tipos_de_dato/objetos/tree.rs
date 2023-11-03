@@ -25,13 +25,26 @@ pub struct Tree {
 }
 impl Tree {
     /// Devuelve un vector con todos los objetos de tipo Blob que se encuentran en el arbol
-    fn obtener_objetos_hoja(&self) -> Vec<Objeto> {
+    pub fn obtener_objetos_hoja(&self) -> Vec<Objeto> {
         let mut objetos: Vec<Objeto> = Vec::new();
         for objeto in &self.objetos {
             match objeto {
                 Objeto::Blob(blob) => objetos.push(Objeto::Blob(blob.clone())),
                 Objeto::Tree(tree) => {
                     objetos.extend(tree.obtener_objetos_hoja());
+                }
+            }
+        }
+        objetos
+    }
+    pub fn obtener_objetos(&self) -> Vec<Objeto> {
+        let mut objetos: Vec<Objeto> = Vec::new();
+        for objeto in &self.objetos {
+            match objeto {
+                Objeto::Blob(blob) => objetos.push(Objeto::Blob(blob.clone())),
+                Objeto::Tree(tree) => {
+                    objetos.push(Objeto::Tree(tree.clone()));
+                    objetos.extend(tree.obtener_objetos());
                 }
             }
         }
