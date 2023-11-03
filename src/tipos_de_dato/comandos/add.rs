@@ -38,7 +38,6 @@ impl Add {
         let index = leer_index()?;
         let ubicaciones_recibidas = args.iter().map(PathBuf::from).collect::<Vec<PathBuf>>();
         let ubicaciones: Vec<PathBuf> = Self::obtener_ubicaciones_hoja(ubicaciones_recibidas)?;
-
         Ok(Add {
             logger,
             ubicaciones,
@@ -75,7 +74,6 @@ impl Add {
                 self.index.push(nuevo_objeto_index);
             }
         }
-
         escribir_index(self.logger.clone(), &self.index)?;
         Ok("".to_string())
     }

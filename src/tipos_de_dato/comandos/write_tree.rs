@@ -18,7 +18,7 @@ pub fn conseguir_arbol_padre_from_ult_commit_de_dir(hash_commit_padre: &str, dir
 }
 pub fn conseguir_arbol_padre_from_ult_commit(hash_commit_padre: String) -> String {
     let contenido =
-        utilidades_de_compresion::descomprimir_objeto(hash_commit_padre.clone(), String::from("./.gir/objects")).unwrap();
+        utilidades_de_compresion::descomprimir_objeto(hash_commit_padre.clone(), String::from("./.gir/objects/")).unwrap();
     let lineas_sin_null = contenido.replace("\0", "\n");
     let lineas = lineas_sin_null.split("\n").collect::<Vec<&str>>();
     let arbol_commit = lineas[1];
@@ -53,7 +53,8 @@ fn aplicar_index_a_arbol(arbol_index: &[ObjetoIndex], arbol_padre: &[Objeto]) ->
 }
 
 /// Crea un arbol de commit a partir del index y su commit padre
-/// commit_padre es un option ya que puede ser None en caso de que sea el primer commit
+/// commit_padre es un option ya que puede ser No
+/// ne en caso de que sea el primer commit
 pub fn crear_arbol_commit(commit_padre: Option<String>) -> Result<String, String> {
     let objetos_index = leer_index()?;
     if objetos_index.is_empty() {

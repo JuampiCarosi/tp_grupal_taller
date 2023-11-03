@@ -8,6 +8,9 @@ use std::path::PathBuf;
 pub fn receive_pack(dir: String, comunicacion: &mut Comunicacion) -> Result<(), ErrorDeComunicacion> {
 
     let actualizaciones = comunicacion.obtener_lineas().unwrap();
+    if actualizaciones.is_empty() {
+        return Ok(());
+    }
     println!("actualizaciones: {:?}", actualizaciones);
     println!("direccion: {:?}", dir);
     for actualizacion in &actualizaciones { 

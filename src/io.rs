@@ -24,7 +24,6 @@ use std::str;
 pub fn obtener_objetos_del_directorio(dir: String) -> Result<Vec<String>, ErrorDeComunicacion> {
     let path = PathBuf::from(dir);
     let mut objetos: Vec<String> = Vec::new();
-    println!("Voy a obtener objetos del directorio: {:?}", path);
     let dir_abierto = fs::read_dir(path.clone())?;
     // println!("dir_abierto: {:?}", dir_abierto);
     for archivo in dir_abierto {
@@ -102,8 +101,12 @@ pub fn obtener_objetos_con_nombre_carpeta(dir: PathBuf) -> Result<Vec<String>, E
 pub fn obtener_refs_con_largo_hex(refs_path: PathBuf, dir: String) -> Result<Vec<String>, ErrorDeComunicacion> {
     let mut refs: Vec<String> = Vec::new();
     if !refs_path.exists() {
-        io::Error::new(io::ErrorKind::NotFound, "No existe el repositorio");
+        return Ok(refs);
     }
+//    println!("Obteniendo referencias de: {:?}", refs_path);
+    // if !refs_path.exists() {
+    //     io::Error::new(io::ErrorKind::NotFound, "No existe el repositorio");
+    // }
     if refs_path.ends_with("HEAD") {
         refs.push(obtener_ref_head(refs_path.to_path_buf())?);
     } else {
@@ -127,7 +130,8 @@ pub fn obtener_refs_con_largo_hex(refs_path: PathBuf, dir: String) -> Result<Vec
 pub fn obtener_refs(refs_path: PathBuf, dir: String) -> Result<Vec<String>, ErrorDeComunicacion> {
     let mut refs: Vec<String> = Vec::new();
     if !refs_path.exists() {
-        io::Error::new(io::ErrorKind::NotFound, "No existe el repositorio");
+        return Ok(refs);
+        // io::Error::new(io::ErrorKind::NotFound, "No existe el repositorio");
     }
     if refs_path.ends_with("HEAD") {
         refs.push(obtener_ref_head(refs_path.to_path_buf())?);
@@ -191,9 +195,9 @@ fn obtener_ref_head(path: PathBuf) -> Result<String, ErrorDeComunicacion> {
         )));
     }
     let contenido = leer_archivo(&mut path.clone())?;
-    let head_ref: Vec<&str> = contenido.split_whitespace().collect();
+    // let head_ref: Vec<&str> = contenido.split_whitespace().collect();
     if let Some(ruta) = path.clone().parent() {
-        let cont = leer_archivo(&mut ruta.join(head_ref[1]))? + " HEAD";
+        let cont = leer_archivo(&mut ruta.join(contenido))? + " HEAD";
         Ok(obtener_linea_con_largo_hex(&cont))
     } else {
         Err(ErrorDeComunicacion::IoError(io::Error::new(
@@ -355,5 +359,27 @@ pub fn escribir_referencia(referencia: &str, dir: PathBuf) {
         let dir = dir.join(referencia_y_contenido[1]);
         println!("Voy a escribir en: {:?}", dir);
         escribir_bytes(dir, referencia_y_contenido[0]).unwrap();
-}   
+    }   
+}
+
+pub fn obtener_diferencias_remote(referencias: Vec<String>, dir: String) -> Vec<String> {
+    let mut diferencias: Vec<String> = Vec::new();
+    // si no existe devuelvo todas las refs
+    if !PathBuf::from(dir.clone() + "refs/remotes/origin/").exists() {
+        return referencias
+    }
+    for referencia in referencias { 
+        let referencia_y_contenido = referencia.split_whitespace().collect::<Vec<&str>>();
+        let referencia_remote = "refs/remotes/origin/".to_string() + referencia_y_contenido[1].split('/').last().unwrap();
+        println!("referencia_remote: {}", referencia_remote);
+        let referencia_local = leer_a_string(&mut Path::new(&(dir.clone() + &referencia_remote))).unwrap();
+        if referencia_local != referencia_y_contenido[0] {
+            println!("referencia_local: {}", referencia_local);
+            println!("referencia que me pasan: {}", referencia_y_contenido[0]);
+            diferencias.push(referencia_y_contenido[0].to_string());
+        }
+    }   
+    println!("Las diferencias son: {:?}", diferencias);
+    diferencias
+    
 }

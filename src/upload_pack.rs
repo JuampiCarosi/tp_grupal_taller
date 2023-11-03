@@ -8,7 +8,11 @@ pub fn upload_pack(dir: String, comunicacion: &mut Comunicacion) -> Result<(), E
     // caso push 
     // let refs_a_actualizar = comunicacion.obtener_lineas().unwrap();
     
-    let mut wants = comunicacion.obtener_lineas()?; // obtengo los wants del cliente
+    let wants = comunicacion.obtener_lineas()?; // obtengo los wants del cliente
+    if wants.is_empty() {
+        println!("Se termino la conexion");
+        return Ok(()); // el cliente esta actualizado
+    }
     // ------- CLONE --------
     // a partir de aca se asume que va a ser un clone porque es el caso mas sencillo, despues cambiar
     let lineas_siguientes = comunicacion.obtener_lineas()?;
@@ -18,7 +22,7 @@ pub fn upload_pack(dir: String, comunicacion: &mut Comunicacion) -> Result<(), E
         // let want_obj_ids = utilidades_strings::eliminar_prefijos(&mut wants, "want");
         // println!("want_obj_ids: {:?}", want_obj_ids);
         let packfile =
-            packfile::Packfile::new().obtener_pack_entero(&(dir.clone().to_string() + "/.gir/")); // obtengo el packfile
+            packfile::Packfile::new().obtener_pack_entero(&(dir.clone().to_string() + "/.gir/objects/")); // obtengo el packfile
             // git_io::leer_bytes("./.git/objects/pack/pack-31897a1f902980a7e540e812b54f5702f449af8b.pack").unwrap();
         comunicacion.responder_con_bytes(packfile).unwrap();
         return Ok(());
@@ -29,14 +33,14 @@ pub fn upload_pack(dir: String, comunicacion: &mut Comunicacion) -> Result<(), E
     let have_objs_ids = utilidades_strings::eliminar_prefijos(&lineas_siguientes);
     println!("have_objs_ids: {:?}", have_objs_ids);
     // let have_obj_ids = utilidades_strings::eliminar_prefijos(&mut lineas_siguientes, "have");
-    let respuesta_acks_nak = git_io::obtener_ack(have_objs_ids.clone(), dir.clone() + "/.gir/objects");
+    let respuesta_acks_nak = git_io::obtener_ack(have_objs_ids.clone(), dir.clone() + "/.gir/objects/");
     println!("respuesta_acks_nak: {:?}", respuesta_acks_nak);
     comunicacion.responder(respuesta_acks_nak).unwrap();
     // let lineas = comunicacion.obtener_lineas().unwrap();
     // println!("lineas: {:?}", lineas);
     let faltantes = obtener_archivos_faltantes(have_objs_ids, dir.clone());
     // obtener un packfile de los faltantes...
-    let packfile = packfile::Packfile::new().obtener_pack_con_archivos(faltantes, &(dir.clone() + "/.gir/objects"));
+    let packfile = packfile::Packfile::new().obtener_pack_con_archivos(faltantes, &(dir.clone() + "/.gir/objects/"));
     comunicacion.responder_con_bytes(packfile).unwrap();
     Ok(())
 }

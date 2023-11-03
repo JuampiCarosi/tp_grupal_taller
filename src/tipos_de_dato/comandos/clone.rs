@@ -32,8 +32,9 @@ impl Clone {
         let request_data_con_largo_hex = io::obtener_linea_con_largo_hex(request_data);
 
         client.write_all(request_data_con_largo_hex.as_bytes()).unwrap();
-        let refs_recibidas = comunicacion.obtener_lineas().unwrap();
+        let mut refs_recibidas = comunicacion.obtener_lineas().unwrap();
         // escribo las refs
+        let mut primera_ref = refs_recibidas.remove(0);
         for referencia in &refs_recibidas { 
             io::escribir_referencia(referencia, PathBuf::from("./.gir/"));
         }
@@ -45,7 +46,7 @@ impl Clone {
         //         escribir_bytes(dir, referencia_y_contenido[0]).unwrap();
         //     }
         // }   
-        let capacidades = refs_recibidas[0].split("\0").collect::<Vec<&str>>()[1];
+        let capacidades = primera_ref.split("\0").collect::<Vec<&str>>()[1];
         let wants = comunicacion.obtener_wants_pkt(&refs_recibidas, capacidades.to_string()).unwrap();
         comunicacion.responder(wants.clone()).unwrap();
         // Esto porque es un CLONE
@@ -59,18 +60,19 @@ impl Clone {
 
         let head_dir: String = String::from(".gir/HEAD");
         
-        let ref_head: String = if refs_recibidas[0].contains("HEAD") {
-            refs_recibidas[0].split("\0").collect::<Vec<&str>>()[0].to_string().split(" ").collect::<Vec<&str>>()[0].to_string()
-        } else {
-            refs_recibidas[0].split("\0").collect::<Vec<&str>>()[0].to_string()
-        };
+        // let ref_head: String = if refs_recibidas[0].contains("HEAD") {
+        //     refs_recibidas[0].split("\0").collect::<Vec<&str>>()[0].to_string().split(" ").collect::<Vec<&str>>()[0].to_string()
+        // } else {
+        //     refs_recibidas[0].split("\0").collect::<Vec<&str>>()[0].to_string()
+        // };
+        let ref_head = refs_recibidas[0].split_whitespace().collect::<Vec<&str>>()[0].to_string();
         io::escribir_bytes(PathBuf::from(head_dir), b"refs/heads/master").unwrap();
         // println!("ref_head: {:?}", ref_head);
         
         let tree_hash = write_tree::conseguir_arbol_padre_from_ult_commit_de_dir(&ref_head, String::from("./.gir/objects/"));
         println!("tree_hash: {:?}", tree_hash);
 
-        let tree: Tree = Tree::from_hash(tree_hash, PathBuf::from(env!("CARGO_MANIFEST_DIR").to_string() + "/.gir/objects")).unwrap();
+        let tree: Tree = Tree::from_hash(tree_hash, PathBuf::from(env!("CARGO_MANIFEST_DIR").to_string())).unwrap();
         match tree.escribir_en_directorio() {
             Ok(_) => {},
             Err(e) => {println!("Error al escribir el arbol: {}", e);}

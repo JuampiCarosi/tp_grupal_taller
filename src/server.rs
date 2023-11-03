@@ -94,15 +94,16 @@ impl Servidor {
     }
     // devuelve las refs de un directorio valido
     fn obtener_refs_de(&self, dir: PathBuf) -> Vec<String> {
-        println!("path del comando: {:?}", dir);
+        // println!("path del comando: {:?}", dir);
         let mut refs: Vec<String> = Vec::new();
         if let Ok(mut head) = git_io::obtener_refs_con_largo_hex(dir.join("HEAD"), "/home/juani/23C2-Cangrejos-Tacticos/srv/.gir/".to_string()) {
             refs.append(&mut head);
         }
+        println!("Hola!");
         refs.append(&mut git_io::obtener_refs_con_largo_hex(dir.join("refs/heads/"), String::from("/home/juani/23C2-Cangrejos-Tacticos/srv/.gir/")).unwrap());
         refs.append(&mut git_io::obtener_refs_con_largo_hex(dir.join("refs/tags/"), String::from("/home/juani/23C2-Cangrejos-Tacticos/srv/.gir/")).unwrap());
         if !refs.is_empty(){
-            refs[0] = self.agregar_capacidades(refs[0].clone());
+            refs.insert(0, self.agregar_capacidades(refs[0].clone()));
         }
         refs
     }
@@ -117,3 +118,20 @@ impl Servidor {
         git_io::obtener_linea_con_largo_hex(&referencia_con_capacidades)
     }
 }
+
+
+
+// git daemon [--verbose] [--syslog] [--export-all]
+// [--timeout=<n>] [--init-timeout=<n>] [--max-connections=<n>]
+// [--strict-paths] [--base-path=<path>] [--base-path-relaxed]
+// [--user-path | --user-path=<path>]
+// [--interpolated-path=<pathtemplate>]
+// [--reuseaddr] [--detach] [--pid-file=<file>]
+// [--enable=<service>] [--disable=<service>]
+// [--allow-override=<service>] [--forbid-override=<service>]
+// [--access-hook=<path>] [--[no-]informative-errors]
+// [--inetd |
+//  [--listen=<host_or_ipaddr>] [--port=<n>]
+//  [--user=<user> [--group=<group>]]]
+// [--log-destination=(stderr|syslog|none)]
+// [<directory>...]
