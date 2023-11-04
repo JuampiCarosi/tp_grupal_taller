@@ -47,12 +47,12 @@ impl Push {
         let mut actualizaciones = Vec::new();
         let mut objetos_a_enviar = HashSet::new();
         // la primera es version 1
-        let mut version = refs_recibidas.remove(0);
+        let _version = refs_recibidas.remove(0);
         if !refs_recibidas.len() > 1 {
             let first_ref = refs_recibidas.remove(0);
             let referencia_y_capacidades = first_ref.split('\0').collect::<Vec<&str>>();
             println!("referencia_y_capacidades: {:?}", referencia_y_capacidades);
-            let capabilities = referencia_y_capacidades[1];
+            let _capabilities = referencia_y_capacidades[1];
             refs_recibidas.push(referencia_y_capacidades[0].to_string());
         }
         if refs_recibidas.is_empty() {
@@ -85,12 +85,12 @@ impl Push {
                 &value.1, &value.0, &key
             ))); // viejo (el del sv), nuevo (cliente), ref
                  // checkear que no existan los objetos antes de appendear
-            if !(value.1 == "0".repeat(20)) {
+            if value.1 != "0".repeat(20) {
                 objetos_a_enviar
-                    .extend(obtener_commits_y_objetos_asociados(&key, &value.1).unwrap());
+                    .extend(obtener_commits_y_objetos_asociados(key, &value.1).unwrap());
             } else {
                 objetos_a_enviar
-                    .extend(obtener_commits_y_objetos_asociados(&key, &value.0).unwrap());
+                    .extend(obtener_commits_y_objetos_asociados(key, &value.0).unwrap());
             }
         }
         println!("objetos: {:?}", objetos_a_enviar);
@@ -110,7 +110,7 @@ impl Push {
             Ok(String::from("Push ejecutado con exito"))
         } else {
             //error
-            return Err("No hay actualizaciones".to_string());
+            Err("No hay actualizaciones".to_string())
         }
 
         // println!("Refs recibidas: {:?}", refs_recibidas);
@@ -136,8 +136,8 @@ fn obtener_commits_y_objetos_asociados(
     let mut commits_a_revisar: Vec<CommitObj> = Vec::new();
     commits_a_revisar.push(CommitObj::from_hash(ultimo_commit)?);
 
-    while !commits_a_revisar.is_empty() {
-        let commit = commits_a_revisar.pop().unwrap();
+    while let Some(commit) = commits_a_revisar.pop() {
+        
         if commits.contains_key(&commit.hash) || commit.hash == *commit_limite {
             break;
         }

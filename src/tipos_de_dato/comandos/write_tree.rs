@@ -12,17 +12,17 @@ use crate::utils::index::{generar_objetos_raiz, leer_index, ObjetoIndex};
 /// devuelve el hash del arbol de ese commit
 pub fn conseguir_arbol_from_hash_commit(hash_commit_padre: &str, dir: String) -> String {
     let contenido = descomprimir_objeto(hash_commit_padre.to_string(), dir).unwrap();
-    let lineas_sin_null = contenido.replace("\0", "\n");
-    let lineas = lineas_sin_null.split("\n").collect::<Vec<&str>>();
+    let lineas_sin_null = contenido.replace('\0', "\n");
+    let lineas = lineas_sin_null.split('\n').collect::<Vec<&str>>();
     let arbol_commit = lineas[1];
-    let lineas = arbol_commit.split(" ").collect::<Vec<&str>>();
+    let lineas = arbol_commit.split(' ').collect::<Vec<&str>>();
     let arbol_commit = lineas[1];
     arbol_commit.to_string()
 }
 pub fn conseguir_arbol_padre_from_ult_commit(hash_commit_padre: String) -> String {
     let contenido = descomprimir_objeto_gir(hash_commit_padre.clone()).unwrap();
-    let lineas_sin_null = contenido.replace("\0", "\n");
-    let lineas = lineas_sin_null.split("\n").collect::<Vec<&str>>();
+    let lineas_sin_null = contenido.replace('\0', "\n");
+    let lineas = lineas_sin_null.split('\n').collect::<Vec<&str>>();
     let arbol_commit = lineas[1];
     let lineas = arbol_commit.split(' ').collect::<Vec<&str>>();
     let arbol_commit = lineas[1];

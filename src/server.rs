@@ -1,13 +1,13 @@
 use crate::err_comunicacion::ErrorDeComunicacion;
 use crate::io::crear_directorio;
+use crate::receive_pack::receive_pack;
+use crate::upload_pack::upload_pack;
 use crate::{comunicacion::Comunicacion, io as git_io};
 use std::env;
 use std::io;
 use std::net::TcpListener;
 use std::path::PathBuf;
 use std::str;
-use crate::upload_pack::upload_pack;
-use crate::receive_pack::receive_pack;
 pub struct Servidor {
     listener: TcpListener,
     dir: String,
@@ -59,7 +59,11 @@ impl Servidor {
         Ok(())
     }
 
-    fn parse_line(&mut self, linea: &str, comunicacion: &mut Comunicacion) -> Result<(), ErrorDeComunicacion> {
+    fn parse_line(
+        &mut self,
+        linea: &str,
+        comunicacion: &mut Comunicacion,
+    ) -> Result<(), ErrorDeComunicacion> {
         let pedido: Vec<&str> = linea.split_whitespace().collect();
         // veo si es un comando git
         let args: Vec<_> = pedido[1].split('\0').collect();
@@ -70,25 +74,25 @@ impl Servidor {
                 refs = self.obtener_refs_de(path);
                 comunicacion.responder(refs).unwrap();
                 upload_pack(self.dir.clone(), comunicacion)
-            },
+            }
             "git-receive-pack" => {
-                if !path.exists() { 
+                if !path.exists() {
                     crear_directorio(&path.join("refs/")).unwrap();
                     crear_directorio(&path.join("refs/heads/")).unwrap();
                     crear_directorio(&path.join("refs/tags/")).unwrap();
                 }
                 refs = self.obtener_refs_de(path);
-                comunicacion.responder(refs).unwrap(); 
+                comunicacion.responder(refs).unwrap();
                 receive_pack(self.dir.clone(), comunicacion)
                 // Ok(())
-            },
+            }
             _ => {
                 println!("No se reconoce el comando");
                 // cambiar el error
-                return Err(ErrorDeComunicacion::IoError(io::Error::new(
+                Err(ErrorDeComunicacion::IoError(io::Error::new(
                     io::ErrorKind::NotFound,
                     "No existe el comando",
-                )));
+                )))
             }
         }
     }
@@ -96,13 +100,28 @@ impl Servidor {
     fn obtener_refs_de(&self, dir: PathBuf) -> Vec<String> {
         // println!("path del comando: {:?}", dir);
         let mut refs: Vec<String> = Vec::new();
-        if let Ok(mut head) = git_io::obtener_refs_con_largo_hex(dir.join("HEAD"), "/home/juani/23C2-Cangrejos-Tacticos/srv/.gir/".to_string()) {
+        if let Ok(mut head) = git_io::obtener_refs_con_largo_hex(
+            dir.join("HEAD"),
+            "/home/juani/23C2-Cangrejos-Tacticos/srv/.gir/".to_string(),
+        ) {
             refs.append(&mut head);
         }
         println!("Hola!");
-        refs.append(&mut git_io::obtener_refs_con_largo_hex(dir.join("refs/heads/"), String::from("/home/juani/23C2-Cangrejos-Tacticos/srv/.gir/")).unwrap());
-        refs.append(&mut git_io::obtener_refs_con_largo_hex(dir.join("refs/tags/"), String::from("/home/juani/23C2-Cangrejos-Tacticos/srv/.gir/")).unwrap());
-        if !refs.is_empty(){
+        refs.append(
+            &mut git_io::obtener_refs_con_largo_hex(
+                dir.join("refs/heads/"),
+                String::from("/home/juani/23C2-Cangrejos-Tacticos/srv/.gir/"),
+            )
+            .unwrap(),
+        );
+        refs.append(
+            &mut git_io::obtener_refs_con_largo_hex(
+                dir.join("refs/tags/"),
+                String::from("/home/juani/23C2-Cangrejos-Tacticos/srv/.gir/"),
+            )
+            .unwrap(),
+        );
+        if !refs.is_empty() {
             refs.insert(0, self.agregar_capacidades(refs[0].clone()));
         }
         refs
@@ -118,8 +137,6 @@ impl Servidor {
         git_io::obtener_linea_con_largo_hex(&referencia_con_capacidades)
     }
 }
-
-
 
 // git daemon [--verbose] [--syslog] [--export-all]
 // [--timeout=<n>] [--init-timeout=<n>] [--max-connections=<n>]

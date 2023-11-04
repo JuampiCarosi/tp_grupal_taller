@@ -33,7 +33,7 @@ pub fn decodificar_contenido(contenido: Vec<u8>) -> Result<String, String> {
     match tipo_objeto {
         "blob" | "commit" => Ok(vec_a_string(contenido.clone())?),
         "tree" => decodificar_tree(&header, &contenido),
-        _ => return Err("Tipo de objeto invalido".to_string()),
+        _ => Err("Tipo de objeto invalido".to_string()),
     }
 }
 
@@ -98,7 +98,7 @@ fn reconstruir_contenido_separado(header: &str, contenido: Vec<Vec<u8>>) -> Resu
 fn decodificar_tree(header: &str, contenido: &[u8]) -> Result<String, String> {
     let spliteado_por_null_separado_por_linea = separar_contenido_por_linea(contenido)?;
 
-    reconstruir_contenido_separado(&header, spliteado_por_null_separado_por_linea)
+    reconstruir_contenido_separado(header, spliteado_por_null_separado_por_linea)
 }
 
 pub fn comprimir_contenido(contenido: String) -> Result<Vec<u8>, String> {

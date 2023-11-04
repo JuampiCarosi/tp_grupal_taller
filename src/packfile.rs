@@ -5,7 +5,7 @@ use crate::tipos_de_dato::logger::Logger;
 use crate::utils::compresion::obtener_contenido_comprimido_sin_header;
 use sha1::{Digest, Sha1};
 use std::path::PathBuf;
-use std::rc::Rc;
+
 use std::sync::Arc;
 
 pub struct Packfile {
@@ -30,7 +30,7 @@ impl Packfile {
         // DESHARCODEAR EL ./.GIR
         let ruta_objeto = format!("{}{}/{}", dir, &objeto[..2], &objeto[2..]);
         // println!("ruta objeto: {}", ruta_objeto);
-        let objeto_comprimido = io::leer_bytes(&ruta_objeto).unwrap();
+        let _objeto_comprimido = io::leer_bytes(ruta_objeto).unwrap();
         // let tamanio_sin_split = utilidades_de_compresion::descomprimir_objeto(&objeto_comprimido, "./gir/objects/".to_string())?;
         let log = Arc::new(Logger::new(PathBuf::from("log.txt")).unwrap());
         let tamanio_objeto_str =
@@ -152,9 +152,9 @@ pub fn codificar_bytes(tipo: u8, numero: u32) -> Vec<u8> {
     let mut valor = numero;
     // si lo el tamanio del numero es mayor a 4 bits, entonces tengo que poner el bit mas significativo en 1
     let primer_byte: u8 = if valor >> 4 != 0 {
-        ((tipo & 0x07) << 4) as u8 | 0x80 | (numero & 0x0F) as u8
+        ((tipo & 0x07) << 4) | 0x80 | (numero & 0x0F) as u8
     } else {
-        ((tipo & 0x07) << 4) as u8 | (numero & 0x0F) as u8
+        ((tipo & 0x07) << 4) | (numero & 0x0F) as u8
     };
 
     resultado.push(primer_byte); // Establecer el bit más significativo a 1 y agregar los 4 bits finales

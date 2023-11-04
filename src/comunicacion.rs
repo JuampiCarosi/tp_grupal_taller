@@ -6,7 +6,7 @@ use std::convert::TryInto;
 use std::io::{Read, Write};
 use std::net::TcpStream;
 use std::str;
-                    
+
 use sha1::{Digest, Sha1};
 
 pub struct Comunicacion {
@@ -70,7 +70,10 @@ impl Comunicacion {
         for linea in &lineas {
             self.flujo.write_all(linea.as_bytes())?;
         }
-        if !lineas[0].contains(&"NAK".to_string()) && !lineas[0].contains(&"ACK".to_string()) && !lineas[0].contains(&"done".to_string()) {
+        if !lineas[0].contains(&"NAK".to_string())
+            && !lineas[0].contains(&"ACK".to_string())
+            && !lineas[0].contains(&"done".to_string())
+        {
             self.flujo.write_all(String::from("0000").as_bytes())?;
         }
         Ok(())
@@ -107,10 +110,13 @@ impl Comunicacion {
             obj_ids.push(linea.split_whitespace().collect::<Vec<&str>>()[0].to_string());
         }
         obj_ids
-
     }
-    
-    pub fn obtener_wants_pkt(&mut self, lineas: &Vec<String>, capacidades: String) -> Result<Vec<String>, ErrorDeComunicacion> {
+
+    pub fn obtener_wants_pkt(
+        &mut self,
+        lineas: &Vec<String>,
+        capacidades: String,
+    ) -> Result<Vec<String>, ErrorDeComunicacion> {
         // hay que checkear que no haya repetidos, usar hashset
         let mut lista_wants: Vec<String> = Vec::new();
         let mut obj_ids = self.obtener_obj_ids(lineas);
@@ -123,10 +129,12 @@ impl Comunicacion {
         }
         Ok(lista_wants)
     }
-    pub fn obtener_haves_pkt(&mut self, lineas: &Vec<String>) -> Vec<String> { 
+    pub fn obtener_haves_pkt(&mut self, lineas: &Vec<String>) -> Vec<String> {
         let mut haves: Vec<String> = Vec::new();
         for linea in lineas {
-            haves.push(io::obtener_linea_con_largo_hex(&("have ".to_string() + &linea + "\n")))
+            haves.push(io::obtener_linea_con_largo_hex(
+                &("have ".to_string() + linea + "\n"),
+            ))
         }
         haves
     }
@@ -136,16 +144,20 @@ impl Comunicacion {
         Ok(())
     }
 
-    pub fn obtener_paquete_y_escribir(&mut self, bytes: &mut Vec<u8>, ubicacion: String) -> Result<(), ErrorDeComunicacion> {
+    pub fn obtener_paquete_y_escribir(
+        &mut self,
+        bytes: &mut Vec<u8>,
+        ubicacion: String,
+    ) -> Result<(), ErrorDeComunicacion> {
         // a partir de aca obtengo el paquete
         // println!("cant bytes: {:?}", bytes.len());
         // println!("obteniendo firma");
         let firma = &bytes[0..4];
-        println!("firma: {:?}", str::from_utf8(&firma));
+        println!("firma: {:?}", str::from_utf8(firma));
         // assert_eq!("PACK", str::from_utf8(&firma).unwrap());
         bytes.drain(0..4);
         let version = &bytes[0..4];
-        println!("version: {:?}", str::from_utf8(&version)?);
+        println!("version: {:?}", str::from_utf8(version)?);
         // assert_eq!("0002", str::from_utf8(&version)?);
 
         bytes.drain(0..4);
@@ -156,9 +168,9 @@ impl Comunicacion {
         println!("largo: {:?}", largo);
         bytes.drain(0..4);
 
-        while bytes.len() > 0 {
+        while !bytes.is_empty() {
             // println!("cant bytes: {:?}", bytes.len());
-            let (tipo, tamanio, bytes_leidos) = packfile::decodificar_bytes(bytes);
+            let (tipo, tamanio, _bytes_leidos) = packfile::decodificar_bytes(bytes);
             println!("tipo: {:?}, tamanio: {}", tipo, tamanio);
             // println!("cant bytes post decodificacion: {:?}", bytes.len());
             // println!("tipo: {:?}", tipo);
@@ -170,28 +182,29 @@ impl Comunicacion {
             let mut descompresor = Decompress::new(true);
 
             descompresor
-                .decompress(&bytes, &mut objeto_descomprimido, FlushDecompress::None)
+                .decompress(bytes, &mut objeto_descomprimido, FlushDecompress::None)
                 .unwrap();
 
             let mut hasher = Sha1::new();
             hasher.update(objeto_descomprimido.clone());
             let _hash = hasher.finalize();
             let hash = format!("{:x}", _hash);
-            
+
             println!("hash: {:?}", hash);
             let ruta = format!("{}{}/{}", &ubicacion, &hash[..2], &hash[2..]);
             println!("rutarda donde pongo objetos: {:?}", ruta);
 
             let total_out = descompresor.total_out(); // esto es lo que debe matchear el tamanio que se pasa en el header
             let total_in = descompresor.total_in(); // esto es para calcular el offset
-            println!("total in: {:?}, total out: {:?} ", total_in as usize, total_out as usize);
-            
+            println!(
+                "total in: {:?}, total out: {:?} ",
+                total_in as usize, total_out as usize
+            );
+
             io::escribir_bytes(ruta, bytes.drain(0..total_in as usize)).unwrap();
 
             // println!("cant bytes restantes: {:?}", bytes.len());
         }
         Ok(())
     }
-
-}   
-
+}

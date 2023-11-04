@@ -331,7 +331,7 @@ mod tests {
         addear_archivos(vec!["test_file.txt".to_string()], logger.clone());
         let status = Status::from(logger).unwrap();
         let untrackeados = status.obtener_untrackeados().unwrap();
-        assert_eq!(nombre_esta_en_vector(untrackeados, "test_file.txt"), false);
+        assert!(!nombre_esta_en_vector(untrackeados, "test_file.txt"));
     }
 
     #[test]

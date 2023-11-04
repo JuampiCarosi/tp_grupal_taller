@@ -14,7 +14,7 @@ pub fn receive_pack(
     println!("direccion: {:?}", dir);
     for actualizacion in &actualizaciones {
         let mut parts = actualizacion.splitn(2, ' ');
-        let vieja_ref = parts.next().unwrap_or("");
+        let _vieja_ref = parts.next().unwrap_or("");
         let nueva_ref = parts.next().unwrap_or("");
         println!("Voy a escribir la referencia: {:?}", nueva_ref);
         io::escribir_referencia(nueva_ref, PathBuf::from(format!("{}/{}", dir, ".gir")));

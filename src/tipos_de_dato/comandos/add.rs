@@ -95,7 +95,7 @@ impl Add {
 #[cfg(test)]
 
 mod tests {
-    use std::{io::Write, path::PathBuf, rc::Rc, sync::Arc};
+    use std::{io::Write, path::PathBuf, sync::Arc};
 
     use crate::{
         io::{self, rm_directorio},

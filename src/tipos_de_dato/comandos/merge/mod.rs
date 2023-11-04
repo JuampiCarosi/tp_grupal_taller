@@ -4,7 +4,6 @@ mod region;
 use region::Region;
 use std::{
     path::{self, Path, PathBuf},
-    rc::Rc,
     sync::Arc,
 };
 
@@ -72,11 +71,11 @@ impl Merge {
         let head_commit = io::leer_a_string(format!(".gir/refs/heads/{}", branch))?;
         let hash_tree_padre =
             conseguir_arbol_from_hash_commit(&head_commit, String::from(".gir/objects/"));
-        Ok(Tree::from_hash(
+        Tree::from_hash(
             hash_tree_padre,
             PathBuf::from("."),
             logger.clone(),
-        )?)
+        )
     }
 
     fn obtener_commit_base_entre_dos_branches(&self) -> Result<String, String> {
@@ -168,7 +167,7 @@ impl Merge {
         for i in 0..resultados.len() {
             if let DiffType::Added(_) = resultados[i].1 {
                 let cantidad_anteriores_solo_con_remove =
-                    Self::cantidad_de_anteriores_solo_con_remove(&resultados, i);
+                    Self::cantidad_de_anteriores_solo_con_remove(resultados, i);
                 resultados[i].0 -= cantidad_anteriores_solo_con_remove;
             }
         }
@@ -237,7 +236,7 @@ impl Merge {
         println!("{:?}", diff_a_mergear);
 
         for diff in diff_actual {
-            if diff.0 - 1 >= posibles_conflictos.len() {
+            if diff.0 > posibles_conflictos.len() {
                 posibles_conflictos.push(Vec::new());
             }
             posibles_conflictos[diff.0 - 1].push((diff.1, LadoConflicto::Head));
@@ -261,17 +260,15 @@ impl Merge {
                     posible_conflicto,
                     lineas_archivo_base.iter().nth(i).unwrap_or(&""),
                 ));
+            } else if posible_conflicto.len() == 2 {
+                contenido_por_regiones.push(resolver_merge_len_2(
+                    posible_conflicto,
+                    lineas_archivo_base[i],
+                ));
             } else {
-                if posible_conflicto.len() == 2 {
-                    contenido_por_regiones.push(resolver_merge_len_2(
-                        posible_conflicto,
-                        lineas_archivo_base[i],
-                    ));
-                } else {
-                    for (diff, _) in posible_conflicto {
-                        if let DiffType::Added(linea) = diff {
-                            contenido_por_regiones.push(Region::Normal(linea.clone()))
-                        }
+                for (diff, _) in posible_conflicto {
+                    if let DiffType::Added(linea) = diff {
+                        contenido_por_regiones.push(Region::Normal(linea.clone()))
                     }
                 }
             }
@@ -370,7 +367,7 @@ impl Merge {
         self.escribir_merge_head()?;
         self.escribir_mensaje_merge()?;
 
-        if paths_con_conflictos.len() > 0 {
+        if !paths_con_conflictos.is_empty() {
             Ok(format!(
                 "Se encontraron conflictos en los siguientes archivos: \n{:#?}",
                 paths_con_conflictos

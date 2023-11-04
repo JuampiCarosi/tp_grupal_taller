@@ -46,8 +46,8 @@ pub fn unificar_regiones(regiones: Vec<Region>) -> Vec<Region> {
                     match &regiones[j] {
                         Region::Normal(_) => break,
                         Region::Conflicto(lado_head, lado_entrante) => {
-                            buffer_head.push_str(&lado_head);
-                            buffer_entrante.push_str(&lado_entrante);
+                            buffer_head.push_str(lado_head);
+                            buffer_entrante.push_str(lado_entrante);
                         }
                     }
                     j += 1;

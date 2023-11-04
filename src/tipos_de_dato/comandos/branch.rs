@@ -120,7 +120,7 @@ mod test {
 
     fn craer_archivo_config_default() {
         let config_path = obtener_gir_config_path().unwrap();
-        let contenido = format!("nombre =aaaa\nmail =bbbb\n");
+        let contenido = "nombre =aaaa\nmail =bbbb\n".to_string();
         std::fs::write(config_path, contenido).unwrap();
     }
 
@@ -141,10 +141,10 @@ mod test {
     fn conseguir_arbol_commit(branch: String) -> String {
         let hash_hijo = std::fs::read_to_string(format!(".gir/refs/heads/{}", branch)).unwrap();
         let contenido_hijo = utils::compresion::descomprimir_objeto_gir(hash_hijo.clone()).unwrap();
-        let lineas_sin_null = contenido_hijo.replace("\0", "\n");
-        let lineas = lineas_sin_null.split("\n").collect::<Vec<&str>>();
+        let lineas_sin_null = contenido_hijo.replace('\0', "\n");
+        let lineas = lineas_sin_null.split('\n').collect::<Vec<&str>>();
         let arbol_commit = lineas[1];
-        let lineas = arbol_commit.split(" ").collect::<Vec<&str>>();
+        let lineas = arbol_commit.split(' ').collect::<Vec<&str>>();
         let arbol_commit = lineas[1];
         arbol_commit.to_string()
     }

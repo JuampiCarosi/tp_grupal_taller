@@ -5,7 +5,7 @@ use gtk::prelude::*;
 use crate::{
     io::leer_a_string,
     tipos_de_dato::{comandos::log::Log, objetos::commit::CommitObj},
-    utils::compresion::{descomprimir_objeto, descomprimir_objeto_gir},
+    utils::compresion::{descomprimir_objeto_gir},
 };
 
 use super::log_seleccionado;

@@ -136,11 +136,11 @@ impl Checkout {
         let head_commit = io::leer_a_string(format!(".gir/refs/heads/{}", rama_actual))?;
         let hash_tree_padre =
             conseguir_arbol_from_hash_commit(&head_commit, ".gir/objects/".to_string());
-        Ok(Tree::from_hash(
+        Tree::from_hash(
             hash_tree_padre,
             PathBuf::from("."),
             self.logger.clone(),
-        )?)
+        )
     }
 
     pub fn ejecutar(&self) -> Result<String, String> {
@@ -217,7 +217,7 @@ mod tests {
     fn craer_archivo_config_default() {
         let home = std::env::var("HOME").unwrap();
         let config_path = format!("{home}/.girconfig");
-        let contenido = format!("nombre = aaaa\nmail = bbbb\n");
+        let contenido = "nombre = aaaa\nmail = bbbb\n".to_string();
         escribir_bytes(config_path, contenido).unwrap();
     }
 

@@ -39,7 +39,7 @@ fn armar_timestamp_commit() -> Result<String, String> {
 
 impl Commit {
     pub fn from(args: &mut Vec<String>, logger: Arc<Logger>) -> Result<Commit, String> {
-        if args.len() == 0 && Merge::hay_merge_en_curso()? {
+        if args.is_empty() && Merge::hay_merge_en_curso()? {
             if Merge::hay_archivos_sin_mergear(logger.clone())? {
                 return Err("Hay archivos sin mergear".to_string());
             }
@@ -193,7 +193,7 @@ impl Commit {
 
 #[cfg(test)]
 mod tests {
-    use std::{path::PathBuf, rc::Rc, sync::Arc};
+    use std::{path::PathBuf, sync::Arc};
 
     use crate::{
         io::{self, escribir_bytes, rm_directorio},
@@ -209,7 +209,7 @@ mod tests {
     fn craer_archivo_config_default() {
         let home = std::env::var("HOME").unwrap();
         let config_path = format!("{home}/.girconfig");
-        let contenido = format!("nombre =aaaa\nmail =bbbb\n");
+        let contenido = "nombre =aaaa\nmail =bbbb\n".to_string();
         escribir_bytes(config_path, contenido).unwrap();
     }
 
@@ -227,9 +227,9 @@ mod tests {
     fn conseguir_hash_padre(branch: String) -> String {
         let hash = std::fs::read_to_string(format!(".gir/refs/heads/{}", branch)).unwrap();
         let contenido = descomprimir_objeto(hash.clone(), String::from(".gir/objects/")).unwrap();
-        let lineas_sin_null = contenido.replace("\0", "\n");
-        let lineas = lineas_sin_null.split("\n").collect::<Vec<&str>>();
-        let linea_supuesto_padre = lineas[2].split(" ").collect::<Vec<&str>>();
+        let lineas_sin_null = contenido.replace('\0', "\n");
+        let lineas = lineas_sin_null.split('\n').collect::<Vec<&str>>();
+        let linea_supuesto_padre = lineas[2].split(' ').collect::<Vec<&str>>();
         let hash_padre = match linea_supuesto_padre[0] {
             "parent" => linea_supuesto_padre[1],
             _ => "",
@@ -241,8 +241,8 @@ mod tests {
         let hash_hijo = io::leer_a_string(format!(".gir/refs/heads/{}", branch)).unwrap();
         let contenido_hijo =
             descomprimir_objeto(hash_hijo.clone(), String::from(".gir/objects/")).unwrap();
-        let lineas_sin_null = contenido_hijo.replace("\0", "\n");
-        let lineas = lineas_sin_null.split("\n").collect::<Vec<&str>>();
+        let lineas_sin_null = contenido_hijo.replace('\0', "\n");
+        let lineas = lineas_sin_null.split('\n').collect::<Vec<&str>>();
         let arbol_commit = lineas[1];
         let lineas = arbol_commit.split(' ').collect::<Vec<&str>>();
         let arbol_commit = lineas[1];
@@ -284,7 +284,7 @@ mod tests {
         addear_archivos_y_comittear(vec!["test_file2.txt".to_string()], logger.clone());
 
         let hash_padre_desde_hijo = conseguir_hash_padre("master".to_string());
-        assert_eq!(hash_padre_desde_hijo, format!("{}", hash_padre).to_string());
+        assert_eq!(hash_padre_desde_hijo, hash_padre.to_string().to_string());
     }
 
     #[test]

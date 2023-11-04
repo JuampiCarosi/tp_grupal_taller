@@ -7,7 +7,7 @@ use crate::tipos_de_dato::logger::Logger;
 use crate::io;
 use crate::tipos_de_dato::comandos::checkout::Checkout;
 use crate::tipos_de_dato::objetos::commit::CommitObj;
-use crate::utils::compresion::descomprimir_objeto;
+
 
 use super::commit::Commit;
 
@@ -46,8 +46,8 @@ impl Log {
         let mut commits_a_revisar: Vec<CommitObj> = Vec::new();
         commits_a_revisar.push(commit);
 
-        while !commits_a_revisar.is_empty() {
-            let commit = commits_a_revisar.pop().unwrap();
+        while let Some(commit) = commits_a_revisar.pop() {
+            
             if commits.contains_key(&commit.hash) {
                 break;
             }
@@ -79,7 +79,7 @@ impl Log {
 
         for commit in commits {
             log.push_str(&commit.format_log()?);
-            log.push_str("\n");
+            log.push('\n');
         }
 
         Ok(log)
