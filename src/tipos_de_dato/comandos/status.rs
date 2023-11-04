@@ -157,7 +157,11 @@ impl Status {
                     if self.index_contiene_objeto(objeto) {
                         continue;
                     }
-                    untrackeados.push(format!("{}", objeto.obtener_path().display()));
+                    if let Objeto::Tree(_) = objeto {
+                        untrackeados.push(format!("{}/", objeto.obtener_path().display()));
+                    } else {
+                        untrackeados.push(format!("{}", objeto.obtener_path().display()));
+                    };
                 }
                 return Ok(untrackeados);
             }
