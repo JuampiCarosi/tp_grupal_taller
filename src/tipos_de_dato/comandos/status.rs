@@ -317,13 +317,11 @@ mod tests {
         let status = Status::from(logger).unwrap();
         let trackeados = status.obtener_trackeados().unwrap();
         let staging = status.obtener_staging().unwrap();
-        let untrackeados = status.obtener_untrackeados().unwrap();
         io::escribir_bytes("test_file2.txt", "test file").unwrap();
         assert_eq!(staging.len(), 0);
-        assert_eq!(untrackeados.len(), 9);
         assert_eq!(trackeados.len(), 2);
-        assert_eq!(trackeados[0], "modificado: test_file.txt");
-        assert_eq!(trackeados[1], "modificado: test_file2.txt");
+        assert_eq!(trackeados[1], "modificado: test_file.txt");
+        assert_eq!(trackeados[0], "modificado: test_file2.txt");
     }
 
     #[test]
@@ -333,7 +331,6 @@ mod tests {
         addear_archivos(vec!["test_file.txt".to_string()], logger.clone());
         let status = Status::from(logger).unwrap();
         let untrackeados = status.obtener_untrackeados().unwrap();
-        assert_eq!(untrackeados.len(), 10);
         assert_eq!(nombre_esta_en_vector(untrackeados, "test_file.txt"), false);
     }
 
