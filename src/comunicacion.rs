@@ -103,8 +103,8 @@ impl<T: Write + Read> Comunicacion<T> {
     /// de la linea donde dice el largo) en u32
     fn obtener_largo_de_la_linea(&self) -> Result<u32, String> {
         let bytes_tamanio_linea = 4;
-        let tamanio = self.leer_del_flujo_tantos_bytes(bytes_tamanio_linea)?;
-        let tamanio_u32 = u32::from_le_bytes([tamanio[0], tamanio[1], tamanio[2], tamanio[3]]);
+        let tamanio_str = self.leer_del_flujo_tantos_bytes_en_string(bytes_tamanio_linea)?;
+        let tamanio_u32 = u32::from_str_radix(&tamanio_str, 16).map_err(|e| format!("Fallo en la conversion a entero\n{}\n", e))?;
 
         Ok(tamanio_u32)
     }
@@ -132,24 +132,16 @@ impl<T: Write + Read> Comunicacion<T> {
     pub fn obtener_lineas(&self) -> Result<Vec<String>, String> {
         let mut lineas: Vec<String> = Vec::new();
         loop {
-            // let tamanio = {let mut tamanio_bytes = [0; 4];
-            //     self.flujo.lock().unwrap().read_exact(&mut tamanio_bytes).unwrap();
-            // tamanio_bytes};
-            // if tamanio.is_empty(){
-            //     break;
-            // }
-
-            // let tamanio_str = str::from_utf8(&tamanio).unwrap();
-            // // transforma str a u32
-            // let tamanio = u32::from_str_radix(tamanio_str, 16).unwrap();
-
-            // let linea = self.obtener_contenido_linea(tamanio)?;
-            let linea = self.aceptar_pedido().unwrap();
-            if linea == '\0'.to_string(){
+            let tamanio = self.obtener_largo_de_la_linea()?;
+            if tamanio == 0{
                 break;
             }
+
+            let linea = self.obtener_contenido_linea(tamanio)?;
+            
             lineas.push(linea.to_string());
 
+            //esto deberia ir antes o despues del push juani  ?? estaba asi
             if linea.contains("NAK") || linea.contains("done") {
                 break;
             }
@@ -229,14 +221,14 @@ impl<T: Write + Read> Comunicacion<T> {
     ///
     /// El objetivo es enviar las commits pertenecientes a las cabeza de rama que es necesario actualizar
     /// El formato seguido para cada linea es la siguiente:
-    /// - ''4 bytes con el largo'want 'hash de un commit cabeza de rama'  
+    /// - ''4 bytes con el largo'want 'hash de un commit cabeza de rama'
     /// Y la primera linea, ademas contien las capacidades separadas por espacio
     ///
     /// # Argumentos
     ///
     /// - pedidos: lista con los hash de los commits cabeza de rama de las ramas que se quieren actualizar en local
     ///     con respecto a las del servidor
-    /// - capacidades: las capacidades que va a ver en la comunicacion con el servidor  
+    /// - capacidades: las capacidades que va a ver en la comunicacion con el servidor
     pub fn enviar_pedidos_al_servidor_pkt(
         &self,
         mut pedidos: Vec<String>,
@@ -422,14 +414,22 @@ mod test {
     #[test]
 
     fn test02_se_obtiene_el_contenido_del_server_de_forma_correcta() {
-        let contenido_mock = "000eversion 1 00887217a7c7e582c46cec22a130adf4b9d7d950fba0 HEAD\0multi_ack thin-pack side-band side-band-64k ofs-delta shallow no-progress include-tag 00441d3fcd5ced445d1abc402225c0b8a1299641f497 refs/heads/integration 003f7217a7c7e582c46cec22a130adf4b9d7d950fba0 refs/heads/master 003cb88d2441cac0977faf98efc80305012112238d9d refs/tags/v0.9 003c525128480b96c89e6418b1e40909bf6c5b2d580f refs/tags/v1.0 003fe92df48743b7bc7d26bcaabfddde0a1e20cae47c refs/tags/v1.0^{} 0000";
-        
+        let contenido_mock = "000eversion 1 \
+        00887217a7c7e582c46cec22a130adf4b9d7d950fba0 HEAD\0multi_ack thin-pack \
+        side-band side-band-64k ofs-delta shallow no-progress include-tag \
+        00441d3fcd5ced445d1abc402225c0b8a1299641f497 refs/heads/integration \
+        003f7217a7c7e582c46cec22a130adf4b9d7d950fba0 refs/heads/master \
+        003cb88d2441cac0977faf98efc80305012112238d9d refs/tags/v0.9 \
+        003c525128480b96c89e6418b1e40909bf6c5b2d580f refs/tags/v1.0 \
+        003fe92df48743b7bc7d26bcaabfddde0a1e20cae47c refs/tags/v1.0^{} \
+        0000";
+
         let mut mock = MockTcpStream {
             lectura_data: contenido_mock.as_bytes().to_vec(),
             escritura_data: Vec::new(),
         };
 
-        let lineas = Comunicacion::new(&mut mock).obtener_lineas().unwrap().join("\n");        
+        let lineas = Comunicacion::new(&mut mock).obtener_lineas().unwrap().join("\n");
 
         let resultado_esperado_de_obtener_lineas = "version 1 \n\
         7217a7c7e582c46cec22a130adf4b9d7d950fba0 HEAD\0multi_ack thin-pack \
@@ -446,6 +446,27 @@ mod test {
         )
     }
 
+    #[test]
+    fn test03_se_envia_correctamente_los_get(){
+        let mut mock = MockTcpStream {
+            lectura_data: Vec::new(),
+            escritura_data: Vec::new(),
+        };
 
-    
+        let contenido = vec!("74730d410fcb6603ace96f1dc55ea6196122532d".to_string(), "7d1665144a3a975c05f1f43902ddaf084e784dbe".to_string(), "5a3f6be755bbb7deae50065988cbfa1ffa9ab68a".to_string());
+        let capacidades = "multi_ack side-band-64k ofs-delta".to_string();
+
+        Comunicacion::new(&mut mock).enviar_pedidos_al_servidor_pkt(contenido,capacidades).unwrap();
+        
+        let contenido_esperado_enviar_pedido = "\
+        0054want 74730d410fcb6603ace96f1dc55ea6196122532d multi_ack side-band-64k ofs-delta\n\
+        0032want 7d1665144a3a975c05f1f43902ddaf084e784dbe\n\
+        0032want 5a3f6be755bbb7deae50065988cbfa1ffa9ab68a\n\
+        0000";
+
+        assert_eq!(contenido_esperado_enviar_pedido.as_bytes(), mock.escritura_data.as_slice())
+    }
+
+
+
 }
