@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::{rc::Rc, io::Write, io::Read, net::TcpStream};
 
 use super::{
     comandos::{
@@ -8,7 +8,7 @@ use super::{
     logger::Logger,
 };
 
-pub enum Comando {
+pub enum Comando{
     Init(Init),
     Version(Version),
     HashObject(HashObject),
@@ -19,7 +19,7 @@ pub enum Comando {
     Branch(Branch),
     Commit(Commit),
     Clone(Clone),
-    Fetch(Fetch),
+    Fetch(Fetch<TcpStream>),
     Push(Push),
     // Pull,
     Log(Log),
@@ -27,7 +27,7 @@ pub enum Comando {
     Unknown,
 }
 
-impl Comando {
+impl Comando{
     pub fn new(input: Vec<String>, logger: Rc<Logger>) -> Result<Comando, String> {
         let (_, rest) = input.split_first().unwrap();
         let (comando, args) = rest.split_first().unwrap();
@@ -44,7 +44,7 @@ impl Comando {
             "branch" => Comando::Branch(Branch::from(&mut vector_args, logger)?),
             "checkout" => Comando::Checkout(Checkout::from(vector_args, logger)?),
             "commit" => Comando::Commit(Commit::from(&mut vector_args, logger)?),
-            "fetch" => Comando::Fetch(Fetch::new()),
+            "fetch" => Comando::Fetch(Fetch::<TcpStream>::new(logger)?),
             "clone" => Comando::Clone(Clone::new()),
             "push" => Comando::Push(Push::new()),
             // "pull",
@@ -58,7 +58,7 @@ impl Comando {
     }
 }
 
-impl Comando {
+impl Comando{
     pub fn ejecutar(&mut self) -> Result<String, String> {
         match self {
             Comando::Init(init) => init.ejecutar(),

@@ -4,9 +4,10 @@ use crate::packfile::Packfile;
 use crate::{packfile, comunicacion};
 use crate::{comunicacion::Comunicacion, io};
 use crate::utilidades_strings;
+use std::net::TcpStream;
 use std::path::PathBuf;
 
-pub fn receive_pack(dir: String, comunicacion: &mut Comunicacion) -> Result<(), ErrorDeComunicacion> {
+pub fn receive_pack(dir: String, comunicacion: &mut Comunicacion<TcpStream>) -> Result<(), ErrorDeComunicacion> {
     println!("Se ejecuto el comando receive-pack");
     let actualizaciones = comunicacion.obtener_lineas().unwrap();
     if actualizaciones.is_empty() {

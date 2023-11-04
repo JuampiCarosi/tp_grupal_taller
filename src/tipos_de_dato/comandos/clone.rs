@@ -3,8 +3,8 @@ use crate::packfile::Packfile;
 use crate::{comunicacion::Comunicacion, io, packfile, tipos_de_dato::objetos::tree::Tree, tipos_de_dato::comandos::write_tree};
 use std::io::Write;
 use std::path::PathBuf;
-use std::rc::Rc;
-use std::{char::decode_utf16, net::TcpStream};
+
+use std::net::TcpStream;
 // use gir::tipos_de_dato::{comando::Comando, logger::Logger};
 
 
@@ -19,12 +19,9 @@ impl Clone {
     }
 
     pub fn ejecutar(&mut self) -> Result<String, String> {
-        println!("Se ejecutó el comando clone");
 
         let server_address = "127.0.0.1:9418"; // Cambia la dirección IP si es necesario
-
-        let mut client = TcpStream::connect(server_address).unwrap();
-        let mut comunicacion = Comunicacion::new(client.try_clone().unwrap());
+        let mut comunicacion = Comunicacion::<TcpStream>::new_desde_direccion_servidor(server_address)?;
 
         // si es un push, tengo que calcular los commits de diferencia entre el cliente y el server, y mandarlos como packfiles.
         // hay una funcion que hace el calculo 
@@ -32,10 +29,10 @@ impl Clone {
         let request_data = "git-upload-pack /gir/\0host=example.com\0\0version=1\0"; //en donde dice /gir/ va la dir del repo
         let request_data_con_largo_hex = io::obtener_linea_con_largo_hex(request_data);
 
-        client.write_all(request_data_con_largo_hex.as_bytes()).unwrap();
+        // client.write_all(request_data_con_largo_hex.as_bytes()).unwrap();
+        comunicacion.enviar_linea(request_data_con_largo_hex).unwrap();
 
         let version = comunicacion.aceptar_pedido().unwrap(); // leo la version (cambiar el nombre a esto)
-
         let mut refs_recibidas = comunicacion.obtener_lineas().unwrap();
 
         println!("refs_recibidas: {:?}", refs_recibidas);

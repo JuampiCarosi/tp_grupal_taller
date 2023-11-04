@@ -257,7 +257,6 @@ where
     P: AsRef<Path>,
     C: AsRef<[u8]>,
 {
-    println!("Voy a escribir en: {:?}", dir_archivo.as_ref().display());
     si_no_existe_directorio_de_archivo_crearlo(&dir_archivo)?;
 
     match fs::write(dir_archivo, contenido) {

@@ -1,20 +1,24 @@
+use std::io::Write;
+use std::io::Read;
+use std::net::TcpStream;
+
 use crate::err_comunicacion::ErrorDeComunicacion;
 use crate::io::obtener_archivos_faltantes;
 use crate::packfile;
 use crate::{comunicacion::Comunicacion, io as git_io};
 use crate::utilidades_strings;
 
-pub fn upload_pack(dir: String, comunicacion: &mut Comunicacion) -> Result<(), ErrorDeComunicacion> {
+pub fn upload_pack(dir: String, comunicacion: &mut Comunicacion<TcpStream>) -> Result<(), ErrorDeComunicacion> {
     // caso push 
     // let refs_a_actualizar = comunicacion.obtener_lineas().unwrap();
-    let wants = comunicacion.obtener_lineas()?; // obtengo los wants del cliente
+    let wants = comunicacion.obtener_lineas().unwrap(); // obtengo los wants del cliente
     if wants.is_empty() {
         println!("Se termino la conexion");
         return Ok(()); // el cliente esta actualizado
     }
     // ------- CLONE --------
     // a partir de aca se asume que va a ser un clone porque es el caso mas sencillo, despues cambiar
-    let lineas_siguientes = comunicacion.obtener_lineas()?;
+    let lineas_siguientes = comunicacion.obtener_lineas().unwrap();
     // println!("Lineas siguientes: {:?}", lineas_siguientes);
     if lineas_siguientes[0].clone().contains("done") {
         comunicacion.responder(vec![git_io::obtener_linea_con_largo_hex("NAK\n")])?; // respondo NAK

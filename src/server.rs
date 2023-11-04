@@ -1,11 +1,10 @@
 use sha1::digest::block_buffer::Error;
-
 use crate::err_comunicacion::ErrorDeComunicacion;
 use crate::io::crear_directorio;
 use crate::{comunicacion::Comunicacion, io as git_io};
 use std::{env, thread};
 use std::io;
-use std::net::TcpListener;
+use std::net::{TcpListener, TcpStream};
 use std::path::PathBuf;
 use std::str;
 use crate::upload_pack::upload_pack;
@@ -17,52 +16,59 @@ const PORT : u16 = 9418;
 const DIR: &str = "/srv"; // direccion relativa
  
 pub struct Servidor {
-    // listener: TcpListener,
-    // dir: String,
-    // capacidades: Vec<String>,
+    listener: TcpListener,
+    dir: String,
+    capacidades: Vec<String>,
 }
 
 impl Servidor {
-    // pub fn new(address: &str) -> std::io::Result<Servidor> {
-    //     let listener = TcpListener::bind(address)?;
-    //     // busca la carpeta raiz del proyecto (evita hardcodear la ruta)
-    //     let dir = env!("CARGO_MANIFEST_DIR").to_string() + "/srv";
-    //     // esto es para checkear, no tengo implementado nada de lo que dice xd
-    //     let capacidades: Vec<String> = [
-    //         "multi_ack",
-    //         "thin-pack",
-    //         "side-band",
-    //         "side-band-64k",
-    //         "ofs-delta",
-    //         "shallow",
-    //         "no-progress",
-    //         "include-tag",
-    //     ]
-    //     .iter()
-    //     .map(|x| x.to_string())
-    //     .collect();
-    //     Ok(Servidor {
-    //         listener,
-    //         dir,
-    //         capacidades,
-    //     })
-    // }
+    pub fn new(address: &str) -> std::io::Result<Servidor> {
+        let listener = TcpListener::bind(address)?;
+        // busca la carpeta raiz del proyecto (evita hardcodear la ruta)
+        let dir = env!("CARGO_MANIFEST_DIR").to_string() + "/srv";
+        // esto es para checkear, no tengo implementado nada de lo que dice xd
+        let capacidades: Vec<String> = [
+            "multi_ack",
+            "thin-pack",
+            "side-band",
+            "side-band-64k",
+            "ofs-delta",
+            "shallow",
+            "no-progress",
+            "include-tag",
+        ]
+        .iter()
+        .map(|x| x.to_string())
+        .collect();
+        Ok(Servidor {
+            listener,
+            dir,
+            capacidades,
+        })
+    }
 
-    pub fn iniciar_servidor() -> Result<(), ErrorDeComunicacion> {
-        while let Ok((stream, _)) = TcpListener::bind((IP, PORT))?.accept() {
-            // thread::spawn(move || {
-                let mut comunicacion = Comunicacion::new(stream.try_clone().unwrap());
-                Self::manejar_cliente(&mut comunicacion, &(env!("CARGO_MANIFEST_DIR").to_string() + DIR)).unwrap();
-            // });
-        }
+    // pub fn iniciar_servidor() -> Result<(), ErrorDeComunicacion> {
+    //     while let Ok((stream, _)) = TcpListener::bind((IP, PORT))?.accept() {
+    //         // thread::spawn(move || {
+    //             let mut comunicacion = Comunicacion::new(stream.try_clone().unwrap());
+    //             Self::manejar_cliente(&mut comunicacion, &(env!("CARGO_MANIFEST_DIR").to_string() + DIR)).unwrap();
+    //         // });
+    //     }
+    //     Ok(())
+    // }
+    pub fn server_run(&mut self) -> Result<(), ErrorDeComunicacion> {
+        // loop {
+        //     self.com.procesar_datos()?;
+        // }
+        let (stream, _) = self.listener.accept()?;
+        self.manejar_cliente(&mut Comunicacion::<TcpStream>::new(stream), &self.dir)?;
         Ok(())
     }
 
 
-
-
     pub fn manejar_cliente(
-        comunicacion: &mut Comunicacion,
+        &self,
+        comunicacion: &mut Comunicacion<TcpStream>,
         dir: &str,
     ) -> Result<(), ErrorDeComunicacion> {
         let pedido = comunicacion.aceptar_pedido()?; // acepto la primera linea
@@ -70,7 +76,7 @@ impl Servidor {
         Ok(())
     }
 
-    fn parse_line(linea: &str, comunicacion: &mut Comunicacion, dir: &str) -> Result<(), ErrorDeComunicacion> {
+    fn parse_line(linea: &str, comunicacion: &mut Comunicacion<TcpStream>, dir: &str) -> Result<(), ErrorDeComunicacion> {
         let pedido: Vec<&str> = linea.split_whitespace().collect();
         // veo si es un comando git
         let args: Vec<_> = pedido[1].split('\0').collect();
@@ -147,9 +153,7 @@ impl Servidor {
         git_io::obtener_linea_con_largo_hex(&referencia_con_capacidades)
     }
 
-
-    
-
+}
 
 
 
@@ -257,7 +261,7 @@ impl Servidor {
     //     referencia_con_capacidades.push('\n');
     //     git_io::obtener_linea_con_largo_hex(&referencia_con_capacidades)
     // }
-}
+// }
 
 
 
