@@ -6,6 +6,7 @@ use std::convert::TryInto;
 use std::io::{Read, Write};
 use std::net::TcpStream;
 use std::str;
+use std::str::Bytes;
 use std::sync::Mutex;
 
 use sha1::{Digest, Sha1};
@@ -55,6 +56,9 @@ impl<T: Write + Read> Comunicacion<T> {
         let tamanio_str = str::from_utf8(&tamanio_bytes)?;
         // transforma str a u32
         let tamanio = u32::from_str_radix(tamanio_str, 16).unwrap();
+        if tamanio == 0{
+            return Ok('\0'.to_string());
+        }
         // lee el resto del flujo
         let mut data = vec![0; (tamanio - 4) as usize];
         self.flujo.lock().unwrap().read_exact(&mut data)?;
@@ -64,9 +68,9 @@ impl<T: Write + Read> Comunicacion<T> {
 
     fn leer_del_flujo_tantos_bytes(
         &self,
-        cantida_bytes_a_leer: u32,
+        cantida_bytes_a_leer: usize,
     ) -> Result<Vec<u8>, String> {
-        let mut data = vec![0; cantida_bytes_a_leer as usize];
+        let mut data = vec![0; cantida_bytes_a_leer];
         self.flujo.lock()
         .map_err(|e| format!("Fallo en el mutex de la lectura.\n{}\n", e))?.read_exact(&mut data).map_err(|e| {
             format!(
@@ -79,7 +83,7 @@ impl<T: Write + Read> Comunicacion<T> {
 
     fn leer_del_flujo_tantos_bytes_en_string(
         &self,
-        cantida_bytes_a_leer: u32,
+        cantida_bytes_a_leer: usize,
     ) -> Result<String, String> {
         let data = self.leer_del_flujo_tantos_bytes(cantida_bytes_a_leer)?;
         let contendio = str::from_utf8(&data).map_err(|e| {
@@ -100,7 +104,7 @@ impl<T: Write + Read> Comunicacion<T> {
     fn obtener_largo_de_la_linea(&self) -> Result<u32, String> {
         let bytes_tamanio_linea = 4;
         let tamanio = self.leer_del_flujo_tantos_bytes(bytes_tamanio_linea)?;
-        let tamanio_u32 = u32::from_be_bytes([tamanio[0], tamanio[1], tamanio[2], tamanio[3]]);
+        let tamanio_u32 = u32::from_le_bytes([tamanio[0], tamanio[1], tamanio[2], tamanio[3]]);
 
         Ok(tamanio_u32)
     }
@@ -114,7 +118,7 @@ impl<T: Write + Read> Comunicacion<T> {
     /// # Resultado
     /// - Devuelve el contendio de la linea actual
     fn obtener_contenido_linea(&self, tamanio: u32) -> Result<String, String> {
-        let tamanio_sin_largo = tamanio - 4;
+        let tamanio_sin_largo = (tamanio - 4) as usize;
         let linea = self.leer_del_flujo_tantos_bytes_en_string(tamanio_sin_largo)?;
         Ok(linea)
     }
@@ -128,13 +132,24 @@ impl<T: Write + Read> Comunicacion<T> {
     pub fn obtener_lineas(&self) -> Result<Vec<String>, String> {
         let mut lineas: Vec<String> = Vec::new();
         loop {
-            let tamanio = self.obtener_largo_de_la_linea()?;
-            if tamanio == 0 {
+            // let tamanio = {let mut tamanio_bytes = [0; 4];
+            //     self.flujo.lock().unwrap().read_exact(&mut tamanio_bytes).unwrap();
+            // tamanio_bytes};
+            // if tamanio.is_empty(){
+            //     break;
+            // }
+
+            // let tamanio_str = str::from_utf8(&tamanio).unwrap();
+            // // transforma str a u32
+            // let tamanio = u32::from_str_radix(tamanio_str, 16).unwrap();
+
+            // let linea = self.obtener_contenido_linea(tamanio)?;
+            let linea = self.aceptar_pedido().unwrap();
+            if linea == '\0'.to_string(){
                 break;
             }
-
-            let linea = self.obtener_contenido_linea(tamanio)?;
             lineas.push(linea.to_string());
+
             if linea.contains("NAK") || linea.contains("done") {
                 break;
             }
@@ -372,7 +387,10 @@ mod test {
 
     impl Read for MockTcpStream {
         fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
-            self.lectura_data.as_slice().read(buf)
+            let bytes_to_read = std::cmp::min(buf.len(), self.lectura_data.len());
+            buf[..bytes_to_read].copy_from_slice(&self.lectura_data[..bytes_to_read]);
+            self.lectura_data.drain(..bytes_to_read);
+            Ok(bytes_to_read)
         }
     }
 
@@ -401,27 +419,30 @@ mod test {
         )
     }
 
+    #[test]
+
     fn test02_se_obtiene_el_contenido_del_server_de_forma_correcta() {
-        let contenido_mock = " 00887217a7c7e582c46cec22a130adf4b9d7d950fba0 HEAD\0multi_ack thin-pack\n
-        side-band side-band-64k ofs-delta shallow no-progress include-tag\n
-         00441d3fcd5ced445d1abc402225c0b8a1299641f497 refs/heads/integration\n
-         003f7217a7c7e582c46cec22a130adf4b9d7d950fba0 refs/heads/master\n
-         003cb88d2441cac0977faf98efc80305012112238d9d refs/tags/v0.9\n
-         003c525128480b96c89e6418b1e40909bf6c5b2d580f refs/tags/v1.0\n
-         003fe92df48743b7bc7d26bcaabfddde0a1e20cae47c refs/tags/v1.0^{}\n
-         0000";
+        let contenido_mock = "000eversion 1 00887217a7c7e582c46cec22a130adf4b9d7d950fba0 HEAD\0multi_ack thin-pack side-band side-band-64k ofs-delta shallow no-progress include-tag 00441d3fcd5ced445d1abc402225c0b8a1299641f497 refs/heads/integration 003f7217a7c7e582c46cec22a130adf4b9d7d950fba0 refs/heads/master 003cb88d2441cac0977faf98efc80305012112238d9d refs/tags/v0.9 003c525128480b96c89e6418b1e40909bf6c5b2d580f refs/tags/v1.0 003fe92df48743b7bc7d26bcaabfddde0a1e20cae47c refs/tags/v1.0^{} 0000";
         
         let mut mock = MockTcpStream {
             lectura_data: contenido_mock.as_bytes().to_vec(),
             escritura_data: Vec::new(),
         };
 
-        
-        Comunicacion::new(&mut mock).enviar("Hola server, soy siro. Todo bien ??").unwrap();
+        let lineas = Comunicacion::new(&mut mock).obtener_lineas().unwrap().join("\n");        
+
+        let resultado_esperado_de_obtener_lineas = "version 1 \n\
+        7217a7c7e582c46cec22a130adf4b9d7d950fba0 HEAD\0multi_ack thin-pack \
+       side-band side-band-64k ofs-delta shallow no-progress include-tag \n\
+        1d3fcd5ced445d1abc402225c0b8a1299641f497 refs/heads/integration \n\
+        7217a7c7e582c46cec22a130adf4b9d7d950fba0 refs/heads/master \n\
+        b88d2441cac0977faf98efc80305012112238d9d refs/tags/v0.9 \n\
+        525128480b96c89e6418b1e40909bf6c5b2d580f refs/tags/v1.0 \n\
+        e92df48743b7bc7d26bcaabfddde0a1e20cae47c refs/tags/v1.0^{} ";
 
         assert_eq!(
-            "Hola server, soy siro. Todo bien ??".as_bytes(),
-            mock.escritura_data.as_slice()
+            resultado_esperado_de_obtener_lineas.to_string(),
+            lineas
         )
     }
 
