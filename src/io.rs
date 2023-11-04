@@ -25,7 +25,6 @@ pub fn obtener_objetos_del_directorio(dir: String) -> Result<Vec<String>, ErrorD
     let path = PathBuf::from(dir);
     let mut objetos: Vec<String> = Vec::new();
     let dir_abierto = fs::read_dir(path.clone())?;
-    // println!("dir_abierto: {:?}", dir_abierto);
     for archivo in dir_abierto {
         match archivo {
             Ok(archivo) => {
@@ -35,9 +34,7 @@ pub fn obtener_objetos_del_directorio(dir: String) -> Result<Vec<String>, ErrorD
                 {
                     let path = archivo.path();
                     if !path.to_string_lossy().contains("log.txt") {
-                        println!("path: {:?}", path);
                         let nombre_carpeta = archivo.file_name().into_string().unwrap();
-                        println!("nombre_carpeta: {:?}", nombre_carpeta);
                         objetos.append(&mut obtener_objetos_con_nombre_carpeta(path.clone())?);
                     }
                 }
@@ -73,17 +70,11 @@ pub fn obtener_objetos_con_nombre_carpeta(
     dir: PathBuf,
 ) -> Result<Vec<String>, ErrorDeComunicacion> {
     let directorio = fs::read_dir(dir.clone())?;
-    println!("DIRECTORIO : {:?}", directorio);
     let mut nombres = Vec::new();
     let nombre_directorio = dir.file_name().unwrap().to_string_lossy().to_string();
     for archivo in directorio {
         match archivo {
             Ok(archivo) => {
-                println!(
-                    "carpeta: {} archivo: {:?}",
-                    nombre_directorio.clone(),
-                    archivo.file_name().to_string_lossy().to_string()
-                );
                 nombres.push(
                     nombre_directorio.clone() + &archivo.file_name().to_string_lossy().to_string(),
                 );
@@ -257,7 +248,6 @@ where
     P: AsRef<Path>,
     C: AsRef<[u8]>,
 {
-    println!("Voy a escribir en: {:?}", dir_archivo.as_ref().display());
     si_no_existe_directorio_de_archivo_crearlo(&dir_archivo)?;
 
     match fs::write(dir_archivo, contenido) {
@@ -270,7 +260,6 @@ pub fn leer_bytes<P>(archivo: P) -> Result<Vec<u8>, String>
 where
     P: AsRef<Path>,
 {
-    println!("archivo: {}", archivo.as_ref().display());
     match fs::read(&archivo) {
         Ok(contenido) => Ok(contenido),
         Err(_) => Err(format!(
@@ -369,7 +358,6 @@ pub fn escribir_referencia(referencia: &str, dir: PathBuf) {
     let referencia_y_contenido = referencia.split_whitespace().collect::<Vec<&str>>();
     if !&referencia_y_contenido[1].contains("HEAD") {
         let dir = dir.join(referencia_y_contenido[1]);
-        println!("Voy a escribir en: {:?}", dir);
         escribir_bytes(dir, referencia_y_contenido[0]).unwrap();
     }
 }

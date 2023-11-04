@@ -6,10 +6,9 @@ use crate::tipos_de_dato::objetos::tree::Tree;
 use crate::utilidades_de_compresion;
 use crate::utilidades_index::{generar_objetos_raiz, leer_index, ObjetoIndex};
 
-pub fn conseguir_arbol_padre_from_ult_commit_de_dir(
-    hash_commit_padre: &str,
-    dir: String,
-) -> String {
+/// Dado un hash de un commit y una ubicacion de donde buscar el objeto
+/// devuelve el hash del arbol de ese commit
+pub fn conseguir_arbol_from_hash_commit(hash_commit_padre: &str, dir: String) -> String {
     let contenido =
         utilidades_de_compresion::descomprimir_objeto(hash_commit_padre.to_string(), dir).unwrap();
     let lineas_sin_null = contenido.replace("\0", "\n");
@@ -68,7 +67,8 @@ pub fn crear_arbol_commit(commit_padre: Option<String>) -> Result<String, String
     }
 
     let objetos_a_utilizar = if let Some(hash) = commit_padre {
-        let hash_arbol_padre = conseguir_arbol_padre_from_ult_commit(hash.clone());
+        let hash_arbol_padre =
+            conseguir_arbol_from_hash_commit(&hash, String::from(".gir/objects/"));
         let arbol_padre = Tree::from_hash(hash_arbol_padre.clone(), PathBuf::from("./"))?;
         let objetos_arbol_nuevo_commit =
             aplicar_index_a_arbol(&objetos_index, &arbol_padre.objetos);
@@ -87,7 +87,7 @@ pub fn crear_arbol_commit(commit_padre: Option<String>) -> Result<String, String
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use std::{path::PathBuf, rc::Rc};
 
     use crate::{

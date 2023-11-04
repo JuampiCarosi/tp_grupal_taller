@@ -2,8 +2,9 @@ use std::rc::Rc;
 
 use super::{
     comandos::{
-        add::Add, branch::Branch, cat_file::CatFile, checkout::Checkout, commit::Commit,
-        hash_object::HashObject, init::Init, rm::Remove, version::Version, clone::Clone, fetch::Fetch, push::Push, log::Log, remote::Remote
+        add::Add, branch::Branch, cat_file::CatFile, checkout::Checkout, clone::Clone,
+        commit::Commit, fetch::Fetch, hash_object::HashObject, init::Init, log::Log, merge::Merge,
+        push::Push, remote::Remote, rm::Remove, status::Status, version::Version,
     },
     logger::Logger,
 };
@@ -23,7 +24,9 @@ pub enum Comando {
     Push(Push),
     // Pull,
     Log(Log),
+    Status(Status),
     Remote(Remote),
+    Merge(Merge),
     Unknown,
 }
 
@@ -48,9 +51,10 @@ impl Comando {
             "clone" => Comando::Clone(Clone::new()),
             "push" => Comando::Push(Push::new()),
             // "pull",
-
             "log" => Comando::Log(Log::from(&mut vector_args, logger)?),
+            "status" => Comando::Status(Status::from(logger)?),
             "remote" => Comando::Remote(Remote::from(&mut vector_args, logger)?),
+            "merge" => Comando::Merge(Merge::from(&mut vector_args, logger)?),
             _ => Comando::Unknown,
         };
 
@@ -74,8 +78,10 @@ impl Comando {
             Comando::Clone(clone) => clone.ejecutar(),
             Comando::Push(push) => push.ejecutar(),
             Comando::Log(ref mut log) => log.ejecutar(),
-            Comando::Unknown => Err("Comando desconocido".to_string()),
+            Comando::Status(ref mut status) => status.ejecutar(),
             Comando::Remote(ref mut remote) => remote.ejecutar(),
+            Comando::Merge(ref mut merge) => merge.ejecutar(),
+            Comando::Unknown => Err("Comando desconocido".to_string()),
         }
     }
 }

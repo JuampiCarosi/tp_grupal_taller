@@ -36,6 +36,9 @@ pub fn esta_vacio_el_index() -> Result<bool, String> {
 }
 
 pub fn leer_index() -> Result<Vec<ObjetoIndex>, String> {
+    if !PathBuf::from(PATH_INDEX).exists() {
+        return Ok(Vec::new());
+    }
     let file = match OpenOptions::new().read(true).open(PATH_INDEX) {
         Ok(file) => file,
         Err(_) => return Err("No se pudo abrir el archivo index".to_string()),
@@ -99,7 +102,10 @@ pub fn generar_objetos_raiz(objetos_index: &Vec<ObjetoIndex>) -> Result<Vec<Obje
     Ok(objetos_raiz)
 }
 
-pub fn escribir_index(logger: Rc<Logger>, objetos_index: &Vec<ObjetoIndex>) -> Result<(), String> {
+pub fn escribir_index(
+    logger: Rc<Logger>,
+    objetos_index: &mut Vec<ObjetoIndex>,
+) -> Result<(), String> {
     let mut file = match OpenOptions::new()
         .write(true)
         .truncate(true)
@@ -119,6 +125,8 @@ pub fn escribir_index(logger: Rc<Logger>, objetos_index: &Vec<ObjetoIndex>) -> R
     }
 
     let mut buffer = String::new();
+
+    objetos_index.sort_by_key(|objeto_index| objeto_index.objeto.obtener_path());
 
     for objeto_index in objetos_index {
         let line = match objeto_index.objeto {

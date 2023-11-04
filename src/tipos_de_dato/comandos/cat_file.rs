@@ -27,7 +27,7 @@ fn obtener_contenido_objeto_de(hash: String, dir: &str) -> Result<(String, Strin
     }
 }
 
-fn obtener_contenido_objeto(hash: String) -> Result<(String, String), String> {
+pub fn obtener_contenido_objeto(hash: String) -> Result<(String, String), String> {
     // sacar el hardcode de esto
     let objeto = descomprimir_objeto(hash, String::from(".gir/objects/"))?;
     match objeto.split_once('\0') {
@@ -114,7 +114,7 @@ impl CatFile {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use crate::{
         io,
         tipos_de_dato::{

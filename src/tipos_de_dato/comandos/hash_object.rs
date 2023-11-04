@@ -56,7 +56,7 @@ impl HashObject {
         hasher.update(contenido);
         let hash = hasher.finalize();
         format!("{:x}", hash)
-    }  
+    }
 
     pub fn ejecutar(&self) -> Result<String, String> {
         let contenido = self.construir_contenido()?;
@@ -75,10 +75,8 @@ impl HashObject {
     }
 }
 
-
-
 #[cfg(test)]
-mod test {
+mod tests {
     use std::{io::Read, path::PathBuf, rc::Rc};
 
     use flate2::read::ZlibDecoder;

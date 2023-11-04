@@ -10,7 +10,7 @@ use crate::{
     utilidades_index,
 };
 
-use super::write_tree;
+use super::{merge::Merge, write_tree};
 
 pub struct Commit {
     logger: Rc<Logger>,
@@ -36,6 +36,13 @@ fn armar_timestamp_commit() -> Result<String, String> {
 
 impl Commit {
     pub fn from(args: &mut Vec<String>, logger: Rc<Logger>) -> Result<Commit, String> {
+        if args.len() == 0 && Merge::hay_merge_en_curso()? {
+            if Merge::hay_archivos_sin_mergear()? {
+                return Err("Hay archivos sin mergear".to_string());
+            }
+            return Commit::from_merge(logger);
+        }
+
         if args.len() != 2 {
             return Err("La cantidad de argumentos es invalida".to_string());
         }
@@ -48,6 +55,11 @@ impl Commit {
         if flag != "-m" {
             return Err(format!("Flag desconocido {}", flag));
         }
+        Ok(Commit { mensaje, logger })
+    }
+
+    pub fn from_merge(logger: Rc<Logger>) -> Result<Commit, String> {
+        let mensaje = leer_a_string(path::Path::new(".gir/COMMIT_EDITMSG"))?;
         Ok(Commit { mensaje, logger })
     }
 
@@ -67,6 +79,10 @@ impl Commit {
         contenido_commit.push_str(&format!("tree {}\n", hash_arbol));
         if !hash_padre_commit.is_empty() {
             contenido_commit.push_str(&format!("parent {}\n", hash_padre_commit));
+        }
+        if Merge::hay_merge_en_curso()? {
+            let padre_mergeado = leer_a_string(path::Path::new(".gir/MERGE_HEAD"))?;
+            contenido_commit.push_str(&format!("parent {}\n", padre_mergeado));
         }
         let (nombre, mail) = Self::conseguir_nombre_y_mail_del_config()?;
         let linea_autor = format!("{} <{}>", nombre, mail);
@@ -108,13 +124,13 @@ impl Commit {
         Ok(branch.to_string())
     }
 
-    fn obtener_ruta_branch_commit() -> Result<String, String> {
+    pub fn obtener_ruta_branch_commit() -> Result<String, String> {
         let branch = Self::obtener_branch_actual()?;
         let ruta = format!(".gir/refs/heads/{}", branch);
         Ok(ruta)
     }
 
-    fn obtener_hash_del_padre_del_commit() -> Result<String, String> {
+    pub fn obtener_hash_del_padre_del_commit() -> Result<String, String> {
         let ruta = Self::obtener_ruta_branch_commit()?;
         let padre_commit = leer_a_string(path::Path::new(&ruta)).unwrap_or_else(|_| "".to_string());
         Ok(padre_commit)
@@ -218,12 +234,13 @@ impl Commit {
                 return Err("No se pudo ejecutar el commit".to_string());
             }
         };
+        Merge::limpiar_merge_post_commit()?;
         Ok("Commit creado".to_string())
     }
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use std::{path::PathBuf, rc::Rc};
 
     use crate::{
@@ -241,7 +258,6 @@ mod test {
         let home = std::env::var("HOME").unwrap();
         let config_path = format!("{home}/.girconfig");
         let contenido = format!("nombre =aaaa\nmail =bbbb\n");
-        println!("contenido: {}", contenido);
         escribir_bytes(config_path, contenido).unwrap();
     }
 

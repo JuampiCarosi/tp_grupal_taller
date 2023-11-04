@@ -8,7 +8,7 @@ use crate::{
     utilidades_index, utilidades_path_buf,
 };
 
-use super::write_tree::conseguir_arbol_padre_from_ult_commit;
+use super::write_tree::conseguir_arbol_from_hash_commit;
 
 const PATH_HEAD: &str = "./.gir/HEAD";
 
@@ -119,7 +119,7 @@ impl Checkout {
     fn crear_rama(&self) -> Result<(), String> {
         let msg_branch = Branch::from(&mut vec![self.rama_a_cambiar.clone()], self.logger.clone())?
             .ejecutar()?;
-        print!("{}", msg_branch);
+        println!("{}", msg_branch);
         Ok(())
     }
 
@@ -136,7 +136,8 @@ impl Checkout {
         let ref_actual = io::leer_a_string(PATH_HEAD)?;
         let rama_actual = self.conseguir_rama_actual(ref_actual)?;
         let head_commit = io::leer_a_string(format!(".gir/refs/heads/{}", rama_actual))?;
-        let hash_tree_padre = conseguir_arbol_padre_from_ult_commit(head_commit);
+        let hash_tree_padre =
+            conseguir_arbol_from_hash_commit(&head_commit, ".gir/objects/".to_string());
         Ok(Tree::from_hash(hash_tree_padre, PathBuf::from("."))?)
     }
 
@@ -198,7 +199,7 @@ impl Checkout {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use std::{path::PathBuf, rc::Rc};
 
     use crate::{
@@ -215,7 +216,6 @@ mod test {
         let home = std::env::var("HOME").unwrap();
         let config_path = format!("{home}/.girconfig");
         let contenido = format!("nombre = aaaa\nmail = bbbb\n");
-        println!("contenido: {}", contenido);
         escribir_bytes(config_path, contenido).unwrap();
     }
 

@@ -2,6 +2,11 @@ use std::{path::PathBuf, rc::Rc};
 
 use crate::{io, tipos_de_dato::logger::Logger, utilidades_path_buf::obtener_nombre};
 
+use super::commit::Commit;
+
+const VERDE: &str = "\x1B[32m";
+const RESET: &str = "\x1B[0m";
+
 pub struct Branch {
     pub mostrar: bool,
     pub rama_nueva: Option<String>,
@@ -33,18 +38,33 @@ impl Branch {
         })
     }
 
-    pub fn mostrar_ramas() -> Result<String, String> {
+    pub fn obtener_ramas() -> Result<Vec<String>, String> {
         let directorio = ".gir/refs/heads";
         let entradas = std::fs::read_dir(directorio)
             .map_err(|e| format!("No se pudo leer el directorio:{}\n {}", directorio, e))?;
 
-        let mut output = String::new();
+        let mut ramas: Vec<String> = Vec::new();
 
         for entrada in entradas {
             let entrada = entrada
                 .map_err(|_| format!("Error al leer entrada el directorio {directorio:#?}"))?;
             let nombre = obtener_nombre(&entrada.path())?;
-            output.push_str(&format!("{}\n", nombre));
+            ramas.push(nombre);
+        }
+        Ok(ramas)
+    }
+
+    pub fn mostrar_ramas() -> Result<String, String> {
+        let rama_actual = Commit::obtener_branch_actual()?;
+
+        let mut output = String::new();
+
+        for rama in Self::obtener_ramas()? {
+            if rama == rama_actual {
+                output.push_str(&format!("* {}{}{}\n", VERDE, rama, RESET));
+            } else {
+                output.push_str(&format!("  {}\n", rama));
+            }
         }
 
         Ok(output)
@@ -86,7 +106,7 @@ impl Branch {
 }
 
 // #[cfg(test)]
-// mod test {
+// mod tests{
 //     use super::Branch;
 //     use crate::io::rm_directorio;
 //     use crate::tipos_de_dato::comandos::add::Add;
