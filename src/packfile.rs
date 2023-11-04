@@ -33,7 +33,9 @@ impl Packfile {
         let objeto_comprimido = io::leer_bytes(&ruta_objeto).unwrap();
         let log = Rc::new(Logger::new(PathBuf::from("log.txt")).unwrap());
         // en este catfile hay cosas hardcodeadas que hay que cambiar :{
-        let tamanio_objeto_str = cat_file::CatFile::from(&mut vec!["-s".to_string(), objeto.clone()], log).unwrap().ejecutar().unwrap();
+        let tamanio_objeto_str = cat_file::CatFile::from(&mut vec!["-s".to_string(), objeto.clone()], log).unwrap().ejecutar_de(dir).unwrap();
+        println!("LLegue");
+
         let tamanio_objeto = tamanio_objeto_str.trim().parse::<u32>().unwrap_or(0);
        
         let tipo_objeto = cat_file::obtener_tipo_objeto_de(&objeto, &dir)?;
@@ -122,8 +124,6 @@ impl Packfile {
 
 
     pub fn obtener_pack_con_archivos(&mut self, objetos: Vec<String>, dir: &str) -> Vec<u8> {
-        // let objetos = vec!["ef55aae678e3a636dc72d68f3b10f60b2ad2c306".to_string(), "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391".to_string(), ];
-        // self.aniadir_objeto("ef55aae678e3a636dc72d68f3b10f60b2ad2c306".to_string(), "./.gir/objects/");
         for objeto in objetos {
             self.aniadir_objeto(objeto, dir).unwrap();
         }
@@ -147,6 +147,7 @@ impl Packfile {
         // a partir de aca obtengo el paquete
         // println!("cant bytes: {:?}", bytes.len());
         // println!("obteniendo firma");
+        println!("La ubicacion es: {}", ubicacion);
         let checksum = Self::verificar_checksum(bytes);
         match checksum {
             true => println!("Checksum correcto"),

@@ -50,11 +50,10 @@ impl Servidor {
 
     pub fn iniciar_servidor() -> Result<(), ErrorDeComunicacion> {
         while let Ok((stream, _)) = TcpListener::bind((IP, PORT))?.accept() {
-            thread::spawn(move || {
+            // thread::spawn(move || {
                 let mut comunicacion = Comunicacion::new(stream.try_clone().unwrap());
                 Self::manejar_cliente(&mut comunicacion, &(env!("CARGO_MANIFEST_DIR").to_string() + DIR)).unwrap();
-            });
-            
+            // });
         }
         Ok(())
     }
@@ -81,19 +80,27 @@ impl Servidor {
         
         match pedido[0] {
             "git-upload-pack" => {
+                println!("upload-pack recibido, ejecutando");
                 refs = Self::obtener_refs_de(PathBuf::from(&dir_repo));
                 comunicacion.responder(refs).unwrap();
                 upload_pack(dir_repo, comunicacion)
             },
             "git-receive-pack" => {
+                println!("receive-pack recibido, ejecutando");
                 let path = PathBuf::from(dir_repo);
+
+                println!("Path: {:?}", path);
                 if !path.exists() { 
                     crear_directorio(&path.join("refs/")).unwrap();
                     crear_directorio(&path.join("refs/heads/")).unwrap();
                     crear_directorio(&path.join("refs/tags/")).unwrap();
-                }
+                } 
                 refs = Self::obtener_refs_de(path);
-                comunicacion.responder(refs).unwrap(); 
+                if refs.is_empty() {
+                    comunicacion.responder(vec![Self::agregar_capacidades("0".repeat(40))]).unwrap();
+                } else {
+                    comunicacion.responder(refs).unwrap(); 
+                }
                 receive_pack(dir.to_string(), comunicacion)
                 // Ok(())
             },
@@ -117,7 +124,6 @@ impl Servidor {
         }
         refs.append(&mut git_io::obtener_refs_con_largo_hex(dir.join("refs/heads/"), dir.to_str().unwrap()).unwrap());
         refs.append(&mut git_io::obtener_refs_con_largo_hex(dir.join("refs/tags/"), dir.to_str().unwrap()).unwrap());   
-        println!("Refs que voy a mandar: {:?}", refs);
         if !refs.is_empty(){
             refs.insert(0,Self::agregar_capacidades(refs[0].clone()));
         }
@@ -125,7 +131,13 @@ impl Servidor {
     }
 
     fn agregar_capacidades(referencia: String) -> String {
-        let mut referencia_con_capacidades = referencia.split_at(4).1.to_string() + "\0"; // borro los primeros 4 caracteres que quedan del tamanio anterior
+        let mut referencia_con_capacidades: String;
+        println!("referencia len: {:?}", referencia.len());
+        if referencia.len() > 40 {
+            referencia_con_capacidades = referencia.split_at(4).1.to_string() + "\0"; // borro los primeros 4 caracteres que quedan del tamanio anterior
+        } else {
+            referencia_con_capacidades = referencia + "\0";
+        }
         let capacidades: Vec<&str> = CAPABILITIES.split_whitespace().collect();
         for cap in capacidades.iter() {
             referencia_con_capacidades.push_str(&format!("{} ", cap));
@@ -135,6 +147,8 @@ impl Servidor {
         git_io::obtener_linea_con_largo_hex(&referencia_con_capacidades)
     }
 
+
+    
 
 
 
