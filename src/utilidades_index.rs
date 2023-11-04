@@ -102,7 +102,10 @@ pub fn generar_objetos_raiz(objetos_index: &Vec<ObjetoIndex>) -> Result<Vec<Obje
     Ok(objetos_raiz)
 }
 
-pub fn escribir_index(logger: Rc<Logger>, objetos_index: &Vec<ObjetoIndex>) -> Result<(), String> {
+pub fn escribir_index(
+    logger: Rc<Logger>,
+    objetos_index: &mut Vec<ObjetoIndex>,
+) -> Result<(), String> {
     let mut file = match OpenOptions::new()
         .write(true)
         .truncate(true)
@@ -122,6 +125,8 @@ pub fn escribir_index(logger: Rc<Logger>, objetos_index: &Vec<ObjetoIndex>) -> R
     }
 
     let mut buffer = String::new();
+
+    objetos_index.sort_by_key(|objeto_index| objeto_index.objeto.obtener_path());
 
     for objeto_index in objetos_index {
         let line = match objeto_index.objeto {

@@ -87,7 +87,7 @@ pub fn crear_arbol_commit(commit_padre: Option<String>) -> Result<String, String
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use std::{path::PathBuf, rc::Rc};
 
     use crate::{

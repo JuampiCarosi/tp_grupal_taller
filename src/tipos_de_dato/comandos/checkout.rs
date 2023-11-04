@@ -199,7 +199,7 @@ impl Checkout {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use std::{path::PathBuf, rc::Rc};
 
     use crate::{

@@ -3,6 +3,10 @@ use std::{
     rc::Rc,
 };
 
+const ROJO: &str = "\x1B[31m";
+const VERDE: &str = "\x1B[32m";
+const RESET: &str = "\x1B[0m";
+
 use crate::{
     io::leer_a_string,
     tipos_de_dato::{logger::Logger, objeto::Objeto, objetos::tree::Tree},
@@ -146,31 +150,18 @@ impl Status {
         let trackeados = self.obtener_trackeados()?;
         let untrackeados = self.obtener_untrackeados()?;
 
-        let codigo_color_rojo = "\x1B[31m";
-        let codigo_color_verde = "\x1B[32m";
-        let codigo_color_predeterminado = "\x1B[0m";
-
         let mut mensaje = String::new();
         mensaje.push_str("Cambios a ser commiteados:\n");
         for cambio in staging {
-            mensaje.push_str(&format!(
-                "         {}{}{}\n",
-                codigo_color_verde, cambio, codigo_color_predeterminado
-            ));
+            mensaje.push_str(&format!("         {}{}{}\n", VERDE, cambio, RESET));
         }
         mensaje.push_str("\nCambios no en zona de preparacion:\n");
         for cambio in trackeados {
-            mensaje.push_str(&format!(
-                "         {}{}{}\n",
-                codigo_color_rojo, cambio, codigo_color_predeterminado
-            ));
+            mensaje.push_str(&format!("         {}{}{}\n", ROJO, cambio, RESET));
         }
         mensaje.push_str("\nCambios no trackeados:\n");
         for cambio in untrackeados {
-            mensaje.push_str(&format!(
-                "         {}{}{}\n",
-                codigo_color_rojo, cambio, codigo_color_predeterminado
-            ));
+            mensaje.push_str(&format!("         {}{}{}\n", ROJO, cambio, RESET));
         }
         self.logger.log("Status terminado".to_string());
         Ok(mensaje)

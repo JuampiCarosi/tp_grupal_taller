@@ -492,7 +492,7 @@ impl Display for Tree {
 
 #[cfg(test)]
 
-mod test {
+mod tests {
 
     use crate::io;
     use crate::tipos_de_dato::{objeto::Objeto, objetos::tree::Tree};

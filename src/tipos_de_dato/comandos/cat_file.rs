@@ -114,7 +114,7 @@ impl CatFile {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use crate::{
         io,
         tipos_de_dato::{

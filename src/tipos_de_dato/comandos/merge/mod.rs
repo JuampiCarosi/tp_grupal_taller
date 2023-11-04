@@ -359,7 +359,7 @@ impl Merge {
             objetos_index.push(objeto);
         }
 
-        escribir_index(self.logger.clone(), &objetos_index)?;
+        escribir_index(self.logger.clone(), &mut objetos_index)?;
         self.escribir_merge_head()?;
         self.escribir_mensaje_merge()?;
 
@@ -473,7 +473,7 @@ impl Merge {
 }
 
 // #[cfg(test)]
-// mod test {
+// mod tests{
 //     use crate::tipos_de_dato::comandos::hash_object::HashObject;
 
 //     use super::*;

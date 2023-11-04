@@ -4,6 +4,9 @@ use crate::{io, tipos_de_dato::logger::Logger, utilidades_path_buf::obtener_nomb
 
 use super::commit::Commit;
 
+const VERDE: &str = "\x1B[32m";
+const RESET: &str = "\x1B[0m";
+
 pub struct Branch {
     pub mostrar: bool,
     pub rama_nueva: Option<String>,
@@ -53,17 +56,12 @@ impl Branch {
 
     pub fn mostrar_ramas() -> Result<String, String> {
         let rama_actual = Commit::obtener_branch_actual()?;
-        let codigo_color_verde = "\x1B[32m";
-        let codigo_color_reset = "\x1B[0m";
 
         let mut output = String::new();
 
         for rama in Self::obtener_ramas()? {
             if rama == rama_actual {
-                output.push_str(&format!(
-                    "* {}{}{}\n",
-                    codigo_color_verde, rama, codigo_color_reset
-                ));
+                output.push_str(&format!("* {}{}{}\n", VERDE, rama, RESET));
             } else {
                 output.push_str(&format!("  {}\n", rama));
             }
@@ -108,7 +106,7 @@ impl Branch {
 }
 
 // #[cfg(test)]
-// mod test {
+// mod tests{
 //     use super::Branch;
 //     use crate::io::rm_directorio;
 //     use crate::tipos_de_dato::comandos::add::Add;

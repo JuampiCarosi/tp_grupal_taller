@@ -2,6 +2,9 @@ use chrono::{FixedOffset, LocalResult, TimeZone};
 
 use crate::tipos_de_dato::comandos::cat_file;
 
+const AMARILLO: &str = "\x1B[33m";
+const RESET: &str = "\x1B[0m";
+
 #[derive(Clone)]
 pub struct CommitObj {
     pub hash: String,
@@ -119,9 +122,7 @@ impl CommitObj {
     }
 
     pub fn format_log(&self) -> Result<String, String> {
-        let color_amarillo = "\x1B[33m";
-        let color_reset = "\x1B[0m";
-        let mut log = format!("{}commit {} {}\n", color_amarillo, self.hash, color_reset);
+        let mut log = format!("{}commit {} {}\n", AMARILLO, self.hash, RESET);
 
         if self.padres.len() > 1 {
             log.push_str("Merge: ");
@@ -130,7 +131,7 @@ impl CommitObj {
             }
             log.push('\n');
         }
-        log.push_str(&format!("Autor: {} {}\n", self.autor, self.mail));
+        log.push_str(&format!("Autor: {} <{}>\n", self.autor, self.mail));
         log.push_str(&format!("Date: {}\n", Self::formatear_date(&self.date)?));
         log.push_str(&format!("\n     {}\n", self.mensaje));
         Ok(log)
@@ -139,9 +140,9 @@ impl CommitObj {
 
 #[cfg(test)]
 
-mod test {
+mod tests {
 
-    use super::{CommitObj, Date};
+    use super::*;
 
     #[test]
     fn test01_rearmar_timestamp_log() {
@@ -172,7 +173,7 @@ mod test {
         };
 
         let contenido_log = objeto.format_log().unwrap();
-        let contenido_log_esperado = "commit 1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p7q8r9s0t (master)\nAutor: nombre_apellido <mail>\nDate: Fri Feb 13 20:31:30 2009 -0300\n\n     Mensaje del commit\n";
+        let contenido_log_esperado = format!("{AMARILLO}commit 1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p7q8r9s0t {RESET}\nAutor: nombre_apellido <mail>\nDate: Fri Feb 13 20:31:30 2009 -0300\n\n     Mensaje del commit\n");
         assert_eq!(contenido_log, contenido_log_esperado);
     }
 }
