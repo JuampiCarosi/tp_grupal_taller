@@ -1,8 +1,7 @@
-use sha1::digest::block_buffer::Error;
 use crate::err_comunicacion::ErrorDeComunicacion;
 use crate::io::crear_directorio;
 use crate::{comunicacion::Comunicacion, io as git_io};
-use std::{env, thread};
+use std::env;
 use std::io;
 use std::net::{TcpListener, TcpStream};
 use std::path::PathBuf;

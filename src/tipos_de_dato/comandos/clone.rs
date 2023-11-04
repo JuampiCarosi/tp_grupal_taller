@@ -1,7 +1,5 @@
-use crate::io::{escribir_bytes, escribir_referencia};
 use crate::packfile::Packfile;
-use crate::{comunicacion::Comunicacion, io, packfile, tipos_de_dato::objetos::tree::Tree, tipos_de_dato::comandos::write_tree};
-use std::io::Write;
+use crate::{comunicacion::Comunicacion, io, tipos_de_dato::objetos::tree::Tree, tipos_de_dato::comandos::write_tree};
 use std::path::PathBuf;
 
 use std::net::TcpStream;
