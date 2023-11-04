@@ -119,7 +119,7 @@ impl Checkout {
     fn crear_rama(&self) -> Result<(), String> {
         let msg_branch = Branch::from(&mut vec![self.rama_a_cambiar.clone()], self.logger.clone())?
             .ejecutar()?;
-        print!("{}", msg_branch);
+        println!("{}", msg_branch);
         Ok(())
     }
 

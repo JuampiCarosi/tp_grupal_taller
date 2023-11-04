@@ -10,7 +10,7 @@ use crate::{
     utilidades_index,
 };
 
-use super::write_tree;
+use super::{merge::Merge, write_tree};
 
 pub struct Commit {
     logger: Rc<Logger>,
@@ -36,6 +36,13 @@ fn armar_timestamp_commit() -> Result<String, String> {
 
 impl Commit {
     pub fn from(args: &mut Vec<String>, logger: Rc<Logger>) -> Result<Commit, String> {
+        if args.len() == 0 && Merge::hay_merge_en_curso()? {
+            if Merge::hay_archivos_sin_mergear()? {
+                return Err("Hay archivos sin mergear".to_string());
+            }
+            return Commit::from_merge(logger);
+        }
+
         if args.len() != 2 {
             return Err("La cantidad de argumentos es invalida".to_string());
         }
@@ -48,6 +55,11 @@ impl Commit {
         if flag != "-m" {
             return Err(format!("Flag desconocido {}", flag));
         }
+        Ok(Commit { mensaje, logger })
+    }
+
+    pub fn from_merge(logger: Rc<Logger>) -> Result<Commit, String> {
+        let mensaje = leer_a_string(path::Path::new(".gir/COMMIT_EDITMSG"))?;
         Ok(Commit { mensaje, logger })
     }
 
