@@ -1,3 +1,5 @@
+use chrono::TimeZone;
+
 use crate::packfile::Packfile;
 use crate::{comunicacion::Comunicacion, io};
 use std::io::Write;
@@ -40,49 +42,58 @@ impl Push {
         let request_data_con_largo_hex = io::obtener_linea_con_largo_hex(request_data);
 
         client.write_all(request_data_con_largo_hex.as_bytes()).unwrap();
-        let version = comunicacion.aceptar_pedido().unwrap();
+        let version = comunicacion.aceptar_pedido().unwrap(); //cambiar aceptar pedido a obtener_linea
 
         let mut refs_recibidas = comunicacion.obtener_lineas().unwrap();
         println!("refs recibidas: {:?}", refs_recibidas);
         let mut actualizaciones = Vec::new();
         let mut objetos_a_enviar  = HashSet::new();
+
+        let first_ref = refs_recibidas.remove(0);
         // caso en el que el server no tiene refs 
-        if !refs_recibidas.len() > 1 {
-            let first_ref = refs_recibidas.remove(0);
+        if !first_ref.contains(&"0".repeat(40)){ 
             let referencia_y_capacidades = first_ref.split('\0').collect::<Vec<&str>>();
-            println!("referencia_y_capacidades: {:?}", referencia_y_capacidades);
             let capabilities = referencia_y_capacidades[1];
+            // println!("referencia_y_capacidades: {:?}", referencia_y_capacidades);
             refs_recibidas.push(referencia_y_capacidades[0].to_string());
-        } else {
-            for referencia in &refs_recibidas {
-                let obj_id = referencia.split(' ').collect::<Vec<&str>>()[0];
-                let referencia = referencia.split(' ').collect::<Vec<&str>>()[1];
-                match self.hash_refs.get_mut(referencia) { 
-                    Some(hash) => { 
-                        if hash.0 != obj_id { 
-                            hash.1 = obj_id.to_string();
-                        } else {
-                            // borra la entrada (ver esta parte..)
-                            self.hash_refs.remove_entry(referencia);
-                        }
-                    }   
-                    None => {
-                        // el server tiene un head que el cliente no tiene, abortar push (no borramos brancahes por lo tanto el sv esta)
-                    }
-                    
+        } 
+        for referencia in &refs_recibidas {
+            let obj_id = referencia.split(' ').collect::<Vec<&str>>()[0];
+            let referencia = referencia.split(' ').collect::<Vec<&str>>()[1];
+            match self.hash_refs.get_mut(referencia) { 
+                Some(hash) => { 
+                    println!("Entre aca para la ref: {}", referencia);
+                    hash.1 = obj_id.to_string();
+                    // if hash.0 != obj_id { 
+                    //     hash.1 = obj_id.to_string();
+                    // } else {
+                    //     // borra la entrada (ver esta parte..)
+                    //     hash.1 = 
+                    //     // self.hash_refs.remove_entry(referencia);
+                    // }
+                }   
+                None => {
+                    // el server tiene un head que el cliente no tiene, abortar push (no borramos brancahes por lo tanto el sv esta por delante)
                 }
+                
             }
         }
-
+        println!("hash_refs: {:?}", self.hash_refs);
+   
         for (key, value) in &self.hash_refs {
             actualizaciones.push(io::obtener_linea_con_largo_hex(&format!("{} {} {}", &value.1, &value.0, &key))); // viejo (el del sv), nuevo (cliente), ref
             // checkear que no existan los objetos antes de appendear
-            if !(value.1 == "0".repeat(20)){
+            println!("value del cliente: {}, value del server: {}", value.0, value.1);
+            if value.1 != value.0 {
                 objetos_a_enviar.extend(obtener_commits_y_objetos_asociados(&key, &value.1).unwrap());
-            } else {
+            } 
+            if value.1 == "0".repeat(40) {
                 objetos_a_enviar.extend(obtener_commits_y_objetos_asociados(&key, &value.0).unwrap());
-                
             }
+            // else {
+                   // objetos_a_enviar.extend(obtener_commits_y_objetos_asociados(&key, &value.0).unwrap());
+                
+            // }
         }   
         println!("objetos a enviar: {:?}", objetos_a_enviar);
 
@@ -141,3 +152,10 @@ fn obtener_refs_de(dir: PathBuf, prefijo: String) -> Vec<String> {
 
 
 
+
+
+// juani@Juani:~/23C2-Cangrejos-Tacticos (servidor)$ rm -rf ./srv/gir/objects/
+// juani@Juani:~/23C2-Cangrejos-Tacticos (servidor)$ rm ./srv/gir/refs/heads/master
+// juani@Juani:~/23C2-Cangrejos-Tacticos (servidor)$ rm -rf ./srv/gir/objects/
+// juani@Juani:~/23C2-Cangrejos-Tacticos (servidor)$ cp -r ../.gir/refs/heads/master ./srv/gir/refs/heads/
+// juani@Juani:~/23C2-Cangrejos-Tacticos (servidor)$ cp -r ../.gir/objects/ ./srv/gir/objects/
