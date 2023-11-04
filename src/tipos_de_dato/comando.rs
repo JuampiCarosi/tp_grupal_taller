@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::sync::Arc;
 
 use super::{
     comandos::{
@@ -31,9 +31,13 @@ pub enum Comando {
 }
 
 impl Comando {
-    pub fn new(input: Vec<String>, logger: Rc<Logger>) -> Result<Comando, String> {
-        let (_, rest) = input.split_first().unwrap();
-        let (comando, args) = rest.split_first().unwrap();
+    pub fn new(input: Vec<String>, logger: Arc<Logger>) -> Result<Comando, String> {
+        let (_, rest) = match input.split_first() {
+            Some((first, rest)) => (first, rest),
+            None => return Err("No se ingreso ningun comando".to_string()),
+        };
+
+        let (comando, args) = rest.split_first().ok_or("No se ingreso ningun comando")?;
 
         let mut vector_args = Vec::from(args);
 
@@ -48,7 +52,7 @@ impl Comando {
             "checkout" => Comando::Checkout(Checkout::from(vector_args, logger)?),
             "commit" => Comando::Commit(Commit::from(&mut vector_args, logger)?),
             "fetch" => Comando::Fetch(Fetch::new()),
-            "clone" => Comando::Clone(Clone::new()),
+            "clone" => Comando::Clone(Clone::from(logger)),
             "push" => Comando::Push(Push::new()),
             // "pull",
             "log" => Comando::Log(Log::from(&mut vector_args, logger)?),

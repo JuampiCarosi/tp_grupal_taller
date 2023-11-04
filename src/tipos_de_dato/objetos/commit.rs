@@ -57,13 +57,13 @@ impl CommitObj {
             Err(_) => return Err("No se pudo obtener el timestamp".to_string()),
         };
         let (horas, minutos) = date.offset.split_at(3);
-        let offset_horas = horas[0..3].parse::<i32>().unwrap_or_else(|_| -3);
-        let offset_minutos = minutos.parse::<i32>().unwrap_or_else(|_| 0);
-        Ok(Self::format_timestamp(
+        let offset_horas = horas[0..3].parse::<i32>().unwrap_or(-3);
+        let offset_minutos = minutos.parse::<i32>().unwrap_or(0);
+        Self::format_timestamp(
             timestamp,
             offset_horas,
             offset_minutos,
-        )?)
+        )
     }
 
     pub fn from_hash(hash: String) -> Result<CommitObj, String> {
@@ -77,7 +77,7 @@ impl CommitObj {
         let mut date_option: Option<Date> = None;
         let mut hash_tree_option: Option<String> = None;
 
-        for linea in contenido.split("\n") {
+        for linea in contenido.split('\n') {
             let linea_splitteada = linea.split(' ').collect::<Vec<&str>>();
             match linea_splitteada[0] {
                 "parent" => padres.push(linea_splitteada[1].to_string()),

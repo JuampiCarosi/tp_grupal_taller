@@ -1,11 +1,11 @@
-use std::{path::PathBuf, rc::Rc};
+use std::{path::PathBuf, sync::Arc};
 
 use crate::{
     io,
     tipos_de_dato::{
         comandos::branch::Branch, logger::Logger, objeto::Objeto, objetos::tree::Tree,
     },
-    utilidades_index, utilidades_path_buf,
+    utils::{self},
 };
 
 use super::write_tree::conseguir_arbol_from_hash_commit;
@@ -15,7 +15,7 @@ const PATH_HEAD: &str = "./.gir/HEAD";
 pub struct Checkout {
     crear_rama: bool,
     rama_a_cambiar: String,
-    logger: Rc<Logger>,
+    logger: Arc<Logger>,
 }
 
 impl Checkout {
@@ -32,20 +32,18 @@ impl Checkout {
         Ok(())
     }
 
-    fn crearse_con_flags(args: Vec<String>, logger: Rc<Logger>) -> Result<Checkout, String> {
+    fn crearse_con_flags(args: Vec<String>, logger: Arc<Logger>) -> Result<Checkout, String> {
         match (args[0].as_str(), args[1].clone()) {
-            ("-b", rama) => {
-                return Ok(Checkout {
-                    crear_rama: true,
-                    rama_a_cambiar: rama,
-                    logger,
-                })
-            }
+            ("-b", rama) => Ok(Checkout {
+                crear_rama: true,
+                rama_a_cambiar: rama,
+                logger,
+            }),
             _ => Err("Argumentos invalidos.\ngir chekcout [-b] <nombre-rama-cambiar>".to_string()),
         }
     }
 
-    pub fn from(args: Vec<String>, logger: Rc<Logger>) -> Result<Checkout, String> {
+    pub fn from(args: Vec<String>, logger: Arc<Logger>) -> Result<Checkout, String> {
         Self::verificar_argumentos(&args)?;
 
         if Self::hay_flags(&args) {
@@ -70,7 +68,7 @@ impl Checkout {
             let entrada = entrada
                 .map_err(|_| format!("Error al leer entrada el directorio {directorio:#?}"))?;
 
-            let nombre = utilidades_path_buf::obtener_nombre(&entrada.path())?;
+            let nombre = utils::path_buf::obtener_nombre(&entrada.path())?;
             output.push(nombre)
         }
 
@@ -124,7 +122,7 @@ impl Checkout {
     }
 
     fn comprobar_que_no_haya_contenido_index(&self) -> Result<(), String> {
-        if !utilidades_index::esta_vacio_el_index()? {
+        if !utils::index::esta_vacio_el_index()? {
             Err("Fallo, tiene contendio sin guardar. Por favor, haga commit para no perder los cambios".to_string())
         } else {
             Ok(())
@@ -138,7 +136,11 @@ impl Checkout {
         let head_commit = io::leer_a_string(format!(".gir/refs/heads/{}", rama_actual))?;
         let hash_tree_padre =
             conseguir_arbol_from_hash_commit(&head_commit, ".gir/objects/".to_string());
-        Ok(Tree::from_hash(hash_tree_padre, PathBuf::from("."))?)
+        Tree::from_hash(
+            hash_tree_padre,
+            PathBuf::from("."),
+            self.logger.clone(),
+        )
     }
 
     pub fn ejecutar(&self) -> Result<String, String> {
@@ -200,7 +202,7 @@ impl Checkout {
 
 #[cfg(test)]
 mod tests {
-    use std::{path::PathBuf, rc::Rc};
+    use std::{path::PathBuf, sync::Arc};
 
     use crate::{
         io::{self, escribir_bytes, rm_directorio},
@@ -215,13 +217,13 @@ mod tests {
     fn craer_archivo_config_default() {
         let home = std::env::var("HOME").unwrap();
         let config_path = format!("{home}/.girconfig");
-        let contenido = format!("nombre = aaaa\nmail = bbbb\n");
+        let contenido = "nombre = aaaa\nmail = bbbb\n".to_string();
         escribir_bytes(config_path, contenido).unwrap();
     }
 
     fn limpiar_archivo_gir() {
         rm_directorio(".gir").unwrap();
-        let logger = Rc::new(Logger::new(PathBuf::from("tmp/branch_init")).unwrap());
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/branch_init")).unwrap());
         let init = Init {
             path: "./.gir".to_string(),
             logger,
@@ -230,7 +232,7 @@ mod tests {
         craer_archivo_config_default();
     }
 
-    fn addear_archivos_y_comittear(args: Vec<String>, logger: Rc<Logger>) {
+    fn addear_archivos_y_comittear(args: Vec<String>, logger: Arc<Logger>) {
         let mut add = Add::from(args, logger.clone()).unwrap();
         add.ejecutar().unwrap();
         let commit =
@@ -241,7 +243,7 @@ mod tests {
     #[test]
     fn test01_checkout_cambia_de_rama() {
         limpiar_archivo_gir();
-        let logger = Rc::new(Logger::new(PathBuf::from("tmp/checkout_test02")).unwrap());
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/checkout_test02")).unwrap());
         let args = vec!["test_dir/objetos/archivo.txt".to_string()];
         addear_archivos_y_comittear(args, logger.clone());
 
@@ -261,7 +263,7 @@ mod tests {
 
     fn test02_checkout_crea_y_cambia_de_rama() {
         limpiar_archivo_gir();
-        let logger = Rc::new(Logger::new(PathBuf::from("tmp/checkout_test02")).unwrap());
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/checkout_test02")).unwrap());
         let args = vec!["test_dir/objetos/archivo.txt".to_string()];
         addear_archivos_y_comittear(args, logger.clone());
 
@@ -279,7 +281,7 @@ mod tests {
     #[test]
     fn test03_al_hacer_checkout_actualiza_contenido() {
         limpiar_archivo_gir();
-        let logger = Rc::new(Logger::new(PathBuf::from("tmp/checkout_test03")).unwrap());
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/checkout_test03")).unwrap());
         io::escribir_bytes("tmp/checkout_test03_test", "contenido").unwrap();
         let args = vec!["tmp/checkout_test03_test".to_string()];
         addear_archivos_y_comittear(args, logger.clone());
@@ -306,7 +308,7 @@ mod tests {
     #[test]
     fn test04_al_hacer_checkout_se_eliminan_no_trackeados() {
         limpiar_archivo_gir();
-        let logger = Rc::new(Logger::new(PathBuf::from("tmp/checkout_test03")).unwrap());
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/checkout_test03")).unwrap());
         io::escribir_bytes("tmp/checkout_test04_test", "contenido").unwrap();
         let args = vec!["tmp/checkout_test04_test".to_string()];
         addear_archivos_y_comittear(args, logger.clone());

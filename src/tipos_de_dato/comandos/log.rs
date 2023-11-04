@@ -1,6 +1,6 @@
 use std::cmp::Reverse;
 use std::collections::HashMap;
-use std::rc::Rc;
+use std::sync::Arc;
 
 use crate::tipos_de_dato::logger::Logger;
 
@@ -8,15 +8,16 @@ use crate::io;
 use crate::tipos_de_dato::comandos::checkout::Checkout;
 use crate::tipos_de_dato::objetos::commit::CommitObj;
 
+
 use super::commit::Commit;
 
 pub struct Log {
     branch: String,
-    logger: Rc<Logger>,
+    logger: Arc<Logger>,
 }
 
 impl Log {
-    pub fn from(args: &mut Vec<String>, logger: Rc<Logger>) -> Result<Log, String> {
+    pub fn from(args: &mut Vec<String>, logger: Arc<Logger>) -> Result<Log, String> {
         if args.len() > 2 {
             return Err("Cantidad de argumentos invalida".to_string());
         }
@@ -45,8 +46,8 @@ impl Log {
         let mut commits_a_revisar: Vec<CommitObj> = Vec::new();
         commits_a_revisar.push(commit);
 
-        while !commits_a_revisar.is_empty() {
-            let commit = commits_a_revisar.pop().unwrap();
+        while let Some(commit) = commits_a_revisar.pop() {
+            
             if commits.contains_key(&commit.hash) {
                 break;
             }
@@ -78,7 +79,7 @@ impl Log {
 
         for commit in commits {
             log.push_str(&commit.format_log()?);
-            log.push_str("\n");
+            log.push('\n');
         }
 
         Ok(log)
@@ -94,7 +95,7 @@ mod tests {
     #[test]
     fn test01_creacion_de_log_sin_branch() {
         let mut args = vec![];
-        let logger = Rc::new(Logger::new(PathBuf::from("tmp/log")).unwrap());
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/log")).unwrap());
         let log = Log::from(&mut args, logger).unwrap();
         assert_eq!(log.branch, "master");
     }
@@ -103,7 +104,7 @@ mod tests {
     fn test02_creacion_de_log_indicando_branch() {
         io::escribir_bytes(".gir/refs/heads/rama", "hash".as_bytes()).unwrap();
         let mut args = vec!["rama".to_string()];
-        let logger = Rc::new(Logger::new(PathBuf::from("tmp/log")).unwrap());
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/log")).unwrap());
         let log = Log::from(&mut args, logger).unwrap();
         assert_eq!(log.branch, "rama");
         std::fs::remove_file(".gir/refs/heads/rama").unwrap();
@@ -113,7 +114,7 @@ mod tests {
     #[should_panic(expected = "La rama rama no existe")]
     fn test03_error_al_usar_branch_inexistente() {
         let mut args = vec!["rama".to_string()];
-        let logger = Rc::new(Logger::new(PathBuf::from("tmp/log")).unwrap());
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/log")).unwrap());
         let _ = Log::from(&mut args, logger).unwrap();
     }
 }

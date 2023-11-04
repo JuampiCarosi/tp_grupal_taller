@@ -3,24 +3,36 @@ use crate::{
         comandos::{cat_file::conseguir_tamanio, hash_object::HashObject},
         logger::Logger,
     },
-    utilidades_de_compresion::descomprimir_objeto,
-    utilidades_path_buf::obtener_nombre,
+    utils::compresion::descomprimir_objeto,
+    utils::path_buf::obtener_nombre,
 };
-use std::{fmt::Display, path::PathBuf, rc::Rc};
+use std::{fmt::Display, path::PathBuf, sync::Arc};
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug)]
 pub struct Blob {
     pub hash: String,
     pub ubicacion: PathBuf,
     pub nombre: String,
+    pub logger: Arc<Logger>,
 }
+
+impl PartialEq for Blob {
+    fn eq(&self, other: &Self) -> bool {
+        self.hash == other.hash
+    }
+}
+
+impl Eq for Blob {}
 
 impl Blob {
     pub fn obtener_hash(&self) -> String {
         self.hash.clone()
     }
     pub fn obtener_tamanio(&self) -> Result<usize, String> {
-        let contenido_blob = descomprimir_objeto(self.hash.clone(), self.ubicacion.to_string_lossy().to_string())?;
+        let contenido_blob = descomprimir_objeto(
+            self.hash.clone(),
+            self.ubicacion.to_string_lossy().to_string(),
+        )?;
         let tamanio_blob = conseguir_tamanio(contenido_blob)?;
         match tamanio_blob.parse::<usize>() {
             Ok(tamanio) => Ok(tamanio),
@@ -28,10 +40,10 @@ impl Blob {
         }
     }
 
-    pub fn from_directorio(directorio: PathBuf) -> Result<Blob, String> {
-        let logger = Rc::new(Logger::new(PathBuf::from("tmp/objeto"))?);
+    pub fn from_directorio(directorio: PathBuf, _logger: Arc<Logger>) -> Result<Blob, String> {
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/objeto"))?);
         let hash = HashObject {
-            logger,
+            logger: logger.clone(),
             escribir: false,
             ubicacion_archivo: directorio.clone(),
         }
@@ -43,6 +55,7 @@ impl Blob {
             nombre,
             hash,
             ubicacion: directorio,
+            logger,
         })
     }
 }

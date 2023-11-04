@@ -34,7 +34,7 @@ pub fn obtener_objetos_del_directorio(dir: String) -> Result<Vec<String>, ErrorD
                 {
                     let path = archivo.path();
                     if !path.to_string_lossy().contains("log.txt") {
-                        let nombre_carpeta = archivo.file_name().into_string().unwrap();
+                        let _nombre_carpeta = archivo.file_name().into_string().unwrap();
                         objetos.append(&mut obtener_objetos_con_nombre_carpeta(path.clone())?);
                     }
                 }
@@ -76,7 +76,7 @@ pub fn obtener_objetos_con_nombre_carpeta(
         match archivo {
             Ok(archivo) => {
                 nombres.push(
-                    nombre_directorio.clone() + &archivo.file_name().to_string_lossy().to_string(),
+                    nombre_directorio.clone() + archivo.file_name().to_string_lossy().as_ref(),
                 );
             }
             Err(error) => {
@@ -168,7 +168,7 @@ pub fn obtener_linea_con_largo_hex(line: &str) -> String {
 }
 
 fn leer_archivo(path: &mut Path) -> Result<String, ErrorDeComunicacion> {
-    let archivo = fs::File::open(path.to_path_buf())?;
+    let archivo = fs::File::open(path)?;
     let mut contenido = String::new();
     std::io::BufReader::new(archivo).read_line(&mut contenido)?;
     Ok(contenido.trim().to_string())
@@ -330,7 +330,7 @@ pub fn obtener_archivos_faltantes(nombres_archivos: Vec<String>, dir: String) ->
     // println!("Nombres: {:?}", nombres_archivos);
     let mut archivos_faltantes: Vec<String> = Vec::new();
     for nombre in &objetcts_contained {
-        if nombres_archivos.contains(&nombre) {
+        if nombres_archivos.contains(nombre) {
         } else {
             archivos_faltantes.push(nombre.clone());
         }
@@ -344,7 +344,7 @@ pub fn obtener_ack(nombres_archivos: Vec<String>, dir: String) -> Vec<String> {
         let dir_archivo = format!("{}/{}/{}", dir.clone(), &nombre[..2], &nombre[2..]);
         if PathBuf::from(dir_archivo.clone()).exists() {
             ack.push(obtener_linea_con_largo_hex(
-                ("ACK".to_string() + &nombre + &"\n".to_string()).as_str(),
+                ("ACK".to_string() + &nombre + "\n").as_str(),
             ));
             break;
         }
@@ -374,7 +374,7 @@ pub fn obtener_diferencias_remote(referencias: Vec<String>, dir: String) -> Vec<
             + referencia_y_contenido[1].split('/').last().unwrap();
         println!("referencia_remote: {}", referencia_remote);
         let referencia_local =
-            leer_a_string(&mut Path::new(&(dir.clone() + &referencia_remote))).unwrap();
+            leer_a_string(Path::new(&(dir.clone() + &referencia_remote))).unwrap();
         if referencia_local != referencia_y_contenido[0] {
             println!("referencia_local: {}", referencia_local);
             println!("referencia que me pasan: {}", referencia_y_contenido[0]);

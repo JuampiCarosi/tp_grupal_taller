@@ -1,16 +1,17 @@
 use std::{
     collections::HashSet,
     fs::{self, OpenOptions},
-    io::{BufRead, Write},
+    io::BufRead,
     path::{Path, PathBuf},
-    rc::Rc,
+    sync::Arc,
 };
 
 use crate::{
-    io,
+    io::{self, escribir_bytes},
     tipos_de_dato::{comandos::hash_object::HashObject, logger::Logger, objeto::Objeto},
-    utilidades_path_buf::obtener_directorio_raiz,
 };
+
+use super::path_buf::obtener_directorio_raiz;
 
 const PATH_INDEX: &str = "./.gir/index";
 
@@ -35,7 +36,7 @@ pub fn esta_vacio_el_index() -> Result<bool, String> {
     Ok(contenido.is_empty())
 }
 
-pub fn leer_index() -> Result<Vec<ObjetoIndex>, String> {
+pub fn leer_index(logger: Arc<Logger>) -> Result<Vec<ObjetoIndex>, String> {
     if !PathBuf::from(PATH_INDEX).exists() {
         return Ok(Vec::new());
     }
@@ -50,7 +51,7 @@ pub fn leer_index() -> Result<Vec<ObjetoIndex>, String> {
         if let Ok(line) = line.as_ref() {
             let (metadata, line) = line.split_at(4);
             let (simbolo_eliminado, merge) = metadata.split_at(2);
-            let objeto = Objeto::from_index(line.to_string())?;
+            let objeto = Objeto::from_index(line.to_string(), logger.clone())?;
             let objeto_index = ObjetoIndex {
                 merge: merge.trim() == "1",
                 es_eliminado: simbolo_eliminado.trim() == "-",
@@ -61,7 +62,10 @@ pub fn leer_index() -> Result<Vec<ObjetoIndex>, String> {
     }
     Ok(objetos)
 }
-pub fn generar_objetos_raiz(objetos_index: &Vec<ObjetoIndex>) -> Result<Vec<Objeto>, String> {
+pub fn generar_objetos_raiz(
+    objetos_index: &Vec<ObjetoIndex>,
+    logger: Arc<Logger>,
+) -> Result<Vec<Objeto>, String> {
     let mut objetos_raiz: Vec<Objeto> = Vec::new();
     let mut directorios_raiz: HashSet<PathBuf> = HashSet::new();
     let mut directorios_a_tener_en_cuenta: Vec<PathBuf> = Vec::new();
@@ -89,8 +93,11 @@ pub fn generar_objetos_raiz(objetos_index: &Vec<ObjetoIndex>) -> Result<Vec<Obje
     }
 
     for directorio in directorios_raiz {
-        let objeto_conteniendo_al_blob =
-            Objeto::from_directorio(directorio.clone(), Some(&directorios_a_tener_en_cuenta))?;
+        let objeto_conteniendo_al_blob = Objeto::from_directorio(
+            directorio.clone(),
+            Some(&directorios_a_tener_en_cuenta),
+            logger.clone(),
+        )?;
 
         objetos_raiz.push(objeto_conteniendo_al_blob);
     }
@@ -103,27 +110,9 @@ pub fn generar_objetos_raiz(objetos_index: &Vec<ObjetoIndex>) -> Result<Vec<Obje
 }
 
 pub fn escribir_index(
-    logger: Rc<Logger>,
+    logger: Arc<Logger>,
     objetos_index: &mut Vec<ObjetoIndex>,
 ) -> Result<(), String> {
-    let mut file = match OpenOptions::new()
-        .write(true)
-        .truncate(true)
-        .open(PATH_INDEX)
-    {
-        Ok(file) => file,
-        Err(_) => return Err("No se pudo abrir el archivo index".to_string()),
-    };
-
-    if objetos_index.is_empty() {
-        OpenOptions::new()
-            .write(true)
-            .truncate(true)
-            .open(PATH_INDEX)
-            .unwrap();
-        return Ok(());
-    }
-
     let mut buffer = String::new();
 
     objetos_index.sort_by_key(|objeto_index| objeto_index.objeto.obtener_path());
@@ -149,8 +138,7 @@ pub fn escribir_index(
         buffer.push_str(&line);
     }
 
-    file.write_all(buffer.as_bytes())
-        .map_err(|_| "No se pudo escribir el index".to_string())?;
+    escribir_bytes(PATH_INDEX, buffer)?;
     Ok(())
 }
 

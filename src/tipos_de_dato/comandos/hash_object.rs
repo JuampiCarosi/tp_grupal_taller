@@ -1,11 +1,11 @@
-use crate::utilidades_de_compresion::comprimir_contenido;
+use crate::utils::compresion::comprimir_contenido;
 use crate::{io, tipos_de_dato::logger::Logger};
 use sha1::{Digest, Sha1};
 use std::path::PathBuf;
-use std::rc::Rc;
+use std::sync::Arc;
 
 pub struct HashObject {
-    pub logger: Rc<Logger>,
+    pub logger: Arc<Logger>,
     pub escribir: bool,
     pub ubicacion_archivo: PathBuf,
 }
@@ -18,7 +18,7 @@ impl HashObject {
         Ok(PathBuf::from(nombre_string?))
     }
 
-    pub fn from(args: &mut Vec<String>, logger: Rc<Logger>) -> Result<HashObject, String> {
+    pub fn from(args: &mut Vec<String>, logger: Arc<Logger>) -> Result<HashObject, String> {
         let mut escribir = false;
         let nombre_archivo = Self::obtener_nombre_archivo(args)?;
 
@@ -77,7 +77,7 @@ impl HashObject {
 
 #[cfg(test)]
 mod tests {
-    use std::{io::Read, path::PathBuf, rc::Rc};
+    use std::{io::Read, path::PathBuf, sync::Arc};
 
     use flate2::read::ZlibDecoder;
 
@@ -89,7 +89,7 @@ mod tests {
     #[test]
     fn test01_hash_object_de_un_blob_devuelve_el_hash_correcto() {
         let mut args = vec!["test_dir/objetos/archivo.txt".to_string()];
-        let logger = Rc::new(Logger::new(PathBuf::from("tmp/hash_object_test01")).unwrap());
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/hash_object_test01")).unwrap());
         let hash_object = HashObject::from(&mut args, logger).unwrap();
         let hash = hash_object.ejecutar().unwrap();
         assert_eq!(hash, "2b824e648965b94c6c6b3dd0702feb91f699ed62");
@@ -98,7 +98,7 @@ mod tests {
     #[test]
     fn test02_hash_object_de_un_blob_con_opcion_w_devuelve_el_hash_correcto_y_lo_escribe() {
         let mut args = vec!["-w".to_string(), "test_dir/objetos/archivo.txt".to_string()];
-        let logger = Rc::new(Logger::new(PathBuf::from("tmp/hash_object_test01")).unwrap());
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/hash_object_test01")).unwrap());
         let hash_object = HashObject::from(&mut args, logger).unwrap();
         let hash = hash_object.ejecutar().unwrap();
         assert_eq!(hash, "2b824e648965b94c6c6b3dd0702feb91f699ed62");

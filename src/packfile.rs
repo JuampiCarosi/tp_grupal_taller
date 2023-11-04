@@ -1,13 +1,13 @@
 use crate::err_comunicacion::ErrorDeComunicacion;
-use crate::tipos_de_dato::logger::Logger;
-use crate::{io, utilidades_de_compresion};
+use crate::io;
 use crate::tipos_de_dato::comandos::cat_file;
-use crate::tipos_de_dato::objetos::tree::Tree;
-use std::path::PathBuf;
-use std::rc::Rc;
-use crate::tipos_de_dato::objetos::blob::Blob;
+use crate::tipos_de_dato::logger::Logger;
+use crate::utils::compresion::obtener_contenido_comprimido_sin_header;
 use sha1::{Digest, Sha1};
-  
+use std::path::PathBuf;
+
+use std::sync::Arc;
+
 pub struct Packfile {
     objetos: Vec<u8>,
     indice: Vec<u8>,
@@ -23,35 +23,39 @@ impl Packfile {
         }
     }
 
-    fn  aniadir_objeto(&mut self, objeto: String, dir: &str) -> Result<(), String> {
+    fn aniadir_objeto(&mut self, objeto: String, dir: &str) -> Result<(), String> {
         // let logger = Rc::new(Logger::new(PathBuf::from("log.txt"))?);
         // println!("Aniadiendo objeto: {}", objeto);
         // println!("la dir que llega: {}", dir);
         // DESHARCODEAR EL ./.GIR
         let ruta_objeto = format!("{}{}/{}", dir, &objeto[..2], &objeto[2..]);
         // println!("ruta objeto: {}", ruta_objeto);
-        let objeto_comprimido = io::leer_bytes(&ruta_objeto).unwrap();
+        let _objeto_comprimido = io::leer_bytes(ruta_objeto).unwrap();
         // let tamanio_sin_split = utilidades_de_compresion::descomprimir_objeto(&objeto_comprimido, "./gir/objects/".to_string())?;
-        let log = Rc::new(Logger::new(PathBuf::from("log.txt")).unwrap());
-        let tamanio_objeto_str = cat_file::CatFile::from(&mut vec!["-s".to_string(), objeto.clone()], log).unwrap().ejecutar().unwrap();
+        let log = Arc::new(Logger::new(PathBuf::from("log.txt")).unwrap());
+        let tamanio_objeto_str =
+            cat_file::CatFile::from(&mut vec!["-s".to_string(), objeto.clone()], log)
+                .unwrap()
+                .ejecutar()
+                .unwrap();
         let tamanio_objeto = tamanio_objeto_str.trim().parse::<u32>().unwrap_or(0);
         println!("tamanio objeto: {}", tamanio_objeto);
-       // println!("tamano objeto: {}", tamanio_objeto);
+        // println!("tamano objeto: {}", tamanio_objeto);
         let tipo_objeto = cat_file::obtener_tipo_objeto_de(&objeto, dir)?;
 
         // codifica el tamanio del archivo descomprimido y su tipo en un tipo variable de longitud
         let nbyte = match tipo_objeto.as_str() {
-            "commit" => codificar_bytes(1, tamanio_objeto), //1
-            "tree" => codificar_bytes(2, tamanio_objeto),   // 2
-            "blob" => codificar_bytes(3, tamanio_objeto),   // 3
-            "tag" => codificar_bytes(4, tamanio_objeto),    // 4
+            "commit" => codificar_bytes(1, tamanio_objeto),    //1
+            "tree" => codificar_bytes(2, tamanio_objeto),      // 2
+            "blob" => codificar_bytes(3, tamanio_objeto),      // 3
+            "tag" => codificar_bytes(4, tamanio_objeto),       // 4
             "ofs_delta" => codificar_bytes(6, tamanio_objeto), // 6
             "ref_delta" => codificar_bytes(7, tamanio_objeto), // 7
             _ => {
                 return Err("Tipo de objeto invalido".to_string());
             }
         };
-        let obj = utilidades_de_compresion::obtener_contenido_comprimido_sin_header(objeto.clone())?;
+        let obj = obtener_contenido_comprimido_sin_header(objeto.clone())?;
         // println!("objeto comprimido: {:?}", String::from_utf8(obj));
         self.objetos.extend(nbyte);
         self.objetos.extend(obj);
@@ -60,13 +64,12 @@ impl Packfile {
         Ok(())
     }
 
-    
-    // fijarse en commit que algo se manda incompleto, creo 
+    // fijarse en commit que algo se manda incompleto, creo
     // funcion que recorrer el directorio y aniade los objetos al packfile junto a su indice correspondiente
     fn obtener_objetos_del_dir(&mut self, dir: &str) -> Result<(), ErrorDeComunicacion> {
         // esto porque es un clone, deberia pasarle los objetos que quiero
         let objetos = io::obtener_objetos_del_directorio(dir.to_string())?;
-        // --- 
+        // ---
         for objeto in objetos {
             let inicio = self.objetos.len() as u32; // obtengo el len previo a aniadir el objeto
             self.aniadir_objeto(objeto.clone(), dir).unwrap();
@@ -121,7 +124,6 @@ impl Packfile {
         expected_hash == actual_hash.as_slice()
     }
 
-
     pub fn obtener_pack_con_archivos(&mut self, objetos: Vec<String>, dir: &str) -> Vec<u8> {
         // let objetos = vec!["ef55aae678e3a636dc72d68f3b10f60b2ad2c306".to_string(), "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391".to_string(), ];
         // self.aniadir_objeto("ef55aae678e3a636dc72d68f3b10f60b2ad2c306".to_string(), "./.gir/objects/");
@@ -150,9 +152,9 @@ pub fn codificar_bytes(tipo: u8, numero: u32) -> Vec<u8> {
     let mut valor = numero;
     // si lo el tamanio del numero es mayor a 4 bits, entonces tengo que poner el bit mas significativo en 1
     let primer_byte: u8 = if valor >> 4 != 0 {
-        ((tipo & 0x07) << 4) as u8 | 0x80 | (numero & 0x0F) as u8
+        ((tipo & 0x07) << 4) | 0x80 | (numero & 0x0F) as u8
     } else {
-        ((tipo & 0x07) << 4) as u8 | (numero & 0x0F) as u8
+        ((tipo & 0x07) << 4) | (numero & 0x0F) as u8
     };
 
     resultado.push(primer_byte); // Establecer el bit más significativo a 1 y agregar los 4 bits finales
@@ -207,7 +209,6 @@ pub fn decodificar_bytes(bytes: &mut Vec<u8>) -> (u8, u32, u32) {
     }
     (tipo, numero_decodificado, bytes_leidos)
 }
-
 
 // tree ef55aae678e3a636dc72d68f3b10f60b2ad2c306
 // author JuaniFIUBA <jperezd@fi.uba.ar> 1698954872 -0300

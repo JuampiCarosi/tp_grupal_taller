@@ -1,22 +1,26 @@
-use crate::io::{escribir_bytes, escribir_referencia};
+
+use crate::tipos_de_dato::logger::{Logger};
 use crate::{
-    comunicacion::Comunicacion, io, packfile, tipos_de_dato::comandos::write_tree,
+    comunicacion::Comunicacion, io, tipos_de_dato::comandos::write_tree,
     tipos_de_dato::objetos::tree::Tree,
 };
 use std::io::Write;
 use std::path::PathBuf;
-use std::rc::Rc;
-use std::{char::decode_utf16, net::TcpStream};
+
+use std::sync::Arc;
+use std::{net::TcpStream};
 // use gir::tipos_de_dato::{comando::Comando, logger::Logger};
 
 //-------- ATENCION ----------
 // Si hay una ref que no apunta a nada porque esta vacia, rompe al hacer el split de refs.
 
-pub struct Clone;
+pub struct Clone {
+    logger: Arc<Logger>,
+}
 
 impl Clone {
-    pub fn new() -> Self {
-        Clone {}
+    pub fn from(logger: Arc<Logger>) -> Self {
+        Clone { logger }
     }
 
     pub fn ejecutar(&mut self) -> Result<String, String> {
@@ -38,7 +42,7 @@ impl Clone {
             .unwrap();
         let mut refs_recibidas = comunicacion.obtener_lineas().unwrap();
         // escribo las refs
-        let mut primera_ref = refs_recibidas.remove(0);
+        let primera_ref = refs_recibidas.remove(0);
         for referencia in &refs_recibidas {
             io::escribir_referencia(referencia, PathBuf::from("./.gir/"));
         }
@@ -50,7 +54,7 @@ impl Clone {
         //         escribir_bytes(dir, referencia_y_contenido[0]).unwrap();
         //     }
         // }
-        let capacidades = primera_ref.split("\0").collect::<Vec<&str>>()[1];
+        let capacidades = primera_ref.split('\0').collect::<Vec<&str>>()[1];
         let wants = comunicacion
             .obtener_wants_pkt(&refs_recibidas, capacidades.to_string())
             .unwrap();
@@ -88,6 +92,7 @@ impl Clone {
         let tree: Tree = Tree::from_hash(
             tree_hash,
             PathBuf::from(env!("CARGO_MANIFEST_DIR").to_string()),
+            self.logger.clone(),
         )
         .unwrap();
         match tree.escribir_en_directorio() {

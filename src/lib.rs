@@ -34,9 +34,15 @@ pub mod tipos_de_dato {
         pub mod write_tree;
     }
 }
+pub mod gui;
+
+pub mod utils {
+
+    pub mod compresion;
+    pub mod gir_config;
+    pub mod index;
+    pub mod path_buf;
+    pub mod strings;
+}
 pub mod receive_pack;
 pub mod upload_pack;
-pub mod utilidades_de_compresion;
-pub mod utilidades_index;
-pub mod utilidades_path_buf;
-pub mod utilidades_strings;

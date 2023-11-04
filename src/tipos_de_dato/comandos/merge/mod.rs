@@ -4,7 +4,7 @@ mod region;
 use region::Region;
 use std::{
     path::{self, Path, PathBuf},
-    rc::Rc,
+    sync::Arc,
 };
 
 use crate::{
@@ -16,8 +16,10 @@ use crate::{
         logger::Logger,
         objetos::{commit::CommitObj, tree::Tree},
     },
-    utilidades_de_compresion::descomprimir_objeto,
-    utilidades_index::{escribir_index, leer_index, ObjetoIndex},
+    utils::{
+        compresion::descomprimir_objeto_gir,
+        index::{escribir_index, leer_index, ObjetoIndex},
+    },
 };
 
 use self::estrategias_conflictos::{conflicto_len_3, conflicto_len_4};
@@ -30,7 +32,7 @@ use super::{
 };
 
 pub struct Merge {
-    pub logger: Rc<Logger>,
+    pub logger: Arc<Logger>,
     pub branch_actual: String,
     pub branch_a_mergear: String,
 }
@@ -52,7 +54,7 @@ type ConflictoAtomico = Vec<(DiffType, LadoConflicto)>;
 type DiffGrid = Vec<Vec<usize>>;
 
 impl Merge {
-    pub fn from(args: &mut Vec<String>, logger: Rc<Logger>) -> Result<Merge, String> {
+    pub fn from(args: &mut Vec<String>, logger: Arc<Logger>) -> Result<Merge, String> {
         if args.len() != 1 {
             return Err("Cantidad de argumentos invalida".to_string());
         }
@@ -65,11 +67,15 @@ impl Merge {
         })
     }
 
-    fn obtener_arbol_commit_actual(branch: String) -> Result<Tree, String> {
+    fn obtener_arbol_commit_actual(branch: String, logger: Arc<Logger>) -> Result<Tree, String> {
         let head_commit = io::leer_a_string(format!(".gir/refs/heads/{}", branch))?;
         let hash_tree_padre =
             conseguir_arbol_from_hash_commit(&head_commit, String::from(".gir/objects/"));
-        Ok(Tree::from_hash(hash_tree_padre, PathBuf::from("."))?)
+        Tree::from_hash(
+            hash_tree_padre,
+            PathBuf::from("."),
+            logger.clone(),
+        )
     }
 
     fn obtener_commit_base_entre_dos_branches(&self) -> Result<String, String> {
@@ -161,7 +167,7 @@ impl Merge {
         for i in 0..resultados.len() {
             if let DiffType::Added(_) = resultados[i].1 {
                 let cantidad_anteriores_solo_con_remove =
-                    Self::cantidad_de_anteriores_solo_con_remove(&resultados, i);
+                    Self::cantidad_de_anteriores_solo_con_remove(resultados, i);
                 resultados[i].0 -= cantidad_anteriores_solo_con_remove;
             }
         }
@@ -230,7 +236,7 @@ impl Merge {
         println!("{:?}", diff_a_mergear);
 
         for diff in diff_actual {
-            if diff.0 - 1 >= posibles_conflictos.len() {
+            if diff.0 > posibles_conflictos.len() {
                 posibles_conflictos.push(Vec::new());
             }
             posibles_conflictos[diff.0 - 1].push((diff.1, LadoConflicto::Head));
@@ -254,17 +260,15 @@ impl Merge {
                     posible_conflicto,
                     lineas_archivo_base.iter().nth(i).unwrap_or(&""),
                 ));
+            } else if posible_conflicto.len() == 2 {
+                contenido_por_regiones.push(resolver_merge_len_2(
+                    posible_conflicto,
+                    lineas_archivo_base[i],
+                ));
             } else {
-                if posible_conflicto.len() == 2 {
-                    contenido_por_regiones.push(resolver_merge_len_2(
-                        posible_conflicto,
-                        lineas_archivo_base[i],
-                    ));
-                } else {
-                    for (diff, _) in posible_conflicto {
-                        if let DiffType::Added(linea) = diff {
-                            contenido_por_regiones.push(Region::Normal(linea.clone()))
-                        }
+                for (diff, _) in posible_conflicto {
+                    if let DiffType::Added(linea) = diff {
+                        contenido_por_regiones.push(Region::Normal(linea.clone()))
                     }
                 }
             }
@@ -287,11 +291,12 @@ impl Merge {
             &commit_base,
             String::from(".gir/objects/"),
         );
-        let tree_base = Tree::from_hash(hash_tree_base, PathBuf::from("."))?;
+        let tree_base = Tree::from_hash(hash_tree_base, PathBuf::from("."), self.logger.clone())?;
 
-        let tree_branch_actual = Self::obtener_arbol_commit_actual(self.branch_actual.clone())?;
+        let tree_branch_actual =
+            Self::obtener_arbol_commit_actual(self.branch_actual.clone(), self.logger.clone())?;
         let tree_branch_a_mergear =
-            Self::obtener_arbol_commit_actual(self.branch_a_mergear.clone())?;
+            Self::obtener_arbol_commit_actual(self.branch_a_mergear.clone(), self.logger.clone())?;
 
         let nodos_hoja_base = tree_base.obtener_objetos_hoja();
         let nodos_hoja_branch_actual = tree_branch_actual.obtener_objetos_hoja();
@@ -339,8 +344,7 @@ impl Merge {
                 objeto_actual.obtener_hash(),
             )?;
 
-            let contenido_base =
-                descomprimir_objeto(objeto_base.obtener_hash(), String::from(".gir/objects/"))?;
+            let contenido_base = descomprimir_objeto_gir(objeto_base.obtener_hash())?;
 
             let (resultado, hubo_conflictos) =
                 Self::mergear_archivos(diff_actual, diff_a_mergear, contenido_base);
@@ -363,7 +367,7 @@ impl Merge {
         self.escribir_merge_head()?;
         self.escribir_mensaje_merge()?;
 
-        if paths_con_conflictos.len() > 0 {
+        if !paths_con_conflictos.is_empty() {
             Ok(format!(
                 "Se encontraron conflictos en los siguientes archivos: \n{:#?}",
                 paths_con_conflictos
@@ -387,18 +391,18 @@ impl Merge {
         )?;
 
         let tree_branch_a_mergear =
-            Self::obtener_arbol_commit_actual(self.branch_a_mergear.clone())?;
+            Self::obtener_arbol_commit_actual(self.branch_a_mergear.clone(), self.logger.clone())?;
 
         tree_branch_a_mergear.escribir_en_directorio()?;
         Ok("Merge con fast-forward completado".to_string())
     }
 
-    pub fn hay_archivos_sin_mergear() -> Result<bool, String> {
+    pub fn hay_archivos_sin_mergear(logger: Arc<Logger>) -> Result<bool, String> {
         let ruta_index = Path::new(".gir/index");
         if !ruta_index.exists() {
             return Ok(false);
         }
-        let contenido_index = leer_index()?;
+        let contenido_index = leer_index(logger.clone())?;
         if contenido_index.is_empty() {
             return Ok(false);
         }
