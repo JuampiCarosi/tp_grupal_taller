@@ -110,8 +110,8 @@ pub fn descomprimir_contenido_u8(contenido: &[u8]) -> Result<Vec<u8>, String> {
     Ok(contenido_descomprimido)
 }
 
-pub fn obtener_contenido_comprimido_sin_header(hash: String) -> Result<Vec<u8>, String> {
-    let ruta_objeto = format!(".gir/objects/{}/{}", &hash[..2], &hash[2..]);
+pub fn obtener_contenido_comprimido_sin_header_de(hash: String, dir: &str) -> Result<Vec<u8>, String> {
+    let ruta_objeto = format!("{}{}/{}", dir, &hash[..2], &hash[2..]);
     let contenido_leido = io::leer_bytes(ruta_objeto)?;
     // println!("contenido_leido: {:?}", String::from_utf8_lossy(contenido_leido.as_slice()));
     let cont_descomprimido =

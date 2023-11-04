@@ -106,7 +106,7 @@ pub fn obtener_objetos_con_nombre_carpeta(
 
 pub fn obtener_refs_con_largo_hex(
     refs_path: PathBuf,
-    dir: String,
+    dir: &str,
 ) -> Result<Vec<String>, ErrorDeComunicacion> {
     let mut refs: Vec<String> = Vec::new();
     if !refs_path.exists() {
@@ -127,7 +127,7 @@ pub fn obtener_refs_con_largo_hex(
                     // let mut path = archivo.path().to_string_lossy().split("./.gir/").into_iter().next().unwrap().to_string();
                     refs.push(obtener_linea_con_largo_hex(&obtener_referencia(
                         &mut path,
-                        dir.clone(),
+                        dir,
                     )?));
                 }
                 Err(error) => {
@@ -154,7 +154,7 @@ pub fn obtener_refs(refs_path: PathBuf, dir: String) -> Result<Vec<String>, Erro
                 Ok(archivo) => {
                     let mut path = archivo.path();
                     // let mut path = archivo.path().to_string_lossy().split("./.gir/").into_iter().next().unwrap().to_string();
-                    refs.push(obtener_referencia(&mut path, dir.clone())?);
+                    refs.push(obtener_referencia(&mut path, &dir)?);
                 }
                 Err(error) => {
                     eprintln!("Error leyendo directorio: {}", error);
@@ -183,7 +183,7 @@ fn leer_archivo(path: &mut Path) -> Result<String, ErrorDeComunicacion> {
     Ok(contenido.trim().to_string())
 }
 
-fn obtener_referencia(path: &mut PathBuf, prefijo: String) -> Result<String, ErrorDeComunicacion> {
+fn obtener_referencia(path: &mut PathBuf, prefijo: &str) -> Result<String, ErrorDeComunicacion> {
     let contenido = leer_archivo(path)?;
     // esto esta hardcodeado, hay que cambiar la forma de sacarle el prefijo
     let directorio_sin_prefijo = path.strip_prefix(prefijo).unwrap().to_path_buf();

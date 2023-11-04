@@ -29,18 +29,21 @@ impl Clone {
         // si es un push, tengo que calcular los commits de diferencia entre el cliente y el server, y mandarlos como packfiles.
         // hay una funcion que hace el calculo 
         // obtener_listas_de_commits
-        let request_data = "git-upload-pack /home/juani/23C2-Cangrejos-Tacticos/srv/gir\0host=example.com\0\0version=1\0"; //en donde dice /.git/ va la dir del repo
+        let request_data = "git-upload-pack /gir/\0host=example.com\0\0version=1\0"; //en donde dice /gir/ va la dir del repo
         let request_data_con_largo_hex = io::obtener_linea_con_largo_hex(request_data);
 
         client.write_all(request_data_con_largo_hex.as_bytes()).unwrap();
+
+        let version = comunicacion.aceptar_pedido().unwrap(); // leo la version (cambiar el nombre a esto)
+
         let mut refs_recibidas = comunicacion.obtener_lineas().unwrap();
-        println!("Refs recibidas: {:?}", refs_recibidas);
+
+        println!("refs_recibidas: {:?}", refs_recibidas);
         // escribo las refs
-        let version = refs_recibidas.remove(0);
         let primera_ref = refs_recibidas.remove(0);
         // escribir esto al final
         for referencia in &refs_recibidas { 
-            io::escribir_referencia(referencia, PathBuf::from("./.gir/"));
+            io::escribir_referencia(referencia, PathBuf::from("./.gir/")); // path al repo
         }
         //  for referencia in &refs_recibidas { 
         //     let referencia_y_contenido = referencia.split_whitespace().collect::<Vec<&str>>();
@@ -53,8 +56,9 @@ impl Clone {
         let capacidades = primera_ref.split("\0").collect::<Vec<&str>>()[1];
         // println!("capacidades: {:?}", capacidades);
         let wants = comunicacion.obtener_wants_pkt(&refs_recibidas, "".to_string()).unwrap();
+        println!("Wants: {:?}", wants);
         comunicacion.responder(wants.clone()).unwrap();
-        
+            
         // Esto porque es un CLONE
         comunicacion.responder(vec![io::obtener_linea_con_largo_hex("done\n")]).unwrap();
         let acks_nak = comunicacion.obtener_lineas().unwrap();

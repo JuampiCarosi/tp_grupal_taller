@@ -47,9 +47,12 @@ impl Comunicacion {
             self.flujo.read(&mut data)?;
             let linea = str::from_utf8(&data)?;
             lineas.push(linea.to_string());
-            if linea.contains("NAK") || linea.contains("done") || linea.contains("ACK") {
+
+            // el problema de esto es que cuando se mandan las refs, se mandan cosas como no_done, o multi_ack
+            if linea.contains("NAK") || (linea.contains("done") && !linea.contains("ref")) || linea.contains("ACK") {
                 break;
             }
+
         }
         println!("Received: {:?}", lineas);
         Ok(lineas)
@@ -63,9 +66,19 @@ impl Comunicacion {
         for linea in &lineas {
             self.flujo.write_all(linea.as_bytes())?;
         }
+        if lineas[0].contains("ref") {
+            self.flujo.write_all(String::from("0000").as_bytes())?;
+            return Ok(());
+        }
         if !lineas[0].contains(&"NAK".to_string()) && !lineas[0].contains(&"ACK".to_string()) && !lineas[0].contains(&"done".to_string()) {
             self.flujo.write_all(String::from("0000").as_bytes())?;
         }
+        Ok(())
+    }
+
+
+    pub fn enviar_linea(&mut self, linea: String) -> Result<(), ErrorDeComunicacion> {
+        self.flujo.write_all(linea.as_bytes())?;
         Ok(())
     }
 

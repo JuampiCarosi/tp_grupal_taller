@@ -25,20 +25,18 @@ impl Packfile {
 
     fn  aniadir_objeto(&mut self, objeto: String, dir: &str) -> Result<(), String> {
         // let logger = Rc::new(Logger::new(PathBuf::from("log.txt"))?);
-        println!("Aniadiendo objeto: {}", objeto);
-        println!("la dir que llega: {}", dir);
+        // println!("Aniadiendo objeto: {}", objeto);
+        // println!("la dir que llega: {}", dir);
         // DESHARCODEAR EL ./.GIR
         let ruta_objeto = format!("{}{}/{}", dir, &objeto[..2], &objeto[2..]);
-        println!("ruta objeto: {}", ruta_objeto);
+        // println!("ruta objeto: {}", ruta_objeto);
         let objeto_comprimido = io::leer_bytes(&ruta_objeto).unwrap();
-        // let tamanio_sin_split = utilidades_de_compresion::descomprimir_objeto(&objeto_comprimido, "./gir/objects/".to_string())?;
         let log = Rc::new(Logger::new(PathBuf::from("log.txt")).unwrap());
+        // en este catfile hay cosas hardcodeadas que hay que cambiar :{
         let tamanio_objeto_str = cat_file::CatFile::from(&mut vec!["-s".to_string(), objeto.clone()], log).unwrap().ejecutar().unwrap();
         let tamanio_objeto = tamanio_objeto_str.trim().parse::<u32>().unwrap_or(0);
-        // println!("tamanio objeto: {}", tamanio_objeto);
-       // println!("tamano objeto: {}", tamanio_objeto);
-        let tipo_objeto = cat_file::obtener_tipo_objeto_de(&objeto, dir)?;
-
+       
+        let tipo_objeto = cat_file::obtener_tipo_objeto_de(&objeto, &dir)?;
         // codifica el tamanio del archivo descomprimido y su tipo en un tipo variable de longitud
         let nbyte = match tipo_objeto.as_str() {
             "commit" => codificar_bytes(1, tamanio_objeto), //1
@@ -51,7 +49,7 @@ impl Packfile {
                 return Err("Tipo de objeto invalido".to_string());
             }
         };
-        let obj = utilidades_de_compresion::obtener_contenido_comprimido_sin_header(objeto.clone())?;
+        let obj = utilidades_de_compresion::obtener_contenido_comprimido_sin_header_de(objeto.clone(), dir)?;
         // println!("objeto comprimido: {:?}", String::from_utf8(obj));
         self.objetos.extend(nbyte);
         self.objetos.extend(obj);
@@ -65,6 +63,7 @@ impl Packfile {
     // funcion que recorrer el directorio y aniade los objetos al packfile junto a su indice correspondiente
     fn obtener_objetos_del_dir(&mut self, dir: &str) -> Result<(), ErrorDeComunicacion> {
         // esto porque es un clone, deberia pasarle los objetos que quiero
+        println!("Obteniendo objetos de la dir: {}", dir);
         let objetos = io::obtener_objetos_del_directorio(dir.to_string())?;
         // --- 
         for objeto in objetos {

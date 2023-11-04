@@ -29,7 +29,7 @@ fn obtener_contenido_objeto_de(hash: String, dir: &str) -> Result<(String, Strin
 
 fn obtener_contenido_objeto(hash: String) -> Result<(String, String), String> {
     // sacar el hardcode de esto
-    let objeto = descomprimir_objeto(hash, String::from(".gir/objects/"))?;
+    let objeto = descomprimir_objeto(hash, String::from("./srv/gir/objects/"))?;
     match objeto.split_once('\0') {
         Some((header, contenido)) => Ok((header.to_string(), contenido.to_string())),
         None => Err("Objeto invalido".to_string()),
@@ -111,6 +111,7 @@ impl CatFile {
         self.logger.log(mensaje.clone());
         Ok(mensaje)
     }
+    
 }
 
 #[cfg(test)]
