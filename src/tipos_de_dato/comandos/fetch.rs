@@ -430,6 +430,17 @@ mod test {
 
     #[test]
     fn test02_la_fase_de_negociacion_funciona(){
+        let mock = MockTcpStream {
+            lectura_data: Vec::new(),
+            escritura_data: Vec::new(),
+        };
+
+        let comunicacion = Comunicacion::new(mock);
+        let logger = Rc::new(Logger::new(PathBuf::from(".log.txt")).unwrap());
+        let capacidades_servidor = vec!["multi_ack".to_string(), "thin-pack".to_string(), "side-band".to_string(), "side-band-64k".to_string(), "ofs-delta".to_string(), "shallow".to_string(), "no-progress".to_string(),  "include-tag".to_string()];
+        let commits_y_ramas = vec![("1d3fcd5ced445d1abc402225c0b8a1299641f497".to_string(), PathBuf::from("refs/heads/integration")),("7217a7c7e582c46cec22a130adf4b9d7d950fba0".to_string(), PathBuf::from("refs/heads/master"))];
         
+        Fetch::new_testing(logger, comunicacion).unwrap().fase_de_negociacion(capacidades_servidor, &commits_y_ramas).unwrap()
+
     }
 }
