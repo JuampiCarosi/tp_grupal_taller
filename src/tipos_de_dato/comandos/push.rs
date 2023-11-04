@@ -2,6 +2,7 @@ use crate::io::leer_a_string;
 use crate::packfile::Packfile;
 use crate::tipos_de_dato::comandos::log::Log;
 use crate::tipos_de_dato::comandos::write_tree;
+use crate::tipos_de_dato::objetos::commit::CommitObj;
 use crate::tipos_de_dato::objetos::tree::Tree;
 use crate::utilidades_de_compresion;
 use crate::{comunicacion::Comunicacion, io};
@@ -123,42 +124,41 @@ impl Push {
 fn obtener_commits_y_objetos_asociados(
     referencia: &String,
     commit_limite: &String,
-) -> Result<HashSet<String>, String> {
+) -> Result<Vec<String>, String> {
     println!(
         "Entro para la referencia {} y el commit limite: {}",
         referencia, commit_limite
     );
-    let ruta = format!(".gir/{}", referencia);
-    let mut ultimo_commit = leer_a_string(Path::new(&ruta))?;
-    if ultimo_commit.is_empty() {
-        return Ok(HashSet::new());
-    }
-    let mut historial_commits: HashSet<String> = HashSet::new();
 
-    loop {
-        // obtengo el hash del tree que guarda el commit, le pido los objetos y los guardo en el set
-        let hash_tree = write_tree::conseguir_arbol_from_hash_commit(
-            &ultimo_commit,
-            "./.gir/objects/".to_string(),
-        );
-        println!("Consiguiendo los objetos para el hash tree: {}", hash_tree);
-        let tree = Tree::from_hash(hash_tree.clone(), PathBuf::from("./.gir/objects/"))?;
-        historial_commits.insert(hash_tree);
-        historial_commits.extend(tree.objetos.iter().map(|objeto| objeto.obtener_hash()));
-        // obtengo el padre del commit
-        let contenido = utilidades_de_compresion::descomprimir_objeto(
-            ultimo_commit.clone(),
-            String::from("./.gir/objects/"),
-        )?;
-        let siguiente_padre = Log::conseguir_padre_desde_contenido_commit(&contenido);
-        historial_commits.insert(ultimo_commit.clone());
-        if siguiente_padre.is_empty() || siguiente_padre == commit_limite.to_string() {
+    let ruta = format!(".gir/{}", referencia);
+    let ultimo_commit = leer_a_string(Path::new(&ruta))?;
+    if ultimo_commit.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let mut commits: HashMap<String, CommitObj> = HashMap::new();
+    let mut commits_a_revisar: Vec<CommitObj> = Vec::new();
+    commits_a_revisar.push(CommitObj::from_hash(ultimo_commit)?);
+
+    while !commits_a_revisar.is_empty() {
+        let commit = commits_a_revisar.pop().unwrap();
+        if commits.contains_key(&commit.hash) || commit.hash == *commit_limite {
             break;
         }
-        ultimo_commit = siguiente_padre.to_string();
-        println!("Siguiente padre: {}", siguiente_padre);
+        commits.insert(commit.hash.clone(), commit.clone());
+        for padre in commit.padres {
+            let commit_padre = CommitObj::from_hash(padre)?;
+            commits_a_revisar.push(commit_padre);
+        }
     }
-    Ok(historial_commits)
+
+    let mut commits_vec = Vec::from_iter(commits.values().cloned());
+    commits_vec.sort_by_key(|commit| commit.date.tiempo.clone());
+
+    Ok(commits_vec
+        .iter()
+        .map(|commit| commit.hash.clone())
+        .collect())
 }
 
 fn obtener_refs_de(dir: PathBuf, prefijo: String) -> Vec<String> {

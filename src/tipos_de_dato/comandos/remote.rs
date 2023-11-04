@@ -1,11 +1,8 @@
-use std::{collections::HashMap, rc::Rc};
+use std::rc::Rc;
 
-use crate::{
-    io::leer_a_string,
-    tipos_de_dato::{
-        config::{Config, RemoteInfo},
-        logger::Logger,
-    },
+use crate::tipos_de_dato::{
+    config::{Config, RemoteInfo},
+    logger::Logger,
 };
 
 enum ComandoRemote {

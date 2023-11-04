@@ -80,6 +80,10 @@ impl Commit {
         if !hash_padre_commit.is_empty() {
             contenido_commit.push_str(&format!("parent {}\n", hash_padre_commit));
         }
+        if Merge::hay_merge_en_curso()? {
+            let padre_mergeado = leer_a_string(path::Path::new(".gir/MERGE_HEAD"))?;
+            contenido_commit.push_str(&format!("parent {}\n", padre_mergeado));
+        }
         let (nombre, mail) = Self::conseguir_nombre_y_mail_del_config()?;
         let linea_autor = format!("{} <{}>", nombre, mail);
         let timestamp = armar_timestamp_commit()?;
@@ -230,6 +234,7 @@ impl Commit {
                 return Err("No se pudo ejecutar el commit".to_string());
             }
         };
+        Merge::limpiar_merge_post_commit()?;
         Ok("Commit creado".to_string())
     }
 }

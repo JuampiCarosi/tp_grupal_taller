@@ -3,21 +3,20 @@ mod region;
 
 use region::Region;
 use std::{
-    collections::HashMap,
     path::{self, Path, PathBuf},
     rc::Rc,
 };
 
 use crate::{
-    io::{self, escribir_bytes, leer_a_string},
+    io::{self, escribir_bytes, leer_a_string, rm_directorio},
     tipos_de_dato::{
         comandos::merge::{
             estrategias_conflictos::resolver_merge_len_2, region::unificar_regiones,
         },
         logger::Logger,
-        objetos::tree::Tree,
+        objetos::{commit::CommitObj, tree::Tree},
     },
-    utilidades_de_compresion::{self, descomprimir_objeto},
+    utilidades_de_compresion::descomprimir_objeto,
     utilidades_index::{escribir_index, leer_index, ObjetoIndex},
 };
 
@@ -73,37 +72,20 @@ impl Merge {
         Ok(Tree::from_hash(hash_tree_padre, PathBuf::from("."))?)
     }
 
-    fn obtener_listas_de_commits(branch: &String) -> Result<Vec<String>, String> {
-        let ruta = format!(".gir/refs/heads/{}", branch);
-        let mut ultimo_commit = leer_a_string(path::Path::new(&ruta))?;
-
-        if ultimo_commit.is_empty() {
-            return Ok(Vec::new());
-        }
-        let mut historial_commits: Vec<String> = Vec::new();
-        loop {
-            let contenido = utilidades_de_compresion::descomprimir_objeto(
-                ultimo_commit.clone(),
-                String::from(".gir/objects/"),
-            )?;
-            let siguiente_padre = Log::conseguir_padre_desde_contenido_commit(&contenido);
-            historial_commits.push(ultimo_commit.clone());
-            if siguiente_padre.is_empty() {
-                break;
-            }
-            ultimo_commit = siguiente_padre.to_string();
-        }
-        Ok(historial_commits)
-    }
-
     fn obtener_commit_base_entre_dos_branches(&self) -> Result<String, String> {
-        let commits_branch_actual = Self::obtener_listas_de_commits(&self.branch_actual)?;
-        let commits_branch_a_mergear = Self::obtener_listas_de_commits(&self.branch_a_mergear)?;
+        let hash_commit_actual = Commit::obtener_hash_del_padre_del_commit()?;
+        let hash_commit_a_mergear = Self::obtener_commit_de_branch(&self.branch_a_mergear)?;
+
+        let commit_obj_actual = CommitObj::from_hash(hash_commit_actual)?;
+        let commit_obj_a_mergear = CommitObj::from_hash(hash_commit_a_mergear)?;
+
+        let commits_branch_actual = Log::obtener_listas_de_commits(commit_obj_actual)?;
+        let commits_branch_a_mergear = Log::obtener_listas_de_commits(commit_obj_a_mergear)?;
 
         for commit_actual in commits_branch_actual {
             for commit_branch_merge in commits_branch_a_mergear.clone() {
-                if commit_actual == commit_branch_merge {
-                    return Ok(commit_actual);
+                if commit_actual.hash == commit_branch_merge.hash {
+                    return Ok(commit_actual.hash);
                 }
             }
         }
@@ -158,12 +140,12 @@ impl Merge {
                 linea = resultados[i].0;
                 tiene_solo_remove = true;
             }
-            if let DiffType::Removed(_) = resultados[i].1 {
-                i -= 1;
-                continue;
-            } else {
-                tiene_solo_remove = false;
-                i -= 1;
+            match resultados[i].1 {
+                DiffType::Removed(_) => i -= 1,
+                _ => {
+                    tiene_solo_remove = false;
+                    i -= 1;
+                }
             }
         }
         if tiene_solo_remove {
@@ -174,6 +156,7 @@ impl Merge {
 
     /// los resultados pueden venir con lineas donde solo hay removes, por lo que hay que mover el usize los add
     /// en los casos donde la linea anterior solo tiene removes
+    /// TODO: hacer mas eficiente con PD
     fn reindexar_resultados(resultados: &mut Vec<(usize, DiffType)>) {
         for i in 0..resultados.len() {
             if let DiffType::Added(_) = resultados[i].1 {
@@ -299,6 +282,7 @@ impl Merge {
     }
 
     fn automerge(&self, commit_base: String) -> Result<String, String> {
+        println!("Realizando automerge");
         let hash_tree_base = write_tree::conseguir_arbol_from_hash_commit(
             &commit_base,
             String::from(".gir/objects/"),
@@ -316,45 +300,58 @@ impl Merge {
         let mut objetos_index: Vec<ObjetoIndex> = Vec::new();
         let mut paths_con_conflictos: Vec<String> = Vec::new();
 
-        for objeto in nodos_hoja_base {
-            let nombre_objeto = objeto.obtener_path();
-            let objeto_a_mergear = nodos_hoja_branch_a_mergear
+        for objeto_base in nodos_hoja_base {
+            let nombre_objeto = objeto_base.obtener_path();
+            let objeto_a_mergear_encontrado = nodos_hoja_branch_a_mergear
                 .iter()
                 .find(|&nodo| nodo.obtener_path() == nombre_objeto);
-            if objeto_a_mergear.is_none() {
-                continue;
-            }
-            let objeto_a_mergear = objeto_a_mergear.unwrap();
+
+            let objeto_actual_encontrado = nodos_hoja_branch_actual
+                .iter()
+                .find(|&nodo| nodo.obtener_path() == nombre_objeto);
+
+            let (objeto_a_mergear, objeto_actual) =
+                match (objeto_a_mergear_encontrado, objeto_actual_encontrado) {
+                    (Some(objeto_a_mergear), Some(objeto_actual)) => {
+                        (objeto_a_mergear, objeto_actual)
+                    }
+                    (None, Some(objeto_actual)) => {
+                        let objeto = ObjetoIndex {
+                            objeto: objeto_actual.clone(),
+                            es_eliminado: false,
+                            merge: false,
+                        };
+
+                        objetos_index.push(objeto);
+                        continue;
+                    }
+
+                    _ => continue,
+                };
+
             let diff_a_mergear = Self::obtener_diffs_entre_dos_objetos(
-                objeto.obtener_hash(),
+                objeto_base.obtener_hash(),
                 objeto_a_mergear.obtener_hash(),
             )?;
 
-            let objeto_actual = nodos_hoja_branch_actual
-                .iter()
-                .find(|&nodo| nodo.obtener_path() == nombre_objeto);
-            if objeto_actual.is_none() {
-                continue;
-            }
-            let objeto_actual = objeto_actual.unwrap();
             let diff_actual = Self::obtener_diffs_entre_dos_objetos(
-                objeto.obtener_hash(),
+                objeto_base.obtener_hash(),
                 objeto_actual.obtener_hash(),
             )?;
 
             let contenido_base =
-                descomprimir_objeto(objeto.obtener_hash(), String::from(".gir/objects/"))?;
+                descomprimir_objeto(objeto_base.obtener_hash(), String::from(".gir/objects/"))?;
 
             let (resultado, hubo_conflictos) =
                 Self::mergear_archivos(diff_actual, diff_a_mergear, contenido_base);
 
-            escribir_bytes(objeto.obtener_path(), resultado)?;
+            escribir_bytes(objeto_base.obtener_path(), resultado)?;
             if hubo_conflictos {
-                paths_con_conflictos.push(format!("{}\n", objeto.obtener_path().display()));
+                paths_con_conflictos.push(format!("{}\n", objeto_base.obtener_path().display()));
             }
 
             let objeto = ObjetoIndex {
-                objeto,
+                objeto: objeto_base,
                 es_eliminado: false,
                 merge: hubo_conflictos,
             };
@@ -393,12 +390,6 @@ impl Merge {
             Self::obtener_arbol_commit_actual(self.branch_a_mergear.clone())?;
 
         tree_branch_a_mergear.escribir_en_directorio()?;
-
-        self.escribir_merge_head()?;
-        self.escribir_mensaje_merge()?;
-        let commit = Commit::from_merge(self.logger.clone())?;
-        commit.ejecutar()?;
-
         Ok("Merge con fast-forward completado".to_string())
     }
 
@@ -415,12 +406,14 @@ impl Merge {
     }
 
     pub fn hay_merge_en_curso() -> Result<bool, String> {
-        let ruta_merge = Path::new(".gir/MERGE_HEAD");
-        if ruta_merge.exists() {
-            Ok(true)
-        } else {
-            Ok(false)
+        let path = Path::new(".gir/MERGE_HEAD");
+        if !path.exists() {
+            return Ok(false);
         }
+
+        let merge = leer_a_string(".gir/MERGE_HEAD")?;
+
+        Ok(!merge.is_empty())
     }
 
     pub fn obtener_commit_de_branch(branch: &String) -> Result<String, String> {
@@ -445,6 +438,14 @@ impl Merge {
                 self.branch_a_mergear, self.branch_actual
             ),
         )?;
+        Ok(())
+    }
+
+    pub fn limpiar_merge_post_commit() -> Result<(), String> {
+        let ruta_merge = Path::new(".gir/MERGE_HEAD");
+        if ruta_merge.exists() {
+            rm_directorio(ruta_merge)?;
+        }
         Ok(())
     }
 
