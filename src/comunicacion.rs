@@ -49,7 +49,7 @@ impl Comunicacion {
             lineas.push(linea.to_string());
 
             // el problema de esto es que cuando se mandan las refs, se mandan cosas como no_done, o multi_ack
-            if linea.contains("NAK") || (linea.contains("done") && !linea.contains("ref")) || linea.contains("ACK") {
+            if linea.contains("NAK") || (linea.contains("done") && !linea.contains("ref")) {
                 break;
             }
 

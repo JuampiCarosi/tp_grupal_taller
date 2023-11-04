@@ -336,7 +336,7 @@ where
 pub fn obtener_archivos_faltantes(nombres_archivos: Vec<String>, dir: String) -> Vec<String> {
     // DESHARDCODEAR EL NOMBRE DEL DIRECTORIO (.gir)
     let objetcts_contained =
-        obtener_objetos_del_directorio(dir.clone() + "/.gir/objects/").unwrap();
+        obtener_objetos_del_directorio(dir.clone() + "objects/").unwrap();
     // println!("objetcts_contained: {:?}", objetcts_contained);
     // println!("Nombres: {:?}", nombres_archivos);
     let mut archivos_faltantes: Vec<String> = Vec::new();
@@ -352,7 +352,7 @@ pub fn obtener_archivos_faltantes(nombres_archivos: Vec<String>, dir: String) ->
 pub fn obtener_ack(nombres_archivos: Vec<String>, dir: String) -> Vec<String> {
     let mut ack = Vec::new();
     for nombre in nombres_archivos {
-        let dir_archivo = format!("{}/{}/{}", dir.clone(), &nombre[..2], &nombre[2..]);
+        let dir_archivo = format!("{}{}/{}", dir.clone(), &nombre[..2], &nombre[2..]);
         if PathBuf::from(dir_archivo.clone()).exists() {
             ack.push(obtener_linea_con_largo_hex(
                 ("ACK".to_string() + &nombre + &"\n".to_string()).as_str(),

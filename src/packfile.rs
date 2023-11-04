@@ -34,7 +34,6 @@ impl Packfile {
         let log = Rc::new(Logger::new(PathBuf::from("log.txt")).unwrap());
         // en este catfile hay cosas hardcodeadas que hay que cambiar :{
         let tamanio_objeto_str = cat_file::CatFile::from(&mut vec!["-s".to_string(), objeto.clone()], log).unwrap().ejecutar_de(dir).unwrap();
-        println!("LLegue");
 
         let tamanio_objeto = tamanio_objeto_str.trim().parse::<u32>().unwrap_or(0);
        
@@ -133,7 +132,6 @@ impl Packfile {
         packfile.extend(2u32.to_be_bytes());
         packfile.extend(&self.cant_objetos.to_be_bytes());
         packfile.extend(&self.objetos);
-        println!("cant objetos: {}", self.cant_objetos);
         let mut hasher = Sha1::new();
         hasher.update(&packfile);
         let hash = hasher.finalize();
