@@ -447,7 +447,7 @@ mod test {
     }
 
     #[test]
-    fn test03_se_envia_correctamente_los_get(){
+    fn test03_se_envia_correctamente_los_want(){
         let mut mock = MockTcpStream {
             lectura_data: Vec::new(),
             escritura_data: Vec::new(),
@@ -467,6 +467,24 @@ mod test {
         assert_eq!(contenido_esperado_enviar_pedido.as_bytes(), mock.escritura_data.as_slice())
     }
 
+    #[test]
+    fn test04_se_envia_correctamente_los_have(){
+        let mut mock = MockTcpStream {
+            lectura_data: Vec::new(),
+            escritura_data: Vec::new(),
+        };
+
+        let contenido = vec!("7e47fe2bd8d01d481f44d7af0531bd93d3b21c01".to_string(), "74730d410fcb6603ace96f1dc55ea6196122532d".to_string());
+
+        Comunicacion::new(&mut mock).enviar_lo_que_tengo_al_servidor_pkt(&contenido).unwrap();
+        
+        let contenido_esperado_enviar_lo_que_tengo = "\
+        0032have 7e47fe2bd8d01d481f44d7af0531bd93d3b21c01\n\
+        0032have 74730d410fcb6603ace96f1dc55ea6196122532d\n\
+        0000";
+
+        assert_eq!(contenido_esperado_enviar_lo_que_tengo.as_bytes(), mock.escritura_data.as_slice())
+    }
 
 
 }
