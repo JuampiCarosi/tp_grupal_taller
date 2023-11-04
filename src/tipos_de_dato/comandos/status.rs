@@ -27,7 +27,8 @@ pub fn obtener_arbol_del_commit_head() -> Option<Tree> {
     if padre_commit == "" {
         None
     } else {
-        let hash_arbol_commit = conseguir_arbol_from_hash_commit(padre_commit);
+        let hash_arbol_commit =
+            conseguir_arbol_from_hash_commit(&padre_commit, String::from(".gir/objects/"));
         let tree = Tree::from_hash(hash_arbol_commit, PathBuf::from("./")).unwrap();
         Some(tree)
     }

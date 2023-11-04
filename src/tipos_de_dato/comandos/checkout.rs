@@ -136,7 +136,8 @@ impl Checkout {
         let ref_actual = io::leer_a_string(PATH_HEAD)?;
         let rama_actual = self.conseguir_rama_actual(ref_actual)?;
         let head_commit = io::leer_a_string(format!(".gir/refs/heads/{}", rama_actual))?;
-        let hash_tree_padre = conseguir_arbol_from_hash_commit(head_commit);
+        let hash_tree_padre =
+            conseguir_arbol_from_hash_commit(&head_commit, ".gir/objetcs".to_string());
         Ok(Tree::from_hash(hash_tree_padre, PathBuf::from("."))?)
     }
 

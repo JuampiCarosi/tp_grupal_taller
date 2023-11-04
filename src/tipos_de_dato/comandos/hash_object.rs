@@ -51,16 +51,16 @@ impl HashObject {
         Ok(contenido_total)
     }
 
-    fn hashear_contenido_objeto(&self, contenido: &str) -> String {
+    pub fn hashear_contenido_objeto(contenido: &str) -> String {
         let mut hasher = Sha1::new();
         hasher.update(contenido);
         let hash = hasher.finalize();
         format!("{:x}", hash)
-    }
+    }  
 
     pub fn ejecutar(&self) -> Result<String, String> {
         let contenido = self.construir_contenido()?;
-        let hash = self.hashear_contenido_objeto(&contenido);
+        let hash = Self::hashear_contenido_objeto(&contenido);
 
         if self.escribir {
             let ruta = format!(".gir/objects/{}/{}", &hash[..2], &hash[2..]);
@@ -74,6 +74,8 @@ impl HashObject {
         Ok(hash)
     }
 }
+
+
 
 #[cfg(test)]
 mod test {

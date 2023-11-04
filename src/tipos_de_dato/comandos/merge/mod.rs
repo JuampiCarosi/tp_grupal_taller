@@ -68,7 +68,8 @@ impl Merge {
 
     fn obtener_arbol_commit_actual(branch: String) -> Result<Tree, String> {
         let head_commit = io::leer_a_string(format!(".gir/refs/heads/{}", branch))?;
-        let hash_tree_padre = conseguir_arbol_from_hash_commit(head_commit);
+        let hash_tree_padre =
+            conseguir_arbol_from_hash_commit(&head_commit, String::from(".gir/objects/"));
         Ok(Tree::from_hash(hash_tree_padre, PathBuf::from("."))?)
     }
 
@@ -81,7 +82,10 @@ impl Merge {
         }
         let mut historial_commits: Vec<String> = Vec::new();
         loop {
-            let contenido = utilidades_de_compresion::descomprimir_objeto(ultimo_commit.clone())?;
+            let contenido = utilidades_de_compresion::descomprimir_objeto(
+                ultimo_commit.clone(),
+                String::from(".gir/objects/"),
+            )?;
             let siguiente_padre = Log::conseguir_padre_desde_contenido_commit(&contenido);
             historial_commits.push(ultimo_commit.clone());
             if siguiente_padre.is_empty() {
@@ -295,7 +299,10 @@ impl Merge {
     }
 
     fn automerge(&self, commit_base: String) -> Result<String, String> {
-        let hash_tree_base = write_tree::conseguir_arbol_from_hash_commit(commit_base.clone());
+        let hash_tree_base = write_tree::conseguir_arbol_from_hash_commit(
+            &commit_base,
+            String::from(".gir/objects/"),
+        );
         let tree_base = Tree::from_hash(hash_tree_base, PathBuf::from("."))?;
 
         let tree_branch_actual = Self::obtener_arbol_commit_actual(self.branch_actual.clone())?;
@@ -335,7 +342,8 @@ impl Merge {
                 objeto_actual.obtener_hash(),
             )?;
 
-            let contenido_base = descomprimir_objeto(objeto.obtener_hash())?;
+            let contenido_base =
+                descomprimir_objeto(objeto.obtener_hash(), String::from(".gir/objects/"))?;
 
             let (resultado, hubo_conflictos) =
                 Self::mergear_archivos(diff_actual, diff_a_mergear, contenido_base);

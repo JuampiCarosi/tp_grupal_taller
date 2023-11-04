@@ -69,7 +69,12 @@ impl Log {
 
     pub fn conseguir_padre_desde_contenido_commit(contenido: &str) -> String {
         let contenido_spliteado = contenido.split('\n').collect::<Vec<&str>>();
-        let siguiente_padre = contenido_spliteado[1].split(' ').collect::<Vec<&str>>()[1];
+        let posible_linea_padre_splitteada =
+            contenido_spliteado[1].split(' ').collect::<Vec<&str>>();
+        let siguiente_padre = match posible_linea_padre_splitteada[0] {
+            "parent" => posible_linea_padre_splitteada[1],
+            _ => "",
+        };
         siguiente_padre.to_string()
     }
 
@@ -121,7 +126,10 @@ impl Log {
         }
         let mut i = 1;
         loop {
-            let contenido = utilidades_de_compresion::descomprimir_objeto(hash_commit.clone())?;
+            let contenido = utilidades_de_compresion::descomprimir_objeto(
+                hash_commit.clone(),
+                String::from(".gir/objects/"),
+            )?;
             let siguiente_padre = Self::conseguir_padre_desde_contenido_commit(&contenido);
             let contenido_a_mostrar = match i {
                 1 => {

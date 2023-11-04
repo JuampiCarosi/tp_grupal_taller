@@ -5,8 +5,6 @@ use crate::{
     utilidades_index::{crear_index, escribir_index, leer_index, ObjetoIndex},
 };
 
-use super::status::obtener_arbol_del_commit_head;
-
 pub struct Add {
     logger: Rc<Logger>,
     ubicaciones: Vec<PathBuf>,
@@ -40,7 +38,6 @@ impl Add {
         let index = leer_index()?;
         let ubicaciones_recibidas = args.iter().map(PathBuf::from).collect::<Vec<PathBuf>>();
         let ubicaciones: Vec<PathBuf> = Self::obtener_ubicaciones_hoja(ubicaciones_recibidas)?;
-
         Ok(Add {
             logger,
             ubicaciones,
@@ -52,6 +49,10 @@ impl Add {
         self.logger.log("Ejecutando update-index".to_string());
 
         for ubicacion in self.ubicaciones.clone() {
+            if ubicacion.is_dir() {
+                Err("No se puede agregar un directorio".to_string())?;
+            }
+
             let nuevo_objeto = Objeto::from_directorio(ubicacion.clone(), None)?;
             let nuevo_objeto_index = ObjetoIndex {
                 merge: false,
@@ -68,25 +69,11 @@ impl Add {
                 });
 
             if let Some(i) = indice {
-                if self.index[i].objeto.obtener_hash() == nuevo_objeto_index.objeto.obtener_hash() {
-                    continue;
-                }
-
                 self.index[i] = nuevo_objeto_index;
             } else {
-                let tree_head = obtener_arbol_del_commit_head();
-                if let Some(tree_head) = tree_head {
-                    if tree_head.contiene_misma_version_hijo(
-                        nuevo_objeto_index.objeto.obtener_hash(),
-                        nuevo_objeto_index.objeto.obtener_path(),
-                    ) {
-                        continue;
-                    }
-                }
                 self.index.push(nuevo_objeto_index);
             }
         }
-
         escribir_index(self.logger.clone(), &self.index)?;
         Ok("".to_string())
     }
@@ -98,12 +85,8 @@ mod test {
     use std::{io::Write, path::PathBuf, rc::Rc};
 
     use crate::{
-        io::{self, rm_directorio},
-        tipos_de_dato::{
-            comandos::{add::Add, init::Init},
-            logger::Logger,
-            objeto::Objeto,
-        },
+        io,
+        tipos_de_dato::{comandos::add::Add, logger::Logger, objeto::Objeto},
     };
 
     fn create_test_file() {
@@ -123,19 +106,8 @@ mod test {
         let _ = std::fs::remove_file("./.gir/index");
     }
 
-    fn limpiar_archivo_gir() {
-        rm_directorio(".gir").unwrap();
-        let logger = Rc::new(Logger::new(PathBuf::from("tmp/branch_init")).unwrap());
-        let init = Init {
-            path: "./.gir".to_string(),
-            logger,
-        };
-        init.ejecutar().unwrap();
-    }
-
     #[test]
     fn test01_archivo_vacio_se_llena_con_objeto_agregado() {
-        limpiar_archivo_gir();
         clear_index();
         create_test_file();
         let logger = Rc::new(Logger::new(PathBuf::from("tmp/add_test01")).unwrap());
@@ -259,7 +231,7 @@ mod test {
     }
 
     #[test]
-    fn test06_agregar_dos_archivos_de_una() {
+    fn test07_agregar_dos_archivos_de_una() {
         clear_index();
         let logger = Rc::new(Logger::new(PathBuf::from("tmp/add_test07")).unwrap());
         let ubicacion = "test_file.txt".to_string();
