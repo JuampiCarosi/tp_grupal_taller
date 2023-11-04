@@ -2,19 +2,20 @@ use crate::tipos_de_dato::logger::Logger;
 use crate::utilidades_path_buf;
 use crate::{comunicacion::Comunicacion, io};
 
+use std::io::{Read, Write};
 use std::net::TcpStream;
 use std::path::PathBuf;
 use std::rc::Rc;
 
-pub struct Fetch {
+pub struct Fetch <T: Write + Read>{
     remoto: String,
-    comunicacion: Comunicacion<TcpStream>,
+    comunicacion: Comunicacion<T>,
     capacidades_local: Vec<String>,
     logger: Rc<Logger>,
 }
 
-impl Fetch {
-    pub fn new(logger: Rc<Logger>) -> Result<Fetch, String> {
+impl <T:Write + Read>Fetch<T>{
+    pub fn new(logger: Rc<Logger>) -> Result<Fetch<TcpStream>, String> {
         let remoto = "origin".to_string();
         //"Por ahora lo hardcoedo necesito el config que no esta en esta rama";
 
@@ -33,7 +34,20 @@ impl Fetch {
             logger,
         })
     }
+    //pòr ahoar para testing, para mi asi deberia ser recibiendo el comunicacion 
+    pub fn new_testing(logger: Rc<Logger>, comunicacion: Comunicacion<T>) -> Result<Fetch<T>, String> {
+        let remoto = "origin".to_string();
+        //"Por ahora lo hardcoedo necesito el config que no esta en esta rama";
 
+        let capacidades_local = Vec::new();
+        //esto lo deberia tener la comunicacion creo yo
+        Ok(Fetch {
+            remoto,
+            comunicacion,
+            capacidades_local,
+            logger,
+        })
+    }
     //verificar si existe /.git
     pub fn ejecutar(&self) -> Result<String, String> {
         self.iniciar_git_upload_pack_con_servidor()?;
@@ -189,8 +203,9 @@ impl Fetch {
     /// # Resultado
     /// - vector con las capacidades del servidor
     /// - hash del commit cabeza de rama
-    /// -vector de tuplas con los hash del commit cabeza de rama y la direccion de la
+    /// - vector de tuplas con los hash del commit cabeza de rama y la direccion de la
     ///     carpeta de la rama en el servidor(ojo!! la direccion para el servidor no para el local)
+    /// - vector de tuplas con el hash del commit y el tag asosiado 
     fn fase_de_descubrimiento(
         &self,
     ) -> Result<
@@ -302,11 +317,14 @@ impl Fetch {
             "Fallo al separar la primera line en commit HEAD y capacidades\n"
         ))?;
 
+        let commit_head_remoto_sin_head = commit_head_remoto.replace("HEAD", "").trim().to_string();
+        
         let capacidades_vector: Vec<String> = capacidades
             .split_whitespace()
             .map(|s| s.to_string())
             .collect();
-        Ok((commit_head_remoto.to_string(), capacidades_vector))
+
+        Ok((commit_head_remoto_sin_head, capacidades_vector))
     }
 
     ///Separa el commit del dir asosiado
@@ -323,7 +341,7 @@ impl Fetch {
             "Fallo al separar el conendio en actualizar referencias\n"
         ))?;
 
-        let dir_path = PathBuf::from(dir);
+        let dir_path = PathBuf::from(dir.trim());
         Ok((commit_cabeza_de_rama.to_string(), dir_path))
     }
 
@@ -345,4 +363,73 @@ impl Fetch {
 
 #[cfg(test)]
 
-mod test {}
+mod test {
+    use std::{io::{Read, Write}, path::PathBuf, rc::Rc};
+
+    use crate::{comunicacion::Comunicacion, tipos_de_dato::logger::{self, Logger}};
+
+    use super::Fetch;
+
+    struct MockTcpStream {
+        lectura_data: Vec<u8>,
+        escritura_data: Vec<u8>,
+    }
+
+    impl Read for MockTcpStream {
+        fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+            let bytes_to_read = std::cmp::min(buf.len(), self.lectura_data.len());
+            buf[..bytes_to_read].copy_from_slice(&self.lectura_data[..bytes_to_read]);
+            self.lectura_data.drain(..bytes_to_read);
+            Ok(bytes_to_read)
+        }
+    }
+
+    impl Write for MockTcpStream {
+        fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+            self.escritura_data.write(buf)
+        }
+
+        fn flush(&mut self) -> std::io::Result<()> {
+            self.escritura_data.flush()
+        }
+    }
+    
+    #[test]
+    fn test01_la_fase_de_descubrimiento_funcion(){
+        let contenido_mock = "000eversion 1 \
+        00887217a7c7e582c46cec22a130adf4b9d7d950fba0 HEAD\0multi_ack thin-pack \
+        side-band side-band-64k ofs-delta shallow no-progress include-tag \
+        00441d3fcd5ced445d1abc402225c0b8a1299641f497 refs/heads/integration \
+        003f7217a7c7e582c46cec22a130adf4b9d7d950fba0 refs/heads/master \
+        003cb88d2441cac0977faf98efc80305012112238d9d refs/tags/v0.9 \
+        003c525128480b96c89e6418b1e40909bf6c5b2d580f refs/tags/v1.0 \
+        003fe92df48743b7bc7d26bcaabfddde0a1e20cae47c refs/tags/v1.0^{} \
+        0000";
+
+        let mock = MockTcpStream {
+            lectura_data: contenido_mock.as_bytes().to_vec(),
+            escritura_data: Vec::new(),
+        };
+
+        let comunicacion = Comunicacion::new(mock);
+        let logger = Rc::new(Logger::new(PathBuf::from(".log.txt")).unwrap());
+        let (capacidades, commit_head, commits_y_ramas, commits_y_tags) = Fetch::new_testing(logger, comunicacion).unwrap().fase_de_descubrimiento().unwrap();
+
+        let capacidades_esperadas = "multi_ack thin-pack side-band side-band-64k ofs-delta shallow no-progress include-tag";
+        assert_eq!(capacidades_esperadas, capacidades.join(" "));
+        
+        let commit_head_esperado = "7217a7c7e582c46cec22a130adf4b9d7d950fba0";
+        assert_eq!(commit_head_esperado, commit_head); 
+        
+        let commits_y_ramas_esperadas = vec![("1d3fcd5ced445d1abc402225c0b8a1299641f497".to_string(), PathBuf::from("refs/heads/integration")),("7217a7c7e582c46cec22a130adf4b9d7d950fba0".to_string(), PathBuf::from("refs/heads/master"))];
+        assert_eq!(commits_y_ramas_esperadas, commits_y_ramas);
+
+        let commits_y_tags_esperados = vec![("b88d2441cac0977faf98efc80305012112238d9d".to_string(), PathBuf::from("refs/tags/v0.9")),("525128480b96c89e6418b1e40909bf6c5b2d580f".to_string(), PathBuf::from("refs/tags/v1.0")),("e92df48743b7bc7d26bcaabfddde0a1e20cae47c".to_string(), PathBuf::from("refs/tags/v1.0^{}".to_string()))];
+        assert_eq!(commits_y_tags_esperados, commits_y_tags)
+    } 
+
+    #[test]
+    fn test02_la_fase_de_negociacion_funciona(){
+        
+    }
+}

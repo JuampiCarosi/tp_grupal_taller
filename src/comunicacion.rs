@@ -6,7 +6,6 @@ use std::convert::TryInto;
 use std::io::{Read, Write};
 use std::net::TcpStream;
 use std::str;
-use std::str::Bytes;
 use std::sync::Mutex;
 
 use sha1::{Digest, Sha1};
@@ -368,7 +367,7 @@ impl<T: Write + Read> Comunicacion<T> {
 
 #[cfg(test)]
 mod test {
-    use std::{io::Read, io::Write, rc::Rc};
+    use std::{io::Read, io::Write};
 
     use super::Comunicacion;
 
