@@ -113,14 +113,12 @@ pub fn descomprimir_contenido_u8(contenido: &[u8]) -> Result<Vec<u8>, String> {
 pub fn obtener_contenido_comprimido_sin_header(hash: String) -> Result<Vec<u8>, String> {
     let ruta_objeto = format!(".gir/objects/{}/{}", &hash[..2], &hash[2..]);
     let contenido_leido = io::leer_bytes(ruta_objeto)?;
-    // println!("contenido_leido: {:?}", String::from_utf8_lossy(contenido_leido.as_slice()));
     let cont_descomprimido =
         utilidades_de_compresion::descomprimir_contenido_u8(&contenido_leido).unwrap();
     let vec: Vec<&[u8]> = cont_descomprimido.splitn(2, |&x| x == 0).collect();
     println!("Header: {}", String::from_utf8_lossy(vec[0]));
 
     let contenido = vec[1];
-    // println!("contenido: {:?}", String::from_utf8(contenido.to_vec()));
     let contenido_comprimido = comprimir_contenido_u8(&contenido.to_vec())?;
     Ok(contenido_comprimido)
 }

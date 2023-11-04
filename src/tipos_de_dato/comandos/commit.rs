@@ -253,7 +253,6 @@ mod test {
         let home = std::env::var("HOME").unwrap();
         let config_path = format!("{home}/.girconfig");
         let contenido = format!("nombre =aaaa\nmail =bbbb\n");
-        println!("contenido: {}", contenido);
         escribir_bytes(config_path, contenido).unwrap();
     }
 
