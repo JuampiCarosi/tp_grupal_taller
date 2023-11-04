@@ -1,6 +1,6 @@
 use gtk::prelude::*;
 
-use crate::utils::compresion::descomprimir_objeto;
+use crate::utils::compresion::{descomprimir_objeto, descomprimir_objeto_gir};
 
 fn estilar_log_info(builder: &gtk::Builder) {
     let text: gtk::TextView = builder.object("log-description").unwrap();
@@ -74,7 +74,7 @@ fn esconder_log_info(builder: &gtk::Builder) {
 pub fn render(builder: &gtk::Builder, commit: Option<&str>) {
     let log_info: gtk::TextBuffer = builder.object("log-info").unwrap();
     if let Some(commit) = commit {
-        let contenido = descomprimir_objeto(commit.to_string()).unwrap();
+        let contenido = descomprimir_objeto_gir(commit.to_string()).unwrap();
         let contenido_split = contenido.split('\0').collect::<Vec<&str>>();
         log_info.set_text(contenido_split[1]);
 

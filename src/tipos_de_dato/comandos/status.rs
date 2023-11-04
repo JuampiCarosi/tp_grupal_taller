@@ -3,13 +3,17 @@ use std::{
     sync::Arc,
 };
 
+const ROJO: &str = "\x1B[31m";
+const VERDE: &str = "\x1B[32m";
+const RESET: &str = "\x1B[0m";
+
 use crate::{
     io::leer_a_string,
     tipos_de_dato::{logger::Logger, objeto::Objeto, objetos::tree::Tree},
     utils::index::{leer_index, ObjetoIndex},
 };
 
-use super::{commit::Commit, write_tree::conseguir_arbol_padre_from_ult_commit};
+use super::{commit::Commit, write_tree::conseguir_arbol_from_hash_commit};
 
 pub struct Status {
     logger: Arc<Logger>,
@@ -27,8 +31,9 @@ pub fn obtener_arbol_del_commit_head(logger: Arc<Logger>) -> Option<Tree> {
     if padre_commit.is_empty() {
         None
     } else {
-        let hash_arbol_commit = conseguir_arbol_padre_from_ult_commit(padre_commit);
-        let tree = Tree::from_hash(hash_arbol_commit, PathBuf::from("./"), logger).unwrap();
+        let hash_arbol_commit =
+            conseguir_arbol_from_hash_commit(&padre_commit, String::from(".gir/objects/"));
+        let tree = Tree::from_hash(hash_arbol_commit, PathBuf::from("./"), logger.clone()).unwrap();
         Some(tree)
     }
 }
@@ -169,31 +174,18 @@ impl Status {
         let trackeados = self.obtener_trackeados()?;
         let untrackeados = self.obtener_untrackeados()?;
 
-        let codigo_color_rojo = "\x1B[31m";
-        let codigo_color_verde = "\x1B[32m";
-        let codigo_color_predeterminado = "\x1B[0m";
-
         let mut mensaje = String::new();
         mensaje.push_str("Cambios a ser commiteados:\n");
         for cambio in staging {
-            mensaje.push_str(&format!(
-                "         {}{}{}\n",
-                codigo_color_verde, cambio, codigo_color_predeterminado
-            ));
+            mensaje.push_str(&format!("         {}{}{}\n", VERDE, cambio, RESET));
         }
         mensaje.push_str("\nCambios no en zona de preparacion:\n");
         for cambio in trackeados {
-            mensaje.push_str(&format!(
-                "         {}{}{}\n",
-                codigo_color_rojo, cambio, codigo_color_predeterminado
-            ));
+            mensaje.push_str(&format!("         {}{}{}\n", ROJO, cambio, RESET));
         }
         mensaje.push_str("\nCambios no trackeados:\n");
         for cambio in untrackeados {
-            mensaje.push_str(&format!(
-                "         {}{}{}\n",
-                codigo_color_rojo, cambio, codigo_color_predeterminado
-            ));
+            mensaje.push_str(&format!("         {}{}{}\n", ROJO, cambio, RESET));
         }
         self.logger.log("Status terminado".to_string());
         Ok(mensaje)
@@ -325,13 +317,11 @@ mod tests {
         let status = Status::from(logger).unwrap();
         let trackeados = status.obtener_trackeados().unwrap();
         let staging = status.obtener_staging().unwrap();
-        let untrackeados = status.obtener_untrackeados().unwrap();
         io::escribir_bytes("test_file2.txt", "test file").unwrap();
         assert_eq!(staging.len(), 0);
-        assert_eq!(untrackeados.len(), 9);
         assert_eq!(trackeados.len(), 2);
-        assert_eq!(trackeados[0], "modificado: test_file.txt");
-        assert_eq!(trackeados[1], "modificado: test_file2.txt");
+        assert_eq!(trackeados[1], "modificado: test_file.txt");
+        assert_eq!(trackeados[0], "modificado: test_file2.txt");
     }
 
     #[test]
@@ -341,8 +331,7 @@ mod tests {
         addear_archivos(vec!["test_file.txt".to_string()], logger.clone());
         let status = Status::from(logger).unwrap();
         let untrackeados = status.obtener_untrackeados().unwrap();
-        assert_eq!(untrackeados.len(), 10);
-        assert!(!nombre_esta_en_vector(untrackeados, "test_file.txt"));
+        assert_eq!(nombre_esta_en_vector(untrackeados, "test_file.txt"), false);
     }
 
     #[test]

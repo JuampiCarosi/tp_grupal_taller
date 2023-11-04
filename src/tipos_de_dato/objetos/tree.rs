@@ -54,11 +54,15 @@ impl Tree {
 
     /// Escribe en el directorio actual los archivos que se encuentran en el arbol
     pub fn escribir_en_directorio(&self) -> Result<(), String> {
+        println!("escribiendo en directorio: {}", self.directorio.display());
         let objetos = self.obtener_objetos_hoja();
         for objeto in objetos {
             match objeto {
                 Objeto::Blob(blob) => {
-                    let objeto = descomprimir_objeto(blob.hash)?;
+                    let objeto = descomprimir_objeto(
+                        blob.hash,
+                        String::from(self.directorio.to_string_lossy() + "/.gir/objects/"),
+                    )?;
                     let contenido = objeto.split('\0').collect::<Vec<&str>>()[1];
                     io::escribir_bytes(blob.ubicacion, contenido).unwrap();
                 }
@@ -205,7 +209,6 @@ impl Tree {
         }
 
         lineas.remove(0);
-
         let mut lineas_separadas: Vec<&str> = Vec::new();
         lineas_separadas.push(lineas[0]);
         let ultima_linea = lineas.pop().unwrap();
@@ -215,7 +218,6 @@ impl Tree {
             lineas_separadas.push(modo_y_nombre);
         });
         lineas_separadas.push(ultima_linea);
-
         for i in (0..lineas_separadas.len()).step_by(2) {
             if i + 1 < lineas_separadas.len() {
                 let linea = lineas_separadas[i].split_whitespace();
@@ -245,15 +247,12 @@ impl Tree {
         logger: Arc<Logger>,
     ) -> Result<Tree, String> {
         // let hash_completo = Self::obtener_hash_completo(hash)?;
-
-        let contenido = descomprimir_objeto(hash)?;
-
+        let contenido = descomprimir_objeto(hash, ".gir/objects/".to_string())?;
         let contenido_parseado = Self::obtener_datos_de_contenido(contenido)?;
         let mut objetos: Vec<Objeto> = Vec::new();
 
         for (modo, nombre, hash_hijo) in contenido_parseado {
             let mut ubicacion = format!("{}/{}", directorio.display(), nombre);
-
             if directorio == PathBuf::from(".") {
                 ubicacion = nombre.clone()
             }
@@ -523,7 +522,7 @@ impl Display for Tree {
 
 #[cfg(test)]
 
-mod test {
+mod tests {
 
     use crate::io;
     use crate::tipos_de_dato::logger::Logger;

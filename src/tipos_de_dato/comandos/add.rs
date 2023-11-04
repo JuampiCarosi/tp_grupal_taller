@@ -41,7 +41,6 @@ impl Add {
         let index = leer_index(logger.clone())?;
         let ubicaciones_recibidas = args.iter().map(PathBuf::from).collect::<Vec<PathBuf>>();
         let ubicaciones: Vec<PathBuf> = Self::obtener_ubicaciones_hoja(ubicaciones_recibidas)?;
-
         Ok(Add {
             logger,
             ubicaciones,
@@ -53,6 +52,10 @@ impl Add {
         self.logger.log("Ejecutando add".to_string());
 
         for ubicacion in self.ubicaciones.clone() {
+            if ubicacion.is_dir() {
+                Err("No se puede agregar un directorio".to_string())?;
+            }
+
             let nuevo_objeto =
                 Objeto::from_directorio(ubicacion.clone(), None, self.logger.clone())?;
             let nuevo_objeto_index = ObjetoIndex {
@@ -70,10 +73,6 @@ impl Add {
                 });
 
             if let Some(i) = indice {
-                if self.index[i].objeto.obtener_hash() == nuevo_objeto_index.objeto.obtener_hash() {
-                    continue;
-                }
-
                 self.index[i] = nuevo_objeto_index;
             } else {
                 let tree_head = obtener_arbol_del_commit_head(self.logger.clone());
@@ -88,16 +87,15 @@ impl Add {
                 self.index.push(nuevo_objeto_index);
             }
         }
-
-        escribir_index(self.logger.clone(), &self.index)?;
+        escribir_index(self.logger.clone(), &mut self.index)?;
         Ok("".to_string())
     }
 }
 
 #[cfg(test)]
 
-mod test {
-    use std::{io::Write, path::PathBuf, sync::Arc};
+mod tests {
+    use std::{io::Write, path::PathBuf, rc::Rc, sync::Arc};
 
     use crate::{
         io::{self, rm_directorio},
@@ -137,7 +135,6 @@ mod test {
 
     #[test]
     fn test01_archivo_vacio_se_llena_con_objeto_agregado() {
-        limpiar_archivo_gir();
         clear_index();
         create_test_file();
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/add_test01")).unwrap());
@@ -221,16 +218,12 @@ mod test {
 
         assert_eq!(add.index.len(), 2);
 
-        let objeto = &add.index[0].objeto;
-
-        if let Objeto::Blob(blob) = objeto {
+        if let Objeto::Blob(blob) = &add.index[1].objeto {
             assert_eq!(blob.nombre, "test_file.txt");
             assert_eq!(blob.hash, "678e12dc5c03a7cf6e9f64e688868962ab5d8b65");
         }
 
-        let objeto = &add.index[1].objeto;
-
-        if let Objeto::Blob(blob) = objeto {
+        if let Objeto::Blob(blob) = &add.index[0].objeto {
             assert_eq!(blob.nombre, "archivo.txt");
             assert_eq!(blob.hash, "2b824e648965b94c6c6b3dd0702feb91f699ed62");
         }
@@ -239,7 +232,7 @@ mod test {
 
         assert_eq!(
             file,
-            "+ 0 100644 678e12dc5c03a7cf6e9f64e688868962ab5d8b65 test_file.txt\n+ 0 100644 2b824e648965b94c6c6b3dd0702feb91f699ed62 test_dir/objetos/archivo.txt\n"
+            "+ 0 100644 2b824e648965b94c6c6b3dd0702feb91f699ed62 test_dir/objetos/archivo.txt\n+ 0 100644 678e12dc5c03a7cf6e9f64e688868962ab5d8b65 test_file.txt\n"
         );
     }
 
@@ -256,12 +249,12 @@ mod test {
 
         assert_eq!(
             file,
-            "+ 0 100644 2b824e648965b94c6c6b3dd0702feb91f699ed62 test_dir/muchos_objetos/archivo_copy.txt\n+ 0 100644 ba1d9d6871ba93f7e070c8663e6739cc22f07d3f test_dir/muchos_objetos/archivo.txt\n"
+            "+ 0 100644 ba1d9d6871ba93f7e070c8663e6739cc22f07d3f test_dir/muchos_objetos/archivo.txt\n+ 0 100644 2b824e648965b94c6c6b3dd0702feb91f699ed62 test_dir/muchos_objetos/archivo_copy.txt\n"
         );
     }
 
     #[test]
-    fn test06_agregar_dos_archivos_de_una() {
+    fn test07_agregar_dos_archivos_de_una() {
         clear_index();
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/add_test07")).unwrap());
         let ubicacion = "test_file.txt".to_string();
@@ -273,25 +266,21 @@ mod test {
 
         assert_eq!(add.index.len(), 2);
 
-        let objeto = &add.index[0].objeto;
-
-        if let Objeto::Blob(blob) = objeto {
-            assert_eq!(blob.nombre, "test_file.txt");
-            assert_eq!(blob.hash, "678e12dc5c03a7cf6e9f64e688868962ab5d8b65");
-        }
-
-        let objeto = &add.index[1].objeto;
-
-        if let Objeto::Blob(blob) = objeto {
+        if let Objeto::Blob(blob) = &add.index[0].objeto {
             assert_eq!(blob.nombre, "archivo.txt");
             assert_eq!(blob.hash, "2b824e648965b94c6c6b3dd0702feb91f699ed62");
+        }
+
+        if let Objeto::Blob(blob) = &add.index[1].objeto {
+            assert_eq!(blob.nombre, "test_file.txt");
+            assert_eq!(blob.hash, "678e12dc5c03a7cf6e9f64e688868962ab5d8b65");
         }
 
         let file = io::leer_a_string("./.gir/index").unwrap();
 
         assert_eq!(
             file,
-            "+ 0 100644 678e12dc5c03a7cf6e9f64e688868962ab5d8b65 test_file.txt\n+ 0 100644 2b824e648965b94c6c6b3dd0702feb91f699ed62 test_dir/objetos/archivo.txt\n"
+            "+ 0 100644 2b824e648965b94c6c6b3dd0702feb91f699ed62 test_dir/objetos/archivo.txt\n+ 0 100644 678e12dc5c03a7cf6e9f64e688868962ab5d8b65 test_file.txt\n"
         );
     }
 }

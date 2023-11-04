@@ -3,34 +3,26 @@ use std::path::Path;
 use gtk::prelude::*;
 
 use crate::{
-    io::leer_a_string, tipos_de_dato::comandos::log::Log, utils::compresion::descomprimir_objeto,
+    io::leer_a_string,
+    tipos_de_dato::{comandos::log::Log, objetos::commit::CommitObj},
+    utils::compresion::{descomprimir_objeto, descomprimir_objeto_gir},
 };
 
 use super::log_seleccionado;
 
 fn obtener_listas_de_commits(branch: &String) -> Result<Vec<String>, String> {
     let ruta = format!(".gir/refs/heads/{}", branch);
-    let mut ultimo_commit = leer_a_string(Path::new(&ruta))?;
+    let ultimo_commit = leer_a_string(Path::new(&ruta))?;
 
-    if ultimo_commit.is_empty() {
-        return Ok(Vec::new());
-    }
-    let mut historial_commits: Vec<String> = Vec::new();
-    loop {
-        let contenido = descomprimir_objeto(ultimo_commit.clone())?;
-        let siguiente_padre = Log::conseguir_padre_desde_contenido_commit(&contenido);
-        historial_commits.push(ultimo_commit.clone());
-        if siguiente_padre.is_empty() {
-            break;
-        }
-        ultimo_commit = siguiente_padre.to_string();
-    }
+    let commit_obj = CommitObj::from_hash(ultimo_commit)?;
 
-    Ok(historial_commits)
+    let historial = Log::obtener_listas_de_commits(commit_obj)?;
+
+    Ok(historial.iter().map(|commit| commit.hash.clone()).collect())
 }
 
 pub fn obtener_mensaje_commit(commit_hash: String) -> String {
-    let commit = descomprimir_objeto(commit_hash).unwrap_or("".to_string());
+    let commit = descomprimir_objeto_gir(commit_hash).unwrap_or("".to_string());
 
     let mut mensaje = String::new();
 

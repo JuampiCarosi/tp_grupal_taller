@@ -1,11 +1,12 @@
+use std::cmp::Reverse;
+use std::collections::HashMap;
 use std::sync::Arc;
-
-use chrono::{FixedOffset, LocalResult, TimeZone};
 
 use crate::tipos_de_dato::logger::Logger;
 
 use crate::io;
 use crate::tipos_de_dato::comandos::checkout::Checkout;
+use crate::tipos_de_dato::objetos::commit::CommitObj;
 use crate::utils::compresion::descomprimir_objeto;
 
 use super::commit::Commit;
@@ -13,34 +14,6 @@ use super::commit::Commit;
 pub struct Log {
     branch: String,
     logger: Arc<Logger>,
-}
-
-fn timestamp_archivo_log(
-    timestamp: i64,
-    offset_horas: i32,
-    offset_minutos: i32,
-) -> Result<String, String> {
-    let offset_seconds = offset_horas * 3600 + offset_minutos * 60;
-    let offset_str = format!(
-        "{:>+03}{:02}",
-        offset_seconds / 3600,
-        (offset_seconds % 3600) / 60
-    );
-
-    let offset = match FixedOffset::east_opt(offset_seconds) {
-        Some(offset) => offset,
-        None => return Err("No se pudo obtener el offset".to_string()),
-    };
-
-    let datetime = match offset.timestamp_opt(timestamp, 0) {
-        LocalResult::Single(datetime) => datetime,
-        _ => return Err("No se pudo obtener el datetime".to_string()),
-    };
-
-    let datetime_formateado = datetime.format("%a %b %d %H:%M:%S %Y");
-    let formatted_timestamp = format!("{} {}", datetime_formateado, offset_str);
-
-    Ok(formatted_timestamp)
 }
 
 impl Log {
@@ -68,77 +41,53 @@ impl Log {
         Ok(hash_commit.to_string())
     }
 
-    pub fn conseguir_padre_desde_contenido_commit(contenido: &str) -> String {
-        let contenido_spliteado = contenido.split('\n').collect::<Vec<&str>>();
-        let siguiente_padre = contenido_spliteado[1].split(' ').collect::<Vec<&str>>()[1];
-        siguiente_padre.to_string()
-    }
+    pub fn obtener_listas_de_commits(commit: CommitObj) -> Result<Vec<CommitObj>, String> {
+        let mut commits: HashMap<String, CommitObj> = HashMap::new();
+        let mut commits_a_revisar: Vec<CommitObj> = Vec::new();
+        commits_a_revisar.push(commit);
 
-    fn calcular_date_desde_linea(tiempo: &str, offset: &str) -> Result<String, String> {
-        let timestamp = match tiempo.parse::<i64>() {
-            Ok(timestamp) => timestamp,
-            Err(_) => return Err("No se pudo obtener el timestamp".to_string()),
-        };
-        let (horas, minutos) = offset.split_at(3);
-        let offset_horas = horas[0..3].parse::<i32>().unwrap_or(-3);
-        let offset_minutos = minutos.parse::<i32>().unwrap_or(0);
-        timestamp_archivo_log(timestamp, offset_horas, offset_minutos)
-    }
-
-    fn armar_contenido_log(
-        contenido: &str,
-        branch_actual: &str,
-        hash_commit: String,
-    ) -> Result<String, String> {
-        let contenido_splitteado_del_header = contenido.split('\0').collect::<Vec<&str>>();
-        let lineas_contenido = contenido_splitteado_del_header[1]
-            .split('\n')
-            .collect::<Vec<&str>>();
-        let linea_autor_splitteada = lineas_contenido[2].split(' ').collect::<Vec<&str>>();
-        let nombre_autor = linea_autor_splitteada[1];
-        let mail_autor = linea_autor_splitteada[2];
-        let date =
-            Self::calcular_date_desde_linea(linea_autor_splitteada[3], linea_autor_splitteada[4])?;
-        let mensaje = lineas_contenido[5];
-        let mut branch_format = format!("({})", branch_actual);
-        if branch_actual.is_empty() {
-            branch_format = "".to_string();
+        while !commits_a_revisar.is_empty() {
+            let commit = commits_a_revisar.pop().unwrap();
+            if commits.contains_key(&commit.hash) {
+                break;
+            }
+            commits.insert(commit.hash.clone(), commit.clone());
+            for padre in commit.padres {
+                let commit_padre = CommitObj::from_hash(padre)?;
+                commits_a_revisar.push(commit_padre);
+            }
         }
-        Ok(format!(
-            "commit {} {}\nAutor: {} {}\nDate: {}\n\n     {}\n",
-            hash_commit, branch_format, nombre_autor, mail_autor, date, mensaje
-        ))
+
+        let mut commits_vec = Vec::from_iter(commits.values().cloned());
+        commits_vec.sort_by_key(|commit| Reverse(commit.date.tiempo.clone()));
+
+        Ok(commits_vec)
     }
 
     pub fn ejecutar(&self) -> Result<String, String> {
         self.logger.log("Ejecutando comando log".to_string());
-        let mut hash_commit = Self::obtener_commit_branch(&self.branch)?;
+        let hash_commit = Self::obtener_commit_branch(&self.branch)?;
         if hash_commit.is_empty() {
             return Err(format!("La rama {} no tiene commits", self.branch));
         }
-        let mut i = 1;
-        loop {
-            let contenido = descomprimir_objeto(hash_commit.clone())?;
-            let siguiente_padre = Self::conseguir_padre_desde_contenido_commit(&contenido);
-            let contenido_a_mostrar = match i {
-                1 => {
-                    i -= 1;
-                    Self::armar_contenido_log(&contenido, &self.branch, hash_commit.clone())?
-                }
-                _ => Self::armar_contenido_log(&contenido, "", hash_commit.clone())?,
-            };
-            println!("{}", contenido_a_mostrar);
-            if siguiente_padre.is_empty() {
-                break;
-            }
-            hash_commit = siguiente_padre.to_string();
+
+        let objeto_commit = CommitObj::from_hash(hash_commit)?;
+
+        let commits = Self::obtener_listas_de_commits(objeto_commit)?;
+
+        let mut log = String::new();
+
+        for commit in commits {
+            log.push_str(&commit.format_log()?);
+            log.push_str("\n");
         }
-        Ok("Log terminado".to_string())
+
+        Ok(log)
     }
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use std::path::PathBuf;
 
     use super::*;
@@ -167,27 +116,5 @@ mod test {
         let mut args = vec!["rama".to_string()];
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/log")).unwrap());
         let _ = Log::from(&mut args, logger).unwrap();
-    }
-
-    #[test]
-    fn test04_rearmar_timestamp_log() {
-        let timestamp = 1234567890;
-        let offset_horas = -03;
-        let offset_minutos = 00;
-        let timestamp_formateado =
-            timestamp_archivo_log(timestamp, offset_horas, offset_minutos).unwrap();
-        let timestamp_formateado_esperado = "Fri Feb 13 20:31:30 2009 -0300";
-        assert_eq!(timestamp_formateado, timestamp_formateado_esperado);
-    }
-
-    #[test]
-    fn test05_armar_contenido_log() {
-        let contenido = "commit 142\0tree 1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p7q8r9s0t\nparent 1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p7q8r9s0t\nauthor nombre_apellido <mail> 1234567890 -0300\ncommitter nombre_apellido <mail> 1234567890 -0300\n\nMensaje del commit";
-        let branch_actual = "master";
-        let hash_commit = "1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p7q8r9s0t".to_string();
-        let contenido_log =
-            Log::armar_contenido_log(contenido, branch_actual, hash_commit).unwrap();
-        let contenido_log_esperado = "commit 1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p7q8r9s0t (master)\nAutor: nombre_apellido <mail>\nDate: Fri Feb 13 20:31:30 2009 -0300\n\n     Mensaje del commit\n";
-        assert_eq!(contenido_log, contenido_log_esperado);
     }
 }

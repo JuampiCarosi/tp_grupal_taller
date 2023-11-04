@@ -2,12 +2,17 @@ use crate::{io, tipos_de_dato::objetos::tree::Tree};
 use flate2::{read::ZlibDecoder, write::ZlibEncoder, Compression};
 use std::io::{Read, Write};
 
-pub fn descomprimir_objeto(hash: String) -> Result<String, String> {
-    let ruta_objeto = format!(".gir/objects/{}/{}", &hash[..2], &hash[2..]);
+pub fn descomprimir_objeto(hash: String, ruta: String) -> Result<String, String> {
+    let ruta_objeto = format!("{}{}/{}", ruta.clone(), &hash[..2], &hash[2..]);
+
     let contenido_leido = io::leer_bytes(ruta_objeto)?;
     let contenido_descomprimido = descomprimir_contenido_u8(&contenido_leido)?;
     let contenido_decodificado = decodificar_contenido(contenido_descomprimido)?;
     Ok(contenido_decodificado)
+}
+
+pub fn descomprimir_objeto_gir(hash: String) -> Result<String, String> {
+    descomprimir_objeto(hash, String::from(".gir/objects/"))
 }
 
 pub fn vec_a_string(vec: Vec<u8>) -> Result<String, String> {
@@ -126,4 +131,15 @@ pub fn descomprimir_contenido_u8(contenido: &[u8]) -> Result<Vec<u8>, String> {
         Err(_) => Err("No se pudo descomprimir el contenido")?,
     };
     Ok(contenido_descomprimido)
+}
+
+pub fn obtener_contenido_comprimido_sin_header(hash: String) -> Result<Vec<u8>, String> {
+    let ruta_objeto = format!(".gir/objects/{}/{}", &hash[..2], &hash[2..]);
+    let contenido_leido = io::leer_bytes(ruta_objeto)?;
+    let cont_descomprimido = descomprimir_contenido_u8(&contenido_leido).unwrap();
+    let vec: Vec<&[u8]> = cont_descomprimido.splitn(2, |&x| x == 0).collect();
+
+    let contenido = vec[1];
+    let contenido_comprimido = comprimir_contenido_u8(&contenido.to_vec())?;
+    Ok(contenido_comprimido)
 }

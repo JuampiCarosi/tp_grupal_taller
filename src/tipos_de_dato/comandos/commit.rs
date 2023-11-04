@@ -13,7 +13,7 @@ use crate::{
     },
 };
 
-use super::write_tree;
+use super::{merge::Merge, write_tree};
 
 pub struct Commit {
     logger: Arc<Logger>,
@@ -39,6 +39,13 @@ fn armar_timestamp_commit() -> Result<String, String> {
 
 impl Commit {
     pub fn from(args: &mut Vec<String>, logger: Arc<Logger>) -> Result<Commit, String> {
+        if args.len() == 0 && Merge::hay_merge_en_curso()? {
+            if Merge::hay_archivos_sin_mergear(logger.clone())? {
+                return Err("Hay archivos sin mergear".to_string());
+            }
+            return Commit::from_merge(logger);
+        }
+
         if args.len() != 2 {
             return Err("La cantidad de argumentos es invalida".to_string());
         }
@@ -54,11 +61,40 @@ impl Commit {
         Ok(Commit { mensaje, logger })
     }
 
+    pub fn from_merge(logger: Arc<Logger>) -> Result<Commit, String> {
+        let mensaje = leer_a_string(path::Path::new(".gir/COMMIT_EDITMSG"))?;
+        Ok(Commit { mensaje, logger })
+    }
+
     fn hashear_contenido_objeto(&self, contenido: &str) -> String {
         let mut hasher = Sha1::new();
         hasher.update(contenido);
         let hash = hasher.finalize();
         format!("{:x}", hash)
+    }
+
+    fn formatear_contenido_commit(
+        &self,
+        hash_arbol: String,
+        hash_padre_commit: String,
+    ) -> Result<String, String> {
+        let mut contenido_commit = String::new();
+        contenido_commit.push_str(&format!("tree {}\n", hash_arbol));
+        if !hash_padre_commit.is_empty() {
+            contenido_commit.push_str(&format!("parent {}\n", hash_padre_commit));
+        }
+        if Merge::hay_merge_en_curso()? {
+            let padre_mergeado = leer_a_string(path::Path::new(".gir/MERGE_HEAD"))?;
+            contenido_commit.push_str(&format!("parent {}\n", padre_mergeado));
+        }
+        let (nombre, mail) = conseguir_nombre_y_mail_del_config()?;
+        let linea_autor = format!("{} <{}>", nombre, mail);
+        let timestamp = armar_timestamp_commit()?;
+        contenido_commit.push_str(&format!(
+            "author {} {}\ncommitter {} {}\n\n{}",
+            linea_autor, timestamp, linea_autor, timestamp, self.mensaje
+        ));
+        Ok(contenido_commit)
     }
 
     fn crear_contenido_commit(
@@ -72,22 +108,10 @@ impl Commit {
                 self.logger.clone(),
             )?,
         };
-        let (nombre, mail) = conseguir_nombre_y_mail_del_config()?;
-        let linea_autor = format!("{} <{}>", nombre, mail);
-        let timestamp = armar_timestamp_commit()?;
-        let contenido_commit = format!(
-            "tree {}\nparent {}\nauthor {} {}\ncommitter {} {}\n\n{}",
-            hash_arbol,
-            hash_padre_commit,
-            linea_autor,
-            timestamp,
-            linea_autor,
-            timestamp,
-            self.mensaje
-        );
+        let contenido_commit =
+            self.formatear_contenido_commit(hash_arbol.clone(), hash_padre_commit)?;
         let header = format!("commit {}\0", contenido_commit.len());
         let contenido_total = format!("{}{}", header, contenido_commit);
-
         Ok((hash_arbol, contenido_total))
     }
 
@@ -112,7 +136,7 @@ impl Commit {
         Ok(ruta)
     }
 
-    fn obtener_hash_del_padre_del_commit() -> Result<String, String> {
+    pub fn obtener_hash_del_padre_del_commit() -> Result<String, String> {
         let ruta = Self::obtener_ruta_branch_commit()?;
         let padre_commit = leer_a_string(path::Path::new(&ruta)).unwrap_or_else(|_| "".to_string());
         Ok(padre_commit)
@@ -162,13 +186,14 @@ impl Commit {
                 return Err("No se pudo ejecutar el commit".to_string());
             }
         };
+        Merge::limpiar_merge_post_commit()?;
         Ok("Commit creado".to_string())
     }
 }
 
 #[cfg(test)]
-mod test {
-    use std::{path::PathBuf, sync::Arc};
+mod tests {
+    use std::{path::PathBuf, rc::Rc, sync::Arc};
 
     use crate::{
         io::{self, escribir_bytes, rm_directorio},
@@ -176,7 +201,7 @@ mod test {
             comandos::{add::Add, hash_object::HashObject, init::Init},
             logger::Logger,
         },
-        utils::compresion::descomprimir_objeto,
+        utils::compresion::{descomprimir_objeto, descomprimir_objeto_gir},
     };
 
     use super::Commit;
@@ -184,8 +209,7 @@ mod test {
     fn craer_archivo_config_default() {
         let home = std::env::var("HOME").unwrap();
         let config_path = format!("{home}/.girconfig");
-        let contenido = "nombre =aaaa\nmail =bbbb\n".to_string();
-        println!("contenido: {}", contenido);
+        let contenido = format!("nombre =aaaa\nmail =bbbb\n");
         escribir_bytes(config_path, contenido).unwrap();
     }
 
@@ -201,19 +225,24 @@ mod test {
     }
 
     fn conseguir_hash_padre(branch: String) -> String {
-        let hash = io::leer_a_string(format!(".gir/refs/heads/{}", branch)).unwrap();
-        let contenido = descomprimir_objeto(hash.clone()).unwrap();
-        let lineas_sin_null = contenido.replace('\0', "\n");
-        let lineas = lineas_sin_null.split('\n').collect::<Vec<&str>>();
-        let hash_padre = lineas[2];
+        let hash = std::fs::read_to_string(format!(".gir/refs/heads/{}", branch)).unwrap();
+        let contenido = descomprimir_objeto(hash.clone(), String::from(".gir/objects/")).unwrap();
+        let lineas_sin_null = contenido.replace("\0", "\n");
+        let lineas = lineas_sin_null.split("\n").collect::<Vec<&str>>();
+        let linea_supuesto_padre = lineas[2].split(" ").collect::<Vec<&str>>();
+        let hash_padre = match linea_supuesto_padre[0] {
+            "parent" => linea_supuesto_padre[1],
+            _ => "",
+        };
         hash_padre.to_string()
     }
 
     fn conseguir_arbol_commit(branch: String) -> String {
         let hash_hijo = io::leer_a_string(format!(".gir/refs/heads/{}", branch)).unwrap();
-        let contenido_hijo = descomprimir_objeto(hash_hijo.clone()).unwrap();
-        let lineas_sin_null = contenido_hijo.replace('\0', "\n");
-        let lineas = lineas_sin_null.split('\n').collect::<Vec<&str>>();
+        let contenido_hijo =
+            descomprimir_objeto(hash_hijo.clone(), String::from(".gir/objects/")).unwrap();
+        let lineas_sin_null = contenido_hijo.replace("\0", "\n");
+        let lineas = lineas_sin_null.split("\n").collect::<Vec<&str>>();
         let arbol_commit = lineas[1];
         let lineas = arbol_commit.split(' ').collect::<Vec<&str>>();
         let arbol_commit = lineas[1];
@@ -255,10 +284,7 @@ mod test {
         addear_archivos_y_comittear(vec!["test_file2.txt".to_string()], logger.clone());
 
         let hash_padre_desde_hijo = conseguir_hash_padre("master".to_string());
-        assert_eq!(
-            hash_padre_desde_hijo,
-            format!("parent {}", hash_padre).to_string()
-        );
+        assert_eq!(hash_padre_desde_hijo, format!("{}", hash_padre).to_string());
     }
 
     #[test]
@@ -268,7 +294,8 @@ mod test {
         addear_archivos_y_comittear(vec!["test_file.txt".to_string()], logger);
 
         let hash_arbol = conseguir_arbol_commit("master".to_string());
-        let contenido_arbol = descomprimir_objeto(hash_arbol).unwrap();
+        let contenido_arbol =
+            descomprimir_objeto(hash_arbol, String::from(".gir/objects/")).unwrap();
 
         assert_eq!(
             contenido_arbol,
@@ -287,7 +314,7 @@ mod test {
         addear_archivos_y_comittear(vec!["test_file.txt".to_string()], logger.clone());
 
         let hash_arbol = conseguir_arbol_commit("master".to_string());
-        let contenido_arbol = descomprimir_objeto(hash_arbol).unwrap();
+        let contenido_arbol = descomprimir_objeto_gir(hash_arbol).unwrap();
         let hash_correcto =
             HashObject::from(&mut vec!["test_file.txt".to_string()], logger.clone())
                 .unwrap()

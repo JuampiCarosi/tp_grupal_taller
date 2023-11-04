@@ -109,8 +109,13 @@ pub fn generar_objetos_raiz(
     Ok(objetos_raiz)
 }
 
-pub fn escribir_index(logger: Arc<Logger>, objetos_index: &Vec<ObjetoIndex>) -> Result<(), String> {
+pub fn escribir_index(
+    logger: Arc<Logger>,
+    objetos_index: &mut Vec<ObjetoIndex>,
+) -> Result<(), String> {
     let mut buffer = String::new();
+
+    objetos_index.sort_by_key(|objeto_index| objeto_index.objeto.obtener_path());
 
     for objeto_index in objetos_index {
         let line = match objeto_index.objeto {

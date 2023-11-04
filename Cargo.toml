@@ -13,3 +13,11 @@ sha1 = "0.10.6"
 
 [dev-dependencies]
 serial_test = "1.0.0"
+
+[[bin]]
+name = "client"
+path = "src/main.rs"
+
+[[bin]]
+name = "server"
+path = "src/00_server.rs"

@@ -111,7 +111,7 @@ impl Objeto {
 
 #[cfg(test)]
 
-mod test {
+mod tests {
 
     use crate::tipos_de_dato::logger;
 

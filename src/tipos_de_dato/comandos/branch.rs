@@ -2,6 +2,11 @@ use std::{path::PathBuf, sync::Arc};
 
 use crate::{io, tipos_de_dato::logger::Logger, utils::path_buf::obtener_nombre};
 
+use super::commit::Commit;
+
+const VERDE: &str = "\x1B[32m";
+const RESET: &str = "\x1B[0m";
+
 pub struct Branch {
     pub mostrar: bool,
     pub rama_nueva: Option<String>,
@@ -33,18 +38,33 @@ impl Branch {
         })
     }
 
-    pub fn mostrar_ramas() -> Result<String, String> {
+    pub fn obtener_ramas() -> Result<Vec<String>, String> {
         let directorio = ".gir/refs/heads";
         let entradas = std::fs::read_dir(directorio)
             .map_err(|e| format!("No se pudo leer el directorio:{}\n {}", directorio, e))?;
 
-        let mut output = String::new();
+        let mut ramas: Vec<String> = Vec::new();
 
         for entrada in entradas {
             let entrada = entrada
                 .map_err(|_| format!("Error al leer entrada el directorio {directorio:#?}"))?;
             let nombre = obtener_nombre(&entrada.path())?;
-            output.push_str(&format!("{}\n", nombre));
+            ramas.push(nombre);
+        }
+        Ok(ramas)
+    }
+
+    pub fn mostrar_ramas() -> Result<String, String> {
+        let rama_actual = Commit::obtener_branch_actual()?;
+
+        let mut output = String::new();
+
+        for rama in Self::obtener_ramas()? {
+            if rama == rama_actual {
+                output.push_str(&format!("* {}{}{}\n", VERDE, rama, RESET));
+            } else {
+                output.push_str(&format!("  {}\n", rama));
+            }
         }
 
         Ok(output)
@@ -87,7 +107,7 @@ impl Branch {
 
 #[cfg(test)]
 mod test {
-    use super::Branch;
+    use super::*;
     use crate::io::rm_directorio;
     use crate::tipos_de_dato::comandos::add::Add;
     use crate::tipos_de_dato::comandos::commit::Commit;
@@ -120,7 +140,7 @@ mod test {
 
     fn conseguir_arbol_commit(branch: String) -> String {
         let hash_hijo = std::fs::read_to_string(format!(".gir/refs/heads/{}", branch)).unwrap();
-        let contenido_hijo = utils::compresion::descomprimir_objeto(hash_hijo.clone()).unwrap();
+        let contenido_hijo = utils::compresion::descomprimir_objeto_gir(hash_hijo.clone()).unwrap();
         let lineas_sin_null = contenido_hijo.replace("\0", "\n");
         let lineas = lineas_sin_null.split("\n").collect::<Vec<&str>>();
         let arbol_commit = lineas[1];
@@ -149,7 +169,7 @@ mod test {
 
         let resultado = branch.ejecutar();
 
-        assert_eq!(resultado, Ok("master\n".to_string()));
+        assert_eq!(resultado, Ok(format!("* {VERDE}master{RESET}\n")));
     }
 
     #[test]
@@ -186,7 +206,10 @@ mod test {
         }
         .ejecutar();
 
-        assert_eq!(resultado, Ok("master\nnueva_rama\n".to_string()));
+        assert_eq!(
+            resultado,
+            Ok(format!("* {VERDE}master{RESET}\n  nueva_rama\n"))
+        );
     }
 
     #[test]
@@ -197,7 +220,7 @@ mod test {
 
         let resultado = branch.ejecutar();
 
-        assert_eq!(resultado, Ok("master\n".to_string()));
+        assert_eq!(resultado, Ok(format!("* {VERDE}master{RESET}\n")));
     }
 
     #[test]

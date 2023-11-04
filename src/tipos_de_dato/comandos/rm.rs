@@ -145,7 +145,7 @@ impl Remove {
             }
         }
 
-        escribir_index(self.logger.clone(), &self.index)?;
+        escribir_index(self.logger.clone(), &mut self.index)?;
         self.limpiar_directorios_vacios();
 
         Ok("".to_string())
@@ -153,7 +153,7 @@ impl Remove {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
 
     use crate::{
         io::{escribir_bytes, leer_a_string},
