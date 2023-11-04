@@ -138,8 +138,9 @@ impl<T: Write + Read> Comunicacion<T> {
 
             let linea = self.obtener_contenido_linea(tamanio)?;
             lineas.push(linea.to_string());
+            println!("linea: {:?}", linea);
             //esto deberia ir antes o despues del push juani  ?? estaba asi
-            if linea.contains("NAK") || linea.contains("done") && !linea.contains("ref") {
+            if linea.contains("NAK") || linea.contains("ACK") || (linea.contains("done") && !linea.contains("ref")) {
                 break;
             }
 
@@ -244,19 +245,21 @@ impl<T: Write + Read> Comunicacion<T> {
         mut pedidos: Vec<String>,
         capacidades: String,
     ) -> Result<(), String> {
+        
         self.anadir_capacidades_primer_pedido(&mut pedidos, capacidades);
+
 
         for pedido in &mut pedidos {
             let pedido_con_formato = self.dar_formato_de_solicitud(pedido);
             self.enviar(&pedido_con_formato)?;
         }
 
-        if !pedidos[0].contains(&"NAK".to_string())
-            && !pedidos[0].contains(&"ACK".to_string())
-            && !pedidos[0].contains(&"done".to_string())
-        {
-            self.enviar("0000")?;
-        }
+        // if !pedidos[0].contains(&"NAK".to_string())
+        //     && !pedidos[0].contains(&"ACK".to_string())
+        //     && !pedidos[0].contains(&"done".to_string())
+        // {
+        self.enviar("0000")?;
+        // }
         Ok(())
     }
 
@@ -305,7 +308,6 @@ impl<T: Write + Read> Comunicacion<T> {
         {
             self.enviar("0000")?;
         }
-
         Ok(())
     }
 

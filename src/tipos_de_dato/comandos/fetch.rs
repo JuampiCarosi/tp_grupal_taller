@@ -70,7 +70,9 @@ impl <T:Write + Read>Fetch<T>{
             commits_cabezas_y_dir_rama_asosiado,
             _commits_y_tags_asosiados,
         ) = self.fase_de_descubrimiento()?;
-        self.fase_de_negociacion(capacidades_servidor, &commits_cabezas_y_dir_rama_asosiado)?;
+        if !self.fase_de_negociacion(capacidades_servidor, &commits_cabezas_y_dir_rama_asosiado)? {
+            return Ok(String::from("El cliente esta actualizado"));
+        }
         self.recivir_packfile_y_guardar_objetos()?;
 
         self.actualizar_ramas_locales_del_remoto(&commits_cabezas_y_dir_rama_asosiado)?;
@@ -94,13 +96,16 @@ impl <T:Write + Read>Fetch<T>{
         &self,
         capacidades_servidor: Vec<String>,
         commits_cabezas_y_dir_rama_asosiado: &Vec<(String, PathBuf)>,
-    ) -> Result<(), String> {
-        self.enviar_pedidos(&capacidades_servidor, &commits_cabezas_y_dir_rama_asosiado)?;
-
+    ) -> Result<bool, String> {
+        // no hay pedidos :D
+        if !self.enviar_pedidos(&capacidades_servidor, &commits_cabezas_y_dir_rama_asosiado)? {
+            return Ok(false)
+        }
+        
         self.enviar_lo_que_tengo()?;
-
-        self.finalizar_pedido()?;
-        self.recivir_nack()
+        Ok(true)
+        // self.recivir_nack()?;
+        // self.finalizar_pedido()
     }
 
     //ACA PARA MI HAY UN PROBLEMA DE RESPONSABILIADADES: COMUNICACION DEBERIA RECIBIR EL PACKETE Y FETCH
@@ -131,7 +136,11 @@ impl <T:Write + Read>Fetch<T>{
             self.comunicacion
                 .enviar_lo_que_tengo_al_servidor_pkt(&objetos_directorio)?;
             self.recivir_nack()?;
-        } 
+            self.finalizar_pedido()?
+        } else {
+            self.finalizar_pedido()?;
+            self.recivir_nack()?;
+        }
 
         Ok(())
     }
@@ -151,17 +160,21 @@ impl <T:Write + Read>Fetch<T>{
         &self,
         capacidades_servidor: &Vec<String>,
         commits_cabezas_y_dir_rama_asosiado: &Vec<(String, PathBuf)>,
-    ) -> Result<(), String> {
+    ) -> Result<bool, String> {
         let capacidades_a_usar_en_la_comunicacion =
             self.obtener_capacidades_en_comun_con_el_servidor(capacidades_servidor);
         let commits_de_cabeza_de_rama_faltantes =
             self.obtener_commits_cabeza_de_rama_faltantes(commits_cabezas_y_dir_rama_asosiado)?;
-
+        
+        if commits_de_cabeza_de_rama_faltantes.is_empty() {
+            self.comunicacion.enviar("0000")?;
+            return Ok(false);
+        }
         self.comunicacion.enviar_pedidos_al_servidor_pkt(
             commits_de_cabeza_de_rama_faltantes,
             capacidades_a_usar_en_la_comunicacion,
         )?;
-        Ok(())
+        Ok(true)
     }
 
     ///Obtiene los commits que son necesarios a actulizar y por lo tanto hay que pedirle al servidor esas ramas.
