@@ -1,8 +1,7 @@
-use gir::io;
-use std::path::PathBuf;
-use std::rc::Rc;
-use gir::tipos_de_dato::{comando::Comando, logger::Logger};
+use std::{path::PathBuf, sync::Arc};
 
+use gir::io;
+use gir::tipos_de_dato::{comando::Comando, logger::Logger};
 
 //extrae la ubiacion del archivo log seteada en el archivo config. En caso de error
 // devuelve una direccion default = .log
@@ -28,7 +27,17 @@ fn obtener_dir_archivo_log(ubicacion_config: PathBuf) -> String {
 
 fn main() -> Result<(), String> {
     let args = std::env::args().collect::<Vec<String>>();
-    let logger = Rc::new(Logger::new(PathBuf::from("log.txt"))?);
+    let logger = Arc::new(Logger::new(PathBuf::from("log.txt"))?);
+
+    if args.len() < 2 {
+        println!("ERROR: No se ingreso ningun comando");
+        return Ok(());
+    }
+
+    if args[1] == "gui" {
+        gir::gui::ejecutar(logger.clone());
+        return Ok(());
+    }
 
     let mut comando = match Comando::new(args, logger.clone()) {
         Ok(comando) => comando,
@@ -60,7 +69,7 @@ fn main() -> Result<(), String> {
 //     let mut comunicacion = Comunicacion::new(client.try_clone().unwrap());
 
 //     // si es un push, tengo que calcular los commits de diferencia entre el cliente y el server, y mandarlos como packfiles.
-//     // hay una funcion que hace el calculo 
+//     // hay una funcion que hace el calculo
 //     // obtener_listas_de_commits
 
 //     let request_data = "git-upload-pack /.gir/\0host=example.com\0\0version=1\0"; //en donde dice /.git/ va la dir del repo
@@ -73,12 +82,12 @@ fn main() -> Result<(), String> {
 //     let wants = comunicacion.obtener_wants_pkt(&refs_recibidas, capacidades.to_string()).unwrap();
 //     comunicacion.responder(wants.clone()).unwrap();
 //     // let objetos_directorio = io::obtener_objetos_del_directorio("./.git/objects/".to_string()).unwrap();
-//     // let haves = comunicacion.obtener_haves_pkt(&objetos_directorio);    
-    
+//     // let haves = comunicacion.obtener_haves_pkt(&objetos_directorio);
+
 //     // comunicacion.responder(haves).unwrap();
-//     // if clone { 
+//     // if clone {
 //     //     envio done previo obtencion de nak
-//     // } else { 
+//     // } else {
 //     //     obtengo acks/nak y envio done
 //     // }
 //     // ESTO ES EN EL CASO EN EL QUE SEA UN CLONE
@@ -99,7 +108,7 @@ fn main() -> Result<(), String> {
 //     };
 //     io::escribir_bytes(PathBuf::from(head_dir), ref_head.clone().as_bytes()).unwrap();
 //     println!("ref_head: {:?}", ref_head);
- 
+
 //     let tree_hash = write_tree::conseguir_arbol_padre_from_ult_commit(ref_head.clone());
 //     println!("tree_hash: {:?}", tree_hash);
 //     let tree: Tree = Tree::from_hash(tree_hash, PathBuf::from("/home/juani/git/objects")).unwrap();
@@ -108,12 +117,8 @@ fn main() -> Result<(), String> {
 //         Err(e) => {println!("Error al escribir el arbol: {}", e);}
 //     }
 
-
-
 //     Ok(())
 // }
-
-
 
 // fn obtener_listas_de_commits(branch: &String) -> Result<Vec<String>, String> {
 //     let ruta = format!(".gir/refs/heads/{}", branch);

@@ -20,6 +20,7 @@ pub enum Log {
     End,
 }
 
+#[derive(Debug)]
 /// A logger that writes messages to a file.
 pub struct Logger {
     tx: Sender<Log>,
@@ -126,7 +127,7 @@ fn escribir_mensaje_en_archivo_log(
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::Logger;
     use std::{env, fs, path::PathBuf, sync::Arc, thread};
     extern crate serial_test;

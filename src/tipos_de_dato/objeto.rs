@@ -1,8 +1,11 @@
-use std::{hash::Hash, path::PathBuf};
+use std::{path::PathBuf, sync::Arc};
 
-use super::objetos::{blob::Blob, tree::Tree};
+use super::{
+    logger::Logger,
+    objetos::{blob::Blob, tree::Tree},
+};
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Objeto {
     Tree(Tree),
     Blob(Blob),
@@ -37,7 +40,7 @@ impl Objeto {
         }
     }
 
-    pub fn from_index(linea_index: String) -> Result<Objeto, String> {
+    pub fn from_index(linea_index: String, logger: Arc<Logger>) -> Result<Objeto, String> {
         let mut line = linea_index.split_whitespace();
 
         let modo = line.next().ok_or("Error al leer el modo")?;
@@ -55,9 +58,10 @@ impl Objeto {
                 nombre: nombre.to_string(),
                 ubicacion,
                 hash: hash.to_string(),
+                logger,
             })),
             "40000" => {
-                let tree = Tree::from_hash(hash.to_string(), ubicacion)?;
+                let tree = Tree::from_hash(hash.to_string(), ubicacion, logger)?;
                 Ok(Objeto::Tree(tree))
             }
             _ => Err("Modo no soportado".to_string()),
@@ -68,14 +72,22 @@ impl Objeto {
     /// Si el directorio es un archivo, devuelve un Blob
     /// Si el directorio es un directorio, devuelve un Tree
     pub fn from_directorio(
-        directorio: PathBuf,
+        mut directorio: PathBuf,
         hijos_especificados: Option<&Vec<PathBuf>>,
+        logger: Arc<Logger>,
     ) -> Result<Objeto, String> {
+        if directorio.starts_with("./") && directorio != PathBuf::from("./") {
+            directorio = match directorio.strip_prefix("./") {
+                Ok(dir) => dir.to_path_buf(),
+                Err(_) => return Err(format!("No se pudo leer el directorio {directorio:#?}")),
+            };
+        }
+
         if directorio.is_dir() {
-            let tree = Tree::from_directorio(directorio.clone(), hijos_especificados)?;
+            let tree = Tree::from_directorio(directorio.clone(), hijos_especificados, logger)?;
             Ok(Objeto::Tree(tree))
         } else if directorio.is_file() {
-            let blob = Blob::from_directorio(directorio.clone())?;
+            let blob = Blob::from_directorio(directorio.clone(), logger)?;
             Ok(Objeto::Blob(blob))
         } else {
             Err(format!("No se pudo leer el directorio {directorio:#?}"))
@@ -99,27 +111,37 @@ impl Objeto {
 
 #[cfg(test)]
 
-mod test {
+mod tests {
+
+    use crate::tipos_de_dato::logger;
 
     use super::*;
 
     #[test]
     fn test01_blob_from_index() {
-        let objeto = Objeto::from_index("100644 1234567890 ./hola.txt".to_string()).unwrap();
+        let logger = Arc::new(logger::Logger::new(PathBuf::from("tmp/objeto_test01")).unwrap());
+        let objeto =
+            Objeto::from_index("100644 1234567890 ./hola.txt".to_string(), logger.clone()).unwrap();
         assert_eq!(
             objeto,
             Objeto::Blob(Blob {
                 nombre: "hola.txt".to_string(),
                 hash: "1234567890".to_string(),
                 ubicacion: PathBuf::from("./hola.txt"),
+                logger: logger.clone()
             })
         );
     }
 
     #[test]
     fn test02_blob_from_directorio() {
-        let objeto =
-            Objeto::from_directorio(PathBuf::from("test_dir/objetos/archivo.txt"), None).unwrap();
+        let logger = Arc::new(logger::Logger::new(PathBuf::from("tmp/objeto_test02")).unwrap());
+        let objeto = Objeto::from_directorio(
+            PathBuf::from("test_dir/objetos/archivo.txt"),
+            None,
+            logger.clone(),
+        )
+        .unwrap();
 
         assert_eq!(
             objeto,
@@ -127,6 +149,7 @@ mod test {
                 nombre: "archivo.txt".to_string(),
                 hash: "2b824e648965b94c6c6b3dd0702feb91f699ed62".to_string(),
                 ubicacion: PathBuf::from("test_dir/objetos/archivo.txt"),
+                logger
             })
         );
     }
@@ -134,26 +157,33 @@ mod test {
     #[test]
 
     fn test03_tree_from_directorio() {
-        let objeto = Objeto::from_directorio(PathBuf::from("test_dir/objetos"), None).unwrap();
+        let logger = Arc::new(logger::Logger::new(PathBuf::from("tmp/objeto_test03")).unwrap());
+        let objeto =
+            Objeto::from_directorio(PathBuf::from("test_dir/objetos"), None, logger.clone())
+                .unwrap();
 
         let hijo = Objeto::Blob(Blob {
             nombre: "archivo.txt".to_string(),
             hash: "2b824e648965b94c6c6b3dd0702feb91f699ed62".to_string(),
             ubicacion: PathBuf::from("test_dir/objetos/archivo.txt"),
+            logger: logger.clone(),
         });
 
         assert_eq!(
             objeto,
             Objeto::Tree(Tree {
                 directorio: PathBuf::from("test_dir/objetos"),
-                objetos: vec![hijo]
+                objetos: vec![hijo],
+                logger
             })
         );
     }
 
     #[test]
     fn test04_tree_from_index() {
-        let objeto_a_escibir = Objeto::from_directorio(PathBuf::from("test_dir"), None).unwrap();
+        let logger = Arc::new(logger::Logger::new(PathBuf::from("tmp/objeto_test04")).unwrap());
+        let objeto_a_escibir =
+            Objeto::from_directorio(PathBuf::from("test_dir"), None, logger.clone()).unwrap();
 
         if let Objeto::Tree(ref tree) = objeto_a_escibir {
             tree.escribir_en_base().unwrap();
@@ -161,45 +191,51 @@ mod test {
             panic!("No se pudo leer el directorio");
         }
 
-        let objeto = Objeto::from_index(format!(
-            "40000 {} test_dir",
-            &objeto_a_escibir.obtener_hash()
-        ))
+        let objeto = Objeto::from_index(
+            format!("40000 {} test_dir", &objeto_a_escibir.obtener_hash()),
+            logger.clone(),
+        )
         .unwrap();
 
         let nieto_1 = Objeto::Blob(Blob {
             nombre: "archivo.txt".to_string(),
             hash: "2b824e648965b94c6c6b3dd0702feb91f699ed62".to_string(),
             ubicacion: PathBuf::from("test_dir/objetos/archivo.txt"),
+            logger: logger.clone(),
         });
 
         let nieto_2 = Objeto::Blob(Blob {
             nombre: "archivo.txt".to_string(),
             hash: "ba1d9d6871ba93f7e070c8663e6739cc22f07d3f".to_string(),
             ubicacion: PathBuf::from("test_dir/muchos_objetos/archivo.txt"),
+            logger: logger.clone(),
         });
 
         let nieto_3 = Objeto::Blob(Blob {
             nombre: "archivo_copy.txt".to_string(),
             hash: "2b824e648965b94c6c6b3dd0702feb91f699ed62".to_string(),
             ubicacion: PathBuf::from("test_dir/muchos_objetos/archivo_copy.txt"),
+            logger: logger.clone(),
         });
 
         let hijo_1 = Objeto::Tree(Tree {
             directorio: PathBuf::from("test_dir/objetos"),
             objetos: vec![nieto_1],
+            logger: logger.clone(),
         });
 
         let hijo_2 = Objeto::Tree(Tree {
             directorio: PathBuf::from("test_dir/muchos_objetos"),
-            objetos: Tree::ordenar_objetos_alfabeticamente(&vec![nieto_2, nieto_3]),
+            objetos: Tree::ordenar_objetos_alfabeticamente(&[nieto_2, nieto_3]),
+            logger: logger.clone(),
         });
 
         assert_eq!(
             objeto,
             Objeto::Tree(Tree {
                 directorio: PathBuf::from("test_dir"),
-                objetos: Tree::ordenar_objetos_alfabeticamente(&vec![hijo_1, hijo_2]),
+                objetos: Tree::ordenar_objetos_alfabeticamente(&[hijo_1, hijo_2]),
+                logger: logger.clone(),
             })
         );
     }

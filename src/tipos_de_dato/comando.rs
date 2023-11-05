@@ -1,14 +1,15 @@
-use std::{rc::Rc, io::Write, io::Read, net::TcpStream};
+use std::{net::TcpStream, sync::Arc};
 
 use super::{
     comandos::{
-        add::Add, branch::Branch, cat_file::CatFile, checkout::Checkout, commit::Commit,
-        hash_object::HashObject, init::Init, rm::Remove, version::Version, clone::Clone, fetch::Fetch, push::Push, log::Log, remote::Remote
+        add::Add, branch::Branch, cat_file::CatFile, checkout::Checkout, clone::Clone,
+        commit::Commit, fetch::Fetch, hash_object::HashObject, init::Init, log::Log, merge::Merge,
+        push::Push, remote::Remote, rm::Remove, status::Status, version::Version,
     },
     logger::Logger,
 };
 
-pub enum Comando{
+pub enum Comando {
     Init(Init),
     Version(Version),
     HashObject(HashObject),
@@ -23,14 +24,20 @@ pub enum Comando{
     Push(Push),
     // Pull,
     Log(Log),
+    Status(Status),
     Remote(Remote),
+    Merge(Merge),
     Unknown,
 }
 
-impl Comando{
-    pub fn new(input: Vec<String>, logger: Rc<Logger>) -> Result<Comando, String> {
-        let (_, rest) = input.split_first().unwrap();
-        let (comando, args) = rest.split_first().unwrap();
+impl Comando {
+    pub fn new(input: Vec<String>, logger: Arc<Logger>) -> Result<Comando, String> {
+        let (_, rest) = match input.split_first() {
+            Some((first, rest)) => (first, rest),
+            None => return Err("No se ingreso ningun comando".to_string()),
+        };
+
+        let (comando, args) = rest.split_first().ok_or("No se ingreso ningun comando")?;
 
         let mut vector_args = Vec::from(args);
 
@@ -45,12 +52,13 @@ impl Comando{
             "checkout" => Comando::Checkout(Checkout::from(vector_args, logger)?),
             "commit" => Comando::Commit(Commit::from(&mut vector_args, logger)?),
             "fetch" => Comando::Fetch(Fetch::<TcpStream>::new(logger)?),
-            "clone" => Comando::Clone(Clone::new()),
+            "clone" => Comando::Clone(Clone::from(logger)),
             "push" => Comando::Push(Push::new()),
             // "pull",
-
             "log" => Comando::Log(Log::from(&mut vector_args, logger)?),
+            "status" => Comando::Status(Status::from(logger)?),
             "remote" => Comando::Remote(Remote::from(&mut vector_args, logger)?),
+            "merge" => Comando::Merge(Merge::from(&mut vector_args, logger)?),
             _ => Comando::Unknown,
         };
 
@@ -58,7 +66,7 @@ impl Comando{
     }
 }
 
-impl Comando{
+impl Comando {
     pub fn ejecutar(&mut self) -> Result<String, String> {
         match self {
             Comando::Init(init) => init.ejecutar(),
@@ -74,8 +82,10 @@ impl Comando{
             Comando::Clone(clone) => clone.ejecutar(),
             Comando::Push(push) => push.ejecutar(),
             Comando::Log(ref mut log) => log.ejecutar(),
-            Comando::Unknown => Err("Comando desconocido".to_string()),
+            Comando::Status(ref mut status) => status.ejecutar(),
             Comando::Remote(ref mut remote) => remote.ejecutar(),
+            Comando::Merge(ref mut merge) => merge.ejecutar(),
+            Comando::Unknown => Err("Comando desconocido".to_string()),
         }
     }
 }

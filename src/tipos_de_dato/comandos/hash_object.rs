@@ -1,11 +1,11 @@
-use crate::utilidades_de_compresion::comprimir_contenido;
+use crate::utils::compresion::comprimir_contenido_u8;
 use crate::{io, tipos_de_dato::logger::Logger};
 use sha1::{Digest, Sha1};
 use std::path::PathBuf;
-use std::rc::Rc;
+use std::sync::Arc;
 
 pub struct HashObject {
-    pub logger: Rc<Logger>,
+    pub logger: Arc<Logger>,
     pub escribir: bool,
     pub ubicacion_archivo: PathBuf,
 }
@@ -18,7 +18,7 @@ impl HashObject {
         Ok(PathBuf::from(nombre_string?))
     }
 
-    pub fn from(args: &mut Vec<String>, logger: Rc<Logger>) -> Result<HashObject, String> {
+    pub fn from(args: &mut Vec<String>, logger: Arc<Logger>) -> Result<HashObject, String> {
         let mut escribir = false;
         let nombre_archivo = Self::obtener_nombre_archivo(args)?;
 
@@ -43,20 +43,20 @@ impl HashObject {
         })
     }
 
-    fn construir_contenido(&self) -> Result<String, String> {
-        let contenido = io::leer_a_string(self.ubicacion_archivo.clone())?;
+    fn construir_contenido(&self) -> Result<Vec<u8>, String> {
+        let contenido = io::leer_bytes(self.ubicacion_archivo.clone())?;
         let header = format!("blob {}\0", contenido.len());
-        let contenido_total = header + &contenido;
+        let contenido_total = [header.as_bytes(), &contenido].concat();
 
         Ok(contenido_total)
     }
 
-    pub fn hashear_contenido_objeto(contenido: &str) -> String {
+    pub fn hashear_contenido_objeto(contenido: &Vec<u8>) -> String {
         let mut hasher = Sha1::new();
         hasher.update(contenido);
         let hash = hasher.finalize();
         format!("{:x}", hash)
-    }  
+    }
 
     pub fn ejecutar(&self) -> Result<String, String> {
         let contenido = self.construir_contenido()?;
@@ -64,7 +64,7 @@ impl HashObject {
 
         if self.escribir {
             let ruta = format!(".gir/objects/{}/{}", &hash[..2], &hash[2..]);
-            io::escribir_bytes(ruta, comprimir_contenido(contenido)?)?;
+            io::escribir_bytes(ruta, comprimir_contenido_u8(&contenido)?)?;
         }
         let mensaje = format!(
             "Objeto gir hasheado en {}",
@@ -75,11 +75,9 @@ impl HashObject {
     }
 }
 
-
-
 #[cfg(test)]
-mod test {
-    use std::{io::Read, path::PathBuf, rc::Rc};
+mod tests {
+    use std::{io::Read, path::PathBuf, sync::Arc};
 
     use flate2::read::ZlibDecoder;
 
@@ -91,7 +89,7 @@ mod test {
     #[test]
     fn test01_hash_object_de_un_blob_devuelve_el_hash_correcto() {
         let mut args = vec!["test_dir/objetos/archivo.txt".to_string()];
-        let logger = Rc::new(Logger::new(PathBuf::from("tmp/hash_object_test01")).unwrap());
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/hash_object_test01")).unwrap());
         let hash_object = HashObject::from(&mut args, logger).unwrap();
         let hash = hash_object.ejecutar().unwrap();
         assert_eq!(hash, "2b824e648965b94c6c6b3dd0702feb91f699ed62");
@@ -100,7 +98,7 @@ mod test {
     #[test]
     fn test02_hash_object_de_un_blob_con_opcion_w_devuelve_el_hash_correcto_y_lo_escribe() {
         let mut args = vec!["-w".to_string(), "test_dir/objetos/archivo.txt".to_string()];
-        let logger = Rc::new(Logger::new(PathBuf::from("tmp/hash_object_test01")).unwrap());
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/hash_object_test01")).unwrap());
         let hash_object = HashObject::from(&mut args, logger).unwrap();
         let hash = hash_object.ejecutar().unwrap();
         assert_eq!(hash, "2b824e648965b94c6c6b3dd0702feb91f699ed62");

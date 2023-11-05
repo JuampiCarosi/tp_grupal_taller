@@ -1,15 +1,15 @@
-use std::{collections::HashSet, path::PathBuf, rc::Rc};
+use std::{collections::HashSet, path::PathBuf, sync::Arc};
 
 use crate::{
     io::rm_directorio,
     tipos_de_dato::{logger::Logger, objeto::Objeto},
-    utilidades_index::{crear_index, escribir_index, leer_index, ObjetoIndex},
+    utils::index::{crear_index, escribir_index, leer_index, ObjetoIndex},
 };
 
 pub struct Remove {
     pub ubicaciones: Vec<PathBuf>,
     pub cached: bool,
-    pub logger: Rc<Logger>,
+    pub logger: Arc<Logger>,
     pub index: Vec<ObjetoIndex>,
 }
 
@@ -78,9 +78,9 @@ impl Remove {
         Ok(ubicaciones_hoja)
     }
 
-    pub fn from(args: Vec<String>, logger: Rc<Logger>) -> Result<Remove, String> {
+    pub fn from(args: Vec<String>, logger: Arc<Logger>) -> Result<Remove, String> {
         crear_index();
-        let index = leer_index()?;
+        let index = leer_index(logger.clone())?;
         let mut ubicaciones_recibidas: Vec<PathBuf> = Vec::new();
         let mut cached = false;
         let mut recursivo = false;
@@ -103,7 +103,7 @@ impl Remove {
             Self::obtener_ubicaciones_hoja(ubicaciones_recibidas, recursivo)?;
 
         Ok(Remove {
-            logger,
+            logger: logger.clone(),
             ubicaciones,
             index,
             cached,
@@ -118,7 +118,8 @@ impl Remove {
                 Err("No se puede borrar un directorio sin la opcion -r".to_string())?;
             }
 
-            let nuevo_objeto = Objeto::from_directorio(ubicacion.clone(), None)?;
+            let nuevo_objeto =
+                Objeto::from_directorio(ubicacion.clone(), None, self.logger.clone())?;
             let nuevo_objeto_index = ObjetoIndex {
                 merge: false,
                 es_eliminado: true,
@@ -144,7 +145,7 @@ impl Remove {
             }
         }
 
-        escribir_index(self.logger.clone(), &self.index)?;
+        escribir_index(self.logger.clone(), &mut self.index)?;
         self.limpiar_directorios_vacios();
 
         Ok("".to_string())
@@ -152,7 +153,7 @@ impl Remove {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
 
     use crate::{
         io::{escribir_bytes, leer_a_string},
@@ -161,8 +162,8 @@ mod test {
 
     use super::*;
 
-    fn crear_test_file() {
-        escribir_bytes("tmp/rm_test.txt", "contenido").unwrap();
+    fn crear_test_file(contenido: &str) {
+        escribir_bytes("tmp/rm_test.txt", contenido).unwrap();
     }
 
     fn existe_test_file() -> bool {
@@ -173,8 +174,8 @@ mod test {
         let _ = std::fs::remove_file(".gir/index");
     }
 
-    fn crear_archivo_en_dir() {
-        escribir_bytes("tmp/test_dir/testfile.txt", "contenido").unwrap();
+    fn crear_archivo_en_dir(contenido: &str) {
+        escribir_bytes("tmp/test_dir/testfile.txt", contenido).unwrap();
     }
 
     fn existe_archivo_en_dir() -> bool {
@@ -188,7 +189,7 @@ mod test {
     #[test]
     fn test01_remove_ejecutar() {
         clear_index();
-        let logger = Rc::new(Logger::new(PathBuf::from("tmp/rm_test01")).unwrap());
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/rm_test01")).unwrap());
         Add::from(vec!["test_file.txt".to_string()], logger.clone())
             .unwrap()
             .ejecutar()
@@ -215,8 +216,8 @@ mod test {
     #[test]
     fn test02_remove_recursivo() {
         clear_index();
-        crear_archivo_en_dir();
-        let logger = Rc::new(Logger::new(PathBuf::from("tmp/rm_test01")).unwrap());
+        crear_archivo_en_dir("test02");
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/rm_test01")).unwrap());
         Add::from(vec!["tmp/test_dir".to_string()], logger.clone())
             .unwrap()
             .ejecutar()
@@ -241,15 +242,15 @@ mod test {
 
         assert_eq!(
             index,
-            "- 0 100644 d2207d7532b976e05bada36e723b79f26cd7f2cd tmp/test_dir/testfile.txt\n"
+            "- 0 100644 5b88c81cf6242742a0920887170cff76a3267e50 tmp/test_dir/testfile.txt\n"
         )
     }
 
     #[test]
     fn test03_remove_sin_cached() {
         clear_index();
-        crear_test_file();
-        let logger = Rc::new(Logger::new(PathBuf::from("tmp/rm_test01")).unwrap());
+        crear_test_file("test03");
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/rm_test01")).unwrap());
         Add::from(vec!["tmp/rm_test.txt".to_string()], logger.clone())
             .unwrap()
             .ejecutar()
@@ -271,7 +272,7 @@ mod test {
 
         assert_eq!(
             index,
-            "- 0 100644 d2207d7532b976e05bada36e723b79f26cd7f2cd tmp/rm_test.txt\n"
+            "- 0 100644 bd64bee30820f16fa35105d7cd589131812c4d67 tmp/rm_test.txt\n"
         );
         assert!(!existe_test_file());
     }
@@ -279,9 +280,9 @@ mod test {
     #[test]
     fn test04_remove_recursivo_sin_cached() {
         clear_index();
-        crear_archivo_en_dir();
+        crear_archivo_en_dir("test04");
 
-        let logger = Rc::new(Logger::new(PathBuf::from("tmp/rm_test01")).unwrap());
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/rm_test01")).unwrap());
         Add::from(vec!["tmp/test_dir".to_string()], logger.clone())
             .unwrap()
             .ejecutar()
@@ -302,7 +303,7 @@ mod test {
 
         assert_eq!(
             index,
-            "- 0 100644 d2207d7532b976e05bada36e723b79f26cd7f2cd tmp/test_dir/testfile.txt\n"
+            "- 0 100644 46bc7488b30b93a1c3e6f2e3f6f3fd200c662ad2 tmp/test_dir/testfile.txt\n"
         );
 
         assert!(!existe_archivo_en_dir());
@@ -313,9 +314,9 @@ mod test {
     #[should_panic(expected = "No se puede borrar un directorio sin la opcion -r")]
     fn test05_remove_directorio_no_recursivo_falla() {
         clear_index();
-        crear_archivo_en_dir();
+        crear_archivo_en_dir("test05");
 
-        let logger = Rc::new(Logger::new(PathBuf::from("tmp/rm_test01")).unwrap());
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/rm_test01")).unwrap());
         Add::from(vec!["tmp/test_dir".to_string()], logger.clone())
             .unwrap()
             .ejecutar()

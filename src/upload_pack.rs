@@ -5,8 +5,8 @@ use std::net::TcpStream;
 use crate::err_comunicacion::ErrorDeComunicacion;
 use crate::io::obtener_archivos_faltantes;
 use crate::packfile;
+use crate::utils::strings::eliminar_prefijos;
 use crate::{comunicacion::Comunicacion, io as git_io};
-use crate::utilidades_strings;
 
 pub fn upload_pack(dir: String, comunicacion: &mut Comunicacion<TcpStream>) -> Result<(), ErrorDeComunicacion> {
     // caso push 
@@ -34,7 +34,7 @@ pub fn upload_pack(dir: String, comunicacion: &mut Comunicacion<TcpStream>) -> R
 
     // -------- fetch ----------
     println!("Entro aca porque hay haves");
-    let have_objs_ids = utilidades_strings::eliminar_prefijos(&lineas_siguientes);
+    let have_objs_ids = eliminar_prefijos(&lineas_siguientes);
     println!("have_objs_ids: {:?}", have_objs_ids);
     // let have_obj_ids = utilidades_strings::eliminar_prefijos(&mut lineas_siguientes, "have");
     let respuesta_acks_nak = git_io::obtener_ack(have_objs_ids.clone(), dir.clone() + "objects/");

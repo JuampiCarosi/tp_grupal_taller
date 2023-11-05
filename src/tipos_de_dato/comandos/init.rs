@@ -1,10 +1,10 @@
-use std::{fs, path::Path, rc::Rc};
+use std::{fs, path::Path, sync::Arc};
 
 use crate::{io, tipos_de_dato::logger::Logger};
 
 pub struct Init {
     pub path: String,
-    pub logger: Rc<Logger>,
+    pub logger: Arc<Logger>,
 }
 
 impl Init {
@@ -16,7 +16,7 @@ impl Init {
         Ok(())
     }
 
-    pub fn from(args: Vec<String>, logger: Rc<Logger>) -> Result<Init, String> {
+    pub fn from(args: Vec<String>, logger: Arc<Logger>) -> Result<Init, String> {
         logger.log(format!("Se intenta crear comando init con args:{:?}", args));
 
         Self::validar_argumentos(args.clone())?;

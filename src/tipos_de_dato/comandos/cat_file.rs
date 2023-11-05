@@ -3,12 +3,12 @@ use crate::{
         logger::Logger, objeto::flag_es_un_objeto_, objetos::tree::Tree,
         visualizaciones::Visualizaciones,
     },
-    utilidades_de_compresion::descomprimir_objeto,
+    utils::compresion::descomprimir_objeto,
 };
-use std::rc::Rc;
+use std::sync::Arc;
 
 pub struct CatFile {
-    pub logger: Rc<Logger>,
+    pub logger: Arc<Logger>,
     pub visualizacion: Visualizaciones,
     pub hash_objeto: String,
 }
@@ -27,9 +27,9 @@ fn obtener_contenido_objeto_de(hash: String, dir: &str) -> Result<(String, Strin
     }
 }
 
-fn obtener_contenido_objeto(hash: String) -> Result<(String, String), String> {
+pub fn obtener_contenido_objeto(hash: String) -> Result<(String, String), String> {
     // sacar el hardcode de esto
-    let objeto = descomprimir_objeto(hash, String::from("./srv/gir/objects/"))?;
+    let objeto = descomprimir_objeto(hash, String::from(".gir/objects/"))?;
     match objeto.split_once('\0') {
         Some((header, contenido)) => Ok((header.to_string(), contenido.to_string())),
         None => Err("Objeto invalido".to_string()),
@@ -83,7 +83,7 @@ pub fn conseguir_tamanio(header: String) -> Result<String, String> {
 }
 
 impl CatFile {
-    pub fn from(args: &mut Vec<String>, logger: Rc<Logger>) -> Result<CatFile, String> {
+    pub fn from(args: &mut Vec<String>, logger: Arc<Logger>) -> Result<CatFile, String> {
         let objeto = args
             .pop()
             .ok_or_else(|| "No se especifico un objeto".to_string())?;
@@ -111,6 +111,7 @@ impl CatFile {
         self.logger.log(mensaje.clone());
         Ok(mensaje)
     }
+
     pub fn ejecutar_de(&self, dir: &str) -> Result<String, String> {
         let (header, contenido) = obtener_contenido_objeto_de(self.hash_objeto.clone(), dir)?;
         let mensaje = match self.visualizacion {
@@ -121,11 +122,10 @@ impl CatFile {
         self.logger.log(mensaje.clone());
         Ok(mensaje)
     }
-    
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use crate::{
         io,
         tipos_de_dato::{
@@ -139,11 +139,11 @@ mod test {
             visualizaciones::Visualizaciones,
         },
     };
-    use std::{path::PathBuf, rc::Rc};
+    use std::{path::PathBuf, sync::Arc};
 
     #[test]
     fn test01_cat_file_blob_para_visualizar_muestra_el_contenido_correcto() {
-        let logger = Rc::new(Logger::new(PathBuf::from("tmp/cat_file_test01")).unwrap());
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/cat_file_test01")).unwrap());
         let hash_object = HashObject::from(
             &mut vec!["-w".to_string(), "test_dir/objetos/archivo.txt".to_string()],
             logger.clone(),
@@ -166,7 +166,7 @@ mod test {
 
     #[test]
     fn test02_cat_file_blob_muestra_el_tamanio_correcto() {
-        let logger = Rc::new(Logger::new(PathBuf::from("tmp/cat_file_test02")).unwrap());
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/cat_file_test02")).unwrap());
         let hash_object = HashObject::from(
             &mut vec!["-w".to_string(), "test_dir/objetos/archivo.txt".to_string()],
             logger.clone(),
@@ -189,7 +189,7 @@ mod test {
 
     #[test]
     fn test03_cat_file_blob_muestra_el_tipo_de_objeto_correcto() {
-        let logger = Rc::new(Logger::new(PathBuf::from("tmp/cat_file_test03")).unwrap());
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/cat_file_test03")).unwrap());
         let hash_object = HashObject::from(
             &mut vec!["-w".to_string(), "test_dir/objetos/archivo.txt".to_string()],
             logger.clone(),

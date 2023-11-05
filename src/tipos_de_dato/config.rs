@@ -24,7 +24,7 @@ pub struct Config {
 impl Config {
     pub fn leer_config() -> Result<Config, String> {
         let contenido = leer_a_string(".gir/config")?;
-        let contenido_spliteado = contenido.split("[").collect::<Vec<&str>>();
+        let contenido_spliteado = contenido.split('[').collect::<Vec<&str>>();
         let mut remotes: Vec<RemoteInfo> = Vec::new();
         let mut branches: Vec<BranchInfo> = Vec::new();
 
@@ -37,24 +37,24 @@ impl Config {
                 continue;
             }
 
-            let contenido = contenido_raw.split("]").collect::<Vec<&str>>();
+            let contenido = contenido_raw.split(']').collect::<Vec<&str>>();
             let header = contenido[0].split_whitespace().collect::<Vec<&str>>();
             match header[0] {
                 "remote" => {
                     let informacion_remote = contenido[1].split(" = ").collect::<Vec<&str>>();
 
                     if informacion_remote[0].trim() != "url" {
-                        return Err(format!("Error en el archivo de configuracion"));
+                        return Err("Error en el archivo de configuracion".to_string());
                     }
 
                     let remote = RemoteInfo {
-                        nombre: header[1].replace("\"", "").to_string(),
+                        nombre: header[1].replace('\"', "").to_string(),
                         url: informacion_remote[1].trim().to_string(),
                     };
                     remotes.push(remote);
                 }
                 "branch" => {
-                    let informacion_branch = contenido[1].split("\n").collect::<Vec<&str>>();
+                    let informacion_branch = contenido[1].split('\n').collect::<Vec<&str>>();
                     let mut remote = String::new();
                     let mut merge = String::new();
 
@@ -63,23 +63,23 @@ impl Config {
                         match linea[0] {
                             "remote" => remote = linea[1].to_string(),
                             "merge" => merge = linea[1].to_string(),
-                            _ => return Err(format!("Error en el archivo de configuracion")),
+                            _ => return Err("Error en el archivo de configuracion".to_string()),
                         }
                     }
 
                     if remote.is_empty() || merge.is_empty() {
-                        return Err(format!("Error en el archivo de configuracion"));
+                        return Err("Error en el archivo de configuracion".to_string());
                     }
 
                     let branch = BranchInfo {
-                        nombre: header[1].replace("\"", "").to_string(),
+                        nombre: header[1].replace('\"', "").to_string(),
                         remote,
                         merge,
                     };
 
                     branches.push(branch);
                 }
-                _ => return Err(format!("Error en el archivo de configuracion")),
+                _ => return Err("Error en el archivo de configuracion".to_string()),
             }
         }
 

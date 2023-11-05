@@ -3,26 +3,40 @@ use std::{
     fs,
     num::ParseIntError,
     path::PathBuf,
-    rc::Rc,
+    sync::Arc,
 };
 
 use sha1::{Digest, Sha1};
 
 use crate::{
     io,
-    tipos_de_dato::{comandos::hash_object::HashObject, logger, objeto::Objeto},
-    utilidades_de_compresion::{comprimir_contenido_u8, descomprimir_objeto},
-    utilidades_path_buf::{esta_directorio_habilitado, obtener_nombre},
+    tipos_de_dato::{
+        comandos::hash_object::HashObject,
+        logger::{self, Logger},
+        objeto::Objeto,
+    },
+    utils::compresion::{comprimir_contenido_u8, descomprimir_objeto},
+    utils::path_buf::{esta_directorio_habilitado, obtener_nombre},
 };
 
 use super::blob::Blob;
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug)]
 
 pub struct Tree {
     pub directorio: PathBuf,
     pub objetos: Vec<Objeto>,
+    pub logger: Arc<Logger>,
 }
+
+impl PartialEq for Tree {
+    fn eq(&self, other: &Self) -> bool {
+        self.obtener_hash() == other.obtener_hash()
+    }
+}
+
+impl Eq for Tree {}
+
 impl Tree {
     /// Devuelve un vector con todos los objetos de tipo Blob que se encuentran en el arbol
     pub fn obtener_objetos_hoja(&self) -> Vec<Objeto> {
@@ -58,7 +72,6 @@ impl Tree {
         for objeto in objetos {
             match objeto {
                 Objeto::Blob(blob) => {
-                    println!("blob: {:?}", blob);
                     let objeto = descomprimir_objeto(
                         blob.hash,
                         String::from(self.directorio.to_string_lossy() + "/.gir/objects/"),
@@ -107,7 +120,7 @@ impl Tree {
 
     /// Devuelve el contenido de un objeto tree en u8 para poder ser comprimido
     pub fn obtener_contenido(objetos: &[Objeto]) -> Result<Vec<u8>, String> {
-        let objetos_ordenados = Self::ordenar_objetos_alfabeticamente(&objetos);
+        let objetos_ordenados = Self::ordenar_objetos_alfabeticamente(objetos);
 
         let mut contenido: Vec<u8> = Vec::new();
 
@@ -124,7 +137,7 @@ impl Tree {
                         obtener_nombre(&tree.directorio.clone())?
                     };
                     let hash = &Self::decode_hex(&tree.obtener_hash()?)?;
-                    [b"40000 ", nombre.as_bytes(), b"\0", &hash].concat()
+                    [b"40000 ", nombre.as_bytes(), b"\0", hash].concat()
                 }
             };
             contenido.append(&mut line);
@@ -136,12 +149,9 @@ impl Tree {
     pub fn from_directorio(
         directorio: PathBuf,
         hijos_especificados: Option<&Vec<PathBuf>>,
+        logger: Arc<Logger>,
     ) -> Result<Tree, String> {
         let mut objetos: Vec<Objeto> = Vec::new();
-
-        // if directorio.starts_with("./") && directorio != PathBuf::from("./") {
-        //     directorio = directorio.strip_prefix("./").unwrap().to_path_buf();
-        // }
 
         // println!("directorio: {}", directorio.display());
 
@@ -174,7 +184,7 @@ impl Tree {
             }
 
             let objeto = match fs::metadata(&path) {
-                Ok(_) => Objeto::from_directorio(path, hijos_especificados)?,
+                Ok(_) => Objeto::from_directorio(path, hijos_especificados, logger.clone())?,
                 Err(_) => Err("Error al leer el archivo".to_string())?,
             };
             objetos.push(objeto);
@@ -183,6 +193,7 @@ impl Tree {
         Ok(Tree {
             directorio,
             objetos,
+            logger,
         })
     }
 
@@ -203,9 +214,13 @@ impl Tree {
     fn obtener_datos_de_contenido(
         contenido: String,
     ) -> Result<Vec<(String, String, String)>, String> {
-        println!("{:#?}", contenido);
         let mut contenido_parseado: Vec<(String, String, String)> = Vec::new();
         let mut lineas = contenido.split('\0').collect::<Vec<&str>>();
+
+        if lineas[0] == "tree 0" {
+            return Ok(vec![]);
+        }
+
         lineas.remove(0);
         let mut lineas_separadas: Vec<&str> = Vec::new();
         lineas_separadas.push(lineas[0]);
@@ -216,11 +231,11 @@ impl Tree {
             lineas_separadas.push(modo_y_nombre);
         });
         lineas_separadas.push(ultima_linea);
-        println!("{:#?}", lineas_separadas);
         for i in (0..lineas_separadas.len()).step_by(2) {
             if i + 1 < lineas_separadas.len() {
                 let linea = lineas_separadas[i].split_whitespace();
                 let linea_spliteada = linea.clone().collect::<Vec<&str>>();
+
                 let modo = linea_spliteada[0];
                 let nombre = linea_spliteada[1];
                 let tupla = (
@@ -239,12 +254,14 @@ impl Tree {
 
     /// Lee el objeto tree de la base de datos en base a un hash pasado por parametro y
     ///  el directorio en el que se encuentra el tree y lo devuelve como un objeto Tree
-    pub fn from_hash(hash: String, directorio: PathBuf) -> Result<Tree, String> {
+    pub fn from_hash(
+        hash: String,
+        directorio: PathBuf,
+        logger: Arc<Logger>,
+    ) -> Result<Tree, String> {
         // let hash_completo = Self::obtener_hash_completo(hash)?;
         let contenido = descomprimir_objeto(hash, ".gir/objects/".to_string())?;
-        println!("directorio del hash {:?}", directorio);
         let contenido_parseado = Self::obtener_datos_de_contenido(contenido)?;
-        // println!("{:#?}", contenido_parseado);
         let mut objetos: Vec<Objeto> = Vec::new();
 
         for (modo, nombre, hash_hijo) in contenido_parseado {
@@ -259,11 +276,13 @@ impl Tree {
                         nombre,
                         ubicacion: PathBuf::from(ubicacion),
                         hash: hash_hijo.to_string(),
+                        logger: logger.clone(),
                     });
                     objetos.push(blob);
                 }
                 "40000" => {
-                    let tree = Self::from_hash(hash_hijo, PathBuf::from(ubicacion))?;
+                    let tree =
+                        Self::from_hash(hash_hijo, PathBuf::from(ubicacion), logger.clone())?;
                     objetos.push(Objeto::Tree(tree));
                 }
                 _ => {}
@@ -273,6 +292,7 @@ impl Tree {
         Ok(Tree {
             directorio,
             objetos,
+            logger,
         })
     }
 
@@ -284,24 +304,48 @@ impl Tree {
         Ok(contenido.len())
     }
 
-    pub fn contiene_hijo(&self, hash_hijo: String) -> bool {
-        for objeto in &self.objetos {
-            if objeto.obtener_hash() == hash_hijo {
-                return true;
-            }
-        }
-        false
-    }
-    pub fn contiene_hijo_por_nombre(&self, nombre_hijo: PathBuf) -> bool {
+    pub fn contiene_misma_version_hijo(&self, hash_hijo: String, ubicacion_hijo: PathBuf) -> bool {
         for objeto in &self.objetos {
             match objeto {
                 Objeto::Blob(blob) => {
-                    if blob.ubicacion == nombre_hijo.clone() {
+                    if blob.hash == hash_hijo && blob.ubicacion == ubicacion_hijo.clone() {
                         return true;
                     }
                 }
                 Objeto::Tree(tree) => {
-                    if tree.directorio == nombre_hijo.clone() {
+                    if tree.contiene_misma_version_hijo(hash_hijo.clone(), ubicacion_hijo.clone()) {
+                        return true;
+                    }
+                }
+            }
+        }
+        false
+    }
+
+    pub fn contiene_hijo_por_ubicacion(&self, ubicacion_hijo: PathBuf) -> bool {
+        for objeto in &self.objetos {
+            match objeto {
+                Objeto::Blob(blob) => {
+                    if blob.ubicacion == ubicacion_hijo.clone() {
+                        return true;
+                    }
+                }
+                Objeto::Tree(tree) => {
+                    if tree.contiene_hijo_por_ubicacion(ubicacion_hijo.clone()) {
+                        return true;
+                    }
+                }
+            }
+        }
+        false
+    }
+
+    pub fn contiene_directorio(&self, directorio: &PathBuf) -> bool {
+        for objeto in &self.objetos {
+            match objeto {
+                Objeto::Blob(_) => {}
+                Objeto::Tree(tree) => {
+                    if tree.directorio == *directorio || tree.contiene_directorio(directorio) {
                         return true;
                     }
                 }
@@ -404,7 +448,7 @@ impl Tree {
         for objeto in &self.objetos {
             match objeto {
                 Objeto::Blob(blob) => {
-                    let logger = Rc::new(logger::Logger::new(PathBuf::from("tmp/tree"))?);
+                    let logger = Arc::new(logger::Logger::new(PathBuf::from("tmp/tree"))?);
 
                     // if PathBuf::from(&blob.ubicacion).is_file() {
                     //     continue;
@@ -464,7 +508,7 @@ impl Tree {
     }
 
     pub fn es_vacio(&self) -> bool {
-        if self.objetos.len() == 0 {
+        if self.objetos.is_empty() {
             return true;
         }
         self.objetos.iter().all(|objeto| match objeto {
@@ -491,16 +535,20 @@ impl Display for Tree {
 
 #[cfg(test)]
 
-mod test {
+mod tests {
 
     use crate::io;
+    use crate::tipos_de_dato::logger::Logger;
     use crate::tipos_de_dato::{objeto::Objeto, objetos::tree::Tree};
-    use crate::utilidades_de_compresion::descomprimir_contenido_u8;
+    use crate::utils::compresion::descomprimir_contenido_u8;
     use std::path::PathBuf;
+    use std::sync::Arc;
 
     #[test]
     fn test01_test_obtener_hash() {
-        let objeto = Objeto::from_directorio(PathBuf::from("test_dir/objetos"), None).unwrap();
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/tree_test01")).unwrap());
+        let objeto =
+            Objeto::from_directorio(PathBuf::from("test_dir/objetos"), None, logger).unwrap();
 
         if let Objeto::Tree(ref tree) = objeto {
             tree.escribir_en_base().unwrap();
@@ -511,15 +559,20 @@ mod test {
 
     #[test]
     fn test02_test_obtener_tamanio() {
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/tree_test02")).unwrap());
         let objeto =
-            Objeto::from_directorio(PathBuf::from("test_dir/muchos_objetos"), None).unwrap();
+            Objeto::from_directorio(PathBuf::from("test_dir/muchos_objetos"), None, logger)
+                .unwrap();
         let tamanio = objeto.obtener_tamanio().unwrap();
         assert_eq!(tamanio, 83);
     }
 
     #[test]
     fn test03_test_mostrar_contenido() {
-        let objeto = Objeto::from_directorio(PathBuf::from("test_dir/objetos"), None).unwrap();
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/tree_test03")).unwrap());
+
+        let objeto =
+            Objeto::from_directorio(PathBuf::from("test_dir/objetos"), None, logger).unwrap();
 
         if let Objeto::Tree(tree) = objeto {
             let contenido = Tree::mostrar_contenido(&tree.objetos).unwrap();
@@ -534,7 +587,9 @@ mod test {
 
     #[test]
     fn test04_test_mostrar_contenido_recursivo() {
-        let objeto = Objeto::from_directorio(PathBuf::from("test_dir/"), None).unwrap();
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/tree_test04")).unwrap());
+
+        let objeto = Objeto::from_directorio(PathBuf::from("test_dir/"), None, logger).unwrap();
 
         if let Objeto::Tree(tree) = objeto {
             let contenido = Tree::mostrar_contenido(&tree.objetos).unwrap();
@@ -549,7 +604,10 @@ mod test {
 
     #[test]
     fn test05_escribir_en_base() -> Result<(), String> {
-        let objeto = Objeto::from_directorio(PathBuf::from("test_dir/objetos"), None).unwrap();
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/tree_test05")).unwrap());
+
+        let objeto =
+            Objeto::from_directorio(PathBuf::from("test_dir/objetos"), None, logger).unwrap();
         if let Objeto::Tree(tree) = objeto {
             tree.escribir_en_base().unwrap();
 
@@ -575,8 +633,9 @@ mod test {
 
     #[test]
     fn test06_escribir_en_base_con_anidados() -> Result<(), String> {
-        let objeto = Objeto::from_directorio(PathBuf::from("test_dir"), None).unwrap();
-        println!("{:#?}", objeto.obtener_hash());
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/tree_test06")).unwrap());
+
+        let objeto = Objeto::from_directorio(PathBuf::from("test_dir"), None, logger).unwrap();
         if let Objeto::Tree(tree) = objeto {
             tree.escribir_en_base().unwrap();
 
@@ -599,5 +658,25 @@ mod test {
             assert!(false);
             Err("No se pudo leer el directorio".to_string())
         }
+    }
+
+    #[test]
+
+    fn test07_contiene_hijo_por_ubicacion() {
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/tree_test07")).unwrap());
+
+        let tree = Tree::from_directorio(PathBuf::from("src"), None, logger).unwrap();
+
+        assert!(tree.contiene_hijo_por_ubicacion(PathBuf::from("src/io.rs")))
+    }
+
+    #[test]
+
+    fn test08_contiene_hijo_por_ubicacion_rec() {
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/tree_test08")).unwrap());
+
+        let tree = Tree::from_directorio(PathBuf::from("src"), None, logger).unwrap();
+
+        assert!(tree.contiene_directorio(&PathBuf::from("src/tipos_de_dato")))
     }
 }

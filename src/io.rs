@@ -25,7 +25,6 @@ pub fn obtener_objetos_del_directorio(dir: String) -> Result<Vec<String>, ErrorD
     let path = PathBuf::from(dir);
     let mut objetos: Vec<String> = Vec::new();
     let dir_abierto = fs::read_dir(path.clone())?;
-    // println!("dir_abierto: {:?}", dir_abierto);
     for archivo in dir_abierto {
         match archivo {
             Ok(archivo) => {
@@ -35,9 +34,7 @@ pub fn obtener_objetos_del_directorio(dir: String) -> Result<Vec<String>, ErrorD
                 {
                     let path = archivo.path();
                     if !path.to_string_lossy().contains("log.txt") {
-                        println!("path: {:?}", path);
-                        let nombre_carpeta = archivo.file_name().into_string().unwrap();
-                        println!("nombre_carpeta: {:?}", nombre_carpeta);
+                        let _nombre_carpeta = archivo.file_name().into_string().unwrap();
                         objetos.append(&mut obtener_objetos_con_nombre_carpeta(path.clone())?);
                     }
                 }
@@ -73,19 +70,13 @@ pub fn obtener_objetos_con_nombre_carpeta(
     dir: PathBuf,
 ) -> Result<Vec<String>, ErrorDeComunicacion> {
     let directorio = fs::read_dir(dir.clone())?;
-    println!("DIRECTORIO : {:?}", directorio);
     let mut nombres = Vec::new();
     let nombre_directorio = dir.file_name().unwrap().to_string_lossy().to_string();
     for archivo in directorio {
         match archivo {
             Ok(archivo) => {
-                println!(
-                    "carpeta: {} archivo: {:?}",
-                    nombre_directorio.clone(),
-                    archivo.file_name().to_string_lossy().to_string()
-                );
                 nombres.push(
-                    nombre_directorio.clone() + &archivo.file_name().to_string_lossy().to_string(),
+                    nombre_directorio.clone() + archivo.file_name().to_string_lossy().as_ref(),
                 );
             }
             Err(error) => {
@@ -177,7 +168,7 @@ pub fn obtener_linea_con_largo_hex(line: &str) -> String {
 }
 
 fn leer_archivo(path: &mut Path) -> Result<String, ErrorDeComunicacion> {
-    let archivo = fs::File::open(path.to_path_buf())?;
+    let archivo = fs::File::open(path)?;
     let mut contenido = String::new();
     std::io::BufReader::new(archivo).read_line(&mut contenido)?;
     Ok(contenido.trim().to_string())
@@ -269,7 +260,6 @@ pub fn leer_bytes<P>(archivo: P) -> Result<Vec<u8>, String>
 where
     P: AsRef<Path>,
 {
-    println!("archivo: {}", archivo.as_ref().display());
     match fs::read(&archivo) {
         Ok(contenido) => Ok(contenido),
         Err(_) => Err(format!(
@@ -340,7 +330,7 @@ pub fn obtener_archivos_faltantes(nombres_archivos: Vec<String>, dir: String) ->
     // println!("Nombres: {:?}", nombres_archivos);
     let mut archivos_faltantes: Vec<String> = Vec::new();
     for nombre in &objetcts_contained {
-        if nombres_archivos.contains(&nombre) {
+        if nombres_archivos.contains(nombre) {
         } else {
             archivos_faltantes.push(nombre.clone());
         }
@@ -354,7 +344,7 @@ pub fn obtener_ack(nombres_archivos: Vec<String>, dir: String) -> Vec<String> {
         let dir_archivo = format!("{}{}/{}", dir.clone(), &nombre[..2], &nombre[2..]);
         if PathBuf::from(dir_archivo.clone()).exists() {
             ack.push(obtener_linea_con_largo_hex(
-                ("ACK".to_string() + &nombre + &"\n".to_string()).as_str(),
+                ("ACK".to_string() + &nombre + "\n").as_str(),
             ));
             break;
         }
@@ -368,7 +358,6 @@ pub fn escribir_referencia(referencia: &str, dir: PathBuf) {
     let referencia_y_contenido = referencia.split_whitespace().collect::<Vec<&str>>();
     if !&referencia_y_contenido[1].contains("HEAD") {
         let dir = dir.join(referencia_y_contenido[1]);
-        println!("Voy a escribir en: {:?}", dir);
         escribir_bytes(dir, referencia_y_contenido[0]).unwrap();
     }
 }
@@ -385,7 +374,7 @@ pub fn obtener_diferencias_remote(referencias: Vec<String>, dir: String) -> Vec<
             + referencia_y_contenido[1].split('/').last().unwrap();
         println!("referencia_remote: {}", referencia_remote);
         let referencia_local =
-            leer_a_string(&mut Path::new(&(dir.clone() + &referencia_remote))).unwrap();
+            leer_a_string(Path::new(&(dir.clone() + &referencia_remote))).unwrap();
         if referencia_local != referencia_y_contenido[0] {
             println!("referencia_local: {}", referencia_local);
             println!("referencia que me pasan: {}", referencia_y_contenido[0]);
