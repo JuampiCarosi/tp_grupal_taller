@@ -1,10 +1,9 @@
-use crate::io::leer_a_string;
+use crate::comunicacion::Comunicacion;
 use crate::packfile::Packfile;
 use crate::tipos_de_dato::objetos::commit::CommitObj;
-use crate::{comunicacion::Comunicacion, io};
+use crate::utils::io;
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::env;
 use std::io::Write;
 use std::net::TcpStream;
 use std::path::Path;
@@ -116,7 +115,7 @@ fn obtener_commits_y_objetos_asociados(
     );
 
     let ruta = format!(".gir/{}", referencia);
-    let ultimo_commit = leer_a_string(Path::new(&ruta))?;
+    let ultimo_commit = io::leer_a_string(Path::new(&ruta))?;
     if ultimo_commit.is_empty() {
         return Ok(Vec::new());
     }

@@ -1,14 +1,9 @@
 use crate::err_comunicacion::ErrorDeComunicacion;
-use crate::io;
-use crate::packfile;
-use flate2::{Decompress, FlushDecompress};
-use std::convert::TryInto;
+use crate::utils::io;
 use std::io::{Read, Write};
 use std::net::TcpStream;
 use std::str;
 use std::sync::Mutex;
-
-use sha1::{Digest, Sha1};
 
 pub struct Comunicacion<T: Read + Write> {
     flujo: Mutex<T>,
@@ -36,7 +31,9 @@ impl<T: Write + Read> Comunicacion<T> {
     }
 
     pub fn new(flujo: T) -> Comunicacion<T> {
-        Comunicacion { flujo: Mutex::new(flujo) }
+        Comunicacion {
+            flujo: Mutex::new(flujo),
+        }
     }
 
     pub fn enviar(&self, mensaje: &str) -> Result<(), String> {
@@ -55,7 +52,7 @@ impl<T: Write + Read> Comunicacion<T> {
         let tamanio_str = str::from_utf8(&tamanio_bytes)?;
         // transforma str a u32
         let tamanio = u32::from_str_radix(tamanio_str, 16).unwrap();
-        if tamanio == 0{
+        if tamanio == 0 {
             return Ok('\0'.to_string());
         }
         // lee el resto del flujo
@@ -65,18 +62,18 @@ impl<T: Write + Read> Comunicacion<T> {
         Ok(linea.to_string())
     }
 
-    fn leer_del_flujo_tantos_bytes(
-        &self,
-        cantida_bytes_a_leer: usize,
-    ) -> Result<Vec<u8>, String> {
+    fn leer_del_flujo_tantos_bytes(&self, cantida_bytes_a_leer: usize) -> Result<Vec<u8>, String> {
         let mut data = vec![0; cantida_bytes_a_leer];
-        self.flujo.lock()
-        .map_err(|e| format!("Fallo en el mutex de la lectura.\n{}\n", e))?.read_exact(&mut data).map_err(|e| {
-            format!(
-                "Fallo en obtener la linea al leer los priemeros 4 bytes.\n{}\n",
-                e
-            )
-        })?;
+        self.flujo
+            .lock()
+            .map_err(|e| format!("Fallo en el mutex de la lectura.\n{}\n", e))?
+            .read_exact(&mut data)
+            .map_err(|e| {
+                format!(
+                    "Fallo en obtener la linea al leer los priemeros 4 bytes.\n{}\n",
+                    e
+                )
+            })?;
         Ok(data)
     }
 
@@ -102,7 +99,8 @@ impl<T: Write + Read> Comunicacion<T> {
     fn obtener_largo_de_la_linea(&self) -> Result<u32, String> {
         let bytes_tamanio_linea = 4;
         let tamanio_str = self.leer_del_flujo_tantos_bytes_en_string(bytes_tamanio_linea)?;
-        let tamanio_u32 = u32::from_str_radix(&tamanio_str, 16).map_err(|e| format!("Fallo en la conversion a entero\n{}\n", e))?;
+        let tamanio_u32 = u32::from_str_radix(&tamanio_str, 16)
+            .map_err(|e| format!("Fallo en la conversion a entero\n{}\n", e))?;
 
         Ok(tamanio_u32)
     }
@@ -131,37 +129,50 @@ impl<T: Write + Read> Comunicacion<T> {
         let mut lineas: Vec<String> = Vec::new();
         loop {
             let tamanio = self.obtener_largo_de_la_linea()?;
-            if tamanio == 0{
+            if tamanio == 0 {
                 break;
             }
-
 
             let linea = self.obtener_contenido_linea(tamanio)?;
             lineas.push(linea.to_string());
             println!("linea: {:?}", linea);
             //esto deberia ir antes o despues del push juani  ?? estaba asi
-            if linea.contains("NAK") || linea.contains("ACK") || (linea.contains("done") && !linea.contains("ref")) {
+            if linea.contains("NAK")
+                || linea.contains("ACK")
+                || (linea.contains("done") && !linea.contains("ref"))
+            {
                 break;
             }
-
         }
         Ok(lineas)
     }
 
     pub fn responder(&mut self, lineas: Vec<String>) -> Result<(), ErrorDeComunicacion> {
         if lineas.is_empty() {
-            self.flujo.lock().unwrap().write_all(String::from("0000").as_bytes())?;
+            self.flujo
+                .lock()
+                .unwrap()
+                .write_all(String::from("0000").as_bytes())?;
             return Ok(());
         }
         for linea in &lineas {
             self.flujo.lock().unwrap().write_all(linea.as_bytes())?;
         }
         if lineas[0].contains("ref") {
-            self.flujo.lock().unwrap().write_all(String::from("0000").as_bytes())?;
+            self.flujo
+                .lock()
+                .unwrap()
+                .write_all(String::from("0000").as_bytes())?;
             return Ok(());
         }
-        if !lineas[0].contains(&"NAK".to_string()) && !lineas[0].contains(&"ACK".to_string()) && !lineas[0].contains(&"done".to_string()) {
-            self.flujo.lock().unwrap().write_all(String::from("0000").as_bytes())?;
+        if !lineas[0].contains(&"NAK".to_string())
+            && !lineas[0].contains(&"ACK".to_string())
+            && !lineas[0].contains(&"done".to_string())
+        {
+            self.flujo
+                .lock()
+                .unwrap()
+                .write_all(String::from("0000").as_bytes())?;
         }
         Ok(())
     }
@@ -169,11 +180,14 @@ impl<T: Write + Read> Comunicacion<T> {
         self.flujo.lock().unwrap().write_all(linea.as_bytes())?;
         Ok(())
     }
-    
+
     pub fn responder_con_bytes(&self, lineas: Vec<u8>) -> Result<(), ErrorDeComunicacion> {
         self.flujo.lock().unwrap().write_all(&lineas)?;
         if !lineas.starts_with(b"PACK") {
-            self.flujo.lock().unwrap().write_all(String::from("0000").as_bytes())?;
+            self.flujo
+                .lock()
+                .unwrap()
+                .write_all(String::from("0000").as_bytes())?;
         }
         Ok(())
     }
@@ -183,10 +197,14 @@ impl<T: Write + Read> Comunicacion<T> {
         let mut temp_buffer = [0u8; 1024]; // Tamaño del búfer de lectura
 
         loop {
-            let bytes_read = self.flujo.lock()
-            .map_err(|e| format!("Fallo en el mutex.\n{}\n", e))?.read(&mut temp_buffer).map_err(|e| {
-                format!("Fallo en la lectura de la respuesta del servidor.\n{}\n", e)
-            })?;
+            let bytes_read = self
+                .flujo
+                .lock()
+                .map_err(|e| format!("Fallo en el mutex.\n{}\n", e))?
+                .read(&mut temp_buffer)
+                .map_err(|e| {
+                    format!("Fallo en la lectura de la respuesta del servidor.\n{}\n", e)
+                })?;
 
             if bytes_read == 0 {
                 break; // No hay más bytes disponibles, salir del bucle
@@ -215,7 +233,7 @@ impl<T: Write + Read> Comunicacion<T> {
         let mut lista_wants: Vec<String> = Vec::new();
         let mut obj_ids = self.obtener_obj_ids(lineas);
         println!("obj_ids: {:?}", obj_ids);
-        
+
         if !capacidades.is_empty() {
             obj_ids[0].push_str(&(" ".to_string() + &capacidades)); // le aniado las capacidades
         }
@@ -245,9 +263,7 @@ impl<T: Write + Read> Comunicacion<T> {
         mut pedidos: Vec<String>,
         capacidades: String,
     ) -> Result<(), String> {
-        
         self.anadir_capacidades_primer_pedido(&mut pedidos, capacidades);
-
 
         for pedido in &mut pedidos {
             let pedido_con_formato = self.dar_formato_de_solicitud(pedido);
@@ -255,7 +271,7 @@ impl<T: Write + Read> Comunicacion<T> {
         }
 
         self.enviar_flush_pkt()?;
-        
+
         Ok(())
     }
 
@@ -300,7 +316,7 @@ impl<T: Write + Read> Comunicacion<T> {
         }
 
         self.enviar_flush_pkt()?;
-        
+
         Ok(())
     }
 
@@ -308,7 +324,6 @@ impl<T: Write + Read> Comunicacion<T> {
     fn dar_formato_have(&self, hash_commit: &String) -> String {
         io::obtener_linea_con_largo_hex(&("have ".to_string() + &hash_commit + "\n"))
     }
-
 }
 
 #[cfg(test)]
@@ -348,7 +363,9 @@ mod test {
             escritura_data: Vec::new(),
         };
 
-        Comunicacion::new(&mut mock).enviar("Hola server, soy siro. Todo bien ??").unwrap();
+        Comunicacion::new(&mut mock)
+            .enviar("Hola server, soy siro. Todo bien ??")
+            .unwrap();
 
         assert_eq!(
             "Hola server, soy siro. Todo bien ??".as_bytes(),
@@ -374,7 +391,10 @@ mod test {
             escritura_data: Vec::new(),
         };
 
-        let lineas = Comunicacion::new(&mut mock).obtener_lineas().unwrap().join("\n");
+        let lineas = Comunicacion::new(&mut mock)
+            .obtener_lineas()
+            .unwrap()
+            .join("\n");
 
         let resultado_esperado_de_obtener_lineas = "version 1 \n\
         7217a7c7e582c46cec22a130adf4b9d7d950fba0 HEAD\0multi_ack thin-pack \
@@ -385,51 +405,63 @@ mod test {
         525128480b96c89e6418b1e40909bf6c5b2d580f refs/tags/v1.0 \n\
         e92df48743b7bc7d26bcaabfddde0a1e20cae47c refs/tags/v1.0^{} ";
 
-        assert_eq!(
-            resultado_esperado_de_obtener_lineas.to_string(),
-            lineas
-        )
+        assert_eq!(resultado_esperado_de_obtener_lineas.to_string(), lineas)
     }
 
     #[test]
-    fn test03_se_envia_correctamente_los_want(){
+    fn test03_se_envia_correctamente_los_want() {
         let mut mock = MockTcpStream {
             lectura_data: Vec::new(),
             escritura_data: Vec::new(),
         };
 
-        let contenido = vec!("74730d410fcb6603ace96f1dc55ea6196122532d".to_string(), "7d1665144a3a975c05f1f43902ddaf084e784dbe".to_string(), "5a3f6be755bbb7deae50065988cbfa1ffa9ab68a".to_string());
+        let contenido = vec![
+            "74730d410fcb6603ace96f1dc55ea6196122532d".to_string(),
+            "7d1665144a3a975c05f1f43902ddaf084e784dbe".to_string(),
+            "5a3f6be755bbb7deae50065988cbfa1ffa9ab68a".to_string(),
+        ];
         let capacidades = "multi_ack side-band-64k ofs-delta".to_string();
 
-        Comunicacion::new(&mut mock).enviar_pedidos_al_servidor_pkt(contenido,capacidades).unwrap();
-        
+        Comunicacion::new(&mut mock)
+            .enviar_pedidos_al_servidor_pkt(contenido, capacidades)
+            .unwrap();
+
         let contenido_esperado_enviar_pedido = "\
         0054want 74730d410fcb6603ace96f1dc55ea6196122532d multi_ack side-band-64k ofs-delta\n\
         0032want 7d1665144a3a975c05f1f43902ddaf084e784dbe\n\
         0032want 5a3f6be755bbb7deae50065988cbfa1ffa9ab68a\n\
         0000";
 
-        assert_eq!(contenido_esperado_enviar_pedido.as_bytes(), mock.escritura_data.as_slice())
+        assert_eq!(
+            contenido_esperado_enviar_pedido.as_bytes(),
+            mock.escritura_data.as_slice()
+        )
     }
 
     #[test]
-    fn test04_se_envia_correctamente_los_have(){
+    fn test04_se_envia_correctamente_los_have() {
         let mut mock = MockTcpStream {
             lectura_data: Vec::new(),
             escritura_data: Vec::new(),
         };
 
-        let contenido = vec!("7e47fe2bd8d01d481f44d7af0531bd93d3b21c01".to_string(), "74730d410fcb6603ace96f1dc55ea6196122532d".to_string());
+        let contenido = vec![
+            "7e47fe2bd8d01d481f44d7af0531bd93d3b21c01".to_string(),
+            "74730d410fcb6603ace96f1dc55ea6196122532d".to_string(),
+        ];
 
-        Comunicacion::new(&mut mock).enviar_lo_que_tengo_al_servidor_pkt(&contenido).unwrap();
-        
+        Comunicacion::new(&mut mock)
+            .enviar_lo_que_tengo_al_servidor_pkt(&contenido)
+            .unwrap();
+
         let contenido_esperado_enviar_lo_que_tengo = "\
         0032have 7e47fe2bd8d01d481f44d7af0531bd93d3b21c01\n\
         0032have 74730d410fcb6603ace96f1dc55ea6196122532d\n\
         0000";
 
-        assert_eq!(contenido_esperado_enviar_lo_que_tengo.as_bytes(), mock.escritura_data.as_slice())
+        assert_eq!(
+            contenido_esperado_enviar_lo_que_tengo.as_bytes(),
+            mock.escritura_data.as_slice()
+        )
     }
-
-
 }

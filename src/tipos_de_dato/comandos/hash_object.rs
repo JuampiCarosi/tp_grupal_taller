@@ -1,5 +1,6 @@
+use crate::tipos_de_dato::logger::Logger;
 use crate::utils::compresion::comprimir_contenido_u8;
-use crate::{io, tipos_de_dato::logger::Logger};
+use crate::utils::io;
 use sha1::{Digest, Sha1};
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -82,8 +83,8 @@ mod tests {
     use flate2::read::ZlibDecoder;
 
     use crate::{
-        io,
         tipos_de_dato::{comandos::hash_object::HashObject, logger::Logger},
+        utils::io,
     };
 
     #[test]

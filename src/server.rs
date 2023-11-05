@@ -1,8 +1,8 @@
+use crate::comunicacion::Comunicacion;
 use crate::err_comunicacion::ErrorDeComunicacion;
-use crate::io::crear_directorio;
 use crate::receive_pack::receive_pack;
 use crate::upload_pack::upload_pack;
-use crate::{comunicacion::Comunicacion, io as git_io};
+use crate::utils::io as gir_io;
 use std::env;
 use std::io;
 use std::net::{TcpListener, TcpStream};
@@ -86,7 +86,7 @@ impl Servidor {
         let dir_repo = dir.to_string() + args[0];
         let refs: Vec<String>;
         comunicacion
-            .enviar_linea(git_io::obtener_linea_con_largo_hex(
+            .enviar_linea(gir_io::obtener_linea_con_largo_hex(
                 &(VERSION.to_string() + "\n"),
             ))
             .unwrap();
@@ -104,9 +104,9 @@ impl Servidor {
 
                 println!("Path: {:?}", path);
                 if !path.exists() {
-                    crear_directorio(&path.join("refs/")).unwrap();
-                    crear_directorio(&path.join("refs/heads/")).unwrap();
-                    crear_directorio(&path.join("refs/tags/")).unwrap();
+                    gir_io::crear_directorio(&path.join("refs/")).unwrap();
+                    gir_io::crear_directorio(&path.join("refs/heads/")).unwrap();
+                    gir_io::crear_directorio(&path.join("refs/tags/")).unwrap();
                 }
                 refs = Self::obtener_refs_de(path);
                 if refs.is_empty() {
@@ -135,16 +135,16 @@ impl Servidor {
     fn obtener_refs_de(dir: PathBuf) -> Vec<String> {
         let mut refs: Vec<String> = Vec::new();
         if let Ok(mut head) =
-            git_io::obtener_refs_con_largo_hex(dir.join("HEAD"), dir.to_str().unwrap())
+            gir_io::obtener_refs_con_largo_hex(dir.join("HEAD"), dir.to_str().unwrap())
         {
             refs.append(&mut head);
         }
         refs.append(
-            &mut git_io::obtener_refs_con_largo_hex(dir.join("refs/heads/"), dir.to_str().unwrap())
+            &mut gir_io::obtener_refs_con_largo_hex(dir.join("refs/heads/"), dir.to_str().unwrap())
                 .unwrap(),
         );
         refs.append(
-            &mut git_io::obtener_refs_con_largo_hex(dir.join("refs/tags/"), dir.to_str().unwrap())
+            &mut gir_io::obtener_refs_con_largo_hex(dir.join("refs/tags/"), dir.to_str().unwrap())
                 .unwrap(),
         );
         if !refs.is_empty() {
@@ -168,7 +168,7 @@ impl Servidor {
         }
         let mut referencia_con_capacidades = referencia_con_capacidades.trim_end().to_string();
         referencia_con_capacidades.push('\n');
-        git_io::obtener_linea_con_largo_hex(&referencia_con_capacidades)
+        gir_io::obtener_linea_con_largo_hex(&referencia_con_capacidades)
     }
 }
 
@@ -233,12 +233,12 @@ impl Servidor {
 // fn obtener_refs_de(&self, dir: PathBuf) -> Vec<String> {
 //     // println!("path del comando: {:?}", dir);
 //     let mut refs: Vec<String> = Vec::new();
-//     if let Ok(mut head) = git_io::obtener_refs_con_largo_hex(dir.join("HEAD"), "/home/juani/23C2-Cangrejos-Tacticos/srv/.gir/".to_string()) {
+//     if let Ok(mut head) = gir_io::obtener_refs_con_largo_hex(dir.join("HEAD"), "/home/juani/23C2-Cangrejos-Tacticos/srv/.gir/".to_string()) {
 //         refs.append(&mut head);
 //     }
 //     println!("Hola!");
-//     refs.append(&mut git_io::obtener_refs_con_largo_hex(dir.join("refs/heads/"), String::from("/home/juani/23C2-Cangrejos-Tacticos/srv/.gir/")).unwrap());
-//     refs.append(&mut git_io::obtener_refs_con_largo_hex(dir.join("refs/tags/"), String::from("/home/juani/23C2-Cangrejos-Tacticos/srv/.gir/")).unwrap());
+//     refs.append(&mut gir_io::obtener_refs_con_largo_hex(dir.join("refs/heads/"), String::from("/home/juani/23C2-Cangrejos-Tacticos/srv/.gir/")).unwrap());
+//     refs.append(&mut gir_io::obtener_refs_con_largo_hex(dir.join("refs/tags/"), String::from("/home/juani/23C2-Cangrejos-Tacticos/srv/.gir/")).unwrap());
 //     if !refs.is_empty(){
 //         refs.insert(0, self.agregar_capacidades(refs[0].clone()));
 //     }
@@ -252,7 +252,7 @@ impl Servidor {
 //     }
 //     let mut referencia_con_capacidades = referencia_con_capacidades.trim_end().to_string();
 //     referencia_con_capacidades.push('\n');
-//     git_io::obtener_linea_con_largo_hex(&referencia_con_capacidades)
+//     gir_io::obtener_linea_con_largo_hex(&referencia_con_capacidades)
 // }
 // }
 

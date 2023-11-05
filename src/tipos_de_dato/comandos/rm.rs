@@ -1,9 +1,11 @@
 use std::{collections::HashSet, path::PathBuf, sync::Arc};
 
 use crate::{
-    io::rm_directorio,
     tipos_de_dato::{logger::Logger, objeto::Objeto},
-    utils::index::{crear_index, escribir_index, leer_index, ObjetoIndex},
+    utils::{
+        index::{crear_index, escribir_index, leer_index, ObjetoIndex},
+        io::{self, rm_directorio},
+    },
 };
 
 pub struct Remove {
@@ -43,7 +45,7 @@ impl Remove {
                 .unwrap();
 
             if hijos.count() == 0 {
-                rm_directorio(ubicacion).unwrap();
+                io::rm_directorio(ubicacion).unwrap();
             }
         }
     }
@@ -155,15 +157,12 @@ impl Remove {
 #[cfg(test)]
 mod tests {
 
-    use crate::{
-        io::{escribir_bytes, leer_a_string},
-        tipos_de_dato::comandos::{add::Add, commit::Commit},
-    };
+    use crate::tipos_de_dato::comandos::{add::Add, commit::Commit};
 
     use super::*;
 
     fn crear_test_file(contenido: &str) {
-        escribir_bytes("tmp/rm_test.txt", contenido).unwrap();
+        io::escribir_bytes("tmp/rm_test.txt", contenido).unwrap();
     }
 
     fn existe_test_file() -> bool {
@@ -175,7 +174,7 @@ mod tests {
     }
 
     fn crear_archivo_en_dir(contenido: &str) {
-        escribir_bytes("tmp/test_dir/testfile.txt", contenido).unwrap();
+        io::escribir_bytes("tmp/test_dir/testfile.txt", contenido).unwrap();
     }
 
     fn existe_archivo_en_dir() -> bool {
@@ -206,7 +205,7 @@ mod tests {
         let args = vec!["--cached".to_string(), "test_file.txt".to_string()];
         Remove::from(args, logger).unwrap().ejecutar().unwrap();
 
-        let index = leer_a_string(".gir/index").unwrap();
+        let index = io::leer_a_string(".gir/index").unwrap();
         assert_eq!(
             index,
             "- 0 100644 678e12dc5c03a7cf6e9f64e688868962ab5d8b65 test_file.txt\n"
@@ -238,7 +237,7 @@ mod tests {
         ];
         Remove::from(args, logger).unwrap().ejecutar().unwrap();
 
-        let index = leer_a_string(".gir/index").unwrap();
+        let index = io::leer_a_string(".gir/index").unwrap();
 
         assert_eq!(
             index,
@@ -268,7 +267,7 @@ mod tests {
         let mut remove = Remove::from(args, logger).unwrap();
         remove.ejecutar().unwrap();
 
-        let index = leer_a_string(".gir/index").unwrap();
+        let index = io::leer_a_string(".gir/index").unwrap();
 
         assert_eq!(
             index,
@@ -299,7 +298,7 @@ mod tests {
         let args = vec!["-r".to_string(), "tmp/test_dir".to_string()];
         Remove::from(args, logger).unwrap().ejecutar().unwrap();
 
-        let index = leer_a_string(".gir/index").unwrap();
+        let index = io::leer_a_string(".gir/index").unwrap();
 
         assert_eq!(
             index,

@@ -1,4 +1,4 @@
-use crate::io::{escribir_bytes, leer_a_string};
+use super::io;
 
 pub fn obtener_gir_config_path() -> Result<String, String> {
     let home = std::env::var("HOME").map_err(|_| "Error al obtener el directorio home")?;
@@ -8,7 +8,7 @@ pub fn obtener_gir_config_path() -> Result<String, String> {
 
 pub fn conseguir_nombre_y_mail_del_config() -> Result<(String, String), String> {
     let config_path = obtener_gir_config_path()?;
-    let contenido = leer_a_string(config_path)?;
+    let contenido = io::leer_a_string(config_path)?;
 
     let lineas = contenido.split('\n').collect::<Vec<&str>>();
     let nombre = lineas[0].split('=').collect::<Vec<&str>>()[1].trim();
@@ -19,7 +19,7 @@ pub fn conseguir_nombre_y_mail_del_config() -> Result<(String, String), String> 
 fn archivo_config_esta_vacio() -> Result<bool, String> {
     let config_path = obtener_gir_config_path()?;
 
-    let contenido = match leer_a_string(config_path) {
+    let contenido = match io::leer_a_string(config_path) {
         Ok(contenido) => contenido,
         Err(_) => return Ok(true),
     };
@@ -53,7 +53,7 @@ pub fn armar_config_con_mail_y_nombre() -> Result<(), String> {
 
     let config_path = obtener_gir_config_path()?;
     let contenido = format!("nombre ={}\nmail ={}\n", nombre, mail);
-    escribir_bytes(config_path, contenido)?;
+    io::escribir_bytes(config_path, contenido)?;
     println!("Información de usuario guardada en ~/.girconfig.");
     Ok(())
 }

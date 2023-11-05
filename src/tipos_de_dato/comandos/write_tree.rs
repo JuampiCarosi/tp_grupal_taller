@@ -95,9 +95,8 @@ mod tests {
     use std::{path::PathBuf, sync::Arc};
 
     use crate::{
-        io,
         tipos_de_dato::{comandos::add::Add, comandos::init::Init, logger::Logger},
-        utils::compresion::descomprimir_objeto_gir,
+        utils::{compresion::descomprimir_objeto_gir, io},
     };
 
     use super::crear_arbol_commit;

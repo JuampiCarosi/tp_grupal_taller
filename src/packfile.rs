@@ -2,12 +2,11 @@ use crate::err_comunicacion::ErrorDeComunicacion;
 use crate::tipos_de_dato::comandos::cat_file;
 use crate::tipos_de_dato::logger::Logger;
 use crate::utils::compresion;
-use crate::{io, utils};
+use crate::utils::{self, io};
 use flate2::{Decompress, FlushDecompress};
 use sha1::{Digest, Sha1};
 use std::convert::TryInto;
 use std::path::PathBuf;
-use std::rc::Rc;
 use std::str;
 use std::sync::Arc;
 pub struct Packfile {

@@ -4,12 +4,12 @@ use chrono::TimeZone;
 use sha1::{Digest, Sha1};
 
 use crate::{
-    io::{self, leer_a_string},
     tipos_de_dato::logger::Logger,
     utils::{
         compresion::comprimir_contenido,
         gir_config::{armar_config_con_mail_y_nombre, conseguir_nombre_y_mail_del_config},
         index::limpiar_archivo_index,
+        io,
     },
 };
 
@@ -62,7 +62,7 @@ impl Commit {
     }
 
     pub fn from_merge(logger: Arc<Logger>) -> Result<Commit, String> {
-        let mensaje = leer_a_string(path::Path::new(".gir/COMMIT_EDITMSG"))?;
+        let mensaje = io::leer_a_string(path::Path::new(".gir/COMMIT_EDITMSG"))?;
         Ok(Commit { mensaje, logger })
     }
 
@@ -84,7 +84,7 @@ impl Commit {
             contenido_commit.push_str(&format!("parent {}\n", hash_padre_commit));
         }
         if Merge::hay_merge_en_curso()? {
-            let padre_mergeado = leer_a_string(path::Path::new(".gir/MERGE_HEAD"))?;
+            let padre_mergeado = io::leer_a_string(path::Path::new(".gir/MERGE_HEAD"))?;
             contenido_commit.push_str(&format!("parent {}\n", padre_mergeado));
         }
         let (nombre, mail) = conseguir_nombre_y_mail_del_config()?;
@@ -122,7 +122,7 @@ impl Commit {
     }
 
     pub fn obtener_branch_actual() -> Result<String, String> {
-        let ruta_branch = leer_a_string(path::Path::new(".gir/HEAD"))?;
+        let ruta_branch = io::leer_a_string(path::Path::new(".gir/HEAD"))?;
         let branch = ruta_branch
             .split('/')
             .last()
@@ -138,7 +138,8 @@ impl Commit {
 
     pub fn obtener_hash_del_padre_del_commit() -> Result<String, String> {
         let ruta = Self::obtener_ruta_branch_commit()?;
-        let padre_commit = leer_a_string(path::Path::new(&ruta)).unwrap_or_else(|_| "".to_string());
+        let padre_commit =
+            io::leer_a_string(path::Path::new(&ruta)).unwrap_or_else(|_| "".to_string());
         Ok(padre_commit)
     }
 
@@ -196,12 +197,14 @@ mod tests {
     use std::{path::PathBuf, sync::Arc};
 
     use crate::{
-        io::{self, escribir_bytes, rm_directorio},
         tipos_de_dato::{
             comandos::{add::Add, hash_object::HashObject, init::Init},
             logger::Logger,
         },
-        utils::compresion::{descomprimir_objeto, descomprimir_objeto_gir},
+        utils::{
+            compresion::{descomprimir_objeto, descomprimir_objeto_gir},
+            io,
+        },
     };
 
     use super::Commit;
@@ -210,11 +213,11 @@ mod tests {
         let home = std::env::var("HOME").unwrap();
         let config_path = format!("{home}/.girconfig");
         let contenido = "nombre =aaaa\nmail =bbbb\n".to_string();
-        escribir_bytes(config_path, contenido).unwrap();
+        io::escribir_bytes(config_path, contenido).unwrap();
     }
 
     fn limpiar_archivo_gir() {
-        rm_directorio(".gir").unwrap();
+        io::rm_directorio(".gir").unwrap();
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/branch_init")).unwrap());
         let init = Init {
             path: "./.gir".to_string(),
@@ -310,7 +313,7 @@ mod tests {
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/commit_test04")).unwrap());
         addear_archivos_y_comittear(vec!["test_file.txt".to_string()], logger.clone());
 
-        escribir_bytes("test_file.txt", "hola").unwrap();
+        io::escribir_bytes("test_file.txt", "hola").unwrap();
         addear_archivos_y_comittear(vec!["test_file.txt".to_string()], logger.clone());
 
         let hash_arbol = conseguir_arbol_commit("master".to_string());
@@ -321,7 +324,7 @@ mod tests {
                 .ejecutar()
                 .unwrap();
 
-        escribir_bytes("test_file.txt", "test file modified").unwrap();
+        io::escribir_bytes("test_file.txt", "test file modified").unwrap();
         assert_eq!(
             contenido_arbol,
             format!("tree 41\0100644 test_file.txt\0{}", hash_correcto)
@@ -335,13 +338,13 @@ mod tests {
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/commit_test05")).unwrap());
         addear_archivos_y_comittear(vec!["test_dir/muchos_objetos".to_string()], logger.clone());
 
-        escribir_bytes("test_dir/muchos_objetos/archivo.txt", "hola").unwrap();
+        io::escribir_bytes("test_dir/muchos_objetos/archivo.txt", "hola").unwrap();
         addear_archivos_y_comittear(vec!["test_dir/muchos_objetos".to_string()], logger.clone());
 
         let hash_arbol = conseguir_arbol_commit("master".to_string());
         let hash_arbol_git = "c847ae43830604fea16a9830f90e60f0a5f0d993";
 
-        escribir_bytes("test_dir/muchos_objetos/archivo.txt", "mas contenido").unwrap();
+        io::escribir_bytes("test_dir/muchos_objetos/archivo.txt", "mas contenido").unwrap();
         assert_eq!(hash_arbol_git, hash_arbol);
     }
 }

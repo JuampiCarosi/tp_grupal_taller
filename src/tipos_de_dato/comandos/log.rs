@@ -4,9 +4,9 @@ use std::sync::Arc;
 
 use crate::tipos_de_dato::logger::Logger;
 
-use crate::io;
 use crate::tipos_de_dato::comandos::checkout::Checkout;
 use crate::tipos_de_dato::objetos::commit::CommitObj;
+use crate::utils::io;
 
 use super::commit::Commit;
 

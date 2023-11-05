@@ -1,7 +1,9 @@
 use std::{path::PathBuf, sync::Arc};
 
-use gir::io;
-use gir::tipos_de_dato::{comando::Comando, logger::Logger};
+use gir::{
+    tipos_de_dato::{comando::Comando, logger::Logger},
+    utils::io,
+};
 
 //extrae la ubiacion del archivo log seteada en el archivo config. En caso de error
 // devuelve una direccion default = .log

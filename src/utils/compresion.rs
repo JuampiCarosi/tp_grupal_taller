@@ -1,6 +1,8 @@
-use crate::{io, tipos_de_dato::objetos::tree::Tree};
+use crate::tipos_de_dato::objetos::tree::Tree;
 use flate2::{read::ZlibDecoder, write::ZlibEncoder, Compression};
 use std::io::{Read, Write};
+
+use super::io;
 
 pub fn descomprimir_objeto(hash: String, ruta: String) -> Result<String, String> {
     let ruta_objeto = format!("{}{}/{}", ruta.clone(), &hash[..2], &hash[2..]);
@@ -144,11 +146,13 @@ pub fn obtener_contenido_comprimido_sin_header(hash: String) -> Result<Vec<u8>, 
     Ok(contenido_comprimido)
 }
 
-pub fn obtener_contenido_comprimido_sin_header_de(hash: String, dir: &str) -> Result<Vec<u8>, String> {
+pub fn obtener_contenido_comprimido_sin_header_de(
+    hash: String,
+    dir: &str,
+) -> Result<Vec<u8>, String> {
     let ruta_objeto = format!("{}{}/{}", dir, &hash[..2], &hash[2..]);
     let contenido_leido = io::leer_bytes(ruta_objeto)?;
-    let cont_descomprimido =
-        descomprimir_contenido_u8(&contenido_leido).unwrap();
+    let cont_descomprimido = descomprimir_contenido_u8(&contenido_leido).unwrap();
     let vec: Vec<&[u8]> = cont_descomprimido.splitn(2, |&x| x == 0).collect();
 
     let contenido = vec[1];

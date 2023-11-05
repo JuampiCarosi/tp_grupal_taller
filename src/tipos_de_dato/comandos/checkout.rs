@@ -1,11 +1,10 @@
 use std::{path::PathBuf, sync::Arc};
 
 use crate::{
-    io,
     tipos_de_dato::{
         comandos::branch::Branch, logger::Logger, objeto::Objeto, objetos::tree::Tree,
     },
-    utils::{self},
+    utils::{self, io},
 };
 
 use super::write_tree::conseguir_arbol_from_hash_commit;
@@ -136,11 +135,7 @@ impl Checkout {
         let head_commit = io::leer_a_string(format!(".gir/refs/heads/{}", rama_actual))?;
         let hash_tree_padre =
             conseguir_arbol_from_hash_commit(&head_commit, ".gir/objects/".to_string());
-        Tree::from_hash(
-            hash_tree_padre,
-            PathBuf::from("."),
-            self.logger.clone(),
-        )
+        Tree::from_hash(hash_tree_padre, PathBuf::from("."), self.logger.clone())
     }
 
     pub fn ejecutar(&self) -> Result<String, String> {
@@ -205,11 +200,11 @@ mod tests {
     use std::{path::PathBuf, sync::Arc};
 
     use crate::{
-        io::{self, escribir_bytes, rm_directorio},
         tipos_de_dato::{
             comandos::{add::Add, branch::Branch, commit::Commit, init::Init},
             logger::Logger,
         },
+        utils::io,
     };
 
     use super::Checkout;
@@ -218,11 +213,11 @@ mod tests {
         let home = std::env::var("HOME").unwrap();
         let config_path = format!("{home}/.girconfig");
         let contenido = "nombre = aaaa\nmail = bbbb\n".to_string();
-        escribir_bytes(config_path, contenido).unwrap();
+        io::escribir_bytes(config_path, contenido).unwrap();
     }
 
     fn limpiar_archivo_gir() {
-        rm_directorio(".gir").unwrap();
+        io::rm_directorio(".gir").unwrap();
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/branch_init")).unwrap());
         let init = Init {
             path: "./.gir".to_string(),

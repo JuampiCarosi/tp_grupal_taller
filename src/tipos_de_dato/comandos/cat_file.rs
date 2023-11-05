@@ -127,7 +127,6 @@ impl CatFile {
 #[cfg(test)]
 mod tests {
     use crate::{
-        io,
         tipos_de_dato::{
             comandos::{
                 cat_file::{
@@ -138,6 +137,7 @@ mod tests {
             logger::Logger,
             visualizaciones::Visualizaciones,
         },
+        utils::io,
     };
     use std::{path::PathBuf, sync::Arc};
 

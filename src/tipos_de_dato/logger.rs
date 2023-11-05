@@ -8,7 +8,7 @@ use std::{
     thread::{self, JoinHandle},
 };
 
-use crate::io::crear_archivo;
+use crate::utils::io;
 
 //que use el modulo io el logger
 //hay que mover a otro archivo
@@ -84,7 +84,7 @@ impl Logger {
 
     fn obtener_dir_archivo_log(ubicacion_archivo: PathBuf) -> Result<PathBuf, String> {
         if ubicacion_archivo.is_absolute() {
-            crear_archivo(&ubicacion_archivo)?;
+            io::crear_archivo(&ubicacion_archivo)?;
             return Ok(ubicacion_archivo);
         }
 
@@ -92,7 +92,7 @@ impl Logger {
 
         let dir_archivo_log = dir_actual.as_path().join(ubicacion_archivo);
 
-        crear_archivo(&dir_archivo_log)?;
+        io::crear_archivo(&dir_archivo_log)?;
 
         Ok(dir_archivo_log)
     }

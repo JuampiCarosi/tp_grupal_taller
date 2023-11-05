@@ -1,6 +1,5 @@
 pub mod comunicacion;
 pub mod err_comunicacion;
-pub mod io;
 pub mod packfile;
 pub mod server;
 pub mod tipos_de_dato {
@@ -41,6 +40,7 @@ pub mod utils {
     pub mod compresion;
     pub mod gir_config;
     pub mod index;
+    pub mod io;
     pub mod path_buf;
     pub mod strings;
 }

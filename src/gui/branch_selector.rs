@@ -14,16 +14,15 @@ pub fn render(builder: &gtk::Builder, window: &gtk::Window, logger: Arc<Logger>)
     let branch_actual = Commit::obtener_branch_actual().unwrap();
     select.remove_all();
 
-    let binding = Branch::mostrar_ramas().unwrap();
-    let branches = binding.split('\n');
+    let branches = Branch::obtener_ramas().unwrap();
 
     let mut i = 0;
-    branches.for_each(|branch| {
+    branches.iter().for_each(|branch| {
         if branch.is_empty() {
             return;
         }
         select.append_text(branch);
-        if branch == branch_actual {
+        if *branch == branch_actual {
             select.set_active(Some(i));
         }
         i += 1;

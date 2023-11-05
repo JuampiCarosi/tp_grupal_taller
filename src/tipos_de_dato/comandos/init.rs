@@ -1,6 +1,6 @@
 use std::{fs, path::Path, sync::Arc};
 
-use crate::{io, tipos_de_dato::logger::Logger};
+use crate::{tipos_de_dato::logger::Logger, utils::io};
 
 pub struct Init {
     pub path: String,

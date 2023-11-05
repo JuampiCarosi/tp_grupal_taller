@@ -98,12 +98,12 @@ mod tests {
     use std::{io::Write, path::PathBuf, sync::Arc};
 
     use crate::{
-        io::{self, rm_directorio},
         tipos_de_dato::{
             comandos::{add::Add, init::Init},
             logger::Logger,
             objeto::Objeto,
         },
+        utils::io,
     };
 
     fn create_test_file() {
@@ -124,7 +124,7 @@ mod tests {
     }
 
     fn limpiar_archivo_gir() {
-        rm_directorio(".gir").unwrap();
+        io::rm_directorio(".gir").unwrap();
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/branch_init")).unwrap());
         let init = Init {
             path: "./.gir".to_string(),

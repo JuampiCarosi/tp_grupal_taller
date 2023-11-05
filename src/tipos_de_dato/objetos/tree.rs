@@ -9,14 +9,16 @@ use std::{
 use sha1::{Digest, Sha1};
 
 use crate::{
-    io,
     tipos_de_dato::{
         comandos::hash_object::HashObject,
         logger::{self, Logger},
         objeto::Objeto,
     },
-    utils::compresion::{comprimir_contenido_u8, descomprimir_objeto},
     utils::path_buf::{esta_directorio_habilitado, obtener_nombre},
+    utils::{
+        compresion::{comprimir_contenido_u8, descomprimir_objeto},
+        io,
+    },
 };
 
 use super::blob::Blob;
@@ -537,10 +539,10 @@ impl Display for Tree {
 
 mod tests {
 
-    use crate::io;
     use crate::tipos_de_dato::logger::Logger;
     use crate::tipos_de_dato::{objeto::Objeto, objetos::tree::Tree};
     use crate::utils::compresion::descomprimir_contenido_u8;
+    use crate::utils::io;
     use std::path::PathBuf;
     use std::sync::Arc;
 

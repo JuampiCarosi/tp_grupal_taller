@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use crate::io::{escribir_bytes, leer_a_string};
+use crate::utils::io;
 
 #[derive(Debug, Clone)]
 pub struct RemoteInfo {
@@ -23,7 +23,7 @@ pub struct Config {
 
 impl Config {
     pub fn leer_config() -> Result<Config, String> {
-        let contenido = leer_a_string(".gir/config")?;
+        let contenido = io::leer_a_string(".gir/config")?;
         let contenido_spliteado = contenido.split('[').collect::<Vec<&str>>();
         let mut remotes: Vec<RemoteInfo> = Vec::new();
         let mut branches: Vec<BranchInfo> = Vec::new();
@@ -100,7 +100,7 @@ impl Config {
             contenido.push_str(&format!("   merge = {}\n", branch.merge));
         }
 
-        escribir_bytes(PathBuf::from(".gir/config"), contenido)?;
+        io::escribir_bytes(PathBuf::from(".gir/config"), contenido)?;
 
         Ok(())
     }
@@ -109,7 +109,6 @@ impl Config {
 #[cfg(test)]
 
 mod tests {
-    use crate::io;
 
     use super::*;
 

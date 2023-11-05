@@ -8,7 +8,6 @@ use std::{
 };
 
 use crate::{
-    io::{self, escribir_bytes, leer_a_string, rm_directorio},
     tipos_de_dato::{
         comandos::merge::{
             estrategias_conflictos::resolver_merge_len_2, region::unificar_regiones,
@@ -19,6 +18,7 @@ use crate::{
     utils::{
         compresion::descomprimir_objeto_gir,
         index::{escribir_index, leer_index, ObjetoIndex},
+        io,
     },
 };
 
@@ -367,7 +367,7 @@ impl Merge {
             let (resultado, hubo_conflictos) =
                 Self::mergear_archivos(diff_actual, diff_a_mergear, contenido_base);
 
-            escribir_bytes(objeto_base.obtener_path(), resultado)?;
+            io::escribir_bytes(objeto_base.obtener_path(), resultado)?;
             if hubo_conflictos {
                 paths_con_conflictos.push(format!("{}\n", objeto_base.obtener_path().display()));
             }
@@ -399,7 +399,7 @@ impl Merge {
 
     /// Realiza un fast-forward, moviendo el puntero de la rama actual al commit de la rama a mergear
     pub fn fast_forward(&self) -> Result<String, String> {
-        let commit_banch_a_mergear = leer_a_string(Path::new(&format!(
+        let commit_banch_a_mergear = io::leer_a_string(Path::new(&format!(
             ".gir/refs/heads/{}",
             self.branch_a_mergear
         )))?;
@@ -438,27 +438,27 @@ impl Merge {
             return Ok(false);
         }
 
-        let merge = leer_a_string(".gir/MERGE_HEAD")?;
+        let merge = io::leer_a_string(".gir/MERGE_HEAD")?;
 
         Ok(!merge.is_empty())
     }
 
     pub fn obtener_commit_de_branch(branch: &String) -> Result<String, String> {
         let ruta = format!(".gir/refs/heads/{}", branch);
-        let padre_commit = leer_a_string(path::Path::new(&ruta))?;
+        let padre_commit = io::leer_a_string(path::Path::new(&ruta))?;
         Ok(padre_commit)
     }
 
     fn escribir_merge_head(&self) -> Result<(), String> {
         let ruta_merge = Path::new(".gir/MERGE_HEAD");
         let commit = Self::obtener_commit_de_branch(&self.branch_a_mergear)?;
-        escribir_bytes(ruta_merge, commit)?;
+        io::escribir_bytes(ruta_merge, commit)?;
         Ok(())
     }
 
     fn escribir_mensaje_merge(&self) -> Result<(), String> {
         let ruta_merge_msg = Path::new(".gir/COMMIT_EDITMSG");
-        escribir_bytes(
+        io::escribir_bytes(
             ruta_merge_msg,
             format!(
                 "Mergear rama \"{}\" en  \"{}\"",
@@ -471,7 +471,7 @@ impl Merge {
     pub fn limpiar_merge_post_commit() -> Result<(), String> {
         let ruta_merge = Path::new(".gir/MERGE_HEAD");
         if ruta_merge.exists() {
-            rm_directorio(ruta_merge)?;
+            io::rm_directorio(ruta_merge)?;
         }
         Ok(())
     }

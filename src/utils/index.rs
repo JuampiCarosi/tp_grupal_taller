@@ -6,12 +6,9 @@ use std::{
     sync::Arc,
 };
 
-use crate::{
-    io::{self, escribir_bytes},
-    tipos_de_dato::{comandos::hash_object::HashObject, logger::Logger, objeto::Objeto},
-};
+use crate::tipos_de_dato::{comandos::hash_object::HashObject, logger::Logger, objeto::Objeto};
 
-use super::path_buf::obtener_directorio_raiz;
+use super::{io, path_buf::obtener_directorio_raiz};
 
 const PATH_INDEX: &str = "./.gir/index";
 
@@ -138,7 +135,7 @@ pub fn escribir_index(
         buffer.push_str(&line);
     }
 
-    escribir_bytes(PATH_INDEX, buffer)?;
+    io::escribir_bytes(PATH_INDEX, buffer)?;
     Ok(())
 }
 

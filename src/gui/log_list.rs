@@ -3,16 +3,15 @@ use std::path::Path;
 use gtk::prelude::*;
 
 use crate::{
-    io::leer_a_string,
     tipos_de_dato::{comandos::log::Log, objetos::commit::CommitObj},
-    utils::compresion::descomprimir_objeto_gir,
+    utils::{compresion::descomprimir_objeto_gir, io},
 };
 
 use super::log_seleccionado;
 
 fn obtener_listas_de_commits(branch: &String) -> Result<Vec<String>, String> {
     let ruta = format!(".gir/refs/heads/{}", branch);
-    let ultimo_commit = leer_a_string(Path::new(&ruta))?;
+    let ultimo_commit = io::leer_a_string(Path::new(&ruta))?;
 
     if ultimo_commit.is_empty() {
         return Ok(Vec::new());

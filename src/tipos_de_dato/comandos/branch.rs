@@ -1,6 +1,9 @@
 use std::{path::PathBuf, sync::Arc};
 
-use crate::{io, tipos_de_dato::logger::Logger, utils::path_buf::obtener_nombre};
+use crate::{
+    tipos_de_dato::logger::Logger,
+    utils::{io, path_buf::obtener_nombre},
+};
 
 use super::commit::Commit;
 
@@ -111,7 +114,6 @@ impl Branch {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::io::rm_directorio;
     use crate::tipos_de_dato::comandos::add::Add;
     use crate::tipos_de_dato::comandos::commit::Commit;
     use crate::tipos_de_dato::comandos::init::Init;
@@ -129,7 +131,7 @@ mod test {
 
     fn limpiar_archivo_gir() {
         if PathBuf::from("./.gir").exists() {
-            rm_directorio(".gir").unwrap();
+            io::rm_directorio(".gir").unwrap();
         }
 
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/branch_init")).unwrap());

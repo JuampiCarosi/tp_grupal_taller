@@ -8,9 +8,11 @@ const VERDE: &str = "\x1B[32m";
 const RESET: &str = "\x1B[0m";
 
 use crate::{
-    io::leer_a_string,
     tipos_de_dato::{logger::Logger, objeto::Objeto, objetos::tree::Tree},
-    utils::index::{leer_index, ObjetoIndex},
+    utils::{
+        index::{leer_index, ObjetoIndex},
+        io,
+    },
 };
 
 use super::{commit::Commit, write_tree::conseguir_arbol_from_hash_commit};
@@ -27,7 +29,7 @@ pub fn obtener_arbol_del_commit_head(logger: Arc<Logger>) -> Option<Tree> {
         Ok(ruta) => ruta,
         Err(_) => return None,
     };
-    let padre_commit = leer_a_string(path::Path::new(&ruta)).unwrap_or_else(|_| "".to_string());
+    let padre_commit = io::leer_a_string(path::Path::new(&ruta)).unwrap_or_else(|_| "".to_string());
     if padre_commit.is_empty() {
         None
     } else {
@@ -201,11 +203,11 @@ mod tests {
     use std::{io::Write, path::PathBuf, sync::Arc};
 
     use crate::{
-        io::{self, rm_directorio},
         tipos_de_dato::{
             comandos::{add::Add, commit::Commit, init::Init, status::Status},
             logger::Logger,
         },
+        utils::io,
     };
 
     fn addear_archivos(args: Vec<String>, logger: Arc<Logger>) {
@@ -222,7 +224,7 @@ mod tests {
     }
 
     fn limpiar_archivo_gir() {
-        rm_directorio(".gir").unwrap();
+        io::rm_directorio(".gir").unwrap();
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/branch_init")).unwrap());
         let init = Init {
             path: "./.gir".to_string(),
