@@ -1,10 +1,13 @@
 mod branch_selector;
+mod clone_dialog;
 mod log_list;
 mod log_seleccionado;
 mod new_branch_dialog;
 mod new_commit_dialog;
 mod staging_area;
 
+use std::fs;
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use crate::tipos_de_dato::comandos::commit::Commit;
@@ -20,6 +23,15 @@ pub fn ejecutar(logger: Arc<Logger>) {
 
     let glade_src = include_str!("glade1.glade");
     let builder = gtk::Builder::from_string(glade_src);
+
+    if !PathBuf::from(".gir").is_dir() {
+        clone_dialog::render(
+            &builder,
+            &gtk::Window::new(gtk::WindowType::Toplevel),
+            logger.clone(),
+        );
+    }
+
     let branch_actual = Commit::obtener_branch_actual().unwrap();
 
     let window: gtk::Window = builder.object("home").unwrap();
