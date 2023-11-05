@@ -35,15 +35,11 @@ impl<'a> Push<'a> {
 
     pub fn ejecutar(&mut self) -> Result<String, String> {
         println!("Se ejecuto el comando push");
-        let server_address = "127.0.0.1:9418"; // Cambia la dirección IP si es necesario
-        let mut client = TcpStream::connect(server_address).unwrap();
         let request_data = "git-receive-pack /gir/\0host=example.com\0\0version=1\0"; //en donde dice /.git/ va la dir del repo
 
         let request_data_con_largo_hex = io::obtener_linea_con_largo_hex(request_data);
 
-        client
-            .write_all(request_data_con_largo_hex.as_bytes())
-            .unwrap();
+        self.comunicacion.enviar(&request_data_con_largo_hex)?;
 
         let mut refs_recibidas = self.comunicacion.obtener_lineas().unwrap();
         println!("refs recibidas: {:?}", refs_recibidas);
@@ -54,7 +50,6 @@ impl<'a> Push<'a> {
         // caso en el que el server no tiene refs
         if !first_ref.contains(&"0".repeat(40)) {
             let referencia_y_capacidades = first_ref.split('\0').collect::<Vec<&str>>();
-            let capabilities = referencia_y_capacidades[1];
             refs_recibidas.push(referencia_y_capacidades[0].to_string());
         }
         for referencia in &refs_recibidas {

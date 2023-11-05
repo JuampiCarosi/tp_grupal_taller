@@ -6,8 +6,7 @@ use std::{
 };
 
 use gir::{
-    comunicacion::Comunicacion,
-    tipos_de_dato::{comando::Comando, logger::Logger},
+    tipos_de_dato::{comando::Comando, comunicacion::Comunicacion, logger::Logger},
     utils::{gir_config::obtener_gir_config_path, io::leer_a_string},
 };
 
