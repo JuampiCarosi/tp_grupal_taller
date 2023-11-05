@@ -1,7 +1,7 @@
-use crate::comunicacion::Comunicacion;
 use crate::err_comunicacion::ErrorDeComunicacion;
-use crate::receive_pack::receive_pack;
-use crate::upload_pack::upload_pack;
+use crate::servidor::receive_pack::receive_pack;
+use crate::servidor::upload_pack::upload_pack;
+use crate::tipos_de_dato::comunicacion::Comunicacion;
 use crate::utils::io as gir_io;
 use std::env;
 use std::io;

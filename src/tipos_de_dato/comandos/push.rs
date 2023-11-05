@@ -1,6 +1,6 @@
-use crate::comunicacion::Comunicacion;
-use crate::packfile::Packfile;
+use crate::tipos_de_dato::comunicacion::Comunicacion;
 use crate::tipos_de_dato::objetos::commit::CommitObj;
+use crate::tipos_de_dato::packfile::Packfile;
 use crate::utils::io;
 use std::collections::HashMap;
 use std::collections::HashSet;

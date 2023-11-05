@@ -1,8 +1,7 @@
 use crate::err_comunicacion::ErrorDeComunicacion;
 
-use crate::packfile::Packfile;
-
-use crate::comunicacion::Comunicacion;
+use crate::tipos_de_dato::comunicacion::Comunicacion;
+use crate::tipos_de_dato::packfile::Packfile;
 use crate::utils::io;
 use std::net::TcpStream;
 use std::path::PathBuf;

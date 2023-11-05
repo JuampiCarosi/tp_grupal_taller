@@ -1,8 +1,8 @@
 use std::net::TcpStream;
 
-use crate::comunicacion::Comunicacion;
 use crate::err_comunicacion::ErrorDeComunicacion;
-use crate::packfile;
+use crate::tipos_de_dato::comunicacion::Comunicacion;
+use crate::tipos_de_dato::packfile;
 use crate::utils::io as git_io;
 use crate::utils::strings::eliminar_prefijos;
 
