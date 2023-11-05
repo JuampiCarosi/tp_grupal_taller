@@ -669,7 +669,7 @@ mod tests {
 
         let tree = Tree::from_directorio(PathBuf::from("src"), None, logger).unwrap();
 
-        assert!(tree.contiene_hijo_por_ubicacion(PathBuf::from("src/io.rs")))
+        assert!(tree.contiene_hijo_por_ubicacion(PathBuf::from("src/utils/io.rs")))
     }
 
     #[test]

@@ -1,6 +1,5 @@
+use gir::servidor::server::Servidor;
 use std::env::args;
-
-use gir::server::Servidor;
 static SERVER_ARGS: usize = 2;
 fn main() -> Result<(), ()> {
     let argv = args().collect::<Vec<String>>();

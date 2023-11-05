@@ -20,4 +20,4 @@ path = "src/main.rs"
 
 [[bin]]
 name = "server"
-path = "src/servidor_gir.rs"
+path = "src/servidor/servidor_gir.rs"

@@ -6,7 +6,6 @@ mod new_branch_dialog;
 mod new_commit_dialog;
 mod staging_area;
 
-use std::fs;
 use std::path::PathBuf;
 use std::sync::Arc;
 
