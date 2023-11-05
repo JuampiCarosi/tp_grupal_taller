@@ -23,19 +23,14 @@ pub fn ejecutar(logger: Arc<Logger>) {
 
     let glade_src = include_str!("glade1.glade");
     let builder = gtk::Builder::from_string(glade_src);
+    let window: gtk::Window = builder.object("home").unwrap();
+    window.set_position(gtk::WindowPosition::Center);
 
-    if !PathBuf::from(".gir").is_dir() {
-        clone_dialog::render(
-            &builder,
-            &gtk::Window::new(gtk::WindowType::Toplevel),
-            logger.clone(),
-        );
+    if !PathBuf::from(".gir").is_dir() && !clone_dialog::render(&builder, logger.clone()) {
+        return;
     }
 
     let branch_actual = Commit::obtener_branch_actual().unwrap();
-
-    let window: gtk::Window = builder.object("home").unwrap();
-    window.set_position(gtk::WindowPosition::Center);
 
     new_branch_dialog::render(&builder, &window, logger.clone());
     branch_selector::render(&builder, &window, logger.clone());
@@ -45,11 +40,6 @@ pub fn ejecutar(logger: Arc<Logger>) {
     new_commit_dialog::render(&builder, &window, logger.clone());
 
     window.show_all();
-
-    window.connect_delete_event(|_, _| {
-        gtk::main_quit();
-        gtk::glib::Propagation::Proceed
-    });
 
     gtk::main();
 }

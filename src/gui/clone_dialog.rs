@@ -1,10 +1,8 @@
-use std::sync::Arc;
+use std::{path::PathBuf, sync::Arc};
 
 use gtk::prelude::*;
 
 use crate::tipos_de_dato::{comandos::clone::Clone, logger::Logger};
-
-use super::branch_selector;
 
 fn run_dialog(builder: &gtk::Builder) {
     let dialog: gtk::MessageDialog = builder.object("clone").unwrap();
@@ -12,22 +10,40 @@ fn run_dialog(builder: &gtk::Builder) {
     dialog.hide();
 }
 
-fn boton_confimar_dialog(builder: &gtk::Builder, window: &gtk::Window, logger: Arc<Logger>) {
+fn boton_confimar_dialog(builder: &gtk::Builder, logger: Arc<Logger>) {
     let confirm: gtk::Button = builder.object("confirm-clone").unwrap();
     let dialog: gtk::MessageDialog = builder.object("clone").unwrap();
     let input: gtk::Entry = builder.object("clone-input").unwrap();
+    dialog.set_position(gtk::WindowPosition::Center);
 
-    let builder_clone = builder.clone();
-    let window_clone = window.clone();
     confirm.connect_clicked(move |_| {
         // Clone::from(logger.clone()).ejecutar().unwrap();
-        println!("Clonando repositorio: {}", input.text());
         input.set_text("");
         dialog.hide();
     });
 }
 
-pub fn render(builder: &gtk::Builder, window: &gtk::Window, logger: Arc<Logger>) {
+fn error_no_repo_dialog(builder: &gtk::Builder) {
+    let dialog: gtk::MessageDialog = builder.object("no-repo-dialog").unwrap();
+    let aceptar_button: gtk::Button = builder.object("no-repo-close").unwrap();
+    dialog.set_position(gtk::WindowPosition::Center);
+
+    let dialog_clone = dialog.clone();
+    aceptar_button.connect_clicked(move |_| {
+        dialog_clone.hide();
+    });
+
+    dialog.run();
+}
+
+pub fn render(builder: &gtk::Builder, logger: Arc<Logger>) -> bool {
+    boton_confimar_dialog(builder, logger);
     run_dialog(builder);
-    boton_confimar_dialog(builder, window, logger);
+
+    if !PathBuf::from(".gir").is_dir() {
+        error_no_repo_dialog(&builder);
+        return false;
+    }
+
+    true
 }
