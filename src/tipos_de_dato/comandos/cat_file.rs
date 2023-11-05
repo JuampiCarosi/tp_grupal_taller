@@ -111,6 +111,17 @@ impl CatFile {
         self.logger.log(mensaje.clone());
         Ok(mensaje)
     }
+
+    pub fn ejecutar_de(&self, dir: &str) -> Result<String, String> {
+        let (header, contenido) = obtener_contenido_objeto_de(self.hash_objeto.clone(), dir)?;
+        let mensaje = match self.visualizacion {
+            Visualizaciones::TipoObjeto => conseguir_tipo_objeto(header)?,
+            Visualizaciones::Tamanio => conseguir_tamanio(header)?,
+            Visualizaciones::Contenido => conseguir_contenido_pretty(header, contenido)?,
+        };
+        self.logger.log(mensaje.clone());
+        Ok(mensaje)
+    }
 }
 
 #[cfg(test)]
