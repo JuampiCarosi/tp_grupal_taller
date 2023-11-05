@@ -288,8 +288,8 @@ impl<T: Write + Read> Fetch<T> {
     ///
     fn iniciar_git_upload_pack_con_servidor(&self) -> Result<(), String> {
         let comando = "git-upload-pack";
-        let repositorio = "/gir/";
-        let host = "example.com";
+        let repositorio = "//";
+        let host = "gir.com";
         let numero_de_version = 1;
 
         let mensaje = format!(

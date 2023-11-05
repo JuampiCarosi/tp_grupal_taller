@@ -2,34 +2,13 @@ use std::{path::PathBuf, sync::Arc};
 
 use gir::{
     tipos_de_dato::{comando::Comando, logger::Logger},
-    utils::io,
+    utils::{self, io},
 };
-
-//extrae la ubiacion del archivo log seteada en el archivo config. En caso de error
-// devuelve una direccion default = .log
-fn obtener_dir_archivo_log(ubicacion_config: PathBuf) -> String {
-    let mut dir_archivo_log = ".log".to_string();
-
-    let contenido_config = match io::leer_a_string(ubicacion_config) {
-        Ok(contenido_config) => contenido_config,
-        Err(_) => return dir_archivo_log,
-    };
-
-    for linea_config in contenido_config.lines() {
-        if linea_config.trim().starts_with("log") {
-            if let Some(dir_archivo_log_config) = linea_config.split('=').nth(1) {
-                dir_archivo_log = dir_archivo_log_config.trim().to_string();
-                break;
-            }
-        }
-    }
-
-    dir_archivo_log
-}
 
 fn main() -> Result<(), String> {
     let args = std::env::args().collect::<Vec<String>>();
-    let logger = Arc::new(Logger::new(PathBuf::from("log.txt"))?);
+    let ubicacion_config = utils::gir_config::conseguir_ubicacion_log_config()?;
+    let logger = Arc::new(Logger::new(ubicacion_config)?);
 
     if args.len() < 2 {
         println!("ERROR: No se ingreso ningun comando");
