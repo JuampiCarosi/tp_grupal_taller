@@ -1,4 +1,4 @@
-use crate::io::escribir_bytes;
+
 use crate::packfile::Packfile;
 use crate::tipos_de_dato::logger::Logger;
 use crate::utilidades_path_buf;
@@ -7,6 +7,9 @@ use std::io::{Write, Read};
 use std::path::PathBuf;
 use std::net::TcpStream;
 use std::rc::Rc;
+
+const SE_ENVIO_ALGUN_PEDIDO: bool = true;
+const NO_SE_ENVIO_NINGUN_PEDIDO: bool = false;
 
 pub struct Fetch <T: Write + Read>{
     remoto: String,
@@ -70,9 +73,11 @@ impl <T:Write + Read>Fetch<T>{
             commits_cabezas_y_dir_rama_asosiado,
             _commits_y_tags_asosiados,
         ) = self.fase_de_descubrimiento()?;
+
         if !self.fase_de_negociacion(capacidades_servidor, &commits_cabezas_y_dir_rama_asosiado)? {
             return Ok(String::from("El cliente esta actualizado"));
         }
+
         self.recivir_packfile_y_guardar_objetos()?;
 
         self.actualizar_ramas_locales_del_remoto(&commits_cabezas_y_dir_rama_asosiado)?;
@@ -99,13 +104,12 @@ impl <T:Write + Read>Fetch<T>{
     ) -> Result<bool, String> {
         // no hay pedidos :D
         if !self.enviar_pedidos(&capacidades_servidor, &commits_cabezas_y_dir_rama_asosiado)? {
-            return Ok(false)
+            return Ok(NO_SE_ENVIO_NINGUN_PEDIDO)
         }
         
         self.enviar_lo_que_tengo()?;
-        Ok(true)
-        // self.recivir_nack()?;
-        // self.finalizar_pedido()
+
+        Ok(SE_ENVIO_ALGUN_PEDIDO)
     }
 
     //ACA PARA MI HAY UN PROBLEMA DE RESPONSABILIADADES: COMUNICACION DEBERIA RECIBIR EL PACKETE Y FETCH
@@ -155,26 +159,33 @@ impl <T:Write + Read>Fetch<T>{
     }
 
     ///Envia al servidor todos los commits cabeza de rama que se quieren actulizar junto con las capacidades del
-    /// servidor.
+    /// servidor. 
+    /// La operacion devulve un booleando que dice si se mando o no algun pedido. En caso de enviar algun pedido
+    /// se devuelve true, en caso de no enviar ninigun pedido(es decir no se quiere nada del server) se devuelve 
+    /// false 
     fn enviar_pedidos(
         &self,
         capacidades_servidor: &Vec<String>,
         commits_cabezas_y_dir_rama_asosiado: &Vec<(String, PathBuf)>,
     ) -> Result<bool, String> {
+
         let capacidades_a_usar_en_la_comunicacion =
             self.obtener_capacidades_en_comun_con_el_servidor(capacidades_servidor);
+        
         let commits_de_cabeza_de_rama_faltantes =
             self.obtener_commits_cabeza_de_rama_faltantes(commits_cabezas_y_dir_rama_asosiado)?;
         
         if commits_de_cabeza_de_rama_faltantes.is_empty() {
-            self.comunicacion.enviar("0000")?;
-            return Ok(false);
+            self.comunicacion.enviar_flush_pkt()?;
+            return Ok(NO_SE_ENVIO_NINGUN_PEDIDO); 
         }
+
         self.comunicacion.enviar_pedidos_al_servidor_pkt(
             commits_de_cabeza_de_rama_faltantes,
             capacidades_a_usar_en_la_comunicacion,
         )?;
-        Ok(true)
+
+        Ok(SE_ENVIO_ALGUN_PEDIDO)
     }
 
     ///Obtiene los commits que son necesarios a actulizar y por lo tanto hay que pedirle al servidor esas ramas.
@@ -244,18 +255,23 @@ impl <T:Write + Read>Fetch<T>{
     ) -> Result<
         (
             Vec<String>,
-            String,
+            Option<String>,
             Vec<(String, PathBuf)>,
             Vec<(String, PathBuf)>,
         ),
         String,
     > {
         let mut lineas_recibidas = self.comunicacion.obtener_lineas()?;
+        
         let version = lineas_recibidas.remove(0); //la version del server
+        
         let segunda_linea = lineas_recibidas.remove(0);
+        
+        let (contenido, capacidades) =
+            self.separara_capacidades(&segunda_linea)?;
 
-        let (commit_head_remoto, capacidades) =
-            self.obtener_commit_head_y_capacidades(&segunda_linea)?;
+        let commit_head_remoto = self.separar_commit_head_de_ser_necesario(contenido, &mut lineas_recibidas);
+
         
         let (commits_cabezas_y_dir_rama_asosiado, commits_y_tags_asosiados) =
             self.obtener_commits_y_dir_rama_o_tag_asosiados(&lineas_recibidas)?;
@@ -341,22 +357,21 @@ impl <T:Write + Read>Fetch<T>{
         Ok(dir_rama_local)
     }
 
-    fn obtener_commit_head_y_capacidades(
+    fn separara_capacidades(
         &self,
         primera_linea: &String,
     ) -> Result<(String, Vec<String>), String> {
-        let (commit_head_remoto, capacidades) = primera_linea.split_once('\0').ok_or(format!(
-            "Fallo al separar la primera line en commit HEAD y capacidades\n"
+        let (contenido, capacidades) = primera_linea.split_once('\0').ok_or(format!(
+            "Fallo al separar la linea en commit y capacidades\n"
         ))?;
 
-        // let commit_head_remoto_sin_head = commit_head_remoto.replace("HEAD", "").trim().to_string();
         
         let capacidades_vector: Vec<String> = capacidades
             .split_whitespace()
             .map(|s| s.to_string())
             .collect();
 
-        Ok((commit_head_remoto.to_string(), capacidades_vector))
+        Ok((contenido.to_string(), capacidades_vector))
     }
 
     ///Separa el commit del dir asosiado
@@ -384,12 +399,23 @@ impl <T:Write + Read>Fetch<T>{
     ) -> Result<(), String> {
         for (commit_cabeza_de_rama, dir_rama_remota) in commits_cabezas_y_dir_rama_asosiado {
             let dir_rama_local_del_remoto =
-                self.convertir_de_dir_rama_remota_a_dir_rama_local(&dir_rama_remota)?;
-
+            self.convertir_de_dir_rama_remota_a_dir_rama_local(&dir_rama_remota)?;
+            
             io::escribir_bytes(dir_rama_local_del_remoto, commit_cabeza_de_rama)?;
         }
-
+        
         Ok(())
+    }
+
+    fn separar_commit_head_de_ser_necesario(&self, contenido: String, lineas_recibidas: &mut Vec<String>) -> Option<String> {
+        let mut commit_head_remoto = Option::None;
+            
+        if contenido.contains("HEAD"){
+            commit_head_remoto = Option::Some(contenido.replace("HEAD", "").trim().to_string());
+        }else{
+            lineas_recibidas.insert(0, contenido);
+        }
+        commit_head_remoto
     }
 
 
@@ -477,6 +503,7 @@ impl <T:Write + Read>Fetch<T>{
     
 }
 
+
 #[cfg(test)]
 
 mod test {
@@ -535,7 +562,7 @@ mod test {
         assert_eq!(capacidades_esperadas, capacidades.join(" "));
         
         let commit_head_esperado = "7217a7c7e582c46cec22a130adf4b9d7d950fba0";
-        assert_eq!(commit_head_esperado, commit_head); 
+        assert_eq!(commit_head_esperado, commit_head.unwrap()); 
         
         let commits_y_ramas_esperadas = vec![("1d3fcd5ced445d1abc402225c0b8a1299641f497".to_string(), PathBuf::from("refs/heads/integration")),("7217a7c7e582c46cec22a130adf4b9d7d950fba0".to_string(), PathBuf::from("refs/heads/master"))];
         assert_eq!(commits_y_ramas_esperadas, commits_y_ramas);
@@ -545,7 +572,50 @@ mod test {
     } 
 
     #[test]
-    fn test02_la_fase_de_negociacion_funciona(){
+    fn test02_la_fase_de_descubrimiento_funcion_aun_si_no_hay_un_head(){
+        let contenido_mock = "000eversion 1 \
+        009a1d3fcd5ced445d1abc402225c0b8a1299641f497 refs/heads/integration\0multi_ack thin-pack \
+        side-band side-band-64k ofs-delta shallow no-progress include-tag \
+        003f7217a7c7e582c46cec22a130adf4b9d7d950fba0 refs/heads/master \
+        003cb88d2441cac0977faf98efc80305012112238d9d refs/tags/v0.9 \
+        003c525128480b96c89e6418b1e40909bf6c5b2d580f refs/tags/v1.0 \
+        003fe92df48743b7bc7d26bcaabfddde0a1e20cae47c refs/tags/v1.0^{} \
+        0000";
+
+        let mock = MockTcpStream {
+            lectura_data: contenido_mock.as_bytes().to_vec(),
+            escritura_data: Vec::new(),
+        };
+
+        let comunicacion = Comunicacion::new(mock);
+        let logger = Rc::new(Logger::new(PathBuf::from(".log.txt")).unwrap());
+        let (capacidades, commit_head, commits_y_ramas, commits_y_tags) = Fetch::new_testing(logger, comunicacion).unwrap().fase_de_descubrimiento().unwrap();
+
+        let capacidades_esperadas = "multi_ack thin-pack side-band side-band-64k ofs-delta shallow no-progress include-tag";
+        assert_eq!(capacidades_esperadas, capacidades.join(" "));
         
-    }
+        assert_eq!(Option::None, commit_head); 
+        
+        let commits_y_ramas_esperadas = vec![("1d3fcd5ced445d1abc402225c0b8a1299641f497".to_string(), PathBuf::from("refs/heads/integration")),("7217a7c7e582c46cec22a130adf4b9d7d950fba0".to_string(), PathBuf::from("refs/heads/master"))];
+        assert_eq!(commits_y_ramas_esperadas, commits_y_ramas);
+
+        let commits_y_tags_esperados = vec![("b88d2441cac0977faf98efc80305012112238d9d".to_string(), PathBuf::from("refs/tags/v0.9")),("525128480b96c89e6418b1e40909bf6c5b2d580f".to_string(), PathBuf::from("refs/tags/v1.0")),("e92df48743b7bc7d26bcaabfddde0a1e20cae47c".to_string(), PathBuf::from("refs/tags/v1.0^{}".to_string()))];
+        assert_eq!(commits_y_tags_esperados, commits_y_tags)
+    } 
+
+    // #[test]
+    // fn test02_la_fase_de_negociacion_funciona(){
+    //     let mock = MockTcpStream {
+    //         lectura_data: Vec::new(),
+    //         escritura_data: Vec::new(),
+    //     };
+
+    //     let comunicacion = Comunicacion::new(mock);
+    //     let logger = Rc::new(Logger::new(PathBuf::from(".log.txt")).unwrap());
+    //     let capacidades_servidor = vec!["multi_ack".to_string(), "thin-pack".to_string(), "side-band".to_string(), "side-band-64k".to_string(), "ofs-delta".to_string(), "shallow".to_string(), "no-progress".to_string(),  "include-tag".to_string()];
+    //     let commits_y_ramas = vec![("1d3fcd5ced445d1abc402225c0b8a1299641f497".to_string(), PathBuf::from("refs/heads/integration")),("7217a7c7e582c46cec22a130adf4b9d7d950fba0".to_string(), PathBuf::from("refs/heads/master"))];
+        
+    //     Fetch::new_testing(logger, comunicacion).unwrap().fase_de_negociacion(capacidades_servidor, &commits_y_ramas).unwrap()
+
+    // }
 }

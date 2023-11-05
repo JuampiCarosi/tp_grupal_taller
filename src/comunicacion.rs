@@ -254,12 +254,8 @@ impl<T: Write + Read> Comunicacion<T> {
             self.enviar(&pedido_con_formato)?;
         }
 
-        // if !pedidos[0].contains(&"NAK".to_string())
-        //     && !pedidos[0].contains(&"ACK".to_string())
-        //     && !pedidos[0].contains(&"done".to_string())
-        // {
-        self.enviar("0000")?;
-        // }
+        self.enviar_flush_pkt()?;
+        
         Ok(())
     }
 
@@ -281,10 +277,12 @@ impl<T: Write + Read> Comunicacion<T> {
         }
         haves
     }
-    pub fn enviar_flush_pkt(&mut self) -> Result<(), ErrorDeComunicacion> {
-        self.flujo.lock().unwrap().write_all(b"0000")?;
+
+    pub fn enviar_flush_pkt(&self) -> Result<(), String> {
+        self.enviar("0000")?;
         Ok(())
     }
+
     ///Envia al servidor todo el contendio(los hash de los objetos) que ya se tiene y que no debe
     /// mandarle
     ///
@@ -301,13 +299,8 @@ impl<T: Write + Read> Comunicacion<T> {
             self.enviar(&pedido_con_formato)?;
         }
 
-        //esto if no se si va, el 0000 si
-        if !hash_objetos[0].contains(&"NAK".to_string())
-            && !hash_objetos[0].contains(&"ACK".to_string())
-            && !hash_objetos[0].contains(&"done".to_string())
-        {
-            self.enviar("0000")?;
-        }
+        self.enviar_flush_pkt()?;
+        
         Ok(())
     }
 
