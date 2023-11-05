@@ -507,7 +507,7 @@ impl <T:Write + Read>Fetch<T>{
 #[cfg(test)]
 
 mod test {
-    use std::{io::{Read, Write}, path::PathBuf, rc::Rc};
+    use std::{io::{Read, Write}, path::PathBuf, rc::Rc, fs, env};
 
     use crate::{comunicacion::Comunicacion, tipos_de_dato::logger::{self, Logger}};
 
@@ -604,7 +604,10 @@ mod test {
     } 
 
     // #[test]
-    // fn test02_la_fase_de_negociacion_funciona(){
+    // fn test03_la_fase_de_negociacion_funciona(){
+    //     let nuevo_dir = "test03_fetch";
+    //     let viejo_dir = crear_y_cambiar_directorio(nuevo_dir);
+
     //     let mock = MockTcpStream {
     //         lectura_data: Vec::new(),
     //         escritura_data: Vec::new(),
@@ -615,7 +618,22 @@ mod test {
     //     let capacidades_servidor = vec!["multi_ack".to_string(), "thin-pack".to_string(), "side-band".to_string(), "side-band-64k".to_string(), "ofs-delta".to_string(), "shallow".to_string(), "no-progress".to_string(),  "include-tag".to_string()];
     //     let commits_y_ramas = vec![("1d3fcd5ced445d1abc402225c0b8a1299641f497".to_string(), PathBuf::from("refs/heads/integration")),("7217a7c7e582c46cec22a130adf4b9d7d950fba0".to_string(), PathBuf::from("refs/heads/master"))];
         
-    //     Fetch::new_testing(logger, comunicacion).unwrap().fase_de_negociacion(capacidades_servidor, &commits_y_ramas).unwrap()
+    //     Fetch::new_testing(logger, comunicacion).unwrap().fase_de_negociacion(capacidades_servidor, &commits_y_ramas).unwrap();
 
+    //     volver_al_viejo_dir_y_borrar_el_nuevo(nuevo_dir, viejo_dir);
+    // }
+
+    // fn volver_al_viejo_dir_y_borrar_el_nuevo(nuevo_dir: &str, viejo_dir: PathBuf) {
+    //     std::env::set_current_dir(viejo_dir).unwrap();
+    //     std::fs::remove_dir_all(nuevo_dir).unwrap();
+    // }
+
+    // fn crear_y_cambiar_directorio(nombre: &str)-> PathBuf{
+    //     let viejo_dir = env::current_dir().unwrap();
+        
+    //     fs::create_dir_all(nombre).unwrap();
+    //     std::env::set_current_dir(nombre).unwrap();
+
+    //     viejo_dir
     // }
 }
