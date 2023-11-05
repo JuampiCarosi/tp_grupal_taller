@@ -51,6 +51,19 @@ impl Tree {
         }
         objetos
     }
+    pub fn obtener_objetos(&self) -> Vec<Objeto> {
+        let mut objetos: Vec<Objeto> = Vec::new();
+        for objeto in &self.objetos {
+            match objeto {
+                Objeto::Blob(blob) => objetos.push(Objeto::Blob(blob.clone())),
+                Objeto::Tree(tree) => {
+                    objetos.push(Objeto::Tree(tree.clone()));
+                    objetos.extend(tree.obtener_objetos());
+                }
+            }
+        }
+        objetos
+    }
 
     /// Escribe en el directorio actual los archivos que se encuentran en el arbol
     pub fn escribir_en_directorio(&self) -> Result<(), String> {

@@ -49,7 +49,7 @@ fn main() -> Result<(), String> {
 
     match comando.ejecutar() {
         Ok(mensaje) => {
-            println!("{}", mensaje);
+            println!("{:?}", mensaje.clone());
             logger.log(mensaje);
         }
         Err(mensaje) => {

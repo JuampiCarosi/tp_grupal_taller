@@ -1,14 +1,15 @@
-
-use crate::tipos_de_dato::logger::{Logger};
+use crate::packfile::Packfile;
+use crate::tipos_de_dato::logger::Logger;
 use crate::{
     comunicacion::Comunicacion, io, tipos_de_dato::comandos::write_tree,
     tipos_de_dato::objetos::tree::Tree,
 };
-use std::io::Write;
 use std::path::PathBuf;
 
+use std::net::TcpStream;
+// use gir::tipos_de_dato::{comando::Comando, logger::Logger};
+
 use std::sync::Arc;
-use std::{net::TcpStream};
 // use gir::tipos_de_dato::{comando::Comando, logger::Logger};
 
 //-------- ATENCION ----------
@@ -24,27 +25,30 @@ impl Clone {
     }
 
     pub fn ejecutar(&mut self) -> Result<String, String> {
-        println!("Se ejecutó el comando clone");
-
         let server_address = "127.0.0.1:9418"; // Cambia la dirección IP si es necesario
-
-        let mut client = TcpStream::connect(server_address).unwrap();
-        let mut comunicacion = Comunicacion::new(client.try_clone().unwrap());
+        let mut comunicacion =
+            Comunicacion::<TcpStream>::new_desde_direccion_servidor(server_address)?;
 
         // si es un push, tengo que calcular los commits de diferencia entre el cliente y el server, y mandarlos como packfiles.
         // hay una funcion que hace el calculo
         // obtener_listas_de_commits
-        let request_data = "git-upload-pack /.gir/\0host=example.com\0\0version=1\0"; //en donde dice /.git/ va la dir del repo
+        let request_data = "git-upload-pack /gir/\0host=example.com\0\0version=1\0"; //en donde dice /gir/ va la dir del repo
         let request_data_con_largo_hex = io::obtener_linea_con_largo_hex(request_data);
 
-        client
-            .write_all(request_data_con_largo_hex.as_bytes())
+        // client.write_all(request_data_con_largo_hex.as_bytes()).unwrap();
+        comunicacion
+            .enviar_linea(request_data_con_largo_hex)
             .unwrap();
+
+        let version = comunicacion.aceptar_pedido().unwrap(); // leo la version (cambiar el nombre a esto)
         let mut refs_recibidas = comunicacion.obtener_lineas().unwrap();
+
+        println!("refs_recibidas: {:?}", refs_recibidas);
         // escribo las refs
         let primera_ref = refs_recibidas.remove(0);
+        // escribir esto al final
         for referencia in &refs_recibidas {
-            io::escribir_referencia(referencia, PathBuf::from("./.gir/"));
+            io::escribir_referencia(referencia, PathBuf::from("./.gir/")); // path al repo
         }
         //  for referencia in &refs_recibidas {
         //     let referencia_y_contenido = referencia.split_whitespace().collect::<Vec<&str>>();
@@ -54,21 +58,24 @@ impl Clone {
         //         escribir_bytes(dir, referencia_y_contenido[0]).unwrap();
         //     }
         // }
-        let capacidades = primera_ref.split('\0').collect::<Vec<&str>>()[1];
+        let capacidades = primera_ref.split("\0").collect::<Vec<&str>>()[1];
+        // println!("capacidades: {:?}", capacidades);
         let wants = comunicacion
-            .obtener_wants_pkt(&refs_recibidas, capacidades.to_string())
+            .obtener_wants_pkt(&refs_recibidas, "".to_string())
             .unwrap();
+        println!("Wants: {:?}", wants);
         comunicacion.responder(wants.clone()).unwrap();
+
         // Esto porque es un CLONE
         comunicacion
-            .responder(vec![io::obtener_linea_con_largo_hex("done")])
+            .responder(vec![io::obtener_linea_con_largo_hex("done\n")])
             .unwrap();
         let acks_nak = comunicacion.obtener_lineas().unwrap();
         println!("acks_nack: {:?}", acks_nak);
 
         println!("Obteniendo paquete..");
         let mut packfile = comunicacion.obtener_lineas_como_bytes().unwrap();
-        comunicacion
+        Packfile::new()
             .obtener_paquete_y_escribir(&mut packfile, String::from("./.gir/objects/"))
             .unwrap();
 
@@ -80,13 +87,9 @@ impl Clone {
         //     refs_recibidas[0].split("\0").collect::<Vec<&str>>()[0].to_string()
         // };
         let ref_head = refs_recibidas[0].split_whitespace().collect::<Vec<&str>>()[0].to_string();
-        io::escribir_bytes(PathBuf::from(head_dir), b"refs/heads/master").unwrap();
-        // println!("ref_head: {:?}", ref_head);
-
-        let tree_hash = write_tree::conseguir_arbol_from_hash_commit(
-            &ref_head,
-            String::from("./.gir/objects/"),
-        );
+        io::escribir_bytes(PathBuf::from(head_dir), b"refs/heads/master\n").unwrap();
+        println!("ref_head: {:?}", ref_head);
+        let tree_hash = write_tree::conseguir_arbol_padre_from_ult_commit(ref_head);
         println!("tree_hash: {:?}", tree_hash);
 
         let tree: Tree = Tree::from_hash(

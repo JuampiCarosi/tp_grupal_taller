@@ -97,7 +97,7 @@ pub fn obtener_objetos_con_nombre_carpeta(
 
 pub fn obtener_refs_con_largo_hex(
     refs_path: PathBuf,
-    dir: String,
+    dir: &str,
 ) -> Result<Vec<String>, ErrorDeComunicacion> {
     let mut refs: Vec<String> = Vec::new();
     if !refs_path.exists() {
@@ -118,7 +118,7 @@ pub fn obtener_refs_con_largo_hex(
                     // let mut path = archivo.path().to_string_lossy().split("./.gir/").into_iter().next().unwrap().to_string();
                     refs.push(obtener_linea_con_largo_hex(&obtener_referencia(
                         &mut path,
-                        dir.clone(),
+                        dir,
                     )?));
                 }
                 Err(error) => {
@@ -145,7 +145,7 @@ pub fn obtener_refs(refs_path: PathBuf, dir: String) -> Result<Vec<String>, Erro
                 Ok(archivo) => {
                     let mut path = archivo.path();
                     // let mut path = archivo.path().to_string_lossy().split("./.gir/").into_iter().next().unwrap().to_string();
-                    refs.push(obtener_referencia(&mut path, dir.clone())?);
+                    refs.push(obtener_referencia(&mut path, &dir)?);
                 }
                 Err(error) => {
                     eprintln!("Error leyendo directorio: {}", error);
@@ -174,7 +174,7 @@ fn leer_archivo(path: &mut Path) -> Result<String, ErrorDeComunicacion> {
     Ok(contenido.trim().to_string())
 }
 
-fn obtener_referencia(path: &mut PathBuf, prefijo: String) -> Result<String, ErrorDeComunicacion> {
+fn obtener_referencia(path: &mut PathBuf, prefijo: &str) -> Result<String, ErrorDeComunicacion> {
     let contenido = leer_archivo(path)?;
     // esto esta hardcodeado, hay que cambiar la forma de sacarle el prefijo
     let directorio_sin_prefijo = path.strip_prefix(prefijo).unwrap().to_path_buf();
@@ -325,7 +325,7 @@ where
 pub fn obtener_archivos_faltantes(nombres_archivos: Vec<String>, dir: String) -> Vec<String> {
     // DESHARDCODEAR EL NOMBRE DEL DIRECTORIO (.gir)
     let objetcts_contained =
-        obtener_objetos_del_directorio(dir.clone() + "/.gir/objects/").unwrap();
+        obtener_objetos_del_directorio(dir.clone() + "objects/").unwrap();
     // println!("objetcts_contained: {:?}", objetcts_contained);
     // println!("Nombres: {:?}", nombres_archivos);
     let mut archivos_faltantes: Vec<String> = Vec::new();
@@ -341,7 +341,7 @@ pub fn obtener_archivos_faltantes(nombres_archivos: Vec<String>, dir: String) ->
 pub fn obtener_ack(nombres_archivos: Vec<String>, dir: String) -> Vec<String> {
     let mut ack = Vec::new();
     for nombre in nombres_archivos {
-        let dir_archivo = format!("{}/{}/{}", dir.clone(), &nombre[..2], &nombre[2..]);
+        let dir_archivo = format!("{}{}/{}", dir.clone(), &nombre[..2], &nombre[2..]);
         if PathBuf::from(dir_archivo.clone()).exists() {
             ack.push(obtener_linea_con_largo_hex(
                 ("ACK".to_string() + &nombre + "\n").as_str(),

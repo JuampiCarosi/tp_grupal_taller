@@ -35,65 +35,58 @@ impl Push {
 
         let mut client = TcpStream::connect(server_address).unwrap();
         let mut comunicacion = Comunicacion::new(client.try_clone().unwrap());
-        let request_data = "git-receive-pack /home/juani/23C2-Cangrejos-Tacticos/srv/gir\0host=example.com\0\0version=1\0"; //en donde dice /.git/ va la dir del repo
+        let request_data = "git-receive-pack /gir/\0host=example.com\0\0version=1\0"; //en donde dice /.git/ va la dir del repo
 
-        // let request_data = "git-receive-pack /.gir/\0host=example.com\0\0version=1\0"; //en donde dice /.git/ va la dir del repo
         let request_data_con_largo_hex = io::obtener_linea_con_largo_hex(request_data);
 
         client
             .write_all(request_data_con_largo_hex.as_bytes())
             .unwrap();
+        let version = comunicacion.aceptar_pedido().unwrap(); //cambiar aceptar pedido a obtener_linea
+
         let mut refs_recibidas = comunicacion.obtener_lineas().unwrap();
+        println!("refs recibidas: {:?}", refs_recibidas);
         let mut actualizaciones = Vec::new();
         let mut objetos_a_enviar = HashSet::new();
-        // la primera es version 1
-        let _version = refs_recibidas.remove(0);
-        if !refs_recibidas.len() > 1 {
-            let first_ref = refs_recibidas.remove(0);
+
+        let first_ref = refs_recibidas.remove(0);
+        // caso en el que el server no tiene refs
+        if !first_ref.contains(&"0".repeat(40)) {
             let referencia_y_capacidades = first_ref.split('\0').collect::<Vec<&str>>();
-            println!("referencia_y_capacidades: {:?}", referencia_y_capacidades);
-            let _capabilities = referencia_y_capacidades[1];
+            let capabilities = referencia_y_capacidades[1];
             refs_recibidas.push(referencia_y_capacidades[0].to_string());
         }
-        if refs_recibidas.is_empty() {
-            // hay que actualizar todo
-        }
-
-        // ----------------------------------------------------------
-        // no se si esta hecho el caso de los creates, checkear el caso en el que no mandan refs
-        // ----------------------------------------------------------
         for referencia in &refs_recibidas {
             let obj_id = referencia.split(' ').collect::<Vec<&str>>()[0];
             let referencia = referencia.split(' ').collect::<Vec<&str>>()[1];
             match self.hash_refs.get_mut(referencia) {
                 Some(hash) => {
-                    if hash.0 != obj_id {
-                        hash.1 = obj_id.to_string();
-                    } else {
-                        // borra la entrada (ver esta parte..)
-                        self.hash_refs.remove_entry(referencia);
-                    }
+                    hash.1 = obj_id.to_string();
                 }
                 None => {
-                    // el server tiene un head que el cliente no tiene, abortar push (no borramos brancahes por lo tanto el sv esta)
+                    // el server tiene un head que el cliente no tiene, abortar push (no borramos brancahes por lo tanto el sv esta por delante)
+                    return Err("El servidor tiene un head que el cliente no tiene".to_string());
                 }
             }
         }
+        println!("hash_refs: {:?}", self.hash_refs);
+
         for (key, value) in &self.hash_refs {
             actualizaciones.push(io::obtener_linea_con_largo_hex(&format!(
-                "{} {} {}\n",
+                "{} {} {}",
                 &value.1, &value.0, &key
             ))); // viejo (el del sv), nuevo (cliente), ref
                  // checkear que no existan los objetos antes de appendear
-            if value.1 != "0".repeat(20) {
+            if value.1 != value.0 {
                 objetos_a_enviar
-                    .extend(obtener_commits_y_objetos_asociados(key, &value.1).unwrap());
-            } else {
+                    .extend(obtener_commits_y_objetos_asociados(&key, &value.1).unwrap());
+            }
+            if value.1 == "0".repeat(40) {
                 objetos_a_enviar
-                    .extend(obtener_commits_y_objetos_asociados(key, &value.0).unwrap());
+                    .extend(obtener_commits_y_objetos_asociados(&key, &value.0).unwrap());
             }
         }
-        println!("objetos: {:?}", objetos_a_enviar);
+        println!("objetos a enviar: {:?}", objetos_a_enviar);
 
         if !actualizaciones.is_empty() {
             comunicacion.responder(actualizaciones).unwrap();
@@ -103,14 +96,10 @@ impl Push {
                     "./.gir/objects/",
                 ))
                 .unwrap();
-            println!(
-                "lineas recibidas: {:?}",
-                comunicacion.obtener_lineas().unwrap()
-            );
             Ok(String::from("Push ejecutado con exito"))
         } else {
             //error
-            Err("No hay actualizaciones".to_string())
+            return Err("No hay actualizaciones".to_string());
         }
 
         // println!("Refs recibidas: {:?}", refs_recibidas);
@@ -137,7 +126,6 @@ fn obtener_commits_y_objetos_asociados(
     commits_a_revisar.push(CommitObj::from_hash(ultimo_commit)?);
 
     while let Some(commit) = commits_a_revisar.pop() {
-        
         if commits.contains_key(&commit.hash) || commit.hash == *commit_limite {
             break;
         }
@@ -161,15 +149,12 @@ fn obtener_refs_de(dir: PathBuf, prefijo: String) -> Vec<String> {
     let mut refs: Vec<String> = Vec::new();
     refs.append(&mut io::obtener_refs(dir.join("heads/"), prefijo.clone()).unwrap());
     refs.append(&mut io::obtener_refs(dir.join("tags/"), prefijo).unwrap());
-    // refs[0] = self.agregar_capacidades(refs[0].clone());
+    // refs[0] = self.agregar_capacidades(refs[0].clone ());
     refs
 }
 
-// cargo run --bin client init
-// cargo run --bin client add archivezco.txt
-// cargo run --bin client commit -m "1st comm"
-// cargo run --bin client push
-
-// cargo run --bin client add test_file.txt
-// cargo run --bin client commit -m "2nd commit"
-// cargo run --bin client push
+// juani@Juani:~/23C2-Cangrejos-Tacticos (servidor)$ rm -rf ./srv/gir/objects/
+// juani@Juani:~/23C2-Cangrejos-Tacticos (servidor)$ rm ./srv/gir/refs/heads/master
+// juani@Juani:~/23C2-Cangrejos-Tacticos (servidor)$ rm -rf ./srv/gir/objects/
+// juani@Juani:~/23C2-Cangrejos-Tacticos (servidor)$ cp -r ../.gir/refs/heads/master ./srv/gir/refs/heads/
+// juani@Juani:~/23C2-Cangrejos-Tacticos (servidor)$ cp -r ../.gir/objects/ ./srv/gir/objects/
