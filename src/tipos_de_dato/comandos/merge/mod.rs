@@ -71,13 +71,11 @@ impl Merge {
         let head_commit = io::leer_a_string(format!(".gir/refs/heads/{}", branch))?;
         let hash_tree_padre =
             conseguir_arbol_from_hash_commit(&head_commit, String::from(".gir/objects/"));
-        Tree::from_hash(
-            hash_tree_padre,
-            PathBuf::from("."),
-            logger.clone(),
-        )
+        Tree::from_hash(hash_tree_padre, PathBuf::from("."), logger.clone())
     }
 
+    /// Devuelve el commit base mas cercano entre dos ramas
+    /// Por ejemplo en el arbol a-b-c vs d-b-e, el commit base es b
     fn obtener_commit_base_entre_dos_branches(&self) -> Result<String, String> {
         let hash_commit_actual = Commit::obtener_hash_del_padre_del_commit()?;
         let hash_commit_a_mergear = Self::obtener_commit_de_branch(&self.branch_a_mergear)?;
@@ -98,6 +96,7 @@ impl Merge {
         Err("No se encontro un commit base entre las dos ramas".to_string())
     }
 
+    /// Devuelve un vector con las lineas que difieren entre dos objetos
     fn obtener_diffs_entre_dos_objetos(
         hash_objeto1: String,
         hash_objeto2: String,
@@ -110,6 +109,9 @@ impl Merge {
         Ok(diff)
     }
 
+    /// Calcula la matriz de Longet Common Subsequence entre dos textos
+    /// donde los textos son separados en lineas, para que cada linea sea la
+    /// minima unidad divisible (no se pueden partir lineas en partes mas pequeñas)
     fn computar_lcs_grid(texto1: &Vec<&str>, texto2: &Vec<&str>) -> DiffGrid {
         let longitud1 = texto1.len();
         let longitud2 = texto2.len();
@@ -130,6 +132,13 @@ impl Merge {
         matriz_lcs
     }
 
+    /// Devuelve la cantidad de lineas anteriores que solo tienen removes,
+    /// por ejemplo si el diff es:
+    /// [(1, Removed("hola")), (2, Removed("chau")), (2, Added("juampi"))]
+    /// la cantidad de lineas anteriores que solo tienen removes es 1, ya que en la linea 1
+    /// se removio hola, pero en la 2 se removio chau y se agrego juampi.
+    /// Esto sirve para reindexar los resultados de obtener_diff, ya que en los casos donde
+    /// la linea anterior solo tiene removes, el indice de la linea actual se debe mover
     fn cantidad_de_anteriores_solo_con_remove(
         resultados: &Vec<(usize, DiffType)>,
         i: usize,
@@ -162,7 +171,7 @@ impl Merge {
 
     /// los resultados pueden venir con lineas donde solo hay removes, por lo que hay que mover el usize los add
     /// en los casos donde la linea anterior solo tiene removes
-    /// TODO: hacer mas eficiente con PD
+    /// TODO: hacer mas eficiente con PD de la mano con cantidad_de_anteriores_solo_con_remove
     fn reindexar_resultados(resultados: &mut Vec<(usize, DiffType)>) {
         for i in 0..resultados.len() {
             if let DiffType::Added(_) = resultados[i].1 {
@@ -173,7 +182,10 @@ impl Merge {
         }
     }
 
-    //en texto 1 debe ir la base
+    /// Devuelve un vector con las lineas que difieren entre dos textos
+    /// donde los textos son separados en lineas, En el vector se encuentra una tupla con
+    /// el diff y el indice de la linea en el texto1. El texto1 es el texto base, y el texto2
+    /// es el texto que se quiere mergear
     fn obtener_diff(texto1: Vec<&str>, texto2: Vec<&str>) -> Vec<(usize, DiffType)> {
         let diff_grid = Self::computar_lcs_grid(&texto1, &texto2);
         let mut i = texto1.len();
@@ -204,6 +216,10 @@ impl Merge {
         resultado_diff
     }
 
+    /// Devuelve si hay conflicto basandonos en los distintos casos posibles. Si hay
+    /// un solo diff y es un add, no hay conflicto. Si hay mas de un diff y hay un
+    /// unchange significa que no hay conflicto ya que la contraposicion puede ser
+    /// aplicada sin problemas
     fn hay_conflicto(posibles_conflictos: &Vec<(DiffType, LadoConflicto)>) -> bool {
         if posibles_conflictos.len() == 1 {
             if let DiffType::Added(_) = posibles_conflictos[0].0 {
@@ -217,7 +233,9 @@ impl Merge {
         })
     }
 
-    fn resolver_conflicto<'a>(conflicto: &'a ConflictoAtomico, linea_base: &'a str) -> Region {
+    /// Resuelve los conflictos con distintas estrategias basandose en la cantidad de
+    /// diffs que hay.
+    fn resolver_conflicto(conflicto: &ConflictoAtomico, linea_base: &str) -> Region {
         if conflicto.len() == 4 {
             conflicto_len_4(conflicto)
         } else {
@@ -225,6 +243,7 @@ impl Merge {
         }
     }
 
+    /// Devuelve el contenido del archivo mergeado y un booleano que indica si hubo conflictos
     fn mergear_archivos(
         diff_actual: Vec<(usize, DiffType)>,
         diff_a_mergear: Vec<(usize, DiffType)>,
@@ -232,8 +251,6 @@ impl Merge {
     ) -> (String, bool) {
         let mut posibles_conflictos: Vec<ConflictoAtomico> = Vec::new();
         let mut hubo_conflictos = false;
-        println!("{:?}", diff_actual);
-        println!("{:?}", diff_a_mergear);
 
         for diff in diff_actual {
             if diff.0 > posibles_conflictos.len() {
@@ -285,6 +302,7 @@ impl Merge {
         (resultado, hubo_conflictos)
     }
 
+    /// Realiza un auto-merge, realizando un merge de cada file que difiera entre los dos commits
     fn automerge(&self, commit_base: String) -> Result<String, String> {
         println!("Realizando automerge");
         let hash_tree_base = write_tree::conseguir_arbol_from_hash_commit(
@@ -379,6 +397,7 @@ impl Merge {
         }
     }
 
+    /// Realiza un fast-forward, moviendo el puntero de la rama actual al commit de la rama a mergear
     pub fn fast_forward(&self) -> Result<String, String> {
         let commit_banch_a_mergear = leer_a_string(Path::new(&format!(
             ".gir/refs/heads/{}",
@@ -397,6 +416,8 @@ impl Merge {
         Ok("Merge con fast-forward completado".to_string())
     }
 
+    /// Busca en el index si hay archivos con el flag merge en true
+    /// indicando que hubieron conflictos y no se resolvieron
     pub fn hay_archivos_sin_mergear(logger: Arc<Logger>) -> Result<bool, String> {
         let ruta_index = Path::new(".gir/index");
         if !ruta_index.exists() {
@@ -409,6 +430,8 @@ impl Merge {
         Ok(contenido_index.iter().all(|objeto| !objeto.merge))
     }
 
+    /// Busca en el merge head si hay un commit para
+    /// definir si hay un merge en curso
     pub fn hay_merge_en_curso() -> Result<bool, String> {
         let path = Path::new(".gir/MERGE_HEAD");
         if !path.exists() {

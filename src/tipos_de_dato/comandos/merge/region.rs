@@ -1,4 +1,8 @@
 #[derive(Clone)]
+/// Representa una region en un archivo con conflictos,
+/// normal si no hay conflictos, o conflicto si hay conflictos,
+/// donde el primer elemento de la tupla es el contenido del HEAD,
+/// y el segundo elemento es el contenido entrante
 pub enum Region {
     Normal(String),
     Conflicto(String, String),
@@ -29,6 +33,9 @@ impl std::fmt::Display for Region {
     }
 }
 
+/// De un vector de regiones unifica aquellos conflictos adyacentes
+/// por ejemplo si se tiene [Normal("hola"), Conflicto("a", "b"), Conflicto("c", "d"), Normal("chau")]
+/// devuelve [Normal("hola"), Conflicto("ac", "bd"), Normal("chau")]
 pub fn unificar_regiones(regiones: Vec<Region>) -> Vec<Region> {
     let mut regiones_unificadas: Vec<Region> = Vec::new();
     let mut i = 0;

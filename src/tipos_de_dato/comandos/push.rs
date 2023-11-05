@@ -4,6 +4,7 @@ use crate::tipos_de_dato::objetos::commit::CommitObj;
 use crate::{comunicacion::Comunicacion, io};
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::env;
 use std::io::Write;
 use std::net::TcpStream;
 use std::path::Path;
@@ -32,13 +33,16 @@ impl Push {
     pub fn ejecutar(&mut self) -> Result<String, String> {
         println!("Se ejecuto el comando push");
         let server_address = "127.0.0.1:9418"; // Cambia la dirección IP si es necesario
-
         let mut client = TcpStream::connect(server_address).unwrap();
         let mut comunicacion = Comunicacion::new(client.try_clone().unwrap());
-        let request_data = "git-receive-pack /home/juani/23C2-Cangrejos-Tacticos/srv/gir\0host=example.com\0\0version=1\0"; //en donde dice /.git/ va la dir del repo
+        let current_dir = env::current_dir().unwrap();
+        let request_data = format!(
+            "git-receive-pack {}/srv/gir\0host=example.com\0\0version=1\0",
+            current_dir.display()
+        ); //en donde dice /.git/ va la dir del repo
 
         // let request_data = "git-receive-pack /.gir/\0host=example.com\0\0version=1\0"; //en donde dice /.git/ va la dir del repo
-        let request_data_con_largo_hex = io::obtener_linea_con_largo_hex(request_data);
+        let request_data_con_largo_hex = io::obtener_linea_con_largo_hex(&request_data);
 
         client
             .write_all(request_data_con_largo_hex.as_bytes())
@@ -137,7 +141,6 @@ fn obtener_commits_y_objetos_asociados(
     commits_a_revisar.push(CommitObj::from_hash(ultimo_commit)?);
 
     while let Some(commit) = commits_a_revisar.pop() {
-        
         if commits.contains_key(&commit.hash) || commit.hash == *commit_limite {
             break;
         }
