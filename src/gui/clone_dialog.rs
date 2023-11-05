@@ -2,7 +2,7 @@ use std::{path::PathBuf, sync::Arc};
 
 use gtk::prelude::*;
 
-use crate::tipos_de_dato::{comandos::clone::Clone, logger::Logger};
+use crate::tipos_de_dato::logger::Logger;
 
 fn run_dialog(builder: &gtk::Builder) {
     let dialog: gtk::MessageDialog = builder.object("clone").unwrap();

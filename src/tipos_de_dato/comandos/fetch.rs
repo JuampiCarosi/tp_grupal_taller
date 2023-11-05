@@ -1,6 +1,6 @@
-use crate::comunicacion::Comunicacion;
-use crate::packfile::Packfile;
+use crate::tipos_de_dato::comunicacion::Comunicacion;
 use crate::tipos_de_dato::logger::Logger;
+use crate::tipos_de_dato::packfile::Packfile;
 use crate::utils::{self, io};
 use std::io::{Read, Write};
 use std::net::TcpStream;
@@ -505,7 +505,7 @@ mod test {
         sync::Arc,
     };
 
-    use crate::{comunicacion::Comunicacion, tipos_de_dato::logger::Logger};
+    use crate::tipos_de_dato::{comunicacion::Comunicacion, logger::Logger};
 
     use super::Fetch;
 
