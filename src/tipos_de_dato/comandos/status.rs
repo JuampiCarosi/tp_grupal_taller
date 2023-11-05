@@ -324,8 +324,8 @@ mod tests {
         io::escribir_bytes("test_file2.txt", "test file").unwrap();
         assert_eq!(staging.len(), 0);
         assert_eq!(trackeados.len(), 2);
-        assert_eq!(trackeados[0], "modificado: test_file.txt");
-        assert_eq!(trackeados[1], "modificado: test_file2.txt");
+        assert!(trackeados.contains(&"modificado: test_file.txt".to_string()));
+        assert!(trackeados.contains(&"modificado: test_file2.txt".to_string()));
     }
 
     #[test]
