@@ -117,8 +117,7 @@ pub fn obtener_refs_con_largo_hex(
                     let mut path = archivo.path();
                     // let mut path = archivo.path().to_string_lossy().split("./.gir/").into_iter().next().unwrap().to_string();
                     refs.push(obtener_linea_con_largo_hex(&obtener_referencia(
-                        &mut path,
-                        dir,
+                        &mut path, dir,
                     )?));
                 }
                 Err(error) => {
@@ -324,8 +323,7 @@ where
 // HACER MAS EFICIENTE *Hay iteraciones de mas que se pueden evitar unificando las funciones*
 pub fn obtener_archivos_faltantes(nombres_archivos: Vec<String>, dir: String) -> Vec<String> {
     // DESHARDCODEAR EL NOMBRE DEL DIRECTORIO (.gir)
-    let objetcts_contained =
-        obtener_objetos_del_directorio(dir.clone() + "objects/").unwrap();
+    let objetcts_contained = obtener_objetos_del_directorio(dir.clone() + "objects/").unwrap();
     // println!("objetcts_contained: {:?}", objetcts_contained);
     // println!("Nombres: {:?}", nombres_archivos);
     let mut archivos_faltantes: Vec<String> = Vec::new();
