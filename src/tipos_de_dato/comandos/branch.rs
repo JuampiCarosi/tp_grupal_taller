@@ -38,6 +38,7 @@ impl Branch {
         })
     }
 
+    /// Devuelve un vector con las ramas que existen en el repositorio
     pub fn obtener_ramas() -> Result<Vec<String>, String> {
         let directorio = ".gir/refs/heads";
         let entradas = std::fs::read_dir(directorio)
@@ -54,6 +55,8 @@ impl Branch {
         Ok(ramas)
     }
 
+    ///  Devuelve un string con la lista de ramas en el repo,
+    /// marcando con un * y verde la rama actual
     pub fn mostrar_ramas() -> Result<String, String> {
         let rama_actual = Commit::obtener_branch_actual()?;
 

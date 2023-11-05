@@ -4,6 +4,7 @@ use crate::tipos_de_dato::objetos::commit::CommitObj;
 use crate::{comunicacion::Comunicacion, io};
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::env;
 use std::io::Write;
 use std::net::TcpStream;
 use std::path::Path;
@@ -32,7 +33,6 @@ impl Push {
     pub fn ejecutar(&mut self) -> Result<String, String> {
         println!("Se ejecuto el comando push");
         let server_address = "127.0.0.1:9418"; // Cambia la dirección IP si es necesario
-
         let mut client = TcpStream::connect(server_address).unwrap();
         let mut comunicacion = Comunicacion::new(client.try_clone().unwrap());
         let request_data = "git-receive-pack /gir/\0host=example.com\0\0version=1\0"; //en donde dice /.git/ va la dir del repo
