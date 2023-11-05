@@ -10,23 +10,20 @@ use std::sync::Arc;
 const SE_ENVIO_ALGUN_PEDIDO: bool = true;
 const NO_SE_ENVIO_NINGUN_PEDIDO: bool = false;
 
-pub struct Fetch<T: Write + Read> {
+pub struct Fetch<'a, T: Write + Read> {
     remoto: String,
-    comunicacion: Comunicacion<T>,
+    comunicacion: &'a Comunicacion<T>,
     capacidades_local: Vec<String>,
     logger: Arc<Logger>,
 }
 
-impl<T: Write + Read> Fetch<T> {
-    pub fn new(logger: Arc<Logger>) -> Result<Fetch<TcpStream>, String> {
+impl<'a, T: Write + Read> Fetch<'a, T> {
+    pub fn new(
+        logger: Arc<Logger>,
+        comunicacion: &'a Comunicacion<TcpStream>,
+    ) -> Result<Fetch<'a, TcpStream>, String> {
         let remoto = "origin".to_string();
         //"Por ahora lo hardcoedo necesito el config que no esta en esta rama";
-
-        let direccion_servidor = "127.0.0.1:9418"; // Cambia la dirección IP si es necesario
-                                                   //se inicia la comunicacon con servidor
-        let comunicacion =
-            Comunicacion::<TcpStream>::new_desde_direccion_servidor(direccion_servidor)?;
-        //esto ya lo deberia recibir el fetch en realidad
 
         let capacidades_local = Vec::new();
         //esto lo deberia tener la comunicacion creo yo
@@ -40,8 +37,8 @@ impl<T: Write + Read> Fetch<T> {
     //pòr ahoar para testing, para mi asi deberia ser recibiendo el comunicacion
     pub fn new_testing(
         logger: Arc<Logger>,
-        comunicacion: Comunicacion<T>,
-    ) -> Result<Fetch<T>, String> {
+        comunicacion: &'a Comunicacion<T>,
+    ) -> Result<Fetch<'a, T>, String> {
         let remoto = "origin".to_string();
         //"Por ahora lo hardcoedo necesito el config que no esta en esta rama";
 
@@ -553,7 +550,7 @@ mod test {
         let comunicacion = Comunicacion::new(mock);
         let logger = Arc::new(Logger::new(PathBuf::from(".log.txt")).unwrap());
         let (capacidades, commit_head, commits_y_ramas, commits_y_tags) =
-            Fetch::new_testing(logger, comunicacion)
+            Fetch::new_testing(logger, &comunicacion)
                 .unwrap()
                 .fase_de_descubrimiento()
                 .unwrap();
@@ -613,7 +610,7 @@ mod test {
         let comunicacion = Comunicacion::new(mock);
         let logger = Arc::new(Logger::new(PathBuf::from(".log.txt")).unwrap());
         let (capacidades, commit_head, commits_y_ramas, commits_y_tags) =
-            Fetch::new_testing(logger, comunicacion)
+            Fetch::new_testing(logger, &comunicacion)
                 .unwrap()
                 .fase_de_descubrimiento()
                 .unwrap();

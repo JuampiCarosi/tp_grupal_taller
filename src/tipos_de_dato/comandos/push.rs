@@ -9,12 +9,13 @@ use std::net::TcpStream;
 use std::path::Path;
 use std::path::PathBuf;
 // idea: Key -> (String, String) , primera entrada la ref que tiene el cliente, segunda la que tiene el sv.
-pub struct Push {
+pub struct Push<'a> {
     hash_refs: HashMap<String, (String, String)>,
+    comunicacion: &'a mut Comunicacion<TcpStream>,
 }
 
-impl Push {
-    pub fn new() -> Self {
+impl<'a> Push<'a> {
+    pub fn new(comunicacion: &'a mut Comunicacion<TcpStream>) -> Self {
         let mut hash_refs: HashMap<String, (String, String)> = HashMap::new();
         let refs = obtener_refs_de(PathBuf::from("./.gir/refs/"), String::from("./.gir/"));
         for referencia in refs {
@@ -26,14 +27,16 @@ impl Push {
                 ),
             );
         }
-        Push { hash_refs }
+        Push {
+            hash_refs,
+            comunicacion,
+        }
     }
 
     pub fn ejecutar(&mut self) -> Result<String, String> {
         println!("Se ejecuto el comando push");
         let server_address = "127.0.0.1:9418"; // Cambia la dirección IP si es necesario
         let mut client = TcpStream::connect(server_address).unwrap();
-        let mut comunicacion = Comunicacion::new(client.try_clone().unwrap());
         let request_data = "git-receive-pack /gir/\0host=example.com\0\0version=1\0"; //en donde dice /.git/ va la dir del repo
 
         let request_data_con_largo_hex = io::obtener_linea_con_largo_hex(request_data);
@@ -41,9 +44,8 @@ impl Push {
         client
             .write_all(request_data_con_largo_hex.as_bytes())
             .unwrap();
-        let version = comunicacion.aceptar_pedido().unwrap(); //cambiar aceptar pedido a obtener_linea
 
-        let mut refs_recibidas = comunicacion.obtener_lineas().unwrap();
+        let mut refs_recibidas = self.comunicacion.obtener_lineas().unwrap();
         println!("refs recibidas: {:?}", refs_recibidas);
         let mut actualizaciones = Vec::new();
         let mut objetos_a_enviar = HashSet::new();
@@ -88,8 +90,8 @@ impl Push {
         println!("objetos a enviar: {:?}", objetos_a_enviar);
 
         if !actualizaciones.is_empty() {
-            comunicacion.responder(actualizaciones).unwrap();
-            comunicacion
+            self.comunicacion.responder(actualizaciones).unwrap();
+            self.comunicacion
                 .responder_con_bytes(Packfile::new().obtener_pack_con_archivos(
                     objetos_a_enviar.into_iter().collect(),
                     "./.gir/objects/",

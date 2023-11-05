@@ -57,11 +57,10 @@ impl Servidor {
     //     Ok(())
     // }
     pub fn server_run(&mut self) -> Result<(), ErrorDeComunicacion> {
-        // loop {
-        //     self.com.procesar_datos()?;
-        // }
-        let (stream, _) = self.listener.accept()?;
-        self.manejar_cliente(&mut Comunicacion::<TcpStream>::new(stream), &self.dir)?;
+        loop {
+            let (stream, _) = self.listener.accept()?;
+            self.manejar_cliente(&mut Comunicacion::<TcpStream>::new(stream), &self.dir)?;
+        }
         Ok(())
     }
 

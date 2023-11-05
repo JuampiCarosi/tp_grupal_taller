@@ -50,5 +50,9 @@ pub fn ejecutar(logger: Arc<Logger>) {
 
     window.show_all();
 
+    window.connect_destroy(|_| {
+        gtk::main_quit();
+    });
+
     gtk::main();
 }
