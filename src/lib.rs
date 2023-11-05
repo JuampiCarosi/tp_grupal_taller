@@ -1,12 +1,16 @@
-pub mod comunicacion;
 pub mod err_comunicacion;
-pub mod packfile;
-pub mod server;
+pub mod servidor {
+    pub mod receive_pack;
+    pub mod server;
+    pub mod upload_pack;
+}
 pub mod tipos_de_dato {
     pub mod comando;
+    pub mod comunicacion;
     pub mod config;
     pub mod logger;
     pub mod objeto;
+    pub mod packfile;
     pub mod visualizaciones;
     pub mod objetos {
         pub mod blob;
@@ -44,5 +48,3 @@ pub mod utils {
     pub mod path_buf;
     pub mod strings;
 }
-pub mod receive_pack;
-pub mod upload_pack;
