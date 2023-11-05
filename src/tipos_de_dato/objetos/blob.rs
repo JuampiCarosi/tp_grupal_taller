@@ -10,9 +10,13 @@ use std::{fmt::Display, path::PathBuf, sync::Arc};
 
 #[derive(Clone, Debug)]
 pub struct Blob {
+    /// Hash del objeto blob.
     pub hash: String,
+    /// Ubicacion del objeto blob.
     pub ubicacion: PathBuf,
+    /// Nombre del archivo que representa el blob.
     pub nombre: String,
+    /// Logger para imprimir mensajes en el archivo log.
     pub logger: Arc<Logger>,
 }
 
@@ -25,9 +29,13 @@ impl PartialEq for Blob {
 impl Eq for Blob {}
 
 impl Blob {
+    /// Devuelve el hash del blob.
     pub fn obtener_hash(&self) -> String {
         self.hash.clone()
     }
+
+    /// Devuelve el tamanio del blob.
+    /// Para obtener el tamanio del blob, se descomprime el objeto y se lee el header.
     pub fn obtener_tamanio(&self) -> Result<usize, String> {
         let contenido_blob = descomprimir_objeto(
             self.hash.clone(),
@@ -40,7 +48,11 @@ impl Blob {
         }
     }
 
+    /// Crea un objeto blob a partir de un archivo.
     pub fn from_directorio(directorio: PathBuf, logger: Arc<Logger>) -> Result<Blob, String> {
+        if directorio.is_dir() {
+            return Err("No se puede crear un blob a partir de un directorio".to_string());
+        }
         let hash = HashObject {
             logger: logger.clone(),
             escribir: false,

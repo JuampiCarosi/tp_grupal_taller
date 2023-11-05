@@ -7,22 +7,33 @@ const RESET: &str = "\x1B[0m";
 
 #[derive(Clone, Debug)]
 pub struct CommitObj {
+    /// Hash del objeto commit.
     pub hash: String,
+    /// Hash del objeto tree que tiene el commit.
     pub hash_tree: String,
+    /// Nombre del autor del commit.
     pub autor: String,
+    /// Mail del autor del commit.
     pub mail: String,
+    /// Fecha del commit, guardada en fomarto unix.
     pub date: Date,
+    /// Mensaje del commit.
     pub mensaje: String,
+    /// Hash de los commits padres del commit.
     pub padres: Vec<String>,
 }
 #[derive(Clone, Debug)]
 
 pub struct Date {
+    /// Fecha del commit, guardada en fomarto unix.
     pub tiempo: String,
+    /// Offset de la fecha del commit.
     pub offset: String,
 }
 
 impl CommitObj {
+    /// Formatea el timestamp del commit.
+    /// Toma el timestamp en formato unix y lo formatea en el formato que se muestra en el log.
     fn format_timestamp(
         timestamp: i64,
         offset_horas: i32,
@@ -51,6 +62,7 @@ impl CommitObj {
         Ok(formatted_timestamp)
     }
 
+    /// Recibe un Date y lo formatea en el formato que se muestra en el log.
     fn formatear_date(date: &Date) -> Result<String, String> {
         let timestamp = match date.tiempo.parse::<i64>() {
             Ok(timestamp) => timestamp,
@@ -59,13 +71,12 @@ impl CommitObj {
         let (horas, minutos) = date.offset.split_at(3);
         let offset_horas = horas[0..3].parse::<i32>().unwrap_or(-3);
         let offset_minutos = minutos.parse::<i32>().unwrap_or(0);
-        Self::format_timestamp(
-            timestamp,
-            offset_horas,
-            offset_minutos,
-        )
+        Self::format_timestamp(timestamp, offset_horas, offset_minutos)
     }
 
+    /// Crea un objeto commit a partir de un hash de commit escrito en base.
+    /// Devuelve un error si el hash no es valido o si no se pudo obtener el contenido del commit.
+    /// Devuelve error si no se logran llenar todos los campos del commit.
     pub fn from_hash(hash: String) -> Result<CommitObj, String> {
         if hash.len() != 40 {
             return Err("Hash invalido".to_string());
@@ -121,6 +132,7 @@ impl CommitObj {
         Ok(objeto)
     }
 
+    /// Formatea el contenido del commit para mostrarlo en el log.
     pub fn format_log(&self) -> Result<String, String> {
         let mut log = format!("{}commit {} {}\n", AMARILLO, self.hash, RESET);
 

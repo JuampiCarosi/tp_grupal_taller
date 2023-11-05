@@ -8,8 +8,8 @@ use crate::tipos_de_dato::objetos::tree::Tree;
 use crate::utils::compresion::{descomprimir_objeto, descomprimir_objeto_gir};
 use crate::utils::index::{generar_objetos_raiz, leer_index, ObjetoIndex};
 
-/// Dado un hash de un commit y una ubicacion de donde buscar el objeto
-/// devuelve el hash del arbol de ese commit
+/// Dado un hash de un commit y una ubicacion de donde buscar el objeto.
+/// Devuelve el hash del arbol de ese commit.
 pub fn conseguir_arbol_from_hash_commit(hash_commit_padre: &str, dir: String) -> String {
     let contenido = descomprimir_objeto(hash_commit_padre.to_string(), dir).unwrap();
     let lineas_sin_null = contenido.replace('\0', "\n");
@@ -19,6 +19,9 @@ pub fn conseguir_arbol_from_hash_commit(hash_commit_padre: &str, dir: String) ->
     let arbol_commit = lineas[1];
     arbol_commit.to_string()
 }
+
+/// Dado un hash de un commit devuelve el hash del arbol de ese commit.
+/// Se espera que el contenido del commit tenga el formato correcto.
 pub fn conseguir_arbol_padre_from_ult_commit(hash_commit_padre: String) -> String {
     let contenido = descomprimir_objeto_gir(hash_commit_padre.clone()).unwrap();
     let lineas_sin_null = contenido.replace('\0', "\n");
@@ -29,7 +32,10 @@ pub fn conseguir_arbol_padre_from_ult_commit(hash_commit_padre: String) -> Strin
     arbol_commit.to_string()
 }
 
-/// Devuelve el arbol mergeado entre el arbol padre y los cambios trackeados en el index
+/// Devuelve el arbol mergeado entre el arbol padre y los cambios trackeados en el index.
+/// Si un archivo esta en el arbol padre se agrega al nuevo arbol.
+/// Si un archivo esta en el index se agrega al nuevo arbol, salvo que este en el index por haber sido removido.
+/// Si un archivo esta en el arbol padre y en el index, pisa la version anterior y mantiene solo la del index.
 fn aplicar_index_a_arbol(arbol_index: &[ObjetoIndex], arbol_padre: &[Objeto]) -> Vec<ObjetoIndex> {
     let mut arbol_mergeado: HashMap<PathBuf, ObjetoIndex> = HashMap::new();
 
@@ -55,7 +61,10 @@ fn aplicar_index_a_arbol(arbol_index: &[ObjetoIndex], arbol_padre: &[Objeto]) ->
 }
 
 /// Crea un arbol de commit a partir del index y su commit padre
-/// commit_padre es un option ya que puede ser None en caso de que sea el primer commit
+/// Commit_padre es un option ya que puede ser None en caso de que sea el primer commit
+/// Escribe tanto el arbol como todos sus componentes en .gir/objects.
+/// Devuelve el hash del arbol de commit creado.
+/// En caso de no haber archivos trackeados devuelve un mensaje y corta la ejecucion.
 pub fn crear_arbol_commit(
     commit_padre: Option<String>,
     logger: Arc<Logger>,

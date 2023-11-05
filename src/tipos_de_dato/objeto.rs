@@ -11,11 +11,13 @@ pub enum Objeto {
     Blob(Blob),
 }
 
+/// Devuelve true si el flag es un objeto valido.
 pub fn flag_es_un_objeto_(flag: &String) -> bool {
     flag == "blob" || flag == "tree" || flag == "commit" || flag == "tag"
 }
 
 impl Objeto {
+    /// Devuelve el path del objeto.
     pub fn obtener_path(&self) -> PathBuf {
         match self {
             Objeto::Tree(tree) => tree.directorio.clone(),
@@ -23,6 +25,7 @@ impl Objeto {
         }
     }
 
+    /// Devuelve el hash del objeto.
     pub fn obtener_hash(&self) -> String {
         match self {
             Objeto::Tree(tree) => match tree.obtener_hash() {
@@ -33,6 +36,7 @@ impl Objeto {
         }
     }
 
+    /// Devuelve el tamanio del objeto.
     pub fn obtener_tamanio(&self) -> Result<usize, String> {
         match self {
             Objeto::Tree(tree) => Ok(tree.obtener_tamanio()?),
@@ -40,6 +44,9 @@ impl Objeto {
         }
     }
 
+    /// Dada una linea en formato del archivo index, devuelve una instancia del objeto.
+    /// Si el modo es 100644 devuelve un Blob
+    /// Si el modo es 40000 devuelve un Tree
     pub fn from_index(linea_index: String, logger: Arc<Logger>) -> Result<Objeto, String> {
         let mut line = linea_index.split_whitespace();
 
@@ -92,20 +99,6 @@ impl Objeto {
         } else {
             Err(format!("No se pudo leer el directorio {directorio:#?}"))
         }
-    }
-
-    pub fn esta_directorio_habilitado(
-        directorio: &PathBuf,
-        directorios_habilitados: &Vec<PathBuf>,
-    ) -> bool {
-        for directorio_habilitado in directorios_habilitados {
-            if directorio.starts_with(directorio_habilitado)
-                || directorio_habilitado.starts_with(directorio)
-            {
-                return true;
-            }
-        }
-        false
     }
 }
 
