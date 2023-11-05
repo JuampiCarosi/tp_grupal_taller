@@ -15,6 +15,20 @@ use crate::tipos_de_dato::logger::Logger;
 use gtk::prelude::*;
 use gtk::{self};
 
+fn inicializar_componentes(
+    builder: &gtk::Builder,
+    window: &gtk::Window,
+    logger: Arc<Logger>,
+    branch_actual: String,
+) {
+    new_branch_dialog::render(&builder, &window, logger.clone());
+    branch_selector::render(&builder, &window, logger.clone());
+    log_list::render(&builder, branch_actual);
+    log_seleccionado::render(&builder, None);
+    staging_area::render(&builder, &window, logger.clone());
+    new_commit_dialog::render(&builder, &window, logger.clone());
+}
+
 pub fn ejecutar(logger: Arc<Logger>) {
     if gtk::init().is_err() {
         println!("Failed to initialize GTK.");
@@ -32,12 +46,7 @@ pub fn ejecutar(logger: Arc<Logger>) {
 
     let branch_actual = Commit::obtener_branch_actual().unwrap();
 
-    new_branch_dialog::render(&builder, &window, logger.clone());
-    branch_selector::render(&builder, &window, logger.clone());
-    log_list::render(&builder, branch_actual);
-    log_seleccionado::render(&builder, None);
-    staging_area::render(&builder, &window, logger.clone());
-    new_commit_dialog::render(&builder, &window, logger.clone());
+    inicializar_componentes(&builder, &window, logger.clone(), branch_actual);
 
     window.show_all();
 

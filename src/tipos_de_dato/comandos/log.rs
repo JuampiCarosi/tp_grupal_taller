@@ -8,7 +8,6 @@ use crate::io;
 use crate::tipos_de_dato::comandos::checkout::Checkout;
 use crate::tipos_de_dato::objetos::commit::CommitObj;
 
-
 use super::commit::Commit;
 
 pub struct Log {
@@ -47,7 +46,6 @@ impl Log {
         commits_a_revisar.push(commit);
 
         while let Some(commit) = commits_a_revisar.pop() {
-            
             if commits.contains_key(&commit.hash) {
                 break;
             }
