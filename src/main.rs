@@ -1,8 +1,8 @@
-use std::{path::PathBuf, sync::Arc};
+use std::sync::Arc;
 
 use gir::{
     tipos_de_dato::{comando::Comando, logger::Logger},
-    utils::{self, io},
+    utils::{self},
 };
 
 fn main() -> Result<(), String> {
