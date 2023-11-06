@@ -444,9 +444,18 @@ impl Merge {
     }
 
     pub fn obtener_commit_de_branch(branch: &String) -> Result<String, String> {
-        let ruta = format!(".gir/refs/heads/{}", branch);
-        let padre_commit = io::leer_a_string(path::Path::new(&ruta))?;
-        Ok(padre_commit)
+        let branch_split = branch.split('/').collect::<Vec<&str>>();
+        if branch_split.len() == 1 {
+            let ruta = format!(".gir/refs/heads/{}", branch);
+            let padre_commit = io::leer_a_string(path::Path::new(&ruta))?;
+            Ok(padre_commit)
+        } else if branch_split.len() == 2 {
+            let ruta = format!(".gir/refs/remotes/{}/{}", branch_split[0], branch_split[1]);
+            let padre_commit = io::leer_a_string(path::Path::new(&ruta))?;
+            Ok(padre_commit)
+        } else {
+            Err("Nombre de la rama ambigua".to_string())
+        }
     }
 
     fn escribir_merge_head(&self) -> Result<(), String> {

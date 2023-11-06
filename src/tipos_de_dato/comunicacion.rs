@@ -1,5 +1,5 @@
 use crate::err_comunicacion::ErrorDeComunicacion;
-use crate::utils::io;
+use crate::utils::{self, io};
 use std::io::{Read, Write};
 use std::net::TcpStream;
 use std::str;
@@ -7,6 +7,7 @@ use std::sync::Mutex;
 
 pub struct Comunicacion<T: Read + Write> {
     flujo: Mutex<T>,
+    repositorio: String,
 }
 
 impl<T: Write + Read> Comunicacion<T> {
@@ -26,22 +27,56 @@ impl<T: Write + Read> Comunicacion<T> {
             TcpStream::connect(direccion_servidor)
                 .map_err(|e| format!("Fallo en en la conecciion con el servido.\n{}\n", e))?,
         );
+        let repositorio = "/gir/".to_string();
 
-        Ok(Comunicacion { flujo })
+        Ok(Comunicacion { flujo, repositorio })
     }
 
     pub fn new(flujo: T) -> Comunicacion<T> {
+        let repositorio = "/gir/".to_string();
+
         Comunicacion {
             flujo: Mutex::new(flujo),
+            repositorio,
         }
     }
 
+    pub fn new_desde_gir_config() -> Result<Comunicacion<TcpStream>, String> {
+        let direccion_servidor = utils::gir_config::conseguir_direccion_ip_y_puerto()?;
+        let flujo = Mutex::new(
+            TcpStream::connect(direccion_servidor)
+                .map_err(|e| format!("Fallo en en la conecciion con el servido.\n{}\n", e))?,
+        );
+
+        let repositorio = "/gir/".to_string();
+
+        Ok(Comunicacion { flujo, repositorio })
+    }
     pub fn enviar(&self, mensaje: &str) -> Result<(), String> {
         self.flujo
             .lock()
             .map_err(|e| format!("Fallo en el envio del mensaje.\n{}\n", e))?
             .write_all(mensaje.as_bytes())
             .map_err(|e| format!("Fallo en el envio del mensaje.\n{}\n", e))
+    }
+
+    ///Inicia el comando git upload pack con el servidor, mandole al servidor el siguiente mensaje
+    /// en formato:
+    ///
+    /// - ''git-upload-pack 'directorio'\0host='host'\0\0verision='numero de version'\0''
+    ///
+    pub fn iniciar_git_upload_pack_con_servidor(&self) -> Result<(), String> {
+        let comando = "git-upload-pack";
+        let repositorio = &self.repositorio;
+        let host = "gir.com";
+        let numero_de_version = 1;
+
+        let mensaje = format!(
+            "{} {}\0host={}\0\0version={}\0",
+            comando, repositorio, host, numero_de_version
+        );
+        self.enviar(&io::obtener_linea_con_largo_hex(&mensaje))?;
+        Ok(())
     }
 
     pub fn aceptar_pedido(&self) -> Result<String, ErrorDeComunicacion> {
