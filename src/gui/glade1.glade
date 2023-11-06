@@ -154,7 +154,8 @@
                 <property name="visible">True</property>
                 <property name="can-focus">False</property>
                 <property name="margin-bottom">5</property>
-                <property name="label" translatable="yes">Introduzca la url del repositorio a clonar</property>
+                <property name="label" translatable="yes">Introduzca el nombre del repositorio a clonar</property>
+                <property name="justify">center</property>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -296,6 +297,93 @@
           </packing>
         </child>
       </object>
+    </child>
+  </object>
+  <object class="GtkMessageDialog" id="error-dialog">
+    <property name="width-request">350</property>
+    <property name="can-focus">False</property>
+    <property name="type-hint">dialog</property>
+    <child internal-child="vbox">
+      <object class="GtkBox">
+        <property name="can-focus">False</property>
+        <property name="margin-left">10</property>
+        <property name="margin-right">10</property>
+        <property name="margin-top">20</property>
+        <property name="margin-bottom">5</property>
+        <property name="orientation">vertical</property>
+        <property name="spacing">2</property>
+        <child internal-child="action_area">
+          <object class="GtkButtonBox">
+            <property name="can-focus">False</property>
+            <property name="layout-style">end</property>
+            <child>
+              <placeholder/>
+            </child>
+            <child>
+              <object class="GtkButton" id="error-close">
+                <property name="label" translatable="yes">Cerrar</property>
+                <property name="visible">True</property>
+                <property name="can-focus">True</property>
+                <property name="receives-default">True</property>
+              </object>
+              <packing>
+                <property name="expand">True</property>
+                <property name="fill">True</property>
+                <property name="position">1</property>
+              </packing>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">False</property>
+            <property name="position">0</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkBox" id="error-dialog-box">
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+            <property name="orientation">vertical</property>
+            <child>
+              <object class="GtkLabel" id="no-repo-message">
+                <property name="width-request">300</property>
+                <property name="visible">True</property>
+                <property name="can-focus">False</property>
+                <property name="margin-bottom">5</property>
+                <property name="label" translatable="yes">Error ejecutando comando:</property>
+                <property name="justify">center</property>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="position">0</property>
+              </packing>
+            </child>
+            <child>
+              <placeholder/>
+            </child>
+            <child>
+              <object class="GtkLabel" id="error-label">
+                <property name="visible">True</property>
+                <property name="can-focus">False</property>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="position">2</property>
+              </packing>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">True</property>
+            <property name="position">1</property>
+          </packing>
+        </child>
+      </object>
+    </child>
+    <child type="titlebar">
+      <placeholder/>
     </child>
   </object>
   <object class="GtkDialog" id="fetching-dialog">
@@ -472,28 +560,6 @@
           </object>
         </child>
         <child>
-          <object class="GtkHeaderBar">
-            <property name="width-request">40</property>
-            <property name="height-request">43</property>
-            <property name="visible">True</property>
-            <property name="can-focus">False</property>
-            <property name="spacing">2</property>
-            <child>
-              <object class="GtkComboBoxText" id="select-branch">
-                <property name="name">select-branch</property>
-                <property name="visible">True</property>
-                <property name="can-focus">False</property>
-                <property name="tooltip-text" translatable="yes">seleccionar una branch</property>
-                <property name="active">0</property>
-                <property name="button-sensitivity">on</property>
-              </object>
-            </child>
-          </object>
-          <packing>
-            <property name="x">685</property>
-          </packing>
-        </child>
-        <child>
           <object class="GtkBox" id="log-container">
             <property name="width-request">350</property>
             <property name="visible">True</property>
@@ -631,6 +697,45 @@
             <property name="y">277</property>
           </packing>
         </child>
+        <child>
+          <object class="GtkHeaderBar">
+            <property name="width-request">40</property>
+            <property name="height-request">43</property>
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+            <property name="spacing">29</property>
+            <child>
+              <object class="GtkComboBoxText" id="select-branch">
+                <property name="name">select-branch</property>
+                <property name="width-request">10</property>
+                <property name="visible">True</property>
+                <property name="can-focus">False</property>
+                <property name="tooltip-text" translatable="yes">seleccionar una branch</property>
+                <property name="active">0</property>
+                <property name="button-sensitivity">on</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkEventBox" id="refresh-icon">
+                <property name="visible">True</property>
+                <property name="can-focus">False</property>
+                <child>
+                  <object class="GtkImage">
+                    <property name="visible">True</property>
+                    <property name="can-focus">False</property>
+                    <property name="stock">gtk-refresh</property>
+                  </object>
+                </child>
+              </object>
+              <packing>
+                <property name="position">1</property>
+              </packing>
+            </child>
+          </object>
+          <packing>
+            <property name="x">641</property>
+          </packing>
+        </child>
       </object>
     </child>
   </object>
@@ -641,8 +746,6 @@
     <child internal-child="vbox">
       <object class="GtkBox">
         <property name="can-focus">False</property>
-        <property name="margin-left">10</property>
-        <property name="margin-right">10</property>
         <property name="margin-top">20</property>
         <property name="margin-bottom">5</property>
         <property name="orientation">vertical</property>
@@ -655,7 +758,7 @@
               <placeholder/>
             </child>
             <child>
-              <object class="GtkButton" id="no-repo-close">
+              <object class="GtkButton" id="no-repo-close1">
                 <property name="label" translatable="yes">Cerrar</property>
                 <property name="visible">True</property>
                 <property name="can-focus">True</property>
@@ -680,7 +783,7 @@
             <property name="can-focus">False</property>
             <property name="orientation">vertical</property>
             <child>
-              <object class="GtkLabel" id="no-repo-message">
+              <object class="GtkLabel" id="no-repo-message1">
                 <property name="width-request">300</property>
                 <property name="visible">True</property>
                 <property name="can-focus">False</property>

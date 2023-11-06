@@ -96,37 +96,32 @@ pub fn obtener_objetos_con_nombre_carpeta(
 }
 
 pub fn obtener_refs_con_largo_hex(
+    refs: &mut Vec<String>,
     refs_path: PathBuf,
     dir: &str,
-) -> Result<Vec<String>, ErrorDeComunicacion> {
-    let mut refs: Vec<String> = Vec::new();
+) -> Result<(), ErrorDeComunicacion> {
+    // let mut refs: Vec<String> = Vec::new();
     if !refs_path.exists() {
-        return Ok(refs);
+        return Ok(());
     }
-    //    println!("Obteniendo referencias de: {:?}", refs_path);
     // if !refs_path.exists() {
     //     io::Error::new(io::ErrorKind::NotFound, "No existe el repositorio");
     // }
-    if refs_path.ends_with("HEAD") {
-        refs.push(obtener_ref_head(refs_path.to_path_buf())?);
-    } else {
-        let head_dir = fs::read_dir(&refs_path)?;
-        for archivo in head_dir {
-            match archivo {
-                Ok(archivo) => {
-                    let mut path = archivo.path();
-                    // let mut path = archivo.path().to_string_lossy().split("./.gir/").into_iter().next().unwrap().to_string();
-                    refs.push(obtener_linea_con_largo_hex(&obtener_referencia(
-                        &mut path, dir,
-                    )?));
-                }
-                Err(error) => {
-                    eprintln!("Error leyendo directorio: {}", error);
-                }
+    let head_dir = fs::read_dir(&refs_path)?;
+    for archivo in head_dir {
+        match archivo {
+            Ok(archivo) => {
+                let mut path = archivo.path();
+                let referencia = obtener_linea_con_largo_hex(obtener_referencia(&mut path, dir)?.as_str()); 
+                refs.push(referencia);
+                // println!("Obtengo la ref: {}", referencia);
+            }
+            Err(error) => {
+                eprintln!("Error leyendo directorio: {}", error);
             }
         }
     }
-    Ok(refs)
+    Ok(())
 }
 
 pub fn obtener_refs(refs_path: PathBuf, dir: String) -> Result<Vec<String>, ErrorDeComunicacion> {
@@ -191,11 +186,10 @@ fn obtener_referencia(path: &mut PathBuf, prefijo: &str) -> Result<String, Error
             "No existe HEAD"
         ))?
     );
-    println!("Referencia: {}", referencia);
     Ok(referencia)
 }
 
-fn obtener_ref_head(path: PathBuf) -> Result<String, ErrorDeComunicacion> {
+pub fn obtener_ref_head(path: PathBuf) -> Result<String, ErrorDeComunicacion> {
     if !path.exists() {
         return Err(ErrorDeComunicacion::IoError(io::Error::new(
             io::ErrorKind::NotFound,
@@ -203,9 +197,9 @@ fn obtener_ref_head(path: PathBuf) -> Result<String, ErrorDeComunicacion> {
         )));
     }
     let contenido = leer_archivo(&mut path.clone())?;
-    // let head_ref: Vec<&str> = contenido.split_whitespace().collect();
+    let head_ref = contenido.split_whitespace().collect::<Vec<&str>>()[1];
     if let Some(ruta) = path.clone().parent() {
-        let cont = leer_archivo(&mut ruta.join(contenido))? + " HEAD";
+        let cont = leer_archivo(&mut ruta.join(head_ref))? + " HEAD";
         Ok(obtener_linea_con_largo_hex(&cont))
     } else {
         Err(ErrorDeComunicacion::IoError(io::Error::new(
@@ -353,7 +347,9 @@ pub fn obtener_ack(nombres_archivos: Vec<String>, dir: String) -> Vec<String> {
             break;
         }
     }
-    ack.push(obtener_linea_con_largo_hex("NAK\n"));
+    if ack.is_empty() {
+        ack.push(obtener_linea_con_largo_hex("NAK\n"));
+    }
     ack
 }
 

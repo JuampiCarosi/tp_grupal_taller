@@ -4,7 +4,7 @@ use gtk::prelude::*;
 
 use crate::tipos_de_dato::{comandos::branch::Branch, logger::Logger};
 
-use super::branch_selector;
+use super::{branch_selector, error_dialog};
 
 fn run_dialog(builder: &gtk::Builder) {
     let branch_button: gtk::Button = builder.object("branch-button").unwrap();
@@ -35,13 +35,19 @@ fn boton_confimar_dialog(builder: &gtk::Builder, window: &gtk::Window, logger: A
     let builder_clone = builder.clone();
     let window_clone = window.clone();
     confirm.connect_clicked(move |_| {
-        Branch::from(
+        match Branch::from(
             &mut vec![input.text().to_string()],
             Arc::new(Logger::new(PathBuf::from("log.txt")).unwrap()),
         )
         .unwrap()
         .ejecutar()
-        .unwrap();
+        {
+            Ok(_) => {}
+            Err(err) => {
+                error_dialog::mostrar_error(&err);
+                return;
+            }
+        };
 
         branch_selector::render(&builder_clone, &window_clone, logger.clone());
         input.set_text("");

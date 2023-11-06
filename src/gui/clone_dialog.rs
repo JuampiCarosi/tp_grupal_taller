@@ -8,6 +8,8 @@ use crate::tipos_de_dato::{
     logger::Logger,
 };
 
+use super::error_dialog;
+
 fn run_dialog(builder: &gtk::Builder) {
     let dialog: gtk::MessageDialog = builder.object("clone").unwrap();
     dialog.run();
@@ -25,9 +27,11 @@ fn clonar_dialog(
     dialog.set_position(gtk::WindowPosition::Center);
 
     confirm.connect_clicked(move |_| {
-        Clone::from(logger.clone(), comunicacion.clone())
-            .ejecutar()
-            .unwrap();
+        match Clone::from(logger.clone(), comunicacion.clone()).ejecutar() {
+            Ok(_) => {}
+            Err(err) => error_dialog::mostrar_error(&err),
+        }
+
         input.set_text("");
         dialog.hide();
     });

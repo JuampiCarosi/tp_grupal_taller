@@ -22,11 +22,15 @@ pub fn receive_pack(
     println!("Post pack");
     // las refs se actualizan al final
     for actualizacion in &actualizaciones {
-        let mut parts = actualizacion.splitn(2, ' ');
-        let _vieja_ref = parts.next().unwrap_or("");
-        let nueva_ref = parts.next().unwrap_or("");
-        println!("Voy a escribir la referencia: {:?}", nueva_ref);
-        io::escribir_referencia(nueva_ref, PathBuf::from(format!("{}/{}", dir, "gir")));
+        let mut partes = actualizacion.splitn(2, ' ');
+        println!("Partes: {:?}", partes);
+        let _vieja_ref = partes.next().unwrap_or("");
+        let nueva_ref = partes.next().unwrap_or("");
+        if nueva_ref != _vieja_ref {
+            println!("Vieja ref: {:?}", _vieja_ref);
+            println!("Voy a escribir la referencia: {:?}", nueva_ref);
+            io::escribir_referencia(nueva_ref, PathBuf::from(format!("{}/{}", dir, "gir")));
+        }
         // en donde dice dir va la dir del repo
     }
     println!("Receive pack ejecutado con exito");

@@ -8,6 +8,7 @@ use std::io;
 use std::net::{TcpListener, TcpStream};
 use std::path::PathBuf;
 use std::str;
+use std::thread;
 
 const VERSION: &str = "version 1";
 const CAPABILITIES: &str = "multi_ack thin-pack side-band side-band-64k ofs-delta shallow no-progress include-tag multi_ack_detailed no-done symref=HEAD:refs/heads/master agent=git/2.17.1";
@@ -24,6 +25,7 @@ pub struct Servidor {
 impl Servidor {
     pub fn new(address: &str) -> std::io::Result<Servidor> {
         let listener = TcpListener::bind(address)?;
+        println!("Escuchando en {}", address);
         // busca la carpeta raiz del proyecto (evita hardcodear la ruta)
         let dir = env!("CARGO_MANIFEST_DIR").to_string() + "/srv";
         // esto es para checkear, no tengo implementado nada de lo que dice xd
@@ -47,31 +49,30 @@ impl Servidor {
         })
     }
 
-    // pub fn iniciar_servidor() -> Result<(), ErrorDeComunicacion> {
-    //     while let Ok((stream, _)) = TcpListener::bind((IP, PORT))?.accept() {
-    //         // thread::spawn(move || {
-    //             let mut comunicacion = Comunicacion::new(stream.try_clone().unwrap());
-    //             Self::manejar_cliente(&mut comunicacion, &(env!("CARGO_MANIFEST_DIR").to_string() + DIR)).unwrap();
-    //         // });
-    //     }
-    //     Ok(())
-    // }
-    pub fn server_run(&mut self) -> Result<(), ErrorDeComunicacion> {
-        loop {
-            println!("empezando el loop");
-            let (stream, _) = self.listener.accept()?;
-            println!("recibida una conexion");
-            self.manejar_cliente(&mut Comunicacion::<TcpStream>::new(stream), &self.dir)?;
+    pub fn iniciar_servidor(direccion_y_puerto: &str) -> Result<(), ErrorDeComunicacion> {
+        while let Ok((stream, socket)) = TcpListener::bind(direccion_y_puerto)?.accept() {
+            println!("Conectado al cliente {:?}", socket);
+            thread::spawn(move || {
+                let mut comunicacion = Comunicacion::new(stream.try_clone().unwrap());
+                Self::manejar_cliente(&mut comunicacion, &(env!("CARGO_MANIFEST_DIR").to_string() + DIR)).unwrap();
+            });
         }
+        Ok(())
     }
+    // pub fn server_run(&mut self) -> Result<(), ErrorDeComunicacion> {
+    //     loop {
+    //         println!("empezando el loop");
+    //         let (stream, _) = self.listener.accept()?;
+    //         println!("recibida una conexion");
+    //         self.manejar_cliente(&mut Comunicacion::<TcpStream>::new(stream), &self.dir)?;
+    //     }
+    // }
 
     pub fn manejar_cliente(
-        &self,
         comunicacion: &mut Comunicacion<TcpStream>,
         dir: &str,
     ) -> Result<(), ErrorDeComunicacion> {
         loop {
-            println!("ESPERANDO EL PEDIDO");
             let pedido = comunicacion.aceptar_pedido()?; // acepto la primera linea
             Self::parse_line(&pedido, comunicacion, &dir)?; // parse de la liena para ver que se pide
         }
@@ -84,7 +85,9 @@ impl Servidor {
         comunicacion: &mut Comunicacion<TcpStream>,
         dir: &str,
     ) -> Result<(), ErrorDeComunicacion> {
+        println!("Recibi: {:?}", linea);
         let pedido: Vec<&str> = linea.split_whitespace().collect();
+        println!("pedido: {:?}", pedido);
         // veo si es un comando git
         let args: Vec<_> = pedido[1].split('\0').collect();
         let dir_repo = dir.to_string() + args[0];
@@ -137,28 +140,23 @@ impl Servidor {
     // devuelve las refs de un directorio valido
     fn obtener_refs_de(dir: PathBuf) -> Vec<String> {
         let mut refs: Vec<String> = Vec::new();
-        if let Ok(mut head) =
-            gir_io::obtener_refs_con_largo_hex(dir.join("HEAD"), dir.to_str().unwrap())
-        {
-            refs.append(&mut head);
+        let head_ref = gir_io::obtener_ref_head(dir.join("HEAD"));
+        match head_ref {
+            Ok(head) => {refs.push(head)},
+            Err(_) => {}
         }
-        refs.append(
-            &mut gir_io::obtener_refs_con_largo_hex(dir.join("refs/heads/"), dir.to_str().unwrap())
-                .unwrap(),
-        );
-        refs.append(
-            &mut gir_io::obtener_refs_con_largo_hex(dir.join("refs/tags/"), dir.to_str().unwrap())
-                .unwrap(),
-        );
+        gir_io::obtener_refs_con_largo_hex(&mut refs,dir.join("refs/heads/"), dir.to_str().unwrap()).unwrap();
+        gir_io::obtener_refs_con_largo_hex(&mut refs, dir.join("refs/tags/"), dir.to_str().unwrap()).unwrap();
         if !refs.is_empty() {
-            refs.insert(0, Self::agregar_capacidades(refs[0].clone()));
+            let ref_con_cap = Self::agregar_capacidades(refs[0].clone());
+            refs.remove(0);
+            refs.insert(0, ref_con_cap);
         }
         refs
     }
 
     fn agregar_capacidades(referencia: String) -> String {
         let mut referencia_con_capacidades: String;
-        println!("referencia len: {:?}", referencia.len());
         if referencia.len() > 40 {
             referencia_con_capacidades = referencia.split_at(4).1.to_string() + "\0";
         // borro los primeros 4 caracteres que quedan del tamanio anterior

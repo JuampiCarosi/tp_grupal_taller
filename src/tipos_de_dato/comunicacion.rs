@@ -76,6 +76,7 @@ impl<T: Write + Read> Comunicacion<T> {
             "{} {}\0host={}\0\0version={}\0",
             comando, repositorio, host, numero_de_version
         );
+        println!("Enviando: {}", mensaje);
         self.enviar(&io::obtener_linea_con_largo_hex(&mensaje))?;
         Ok(())
     }
@@ -96,12 +97,14 @@ impl<T: Write + Read> Comunicacion<T> {
         let mut data = vec![0; (tamanio - 4) as usize];
         self.flujo.lock().unwrap().read_exact(&mut data)?;
         let linea = str::from_utf8(&data)?;
+        // if linea.contains("done") {
+            // self.aceptar_pedido()?;
+        // }
         Ok(linea.to_string())
     }
 
     fn leer_del_flujo_tantos_bytes(&self, cantida_bytes_a_leer: usize) -> Result<Vec<u8>, String> {
         let mut data = vec![0; cantida_bytes_a_leer];
-
         self.flujo
             .lock()
             .map_err(|e| format!("Fallo en el mutex de la lectura.\n{}\n", e))?
@@ -139,7 +142,6 @@ impl<T: Write + Read> Comunicacion<T> {
         let tamanio_str = self.leer_del_flujo_tantos_bytes_en_string(bytes_tamanio_linea)?;
         let tamanio_u32 = u32::from_str_radix(&tamanio_str, 16)
             .map_err(|e| format!("Fallo en la conversion a entero\n{}\n", e))?;
-
         Ok(tamanio_u32)
     }
 
@@ -171,9 +173,8 @@ impl<T: Write + Read> Comunicacion<T> {
                 break;
             }
             let linea = self.obtener_contenido_linea(tamanio)?;
-            lineas.push(linea.to_string());
-            println!("linea: {:?}", linea);
             //esto deberia ir antes o despues del push juani  ?? estaba asi
+            lineas.push(linea.clone());
             if linea.contains("NAK")
                 || linea.contains("ACK")
                 || (linea.contains("done") && !linea.contains("ref"))
@@ -183,7 +184,6 @@ impl<T: Write + Read> Comunicacion<T> {
         }
         Ok(lineas)
     }
-
     pub fn responder(&self, lineas: Vec<String>) -> Result<(), ErrorDeComunicacion> {
         if lineas.is_empty() {
             self.flujo
@@ -196,7 +196,6 @@ impl<T: Write + Read> Comunicacion<T> {
             self.flujo.lock().unwrap().write_all(linea.as_bytes())?;
         }
         if lineas[0].contains("ref") {
-            println!("Envio flush con: {:?}", lineas);
             self.flujo
                 .lock()
                 .unwrap()
@@ -207,7 +206,6 @@ impl<T: Write + Read> Comunicacion<T> {
             && !lineas[0].contains(&"ACK".to_string())
             && !lineas[0].contains(&"done".to_string())
         {
-            println!("Envio flush con: {:?}", lineas);
             self.flujo
                 .lock()
                 .unwrap()

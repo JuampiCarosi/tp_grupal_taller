@@ -17,10 +17,12 @@ pub fn upload_pack(
         println!("Se termino la conexion");
         return Ok(()); // el cliente esta actualizado
     }
+    println!("wants: {:?}", wants);
     // ------- CLONE --------
     // a partir de aca se asume que va a ser un clone porque es el caso mas sencillo, despues cambiar
     let lineas_siguientes = comunicacion.obtener_lineas().unwrap();
     // println!("Lineas siguientes: {:?}", lineas_siguientes);
+    println!("Lineas siguientes: {:?}", lineas_siguientes);
     if lineas_siguientes[0].clone().contains("done") {
         comunicacion.responder(vec![git_io::obtener_linea_con_largo_hex("NAK\n")])?; // respondo NAK
                                                                                      // let want_obj_ids = utilidades_strings::eliminar_prefijos(&mut wants, "want");
@@ -41,8 +43,8 @@ pub fn upload_pack(
     let respuesta_acks_nak = git_io::obtener_ack(have_objs_ids.clone(), dir.clone() + "objects/");
     println!("respuesta_acks_nak: {:?}", respuesta_acks_nak);
     comunicacion.responder(respuesta_acks_nak).unwrap();
-    // let lineas = comunicacion.obtener_lineas().unwrap();
-    // println!("lineas: {:?}", lineas);
+    let ultimo_done = comunicacion.obtener_lineas().unwrap();
+    println!("lineas: {:?}", ultimo_done);
     let faltantes = git_io::obtener_archivos_faltantes(have_objs_ids, dir.clone());
     // obtener un packfile de los faltantes...
     let packfile =

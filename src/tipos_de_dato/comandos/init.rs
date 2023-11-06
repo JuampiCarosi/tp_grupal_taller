@@ -72,9 +72,9 @@ impl Init {
         io::crear_directorio(self.path.clone() + "/refs/heads")?;
         io::crear_directorio(self.path.clone() + "/refs/tags")?;
         io::crear_directorio(self.path.clone() + "/refs/remotes")?;
-
         io::crear_archivo(self.path.clone() + "/CONFIG")?;
         io::crear_archivo(self.path.clone() + "/refs/heads/master")?;
+        io::crear_archivo(self.path.clone() + "/index")?;
         self.crear_archivo_head()
     }
 

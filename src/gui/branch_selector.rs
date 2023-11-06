@@ -7,14 +7,20 @@ use crate::tipos_de_dato::{
     logger::Logger,
 };
 
-use super::{log_list, log_seleccionado};
+use super::{error_dialog, log_list, log_seleccionado};
 
 pub fn render(builder: &gtk::Builder, window: &gtk::Window, logger: Arc<Logger>) {
     let select: gtk::ComboBoxText = builder.object("select-branch").unwrap();
     let branch_actual = Commit::obtener_branch_actual().unwrap();
     select.remove_all();
 
-    let branches = Branch::obtener_ramas().unwrap();
+    let branches = match Branch::obtener_ramas() {
+        Ok(branches) => branches,
+        Err(err) => {
+            error_dialog::mostrar_error(&err);
+            return;
+        }
+    };
 
     let mut i = 0;
     branches.iter().for_each(|branch| {
@@ -38,9 +44,15 @@ pub fn render(builder: &gtk::Builder, window: &gtk::Window, logger: Arc<Logger>)
 
         log_list::render(&builder_clone, active.to_string());
         log_seleccionado::render(&builder_clone, None);
-        let _ = Checkout::from(vec![active.to_string()], logger.clone())
-            .unwrap()
-            .ejecutar();
+        let checkout = Checkout::from(vec![active.to_string()], logger.clone()).unwrap();
+
+        match checkout.ejecutar() {
+            Ok(_) => {}
+            Err(err) => {
+                error_dialog::mostrar_error(&err);
+            }
+        }
+
         window_clone.show_all();
     });
 }

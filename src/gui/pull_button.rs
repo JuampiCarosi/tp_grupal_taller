@@ -4,34 +4,49 @@ use std::net::TcpStream;
 use std::sync::Arc;
 use std::thread::sleep;
 
-use crate::tipos_de_dato::comandos::push::Push;
+use crate::tipos_de_dato::comandos::branch;
+use crate::tipos_de_dato::comandos::pull::Pull;
 use crate::tipos_de_dato::comunicacion::Comunicacion;
 
-use super::error_dialog;
+use super::{error_dialog, hidratar_componentes};
 
 pub fn render(
     builder: &gtk::Builder,
     window: &gtk::Window,
     comunicacion: Arc<Comunicacion<TcpStream>>,
+    logger: Arc<crate::tipos_de_dato::logger::Logger>,
+    branch_actual: String,
 ) {
-    let push_button = builder.object::<gtk::Button>("push-button").unwrap();
+    let pull_button = builder.object::<gtk::Button>("pull-button").unwrap();
 
     let builder_clone = builder.clone();
-    let comunicacion_clone = comunicacion.clone();
-    push_button.connect_clicked(move |_| {
+    let window_clone = window.clone();
+    pull_button.connect_clicked(move |_| {
         let fetching_dialog = builder_clone
             .object::<gtk::Dialog>("fetching-dialog")
             .unwrap();
 
         fetching_dialog.set_position(gtk::WindowPosition::Center);
         fetching_dialog.show_all();
-        match Push::new(comunicacion_clone.clone()).ejecutar() {
+        match Pull::from(logger.clone(), comunicacion.clone())
+            .unwrap()
+            .ejecutar()
+        {
             Ok(_) => {}
             Err(err) => {
                 error_dialog::mostrar_error(&err);
                 return;
             }
         };
+
+        hidratar_componentes(
+            &builder_clone,
+            &window_clone,
+            logger.clone(),
+            branch_actual.clone(),
+            comunicacion.clone(),
+        );
+
         sleep(std::time::Duration::from_secs(3));
         fetching_dialog.close();
     });

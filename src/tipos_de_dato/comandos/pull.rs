@@ -27,7 +27,6 @@ impl Pull {
     ) -> Result<Pull, String> {
         let rama_actual = Self::obtener_rama_actual()?;
         let remoto = "origin".to_string(); //momento, necesita ser el mismo que fetch
-
         Ok(Pull {
             rama_actual,
             remoto,
@@ -86,6 +85,7 @@ impl Pull {
     }
 
     fn fast_forward_de_cero(&self, commit_head_remoto: String) -> Result<bool, String> {
+        io::escribir_bytes(UBICACION_RAMA_MASTER, &commit_head_remoto)?;
         let hash_tree_padre = write_tree::conseguir_arbol_from_hash_commit(
             &commit_head_remoto,
             String::from(".gir/objects/"),
@@ -99,8 +99,7 @@ impl Pull {
     }
     fn mergear_rama(&self) -> Result<(), String> {
         let rama_a_mergear = format!("{}/{}", &self.remoto, &self.rama_actual);
-
-        Merge::from(&mut vec![rama_a_mergear], self.logger.clone())?;
+        Merge::from(&mut vec![rama_a_mergear], self.logger.clone())?.ejecutar()?;
 
         Ok(())
     }
