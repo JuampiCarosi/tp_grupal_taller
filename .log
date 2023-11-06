@@ -338,3 +338,52 @@ aldosivi
 2023-11-05 23:13:51 | Push ejecutado con exito
 2023-11-05 23:13:52 | Push ejecutado con exito
 2023-11-05 23:13:53 | Push ejecutado con exito
+2023-11-05 23:23:49 | Ejecutando add
+2023-11-05 23:23:49 | Objeto gir hasheado en ccccc.txt
+2023-11-05 23:23:49 | 
+2023-11-05 23:23:55 | No se pudo leer el archivo .gir/HEAD
+2023-11-05 23:34:19 | Ejecutando add
+2023-11-05 23:34:19 | Objeto gir hasheado en ccccc.txt
+2023-11-05 23:34:19 | 
+2023-11-05 23:34:23 | No se pudo leer el archivo .gir/HEAD
+2023-11-05 23:35:29 | No se pudo ejecutar el commit
+2023-11-05 23:41:24 | Ejecutando add
+2023-11-05 23:41:24 | Objeto gir hasheado en archivo2.txt
+2023-11-05 23:41:24 | Objeto gir hasheado en ccccc.txt
+2023-11-05 23:41:24 | 
+2023-11-05 23:41:27 | No se pudo ejecutar el commit
+2023-11-05 23:42:17 | Se intenta crear comando init con args:[]
+2023-11-05 23:42:17 | Se creo correctamente el comando init:[]
+2023-11-05 23:42:17 | Se ejecuta init
+2023-11-05 23:42:17 | Directorio gir creado en ./.gir
+2023-11-05 23:42:17 | Directorio gir creado en ./.gir
+2023-11-05 23:42:39 | Ejecutando add
+2023-11-05 23:42:39 | Objeto gir hasheado en archivezco.txt
+2023-11-05 23:42:39 | 
+2023-11-05 23:42:44 | commit aaa13837f423c14bf49902f052789dae3dbc9b83
+ Author: 
+algo 
+2023-11-05 23:42:44 | Commit creado
+2023-11-05 23:42:46 | Push ejecutado con exito
+2023-11-05 23:43:12 | Ejecutando add
+2023-11-05 23:43:12 | Objeto gir hasheado en archivo2.txt
+2023-11-05 23:43:12 | 
+2023-11-05 23:43:15 | commit a886d267e9b97a0f73ac2687fd6b8a1e1ff2cc72
+ Author: 
+commit 
+2023-11-05 23:43:15 | Commit creado
+2023-11-05 23:43:18 | Push ejecutado con exito
+2023-11-05 23:51:24 | Push ejecutado con exito
+2023-11-05 23:51:56 | Push ejecutado con exito
+2023-11-05 23:53:22 | Push ejecutado con exito
+2023-11-05 23:53:51 | Ejecutando add
+2023-11-05 23:53:51 | 
+2023-11-05 23:53:54 | No hay archivos trackeados para commitear
+2023-11-05 23:54:09 | Ejecutando add
+2023-11-05 23:54:09 | Objeto gir hasheado en ccccc.txt
+2023-11-05 23:54:09 | 
+2023-11-05 23:54:13 | commit fcb3451b1b0ab66a936d5c57e3de9f8d4f1e0e11
+ Author: 
+sdasdasd 
+2023-11-05 23:54:13 | Commit creado
+2023-11-05 23:54:15 | Push ejecutado con exito

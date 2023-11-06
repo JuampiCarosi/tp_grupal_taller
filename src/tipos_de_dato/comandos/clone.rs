@@ -33,6 +33,7 @@ impl Clone {
         Init::from(Vec::new(), self.logger.clone())?.ejecutar()?;
         Pull::from(self.logger.clone(), self.comunicacion.clone())?.ejecutar()?;
 
+
         let mensaje = format!("Clone ejecutado con exito");
         self.logger.log(mensaje.clone());
         Ok(mensaje)
