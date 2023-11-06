@@ -19,7 +19,7 @@ pub fn receive_pack(
     let mut packfile = comunicacion.obtener_packfile().unwrap();
     println!("packfile: {:?}", packfile);
     Packfile::new().obtener_paquete_y_escribir(&mut packfile, dir.clone() + "/gir/objects/")?; // uso otra convencion (/)por como esta hecho en daemon
-
+    println!("Post pack");
     // las refs se actualizan al final
     for actualizacion in &actualizaciones {
         let mut parts = actualizacion.splitn(2, ' ');

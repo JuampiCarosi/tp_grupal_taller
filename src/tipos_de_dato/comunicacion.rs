@@ -49,7 +49,7 @@ impl<T: Write + Read> Comunicacion<T> {
         // lee primera parte, 4 bytes en hexadecimal indican el largo del stream
 
         let mut tamanio_bytes = [0; 4];
-        self.flujo.lock().unwrap().read_exact(&mut tamanio_bytes)?;
+        self.flujo.lock().unwrap().read(&mut tamanio_bytes)?;
         // largo de bytes a str
         let tamanio_str = str::from_utf8(&tamanio_bytes)?;
         // transforma str a u32
@@ -162,6 +162,7 @@ impl<T: Write + Read> Comunicacion<T> {
             self.flujo.lock().unwrap().write_all(linea.as_bytes())?;
         }
         if lineas[0].contains("ref") {
+            println!("Envio flush con: {:?}", lineas);
             self.flujo
                 .lock()
                 .unwrap()
@@ -172,6 +173,7 @@ impl<T: Write + Read> Comunicacion<T> {
             && !lineas[0].contains(&"ACK".to_string())
             && !lineas[0].contains(&"done".to_string())
         {
+            println!("Envio flush con: {:?}", lineas);
             self.flujo
                 .lock()
                 .unwrap()

@@ -70,9 +70,11 @@ impl Servidor {
         comunicacion: &mut Comunicacion<TcpStream>,
         dir: &str,
     ) -> Result<(), ErrorDeComunicacion> {
-        println!("manejando cliente");
-        let pedido = comunicacion.aceptar_pedido()?; // acepto la primera linea
-        Self::parse_line(&pedido, comunicacion, &dir)?; // parse de la liena para ver que se pide
+        loop {
+            println!("ESPERANDO EL PEDIDO");
+            let pedido = comunicacion.aceptar_pedido()?; // acepto la primera linea
+            Self::parse_line(&pedido, comunicacion, &dir)?; // parse de la liena para ver que se pide
+        }
 
         Ok(())
     }
