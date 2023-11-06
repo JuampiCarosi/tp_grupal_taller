@@ -1,5 +1,3 @@
-use flate2::read;
-
 use crate::tipos_de_dato::comandos::write_tree;
 use crate::tipos_de_dato::comunicacion::Comunicacion;
 use crate::tipos_de_dato::logger::Logger;
@@ -16,11 +14,15 @@ use std::sync::Arc;
 // idea: Key -> (String, String) , primera entrada la ref que tiene el cliente, segunda la que tiene el sv.
 pub struct Push {
     hash_refs: HashMap<String, (String, String)>,
-    comunicacion: Arc<Comunicacion<TcpStream>>,
+    comunicacion: Comunicacion<TcpStream>,
 }
 
 impl Push {
     pub fn new(comunicacion: Arc<Comunicacion<TcpStream>>) -> Self {
+        let comunicacion = Comunicacion::<TcpStream>::new_desde_direccion_servidor(
+            "127.0.0.1:9418",
+        ).unwrap();
+
         let mut hash_refs: HashMap<String, (String, String)> = HashMap::new();
         let refs = obtener_refs_de(PathBuf::from("./.gir/refs/"), String::from("./.gir/"));
         for referencia in refs {

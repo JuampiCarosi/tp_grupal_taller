@@ -22,7 +22,8 @@ impl<T: Write + Read> Fetch<T> {
         logger: Arc<Logger>,
         comunicacion: Arc<Comunicacion<TcpStream>>,
     ) -> Result<Fetch<TcpStream>, String> {
-        let remoto = "origin".to_string();
+        
+    let remoto = "origin".to_string();
         //"Por ahora lo hardcoedo necesito el config que no esta en esta rama";
 
         let capacidades_local = Vec::new();
@@ -257,13 +258,11 @@ impl<T: Write + Read> Fetch<T> {
         String,
     > {
         let mut lineas_recibidas = self.comunicacion.obtener_lineas()?;
-        println!("Recibi: {:?}", lineas_recibidas);
         let version = lineas_recibidas.remove(0); //la version del server
 
         let segunda_linea = lineas_recibidas.remove(0);
 
         let (contenido, capacidades) = self.separara_capacidades(&segunda_linea)?;
-
         let commit_head_remoto =
             self.separar_commit_head_de_ser_necesario(contenido, &mut lineas_recibidas);
 

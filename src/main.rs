@@ -4,6 +4,8 @@ use std::{
     path::PathBuf,
     sync::Arc,
 };
+use std::env::args;
+static CLIENT_ARGS: usize = 2;
 
 use gir::{
     tipos_de_dato::{comando::Comando, comunicacion::Comunicacion, logger::Logger},
@@ -82,42 +84,92 @@ fn main() -> Result<(), String> {
     println!("\n Gir Iniciado\n");
     println!("Ingrese un comando:\n");
 
-    let mut comunicacion = Arc::new(Comunicacion::<TcpStream>::new_desde_direccion_servidor(
-        "127.0.0.1:9418",
-    )?);
+    let argv = args().collect::<Vec<String>>();
+    if argv.len() != CLIENT_ARGS {
+        println!("Cantidad de argumentos inválido");
+        let app_name = &argv[0];
+        println!("Usage:\n{:?} <puerto>", app_name);
+        return Err("Cantidad de argumentos inválido, forma de llamar: cargo run --bin client <puerto>".to_string());
+    }
 
-    loop {
-        let input = pedir_comando()?;
-
-        if input[0] == "exit" {
-            break;
-        }
-
-        if input[0] == "gui" {
-            println!("Iniciando GUI...");
-            gir::gui::ejecutar(logger.clone());
-            continue;
-        }
-
-        let mut comando = match Comando::new(input, logger.clone(), comunicacion.clone()) {
-            Ok(comando) => comando,
-            Err(err) => {
-                println!("ERROR: {}\n", err);
-                logger.log(err);
+    if argv[1] == "9418" {
+        println!("Conectado a git-daemon");
+        loop {
+            let comunicacion = Arc::new(Comunicacion::<TcpStream>::new_desde_direccion_servidor(
+                "127.0.0.1:9418",
+            )?);
+            let input = pedir_comando()?;
+    
+            if input[0] == "exit" {
+                break;
+            }
+    
+            if input[0] == "gui" {
+                println!("Iniciando GUI...");
+                gir::gui::ejecutar(logger.clone());
                 continue;
             }
-        };
+    
+            let mut comando = match Comando::new(input, logger.clone(), comunicacion.clone()) {
+                Ok(comando) => comando,
+                Err(err) => {
+                    println!("ERROR: {}\n", err);
+                    logger.log(err);
+                    continue;
+                }
+            };
+    
+            match comando.ejecutar() {
+                Ok(mensaje) => {
+                    println!("{}", mensaje.clone());
+                    logger.log(mensaje);
+                }
+                Err(mensaje) => {
+                    println!("ERROR: {}", mensaje);
+                    logger.log(mensaje);
+                }
+            };
+        }
+    
+    }
+    else {
 
-        match comando.ejecutar() {
-            Ok(mensaje) => {
-                println!("{}", mensaje.clone());
-                logger.log(mensaje);
+        let comunicacion = Arc::new(Comunicacion::<TcpStream>::new_desde_direccion_servidor(
+            &("127.0.0.1".to_string() + &argv[1]),
+        )?);
+        loop {
+            let input = pedir_comando()?;
+    
+            if input[0] == "exit" {
+                break;
             }
-            Err(mensaje) => {
-                println!("ERROR: {}", mensaje);
-                logger.log(mensaje);
+    
+            if input[0] == "gui" {
+                println!("Iniciando GUI...");
+                gir::gui::ejecutar(logger.clone());
+                continue;
             }
-        };
+    
+            let mut comando = match Comando::new(input, logger.clone(), comunicacion.clone()) {
+                Ok(comando) => comando,
+                Err(err) => {
+                    println!("ERROR: {}\n", err);
+                    logger.log(err);
+                    continue;
+                }
+            };
+    
+            match comando.ejecutar() {
+                Ok(mensaje) => {
+                    println!("{}", mensaje.clone());
+                    logger.log(mensaje);
+                }
+                Err(mensaje) => {
+                    println!("ERROR: {}", mensaje);
+                    logger.log(mensaje);
+                }
+            };
+        }
     }
     Ok(())
 }

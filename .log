@@ -475,3 +475,96 @@ Broken pipe (os error 32)
 2023-11-06 08:48:00 | Pull ejecutado con exito
 2023-11-06 08:48:00 | Clone ejecutado con exito
 2023-11-06 08:48:00 | Clone ejecutado con exito
+2023-11-06 08:57:41 | Se intenta crear comando init con args:[]
+2023-11-06 08:57:41 | Se creo correctamente el comando init:[]
+2023-11-06 08:57:41 | Se ejecuta init
+2023-11-06 08:57:41 | Directorio gir creado en ./.gir
+2023-11-06 08:57:41 | Pull ejecutado con exito
+2023-11-06 08:57:41 | Clone ejecutado con exito
+2023-11-06 08:57:41 | Clone ejecutado con exito
+2023-11-06 08:57:48 | Se intenta crear comando init con args:[]
+2023-11-06 08:57:48 | Se creo correctamente el comando init:[]
+2023-11-06 08:57:48 | Se ejecuta init
+2023-11-06 08:57:48 | Ya existe un repositorio en este directorio
+2023-11-06 08:57:59 | Fallo en obtener la linea al leer los priemeros 4 bytes.
+failed to fill whole buffer
+
+2023-11-06 08:58:01 | Fallo en el envio del mensaje.
+Broken pipe (os error 32)
+
+2023-11-06 08:59:12 | commit
+2023-11-06 08:59:12 | commit
+2023-11-06 08:59:33 | tree
+2023-11-06 08:59:33 | tree
+2023-11-06 08:59:48 | 
+2023-11-06 08:59:48 | 
+2023-11-06 08:59:58 | blob
+2023-11-06 08:59:58 | blob
+2023-11-06 09:00:24 | Ejecutando add
+2023-11-06 09:00:24 | Objeto gir hasheado en archivo2.txt
+2023-11-06 09:00:24 | 
+2023-11-06 09:00:29 | commit 36bac20b2d622722fd7debe132ee1e2e6a8c8fd9
+ Author: 
+archivo2 
+2023-11-06 09:00:29 | Commit creado
+2023-11-06 09:00:31 | Fallo en el envio del mensaje.
+Broken pipe (os error 32)
+
+2023-11-06 09:09:56 | El cliente esta actualizado
+2023-11-06 09:10:30 | Ejecutando add
+2023-11-06 09:10:30 | 
+2023-11-06 09:10:35 | No hay archivos trackeados para commitear
+2023-11-06 09:11:14 | Comando desconocido
+2023-11-06 09:11:17 | 100644 blob e69de29bb2d1d6434b8b29ae775ad8c2e48c5391   archivezco.txt
+100644 blob 5c1b14949828006ed75a3e8858957f86a2f7e2eb   archivo2.txt
+
+2023-11-06 09:11:17 | 100644 blob e69de29bb2d1d6434b8b29ae775ad8c2e48c5391   archivezco.txt
+100644 blob 5c1b14949828006ed75a3e8858957f86a2f7e2eb   archivo2.txt
+
+2023-11-06 09:11:53 | blob
+2023-11-06 09:11:53 | blob
+2023-11-06 09:12:24 | tree
+2023-11-06 09:12:24 | tree
+2023-11-06 09:12:37 | commit
+2023-11-06 09:12:37 | commit
+2023-11-06 09:13:02 | Push ejecutado con exito
+2023-11-06 09:15:26 | Pull ejecutado con exito
+2023-11-06 09:15:26 | Pull ejecutado con exito
+2023-11-06 09:31:26 | Se intenta crear comando init con args:[]
+2023-11-06 09:31:26 | Se creo correctamente el comando init:[]
+2023-11-06 09:31:26 | Se ejecuta init
+2023-11-06 09:31:26 | Ya existe un repositorio en este directorio
+2023-11-06 09:31:27 | Se intenta crear comando init con args:[]
+2023-11-06 09:31:27 | Se creo correctamente el comando init:[]
+2023-11-06 09:31:27 | Se ejecuta init
+2023-11-06 09:31:27 | Ya existe un repositorio en este directorio
+2023-11-06 09:33:49 | commit
+2023-11-06 09:33:49 | commit
+2023-11-06 09:34:24 | tree ef55aae678e3a636dc72d68f3b10f60b2ad2c306
+author aaaa <bbbb> 1699241376 -0300
+committer aaaa <bbbb> 1699241376 -0300
+
+asdasd
+2023-11-06 09:34:24 | tree ef55aae678e3a636dc72d68f3b10f60b2ad2c306
+author aaaa <bbbb> 1699241376 -0300
+committer aaaa <bbbb> 1699241376 -0300
+
+asdasd
+2023-11-06 09:34:44 | Se intenta crear comando init con args:[]
+2023-11-06 09:34:44 | Se creo correctamente el comando init:[]
+2023-11-06 09:34:44 | Se ejecuta init
+2023-11-06 09:34:44 | Ya existe un repositorio en este directorio
+2023-11-06 09:47:32 | El cliente esta actualizado
+2023-11-06 09:47:36 | El cliente esta actualizado
+2023-11-06 09:48:40 | El cliente esta actualizado
+2023-11-06 09:48:41 | Fallo en la conversion a entero
+invalid digit found in string
+
+2023-11-06 09:48:45 | Fallo en el envio del mensaje.
+Broken pipe (os error 32)
+
+2023-11-06 10:20:09 | El cliente esta actualizado
+2023-11-06 10:20:32 | El cliente esta actualizado
+2023-11-06 10:20:33 | El cliente esta actualizado
+2023-11-06 10:20:34 | El cliente esta actualizado
+2023-11-06 10:20:37 | El cliente esta actualizado
