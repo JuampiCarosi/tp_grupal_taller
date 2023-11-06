@@ -82,8 +82,9 @@ fn main() -> Result<(), String> {
     println!("\n Gir Iniciado\n");
     println!("Ingrese un comando:\n");
 
-    let mut comunicacion =
-        Comunicacion::<TcpStream>::new_desde_direccion_servidor("127.0.0.1:9418")?;
+    let mut comunicacion = Arc::new(Comunicacion::<TcpStream>::new_desde_direccion_servidor(
+        "127.0.0.1:9418",
+    )?);
 
     loop {
         let input = pedir_comando()?;
@@ -98,7 +99,7 @@ fn main() -> Result<(), String> {
             continue;
         }
 
-        let mut comando = match Comando::new(input, logger.clone(), &mut comunicacion) {
+        let mut comando = match Comando::new(input, logger.clone(), comunicacion.clone()) {
             Ok(comando) => comando,
             Err(err) => {
                 println!("ERROR: {}\n", err);
