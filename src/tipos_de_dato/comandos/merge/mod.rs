@@ -71,7 +71,7 @@ impl Merge {
         branch: String,
         logger: Arc<Logger>,
     ) -> Result<Tree, String> {
-        let head_commit = io::leer_a_string(format!(".gir/refs/heads/{}", branch))?;
+        let head_commit = Self::obtener_commit_de_branch(&branch)?;
         let hash_tree_padre =
             conseguir_arbol_from_hash_commit(&head_commit, String::from(".gir/objects/"));
         Tree::from_hash(hash_tree_padre, PathBuf::from("."), logger.clone())
@@ -405,10 +405,7 @@ impl Merge {
 
     /// Realiza un fast-forward, moviendo el puntero de la rama actual al commit de la rama a mergear
     pub fn fast_forward(&self) -> Result<String, String> {
-        let commit_banch_a_mergear = io::leer_a_string(Path::new(&format!(
-            ".gir/refs/heads/{}",
-            self.branch_a_mergear
-        )))?;
+        let commit_banch_a_mergear = Self::obtener_commit_de_branch(&self.branch_a_mergear)?;
 
         io::escribir_bytes(
             Path::new(&format!(".gir/refs/heads/{}", self.branch_actual)),

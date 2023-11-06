@@ -99,8 +99,7 @@ impl Pull {
     }
     fn mergear_rama(&self) -> Result<(), String> {
         let rama_a_mergear = format!("{}/{}", &self.remoto, &self.rama_actual);
-
-        Merge::from(&mut vec![rama_a_mergear], self.logger.clone())?;
+        Merge::from(&mut vec![rama_a_mergear], self.logger.clone())?.ejecutar()?;
 
         Ok(())
     }
