@@ -1,5 +1,6 @@
 mod branch_selector;
 mod clone_dialog;
+mod error_dialog;
 mod log_list;
 mod log_seleccionado;
 mod new_branch_dialog;
@@ -35,6 +36,7 @@ fn hidratar_componentes(
     staging_area::render(&builder, &window, logger.clone());
     new_commit_dialog::render(&builder, &window, logger.clone());
     push_button::render(&builder, &window, comunicacion.clone());
+    error_dialog::setup(&builder);
     pull_button::render(
         &builder,
         &window,

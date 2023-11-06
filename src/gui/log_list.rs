@@ -7,7 +7,7 @@ use crate::{
     utils::{compresion::descomprimir_objeto_gir, io},
 };
 
-use super::log_seleccionado;
+use super::{error_dialog, log_seleccionado};
 
 fn obtener_listas_de_commits(branch: &String) -> Result<Vec<String>, String> {
     let ruta = format!(".gir/refs/heads/{}", branch);
@@ -96,7 +96,13 @@ pub fn render(builder: &gtk::Builder, branch: String) {
         container.remove(child);
     });
 
-    let commits = obtener_listas_de_commits(&branch).unwrap();
+    let commits = match obtener_listas_de_commits(&branch) {
+        Ok(commits) => commits,
+        Err(err) => {
+            error_dialog::mostrar_error(&err);
+            return;
+        }
+    };
 
     for commit in commits {
         let commit_clone = commit.clone();

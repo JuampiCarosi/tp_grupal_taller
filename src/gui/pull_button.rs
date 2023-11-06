@@ -8,7 +8,7 @@ use crate::tipos_de_dato::comandos::branch;
 use crate::tipos_de_dato::comandos::pull::Pull;
 use crate::tipos_de_dato::comunicacion::Comunicacion;
 
-use super::hidratar_componentes;
+use super::{error_dialog, hidratar_componentes};
 
 pub fn render(
     builder: &gtk::Builder,
@@ -28,10 +28,16 @@ pub fn render(
 
         fetching_dialog.set_position(gtk::WindowPosition::Center);
         fetching_dialog.show_all();
-        Pull::from(logger.clone(), comunicacion.clone())
+        match Pull::from(logger.clone(), comunicacion.clone())
             .unwrap()
             .ejecutar()
-            .unwrap();
+        {
+            Ok(_) => {}
+            Err(err) => {
+                error_dialog::mostrar_error(&err);
+                return;
+            }
+        };
 
         hidratar_componentes(
             &builder_clone,

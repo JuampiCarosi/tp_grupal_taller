@@ -4,7 +4,7 @@ use gtk::prelude::*;
 
 use crate::tipos_de_dato::{comandos::commit::Commit, logger::Logger};
 
-use super::{log_list, staging_area};
+use super::{error_dialog, log_list, staging_area};
 
 fn run_dialog(builder: &gtk::Builder) {
     let commit_button: gtk::Button = builder.object("commit-button").unwrap();
@@ -35,13 +35,26 @@ fn boton_confimar_dialog(builder: &gtk::Builder, window: &gtk::Window, logger: A
     let builder_clone = builder.clone();
     let window_clone = window.clone();
     confirm.connect_clicked(move |_| {
-        Commit::from(
+        let commit = match Commit::from(
             &mut vec!["-m".to_string(), input.text().to_string()],
             logger.clone(),
-        )
-        .unwrap()
-        .ejecutar()
-        .unwrap();
+        ) {
+            Ok(commit) => commit,
+            Err(err) => {
+                error_dialog::mostrar_error(&err);
+                dialog.hide();
+                return;
+            }
+        };
+
+        match commit.ejecutar() {
+            Ok(_) => {}
+            Err(err) => {
+                error_dialog::mostrar_error(&err);
+                dialog.hide();
+                return;
+            }
+        };
 
         let branch_actual = Commit::obtener_branch_actual().unwrap();
 

@@ -7,6 +7,8 @@ use std::thread::sleep;
 use crate::tipos_de_dato::comandos::push::Push;
 use crate::tipos_de_dato::comunicacion::Comunicacion;
 
+use super::error_dialog;
+
 pub fn render(
     builder: &gtk::Builder,
     window: &gtk::Window,
@@ -23,7 +25,13 @@ pub fn render(
 
         fetching_dialog.set_position(gtk::WindowPosition::Center);
         fetching_dialog.show_all();
-        Push::new(comunicacion_clone.clone()).ejecutar().unwrap();
+        match Push::new(comunicacion_clone.clone()).ejecutar() {
+            Ok(_) => {}
+            Err(err) => {
+                error_dialog::mostrar_error(&err);
+                return;
+            }
+        };
         sleep(std::time::Duration::from_secs(3));
         fetching_dialog.close();
     });
