@@ -60,9 +60,11 @@ impl Pull {
 
         fetch.recivir_packfile_y_guardar_objetos()?;
 
+
         fetch.actualizar_ramas_locales_del_remoto(&commits_cabezas_y_dir_rama_asosiado)?;
 
         self.actualizar_master_de_ser_necesario(commit_head_remoto)?;
+
 
         self.mergear_rama()?;
 

@@ -14,15 +14,11 @@ use std::sync::Arc;
 // idea: Key -> (String, String) , primera entrada la ref que tiene el cliente, segunda la que tiene el sv.
 pub struct Push {
     hash_refs: HashMap<String, (String, String)>,
-    comunicacion: Comunicacion<TcpStream>,
+    comunicacion: Arc<Comunicacion<TcpStream>>,
 }
 
 impl Push {
     pub fn new(comunicacion: Arc<Comunicacion<TcpStream>>) -> Self {
-        let comunicacion = Comunicacion::<TcpStream>::new_desde_direccion_servidor(
-            "127.0.0.1:9418",
-        ).unwrap();
-
         let mut hash_refs: HashMap<String, (String, String)> = HashMap::new();
         let refs = obtener_refs_de(PathBuf::from("./.gir/refs/"), String::from("./.gir/"));
         for referencia in refs {
@@ -34,6 +30,7 @@ impl Push {
                 ),
             );
         }
+        println!("Hashs refs: {:?}", hash_refs);
         Push {
             hash_refs,
             comunicacion,
@@ -75,6 +72,7 @@ impl Push {
             }
         }
 
+        println!("hash_refs: {:?}", self.hash_refs);
 
         for (key, value) in &self.hash_refs {
             actualizaciones.push(io::obtener_linea_con_largo_hex(&format!(
@@ -103,7 +101,6 @@ impl Push {
            
             }
         }
-        println!("hash_refs: {:?}", self.hash_refs);
 
         println!("objetos a enviar: {:?}", objetos_a_enviar);
         println!("actualizaciones: {:?}", actualizaciones);

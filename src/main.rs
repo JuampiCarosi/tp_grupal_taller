@@ -133,9 +133,9 @@ fn main() -> Result<(), String> {
     
     }
     else {
-
+        println!("Conectado a servidor de gir con el puerto: {}", &argv[1]);
         let comunicacion = Arc::new(Comunicacion::<TcpStream>::new_desde_direccion_servidor(
-            &("127.0.0.1".to_string() + &argv[1]),
+            &("127.0.0.1:".to_string() + &argv[1]),
         )?);
         loop {
             let input = pedir_comando()?;

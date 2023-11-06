@@ -24,6 +24,7 @@ pub struct Servidor {
 impl Servidor {
     pub fn new(address: &str) -> std::io::Result<Servidor> {
         let listener = TcpListener::bind(address)?;
+        println!("Escuchando en {}", address);
         // busca la carpeta raiz del proyecto (evita hardcodear la ruta)
         let dir = env!("CARGO_MANIFEST_DIR").to_string() + "/srv";
         // esto es para checkear, no tengo implementado nada de lo que dice xd
@@ -84,6 +85,7 @@ impl Servidor {
         comunicacion: &mut Comunicacion<TcpStream>,
         dir: &str,
     ) -> Result<(), ErrorDeComunicacion> {
+        println!("Recibi: {:?}", linea);
         let pedido: Vec<&str> = linea.split_whitespace().collect();
         // veo si es un comando git
         let args: Vec<_> = pedido[1].split('\0').collect();
@@ -158,7 +160,6 @@ impl Servidor {
 
     fn agregar_capacidades(referencia: String) -> String {
         let mut referencia_con_capacidades: String;
-        println!("referencia len: {:?}", referencia.len());
         if referencia.len() > 40 {
             referencia_con_capacidades = referencia.split_at(4).1.to_string() + "\0";
         // borro los primeros 4 caracteres que quedan del tamanio anterior

@@ -103,7 +103,6 @@ pub fn obtener_refs_con_largo_hex(
     if !refs_path.exists() {
         return Ok(refs);
     }
-    //    println!("Obteniendo referencias de: {:?}", refs_path);
     // if !refs_path.exists() {
     //     io::Error::new(io::ErrorKind::NotFound, "No existe el repositorio");
     // }
@@ -115,10 +114,8 @@ pub fn obtener_refs_con_largo_hex(
             match archivo {
                 Ok(archivo) => {
                     let mut path = archivo.path();
-                    // let mut path = archivo.path().to_string_lossy().split("./.gir/").into_iter().next().unwrap().to_string();
-                    refs.push(obtener_linea_con_largo_hex(&obtener_referencia(
-                        &mut path, dir,
-                    )?));
+                    let referencia = obtener_referencia(&mut path, dir,)?; 
+                    println!("Obtengo la ref: {}", referencia);
                 }
                 Err(error) => {
                     eprintln!("Error leyendo directorio: {}", error);
@@ -203,11 +200,14 @@ fn obtener_ref_head(path: PathBuf) -> Result<String, ErrorDeComunicacion> {
         )));
     }
     let contenido = leer_archivo(&mut path.clone())?;
-    // let head_ref: Vec<&str> = contenido.split_whitespace().collect();
+    let head_ref = contenido.split_whitespace().collect::<Vec<&str>>()[1];
     if let Some(ruta) = path.clone().parent() {
-        let cont = leer_archivo(&mut ruta.join(contenido))? + " HEAD";
+        println!("AAAAAAA");
+        let cont = leer_archivo(&mut ruta.join(head_ref))? + " HEAD";
+        println!("Cont: {}", cont);
         Ok(obtener_linea_con_largo_hex(&cont))
     } else {
+        println!("BBBBB");
         Err(ErrorDeComunicacion::IoError(io::Error::new(
             io::ErrorKind::NotFound,
             "No existe HEAD",
