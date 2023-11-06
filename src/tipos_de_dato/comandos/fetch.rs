@@ -113,7 +113,7 @@ impl<'a, T: Write + Read> Fetch<'a, T> {
     fn recivir_packfile_y_guardar_objetos(&self) -> Result<(), String> {
         // aca para git daemon hay que poner un recibir linea mas porque envia un ACK repetido (No entiendo por que...)
         println!("Obteniendo paquete..");
-        let mut packfile = self.comunicacion.obtener_lineas_como_bytes()?;
+        let mut packfile = self.comunicacion.obtener_packfile()?;
         Packfile::new()
             .obtener_paquete_y_escribir(&mut packfile, String::from("./.gir/objects/"))
             .unwrap();

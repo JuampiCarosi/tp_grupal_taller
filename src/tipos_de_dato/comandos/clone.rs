@@ -73,7 +73,7 @@ impl Clone {
         println!("acks_nack: {:?}", acks_nak);
 
         println!("Obteniendo paquete..");
-        let mut packfile = comunicacion.obtener_lineas_como_bytes().unwrap();
+        let mut packfile = comunicacion.obtener_packfile().unwrap();
         Packfile::new()
             .obtener_paquete_y_escribir(&mut packfile, String::from("./.gir/objects/"))
             .unwrap();

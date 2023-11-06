@@ -61,7 +61,7 @@ impl<'a> Push<'a> {
                 }
                 None => {
                     // el server tiene un head que el cliente no tiene, abortar push (no borramos brancahes por lo tanto el sv esta por delante)
-                    return Err("El servidor tiene un head que el cliente no tiene".to_string());
+                    // return Err("El servidor tiene un head que el cliente no tiene".to_string());
                 }
             }
         }

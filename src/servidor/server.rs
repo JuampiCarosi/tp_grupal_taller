@@ -58,10 +58,11 @@ impl Servidor {
     // }
     pub fn server_run(&mut self) -> Result<(), ErrorDeComunicacion> {
         loop {
+            println!("empezando el loop");
             let (stream, _) = self.listener.accept()?;
+            println!("recibida una conexion");
             self.manejar_cliente(&mut Comunicacion::<TcpStream>::new(stream), &self.dir)?;
         }
-        Ok(())
     }
 
     pub fn manejar_cliente(
@@ -69,8 +70,10 @@ impl Servidor {
         comunicacion: &mut Comunicacion<TcpStream>,
         dir: &str,
     ) -> Result<(), ErrorDeComunicacion> {
+        println!("manejando cliente");
         let pedido = comunicacion.aceptar_pedido()?; // acepto la primera linea
         Self::parse_line(&pedido, comunicacion, &dir)?; // parse de la liena para ver que se pide
+
         Ok(())
     }
 
@@ -116,7 +119,6 @@ impl Servidor {
                     comunicacion.responder(refs).unwrap();
                 }
                 receive_pack(dir.to_string(), comunicacion)
-                // Ok(())
             }
             _ => {
                 println!("No se reconoce el comando");
