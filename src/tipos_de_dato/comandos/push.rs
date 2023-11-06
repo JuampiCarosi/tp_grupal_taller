@@ -57,9 +57,9 @@ impl Push {
         let referencia_y_capacidades = first_ref.split('\0').collect::<Vec<&str>>();
         let referencia = referencia_y_capacidades[0].to_string();
         let capacidades = referencia_y_capacidades[1].to_string();
-        if  !referencia.contains(&"0".repeat(40)){ 
+        if !referencia.contains(&"0".repeat(40)) {
             refs_recibidas.push(referencia_y_capacidades[0].to_string());
-        } 
+        }
         println!("refs recibidas: {:?}", refs_recibidas);
         for referencia in &refs_recibidas {
             let obj_id = referencia.split(' ').collect::<Vec<&str>>()[0];
@@ -75,7 +75,6 @@ impl Push {
                 }
             }
         }
-
 
         for (key, value) in &self.hash_refs {
             actualizaciones.push(io::obtener_linea_con_largo_hex(&format!(
@@ -126,12 +125,10 @@ fn obtener_commits_y_objetos_asociados(
     );
     let logger = Arc::new(Logger::new(PathBuf::from("./tmp/aa"))?);
     let ruta = format!(".gir/{}", referencia);
-    println!("ruta: {}", ruta);
     let ultimo_commit = io::leer_a_string(Path::new(&ruta))?;
     if ultimo_commit.is_empty() {
         return Ok(HashSet::new());
     }
-    println!("ultimo commit: {}", ultimo_commit);
 
     // let mut objetos_a_agregar: HashMap<String, CommitObj> = HashMap::new();
     let mut objetos_a_agregar: HashSet<String> = HashSet::new();
@@ -140,23 +137,7 @@ fn obtener_commits_y_objetos_asociados(
 
     while let Some(commit) = commits_a_revisar.pop() {
         if objetos_a_agregar.contains(&commit.hash) || commit.hash == *commit_limite {
-            objetos_a_agregar.insert(commit.hash.clone());
-            let hash_tree = write_tree::conseguir_arbol_from_hash_commit(
-                &commit.hash,
-                "./.gir/objects/".to_string(),
-            );
-            let tree = Tree::from_hash(
-                hash_tree.clone(),
-                PathBuf::from("./.gir/objects/"),
-                logger.clone(),
-            )?;
-            objetos_a_agregar.insert(hash_tree);
-            objetos_a_agregar.extend(
-                tree.obtener_objetos()
-                    .iter()
-                    .map(|objeto| objeto.obtener_hash()),
-            );
-            break;
+            continue;
         }
         objetos_a_agregar.insert(commit.hash.clone());
         let hash_tree = write_tree::conseguir_arbol_from_hash_commit(
@@ -168,7 +149,7 @@ fn obtener_commits_y_objetos_asociados(
             PathBuf::from("./.gir/objects/"),
             logger.clone(),
         )?;
-        objetos_a_agregar.insert(hash_tree);
+        objetos_a_agregar.insert(hash_tree.clone());
         objetos_a_agregar.extend(
             tree.obtener_objetos()
                 .iter()

@@ -245,9 +245,6 @@ impl<T: Write + Read> Comunicacion<T> {
                     format!("Fallo en la lectura de la respuesta del servidor.\n{}\n", e)
                 })?;
 
-            if bytes_read == 0 {
-                break; // No hay más bytes disponibles, salir del bucle
-            }
             // Copiar los bytes leídos al búfer principal
             buffer.extend_from_slice(&temp_buffer[0..bytes_read]);
 
