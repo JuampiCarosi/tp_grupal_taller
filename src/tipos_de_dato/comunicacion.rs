@@ -168,20 +168,18 @@ impl<T: Write + Read> Comunicacion<T> {
             if tamanio == 0 {
                 break;
             }
-            
             let linea = self.obtener_contenido_linea(tamanio)?;
             //esto deberia ir antes o despues del push juani  ?? estaba asi
+            lineas.push(linea.clone());
             if linea.contains("NAK")
                 || linea.contains("ACK")
                 || (linea.contains("done") && !linea.contains("ref"))
             {
                 break;
             }
-            lineas.push(linea);
         }
         Ok(lineas)
     }
-
     pub fn responder(&self, lineas: Vec<String>) -> Result<(), ErrorDeComunicacion> {
         if lineas.is_empty() {
             self.flujo

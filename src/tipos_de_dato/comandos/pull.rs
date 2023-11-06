@@ -53,7 +53,7 @@ impl Pull {
             commits_cabezas_y_dir_rama_asosiado,
             _commits_y_tags_asosiados,
         ) = fetch.fase_de_descubrimiento()?;
-
+     
         if !fetch.fase_de_negociacion(capacidades_servidor, &commits_cabezas_y_dir_rama_asosiado)? {
             return Ok(String::from("El cliente esta actualizado"));
         }

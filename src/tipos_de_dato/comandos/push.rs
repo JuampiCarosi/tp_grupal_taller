@@ -40,7 +40,6 @@ impl Push {
     pub fn ejecutar(&mut self) -> Result<String, String> {
         println!("Se ejecuto el comando push");
         let request_data = "git-receive-pack /gir/\0host=example.com\0\0version=1\0"; //en donde dice /.git/ va la dir del repo
-
         let request_data_con_largo_hex = io::obtener_linea_con_largo_hex(request_data);
         self.comunicacion.enviar(&request_data_con_largo_hex)?;
         println!("Le mande las cosas");

@@ -139,21 +139,17 @@ impl Servidor {
     // devuelve las refs de un directorio valido
     fn obtener_refs_de(dir: PathBuf) -> Vec<String> {
         let mut refs: Vec<String> = Vec::new();
-        if let Ok(mut head) =
-            gir_io::obtener_refs_con_largo_hex(dir.join("HEAD"), dir.to_str().unwrap())
-        {
-            refs.append(&mut head);
+        let head_ref = gir_io::obtener_ref_head(dir.join("HEAD"));
+        match head_ref {
+            Ok(head) => {refs.push(head)},
+            Err(_) => {}
         }
-        refs.append(
-            &mut gir_io::obtener_refs_con_largo_hex(dir.join("refs/heads/"), dir.to_str().unwrap())
-                .unwrap(),
-        );
-        refs.append(
-            &mut gir_io::obtener_refs_con_largo_hex(dir.join("refs/tags/"), dir.to_str().unwrap())
-                .unwrap(),
-        );
+        gir_io::obtener_refs_con_largo_hex(&mut refs,dir.join("refs/heads/"), dir.to_str().unwrap()).unwrap();
+        gir_io::obtener_refs_con_largo_hex(&mut refs, dir.join("refs/tags/"), dir.to_str().unwrap()).unwrap();
         if !refs.is_empty() {
-            refs.insert(0, Self::agregar_capacidades(refs[0].clone()));
+            let ref_con_cap = Self::agregar_capacidades(refs[0].clone());
+            refs.remove(0);
+            refs.insert(0, ref_con_cap);
         }
         refs
     }

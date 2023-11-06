@@ -22,6 +22,7 @@ pub fn upload_pack(
     // a partir de aca se asume que va a ser un clone porque es el caso mas sencillo, despues cambiar
     let lineas_siguientes = comunicacion.obtener_lineas().unwrap();
     // println!("Lineas siguientes: {:?}", lineas_siguientes);
+    println!("Lineas siguientes: {:?}", lineas_siguientes);
     if lineas_siguientes[0].clone().contains("done") {
         comunicacion.responder(vec![git_io::obtener_linea_con_largo_hex("NAK\n")])?; // respondo NAK
                                                                                      // let want_obj_ids = utilidades_strings::eliminar_prefijos(&mut wants, "want");
