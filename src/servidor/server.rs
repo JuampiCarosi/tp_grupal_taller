@@ -50,11 +50,16 @@ impl Servidor {
     }
 
     pub fn iniciar_servidor(direccion_y_puerto: &str) -> Result<(), ErrorDeComunicacion> {
+        println!("Escuchando en {}", direccion_y_puerto);
         while let Ok((stream, socket)) = TcpListener::bind(direccion_y_puerto)?.accept() {
             println!("Conectado al cliente {:?}", socket);
             thread::spawn(move || {
                 let mut comunicacion = Comunicacion::new(stream.try_clone().unwrap());
-                Self::manejar_cliente(&mut comunicacion, &(env!("CARGO_MANIFEST_DIR").to_string() + DIR)).unwrap();
+                Self::manejar_cliente(
+                    &mut comunicacion,
+                    &(env!("CARGO_MANIFEST_DIR").to_string() + DIR),
+                )
+                .unwrap();
             });
         }
         Ok(())
@@ -142,11 +147,21 @@ impl Servidor {
         let mut refs: Vec<String> = Vec::new();
         let head_ref = gir_io::obtener_ref_head(dir.join("HEAD"));
         match head_ref {
-            Ok(head) => {refs.push(head)},
+            Ok(head) => refs.push(head),
             Err(_) => {}
         }
-        gir_io::obtener_refs_con_largo_hex(&mut refs,dir.join("refs/heads/"), dir.to_str().unwrap()).unwrap();
-        gir_io::obtener_refs_con_largo_hex(&mut refs, dir.join("refs/tags/"), dir.to_str().unwrap()).unwrap();
+        gir_io::obtener_refs_con_largo_hex(
+            &mut refs,
+            dir.join("refs/heads/"),
+            dir.to_str().unwrap(),
+        )
+        .unwrap();
+        gir_io::obtener_refs_con_largo_hex(
+            &mut refs,
+            dir.join("refs/tags/"),
+            dir.to_str().unwrap(),
+        )
+        .unwrap();
         if !refs.is_empty() {
             let ref_con_cap = Self::agregar_capacidades(refs[0].clone());
             refs.remove(0);
