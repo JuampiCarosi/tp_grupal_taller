@@ -451,3 +451,27 @@ Broken pipe (os error 32)
 2023-11-06 00:52:33 | Fallo en el envio del mensaje.
 Broken pipe (os error 32)
 
+2023-11-06 00:53:42 | Se intenta crear comando init con args:[]
+2023-11-06 00:53:42 | Se creo correctamente el comando init:[]
+2023-11-06 00:53:42 | Se ejecuta init
+2023-11-06 00:53:42 | Directorio gir creado en ./.gir
+2023-11-06 00:53:43 | Pull ejecutado con exito
+2023-11-06 00:53:43 | Clone ejecutado con exito
+2023-11-06 00:53:43 | Clone ejecutado con exito
+2023-11-06 00:54:04 | Se intenta crear comando init con args:[]
+2023-11-06 00:54:04 | Se creo correctamente el comando init:[]
+2023-11-06 00:54:04 | Se ejecuta init
+2023-11-06 00:54:04 | Ya existe un repositorio en este directorio
+2023-11-06 00:54:07 | Fallo en obtener la linea al leer los priemeros 4 bytes.
+failed to fill whole buffer
+
+2023-11-06 00:54:13 | Fallo en el envio del mensaje.
+Broken pipe (os error 32)
+
+2023-11-06 08:48:00 | Se intenta crear comando init con args:[]
+2023-11-06 08:48:00 | Se creo correctamente el comando init:[]
+2023-11-06 08:48:00 | Se ejecuta init
+2023-11-06 08:48:00 | Directorio gir creado en ./.gir
+2023-11-06 08:48:00 | Pull ejecutado con exito
+2023-11-06 08:48:00 | Clone ejecutado con exito
+2023-11-06 08:48:00 | Clone ejecutado con exito
