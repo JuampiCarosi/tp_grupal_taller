@@ -82,11 +82,11 @@ impl Push {
                 &value.1, &value.0, &key
             ))); // viejo (el del sv), nuevo (cliente), ref
                  // checkear que no existan los objetos antes de appendear
-            if value.1 == "0".repeat(40) {
-                objetos_a_enviar
-                    .extend(obtener_commits_y_objetos_asociados(&key, &value.0).unwrap());
-                continue;
-            }
+                 // if value.1 == "0".repeat(40) {
+                 //     objetos_a_enviar
+                 //         .extend(obtener_commits_y_objetos_asociados(&key, &value.0).unwrap());
+                 //     continue;
+                 // }
             if value.1 != value.0 {
                 objetos_a_enviar
                     .extend(obtener_commits_y_objetos_asociados(&key, &value.1).unwrap());
@@ -144,11 +144,7 @@ fn obtener_commits_y_objetos_asociados(
             &commit.hash,
             "./.gir/objects/".to_string(),
         );
-        let tree = Tree::from_hash(
-            hash_tree.clone(),
-            PathBuf::from("./.gir/objects/"),
-            logger.clone(),
-        )?;
+        let tree = Tree::from_hash(hash_tree.clone(), PathBuf::from("."), logger.clone())?;
         objetos_a_agregar.insert(hash_tree.clone());
         objetos_a_agregar.extend(
             tree.obtener_objetos()

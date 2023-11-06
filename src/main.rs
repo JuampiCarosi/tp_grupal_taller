@@ -7,32 +7,11 @@ use std::{
 
 use gir::{
     tipos_de_dato::{comando::Comando, comunicacion::Comunicacion, logger::Logger},
-    utils::{gir_config::obtener_gir_config_path, io::leer_a_string},
+    utils::{
+        gir_config::{conseguir_ubicacion_log_config, obtener_gir_config_path},
+        io::leer_a_string,
+    },
 };
-
-//extrae la ubiacion del archivo log seteada en el archivo config. En caso de error
-// devuelve una direccion default = .log
-fn obtener_dir_archivo_log() -> Result<String, String> {
-    let ubicacion_config = obtener_gir_config_path()?;
-
-    let mut dir_archivo_log = ".log".to_string();
-
-    let contenido_config = match leer_a_string(ubicacion_config) {
-        Ok(contenido_config) => contenido_config,
-        Err(_) => return Ok(dir_archivo_log),
-    };
-
-    for linea_config in contenido_config.lines() {
-        if linea_config.trim().starts_with("log") {
-            if let Some(dir_archivo_log_config) = linea_config.split('=').nth(1) {
-                dir_archivo_log = dir_archivo_log_config.trim().to_string();
-                break;
-            }
-        }
-    }
-
-    Ok(dir_archivo_log)
-}
 
 fn interpretar_input(input: &String) -> Vec<String> {
     let mut result = Vec::new();
@@ -78,7 +57,9 @@ fn pedir_comando() -> Result<Vec<String>, String> {
 }
 
 fn main() -> Result<(), String> {
-    let logger = Arc::new(Logger::new(PathBuf::from(obtener_dir_archivo_log()?))?);
+    let logger = Arc::new(Logger::new(PathBuf::from(
+        conseguir_ubicacion_log_config()?
+    ))?);
     println!("\n Gir Iniciado\n");
     println!("Ingrese un comando:\n");
 

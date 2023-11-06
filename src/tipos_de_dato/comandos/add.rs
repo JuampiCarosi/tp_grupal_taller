@@ -51,11 +51,20 @@ impl Add {
         })
     }
 
+    fn es_directorio_a_ignorar(&self, ubicacion: &PathBuf) -> Result<bool, String> {
+        let path = ubicacion.to_str().unwrap();
+        let log_dir = utils::gir_config::conseguir_ubicacion_log_config()?;
+        Ok(path.contains(".gir")
+            || path.contains(".git")
+            || path.contains(".log")
+            || path.contains(&format!("{}", log_dir.display())))
+    }
+
     pub fn ejecutar(&mut self) -> Result<String, String> {
         self.logger.log("Ejecutando add".to_string());
 
         for ubicacion in self.ubicaciones.clone() {
-            if utils::path_buf::obtener_directorio_raiz(&ubicacion)? == ".gir" {
+            if self.es_directorio_a_ignorar(&ubicacion)? {
                 continue;
             }
 
