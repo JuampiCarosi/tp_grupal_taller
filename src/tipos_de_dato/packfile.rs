@@ -34,11 +34,18 @@ impl Packfile {
         let _objeto_comprimido = io::leer_bytes(&ruta_objeto).unwrap();
         let log = Arc::new(Logger::new(PathBuf::from("log.txt")).unwrap());
         // en este catfile hay cosas hardcodeadas que hay que cambiar :{
-        let tamanio_objeto_str =
-            cat_file::CatFile::from(&mut vec!["-s".to_string(), objeto.clone()], log)
+        let tamanio_objeto_str = match {
+            cat_file::CatFile::from(&mut vec!["-s".to_string(), objeto.clone()], log.clone())
                 .unwrap()
                 .ejecutar_de(dir)
-                .unwrap();
+        } {
+            Ok(tamanio) => tamanio,
+            Err(_) => {
+                return Err(format!(
+                    "No se pudo obtener el tamanio del objeto {objeto:#?}"
+                ));
+            }
+        };
 
         let tamanio_objeto = tamanio_objeto_str.trim().parse::<u32>().unwrap_or(0);
 
@@ -178,6 +185,23 @@ impl Packfile {
         while contador < largo {
             // println!("cant bytes: {:?}", bytes.len());
             let (tipo, tamanio, _bytes_leidos) = decodificar_bytes(bytes);
+
+            if tipo == 7 {
+                let _hash_objeto_base = &bytes[0..20];
+                bytes.drain(0..20);
+                let mut objeto_descomprimido = vec![0; tamanio as usize];
+
+                let mut descompresor = Decompress::new(true);
+
+                descompresor
+                    .decompress(&bytes, &mut objeto_descomprimido, FlushDecompress::None)
+                    .unwrap();
+                let total_in = descompresor.total_in();
+                bytes.drain(0..total_in as usize);
+                contador += 1;
+                continue;
+            }
+
             println!("tipo: {:?}, tamanio: {}", tipo, tamanio);
             // println!("cant bytes post decodificacion: {:?}", bytes.len());
             // println!("tipo: {:?}", tipo);

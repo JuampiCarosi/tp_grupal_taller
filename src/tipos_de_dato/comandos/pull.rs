@@ -1,8 +1,13 @@
 use std::{net::TcpStream, path::PathBuf, sync::Arc};
 
 use crate::{
-    tipos_de_dato::{comunicacion::Comunicacion, logger::Logger},
-    utils::{self, io},
+    tipos_de_dato::{
+        comandos::write_tree, comunicacion::Comunicacion, logger::Logger, objetos::tree::Tree,
+    },
+    utils::{
+        self,
+        io::{self, leer_a_string},
+    },
 };
 
 use super::{fetch::Fetch, merge::Merge};
@@ -44,13 +49,18 @@ impl Pull {
         Ok(PathBuf::from(dir_rama_actual.trim()))
     }
 
+    fn obtener_head_remoto(&self) -> Result<String, String> {
+        let path_remoto = format!("./.gir/refs/remotes/{}/{}", self.remoto, self.rama_actual);
+        leer_a_string(path_remoto)
+    }
+
     pub fn ejecutar(&self) -> Result<String, String> {
         self.comunicacion.iniciar_git_upload_pack_con_servidor()?;
         let fetch = Fetch::<TcpStream>::new(self.logger.clone(), self.comunicacion.clone())?;
         //en caso de clone el commit head se tiene que utilizar
         let (
             capacidades_servidor,
-            commit_head_remoto,
+            _commit_head_remoto,
             commits_cabezas_y_dir_rama_asosiado,
             _commits_y_tags_asosiados,
         ) = fetch.fase_de_descubrimiento()?;
@@ -62,6 +72,7 @@ impl Pull {
         fetch.recivir_packfile_y_guardar_objetos()?;
 
         fetch.actualizar_ramas_locales_del_remoto(&commits_cabezas_y_dir_rama_asosiado)?;
+        let commit_head_remoto = self.obtener_head_remoto()?;
 
         if io::esta_vacio(UBICACION_RAMA_MASTER.to_string())? {
             self.fast_forward_de_cero(commit_head_remoto)?;
@@ -74,16 +85,13 @@ impl Pull {
         Ok(mensaje)
     }
 
-    fn fast_forward_de_cero(&self, commit_head_remoto: Option<String>) -> Result<bool, String> {
-        let head = match commit_head_remoto {
-            Some(commit) => {
-                io::escribir_bytes(UBICACION_RAMA_MASTER, &commit)?;
-                commit
-            }
-            None => return Ok(false),
-        };
-
-        let tree_branch_a_mergear = Merge::obtener_arbol_commit_actual(head, self.logger.clone())?;
+    fn fast_forward_de_cero(&self, commit_head_remoto: String) -> Result<bool, String> {
+        let hash_tree_padre = write_tree::conseguir_arbol_from_hash_commit(
+            &commit_head_remoto,
+            String::from(".gir/objects/"),
+        );
+        let tree_branch_a_mergear =
+            Tree::from_hash(hash_tree_padre, PathBuf::from("."), self.logger.clone())?;
 
         tree_branch_a_mergear.escribir_en_directorio()?;
 

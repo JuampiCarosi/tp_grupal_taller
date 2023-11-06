@@ -2,7 +2,10 @@ use std::{path::PathBuf, sync::Arc};
 
 use crate::{
     tipos_de_dato::{logger::Logger, objeto::Objeto},
-    utils::index::{crear_index, escribir_index, leer_index, ObjetoIndex},
+    utils::{
+        self,
+        index::{crear_index, escribir_index, leer_index, ObjetoIndex},
+    },
 };
 
 use super::status::obtener_arbol_del_commit_head;
@@ -52,6 +55,14 @@ impl Add {
         self.logger.log("Ejecutando add".to_string());
 
         for ubicacion in self.ubicaciones.clone() {
+            if utils::path_buf::obtener_directorio_raiz(&ubicacion)? == ".gir" {
+                continue;
+            }
+
+            self.logger.log(format!(
+                "Agregando {} al index",
+                ubicacion.to_str().unwrap()
+            ));
             if ubicacion.is_dir() {
                 Err("No se puede agregar un directorio".to_string())?;
             }
@@ -87,6 +98,7 @@ impl Add {
                 self.index.push(nuevo_objeto_index);
             }
         }
+
         escribir_index(self.logger.clone(), &mut self.index)?;
         Ok("".to_string())
     }
