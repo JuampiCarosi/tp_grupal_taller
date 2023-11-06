@@ -76,6 +76,7 @@ impl<T: Write + Read> Comunicacion<T> {
             "{} {}\0host={}\0\0version={}\0",
             comando, repositorio, host, numero_de_version
         );
+        println!("Enviando: {}", mensaje);
         self.enviar(&io::obtener_linea_con_largo_hex(&mensaje))?;
         Ok(())
     }
@@ -96,6 +97,9 @@ impl<T: Write + Read> Comunicacion<T> {
         let mut data = vec![0; (tamanio - 4) as usize];
         self.flujo.lock().unwrap().read_exact(&mut data)?;
         let linea = str::from_utf8(&data)?;
+        // if linea.contains("done") {
+            // self.aceptar_pedido()?;
+        // }
         Ok(linea.to_string())
     }
 
@@ -192,7 +196,6 @@ impl<T: Write + Read> Comunicacion<T> {
             self.flujo.lock().unwrap().write_all(linea.as_bytes())?;
         }
         if lineas[0].contains("ref") {
-            println!("Envio flush con: {:?}", lineas);
             self.flujo
                 .lock()
                 .unwrap()
@@ -203,7 +206,6 @@ impl<T: Write + Read> Comunicacion<T> {
             && !lineas[0].contains(&"ACK".to_string())
             && !lineas[0].contains(&"done".to_string())
         {
-            println!("Envio flush con: {:?}", lineas);
             self.flujo
                 .lock()
                 .unwrap()

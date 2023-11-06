@@ -64,7 +64,6 @@ impl<T: Write + Read> Fetch<T> {
     //verificar si existe /.git
     pub fn ejecutar(&self) -> Result<String, String> {
         self.comunicacion.iniciar_git_upload_pack_con_servidor()?;
-
         //en caso de clone el commit head se tiene que utilizar
         let (
             capacidades_servidor,
@@ -133,7 +132,6 @@ impl<T: Write + Read> Fetch<T> {
     fn enviar_lo_que_tengo(&self) -> Result<(), String> {
         let objetos_directorio =
             io::obtener_objetos_del_directorio("./.gir/objects/".to_string()).unwrap();
-        println!("objetos_directorio: {:?}", objetos_directorio);
         if !objetos_directorio.is_empty() {
             self.comunicacion
                 .enviar_lo_que_tengo_al_servidor_pkt(&objetos_directorio)?;
