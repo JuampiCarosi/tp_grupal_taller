@@ -71,10 +71,7 @@ impl Push {
                 Some(hash) => {
                     hash.1 = obj_id.to_string();
                 }
-                None => {
-                    // el server tiene un head que el cliente no tiene, abortar push (no borramos brancahes por lo tanto el sv esta por delante)
-                    // return Err("El servidor tiene un head que el cliente no tiene".to_string());
-                }
+                None => {}
             }
         }
 
@@ -85,14 +82,25 @@ impl Push {
                 &value.1, &value.0, &key
             ))); // viejo (el del sv), nuevo (cliente), ref
                  // checkear que no existan los objetos antes de appendear
-            if value.1 == "0".repeat(40) {
-                objetos_a_enviar
-                    .extend(obtener_commits_y_objetos_asociados(&key, &value.0).unwrap());
-                continue;
-            }
+            // if value.1 == "0".repeat(40) {
+            //     objetos_a_enviar
+            //         .extend(obtener_commits_y_objetos_asociados(&key, &value.0).unwrap());
+            //     continue;
+            // }
             if value.1 != value.0 {
-                objetos_a_enviar
-                    .extend(obtener_commits_y_objetos_asociados(&key, &value.1).unwrap());
+                let nuevos_objetos = obtener_commits_y_objetos_asociados(&key, &value.1);
+                match nuevos_objetos {
+                    Ok(nuevos_objetos) => {
+                        objetos_a_enviar.extend(nuevos_objetos);
+                    }
+                    Err(err) => {
+                        //error
+                        return Err(err);
+                    }
+                } 
+                // objetos_a_enviar
+                    // .extend(obtener_commits_y_objetos_asociados(&key, &value.1).unwrap());
+           
             }
         }
         println!("hash_refs: {:?}", self.hash_refs);
@@ -138,10 +146,20 @@ fn obtener_commits_y_objetos_asociados(
     // let mut objetos_a_agregar: HashMap<String, CommitObj> = HashMap::new();
     let mut objetos_a_agregar: HashSet<String> = HashSet::new();
     let mut commits_a_revisar: Vec<CommitObj> = Vec::new();
-    commits_a_revisar.push(CommitObj::from_hash(ultimo_commit)?);
+    
+    let ultimo_commit = CommitObj::from_hash(ultimo_commit);
+
+    match ultimo_commit {
+        Ok(ultimo_commit) => {
+            commits_a_revisar.push(ultimo_commit);
+        }
+        Err(_) => {
+            return Err("El servidor tiene cambios, por favor, actualice su repositorio".to_string());
+        }
+    }
 
     while let Some(commit) = commits_a_revisar.pop() {
-        if objetos_a_agregar.contains(&commit.hash) || commit.hash == *commit_limite {
+        if commit.hash == *commit_limite {
             objetos_a_agregar.insert(commit.hash.clone());
             let hash_tree = write_tree::conseguir_arbol_from_hash_commit(
                 &commit.hash,
