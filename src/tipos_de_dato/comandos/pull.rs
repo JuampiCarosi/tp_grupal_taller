@@ -63,27 +63,29 @@ impl Pull {
 
         fetch.actualizar_ramas_locales_del_remoto(&commits_cabezas_y_dir_rama_asosiado)?;
 
-        self.actualizar_master_de_ser_necesario(commit_head_remoto)?;
-
-        self.mergear_rama()?;
+        if io::esta_vacio(UBICACION_RAMA_MASTER.to_string())? {
+            self.fast_forward_de_cero(commit_head_remoto)?;
+        } else {
+            self.mergear_rama()?;
+        }
 
         let mensaje = format!("Pull ejecutado con exito");
         self.logger.log(mensaje.clone());
         Ok(mensaje)
     }
 
-    fn actualizar_master_de_ser_necesario(
-        &self,
-        commit_head_remoto: Option<String>,
-    ) -> Result<bool, String> {
-        if !io::esta_vacio(UBICACION_RAMA_MASTER.to_string())? {
-            return Ok(false);
-        }
-
-        match commit_head_remoto {
-            Some(commit) => io::escribir_bytes(UBICACION_RAMA_MASTER, commit)?,
+    fn fast_forward_de_cero(&self, commit_head_remoto: Option<String>) -> Result<bool, String> {
+        let head = match commit_head_remoto {
+            Some(commit) => {
+                io::escribir_bytes(UBICACION_RAMA_MASTER, &commit)?;
+                commit
+            }
             None => return Ok(false),
-        }
+        };
+
+        let tree_branch_a_mergear = Merge::obtener_arbol_commit_actual(head, self.logger.clone())?;
+
+        tree_branch_a_mergear.escribir_en_directorio()?;
 
         Ok(true)
     }

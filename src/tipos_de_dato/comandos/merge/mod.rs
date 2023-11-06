@@ -67,7 +67,10 @@ impl Merge {
         })
     }
 
-    fn obtener_arbol_commit_actual(branch: String, logger: Arc<Logger>) -> Result<Tree, String> {
+    pub fn obtener_arbol_commit_actual(
+        branch: String,
+        logger: Arc<Logger>,
+    ) -> Result<Tree, String> {
         let head_commit = io::leer_a_string(format!(".gir/refs/heads/{}", branch))?;
         let hash_tree_padre =
             conseguir_arbol_from_hash_commit(&head_commit, String::from(".gir/objects/"));
@@ -77,7 +80,9 @@ impl Merge {
     /// Devuelve el commit base mas cercano entre dos ramas
     /// Por ejemplo en el arbol a-b-c vs d-b-e, el commit base es b
     fn obtener_commit_base_entre_dos_branches(&self) -> Result<String, String> {
+        // ab5f798d5ab
         let hash_commit_actual = Commit::obtener_hash_del_padre_del_commit()?;
+        // ab5f798d5ab
         let hash_commit_a_mergear = Self::obtener_commit_de_branch(&self.branch_a_mergear)?;
 
         let commit_obj_actual = CommitObj::from_hash(hash_commit_actual)?;
@@ -89,6 +94,7 @@ impl Merge {
         for commit_actual in commits_branch_actual {
             for commit_branch_merge in commits_branch_a_mergear.clone() {
                 if commit_actual.hash == commit_branch_merge.hash {
+                    // ab5f798d5ab
                     return Ok(commit_actual.hash);
                 }
             }
@@ -491,9 +497,14 @@ impl Merge {
         if Self::hay_merge_en_curso()? {
             return Err("Ya hay un merge en curso".to_string());
         }
-
-        let commit_base = self.obtener_commit_base_entre_dos_branches()?;
+        //
         let commit_actual = Commit::obtener_hash_del_padre_del_commit()?;
+        let commit_a_mergear = Self::obtener_commit_de_branch(&self.branch_a_mergear)?;
+        let commit_base = self.obtener_commit_base_entre_dos_branches()?;
+
+        if commit_actual == commit_a_mergear {
+            return Ok("No hay nada para mergear".to_string());
+        }
 
         let mensaje = if commit_base == commit_actual {
             self.logger.log("Haciendo fast-forward".to_string());
