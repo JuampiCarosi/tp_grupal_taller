@@ -387,3 +387,67 @@ commit
 sdasdasd 
 2023-11-05 23:54:13 | Commit creado
 2023-11-05 23:54:15 | Push ejecutado con exito
+2023-11-06 00:21:52 | Se intenta crear comando init con args:[]
+2023-11-06 00:21:52 | Se creo correctamente el comando init:[]
+2023-11-06 00:21:52 | Se ejecuta init
+2023-11-06 00:21:52 | Directorio gir creado en ./.gir
+2023-11-06 00:24:35 | Se intenta crear comando init con args:[]
+2023-11-06 00:24:35 | Se creo correctamente el comando init:[]
+2023-11-06 00:24:35 | Se ejecuta init
+2023-11-06 00:24:35 | Ya existe un repositorio en este directorio
+2023-11-06 00:24:44 | Se intenta crear comando init con args:[]
+2023-11-06 00:24:44 | Se creo correctamente el comando init:[]
+2023-11-06 00:24:44 | Se ejecuta init
+2023-11-06 00:24:44 | Directorio gir creado en ./.gir
+2023-11-06 00:25:32 | Se intenta crear comando init con args:[]
+2023-11-06 00:25:32 | Se creo correctamente el comando init:[]
+2023-11-06 00:25:32 | Se ejecuta init
+2023-11-06 00:25:32 | Directorio gir creado en ./.gir
+2023-11-06 00:28:40 | Se intenta crear comando init con args:[]
+2023-11-06 00:28:40 | Se creo correctamente el comando init:[]
+2023-11-06 00:28:40 | Se ejecuta init
+2023-11-06 00:28:40 | Directorio gir creado en ./.gir
+2023-11-06 00:28:40 | Fallo en obtener la linea al leer los priemeros 4 bytes.
+failed to fill whole buffer
+
+2023-11-06 00:29:10 | Ejecutando add
+2023-11-06 00:29:10 | Objeto gir hasheado en archivezco.txt
+2023-11-06 00:29:10 | 
+2023-11-06 00:29:16 | No se pudo leer el archivo .gir/HEAD
+2023-11-06 00:29:28 | Se intenta crear comando init con args:[]
+2023-11-06 00:29:28 | Se creo correctamente el comando init:[]
+2023-11-06 00:29:28 | Se ejecuta init
+2023-11-06 00:29:28 | Directorio gir creado en ./.gir
+2023-11-06 00:29:28 | Directorio gir creado en ./.gir
+2023-11-06 00:29:33 | Ejecutando add
+2023-11-06 00:29:33 | Objeto gir hasheado en archivezco.txt
+2023-11-06 00:29:33 | 
+2023-11-06 00:29:36 | commit 62841ec8a36a1615b0e5cca384a17dd4e1d6feb0
+ Author: 
+asdasd 
+2023-11-06 00:29:36 | Commit creado
+2023-11-06 00:30:19 | Push ejecutado con exito
+2023-11-06 00:30:33 | Comando desconocido
+2023-11-06 00:30:46 | Comando desconocido
+2023-11-06 00:32:40 | Push ejecutado con exito
+2023-11-06 00:36:42 | Push ejecutado con exito
+2023-11-06 00:37:21 | Push ejecutado con exito
+2023-11-06 00:39:08 | Push ejecutado con exito
+2023-11-06 00:43:38 | Push ejecutado con exito
+2023-11-06 00:43:44 | Comando desconocido
+2023-11-06 00:52:22 | Push ejecutado con exito
+2023-11-06 00:52:25 | Fallo en obtener la linea al leer los priemeros 4 bytes.
+failed to fill whole buffer
+
+2023-11-06 00:52:27 | Fallo en el envio del mensaje.
+Broken pipe (os error 32)
+
+2023-11-06 00:52:30 | Fallo en el envio del mensaje.
+Broken pipe (os error 32)
+
+2023-11-06 00:52:31 | Fallo en el envio del mensaje.
+Broken pipe (os error 32)
+
+2023-11-06 00:52:33 | Fallo en el envio del mensaje.
+Broken pipe (os error 32)
+
