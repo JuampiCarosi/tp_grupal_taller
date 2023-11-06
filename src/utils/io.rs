@@ -4,23 +4,6 @@ use std::io::{self, BufRead};
 use std::path::{Path, PathBuf};
 use std::str;
 
-// pub fn leer_archivos_directorio(direccion: &mut Path) -> Result<Vec<String>, ErrorDeComunicacion> {
-//     let mut contenidos: Vec<String> = Vec::new();
-//     let head_dir = fs::read_dir(&direccion)?;
-//     for archivo in head_dir {
-//         match archivo {
-//             Ok(archivo) => {
-//                 let path = archivo.path();
-//                 contenidos.push(obtener_referencia(&mut path.clone())?);
-//             }
-//             Err(error) => {
-//                 eprintln!("Error leyendo directorio: {}", error);
-//             }
-//         }
-//     }
-//     Ok(contenidos)
-// }
-
 pub fn obtener_objetos_del_directorio(dir: String) -> Result<Vec<String>, ErrorDeComunicacion> {
     let path = PathBuf::from(dir);
     let mut objetos: Vec<String> = Vec::new();
@@ -91,7 +74,6 @@ pub fn obtener_objetos_con_nombre_carpeta(
             "No se encontraron objetos en el directorio",
         )));
     }
-    println!("nombres: {:?}", nombres);
     Ok(nombres)
 }
 
@@ -112,7 +94,8 @@ pub fn obtener_refs_con_largo_hex(
         match archivo {
             Ok(archivo) => {
                 let mut path = archivo.path();
-                let referencia = obtener_linea_con_largo_hex(obtener_referencia(&mut path, dir)?.as_str()); 
+                let referencia =
+                    obtener_linea_con_largo_hex(obtener_referencia(&mut path, dir)?.as_str());
                 refs.push(referencia);
                 // println!("Obtengo la ref: {}", referencia);
             }
@@ -372,15 +355,11 @@ pub fn obtener_diferencias_remote(referencias: Vec<String>, dir: String) -> Vec<
         let referencia_y_contenido = referencia.split_whitespace().collect::<Vec<&str>>();
         let referencia_remote = "refs/remotes/origin/".to_string()
             + referencia_y_contenido[1].split('/').last().unwrap();
-        println!("referencia_remote: {}", referencia_remote);
         let referencia_local =
             leer_a_string(Path::new(&(dir.clone() + &referencia_remote))).unwrap();
         if referencia_local != referencia_y_contenido[0] {
-            println!("referencia_local: {}", referencia_local);
-            println!("referencia que me pasan: {}", referencia_y_contenido[0]);
             diferencias.push(referencia_y_contenido[0].to_string());
         }
     }
-    println!("Las diferencias son: {:?}", diferencias);
     diferencias
 }

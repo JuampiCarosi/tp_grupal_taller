@@ -30,7 +30,6 @@ impl Push {
                 ),
             );
         }
-        println!("Hashs refs: {:?}", hash_refs);
         Push {
             hash_refs,
             comunicacion,
@@ -56,11 +55,9 @@ impl Push {
         if !referencia.contains(&"0".repeat(40)) {
             refs_recibidas.push(referencia_y_capacidades[0].to_string());
         }
-        println!("refs recibidas: {:?}", refs_recibidas);
         for referencia in &refs_recibidas {
             let obj_id = referencia.split(' ').collect::<Vec<&str>>()[0];
             let referencia = referencia.split(' ').collect::<Vec<&str>>()[1];
-            println!("referencia: {}", referencia);
             match self.hash_refs.get_mut(referencia) {
                 Some(hash) => {
                     hash.1 = obj_id.to_string();
@@ -96,9 +93,6 @@ impl Push {
             }
         }
 
-        println!("objetos a enviar: {:?}", objetos_a_enviar);
-        println!("actualizaciones: {:?}", actualizaciones);
-
         if !actualizaciones.is_empty() {
             self.comunicacion.responder(actualizaciones).unwrap();
             self.comunicacion
@@ -121,10 +115,6 @@ fn obtener_commits_y_objetos_asociados(
     referencia: &String,
     commit_limite: &String,
 ) -> Result<HashSet<String>, String> {
-    println!(
-        "Entro para la referencia {} y el commit limite: {}",
-        referencia, commit_limite
-    );
     let logger = Arc::new(Logger::new(PathBuf::from("./tmp/aa"))?);
     let ruta = format!(".gir/{}", referencia);
     let ultimo_commit = io::leer_a_string(Path::new(&ruta))?;

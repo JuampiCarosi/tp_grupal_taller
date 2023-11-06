@@ -76,7 +76,6 @@ impl Packfile {
     // funcion que recorrer el directorio y aniade los objetos al packfile junto a su indice correspondiente
     fn obtener_objetos_del_dir(&mut self, dir: &str) -> Result<(), ErrorDeComunicacion> {
         // esto porque es un clone, deberia pasarle los objetos que quiero
-        println!("Obteniendo objetos de la dir: {}", dir);
         let objetos = io::obtener_objetos_del_directorio(dir.to_string())?;
         // ---
         for objeto in objetos {
@@ -160,18 +159,15 @@ impl Packfile {
         // a partir de aca obtengo el paquete
         // println!("cant bytes: {:?}", bytes.len());
         // println!("obteniendo firma");
-        println!("La ubicacion es: {}", ubicacion);
         let checksum = Self::verificar_checksum(bytes);
         match checksum {
             true => println!("Checksum correcto"),
             false => println!("Checksum incorrecto"),
         }
         let firma = &bytes[0..4];
-        println!("firma: {:?}", str::from_utf8(&firma));
         // assert_eq!("PACK", str::from_utf8(&firma).unwrap());
         bytes.drain(0..4);
         let version = &bytes[0..4];
-        println!("version: {:?}", str::from_utf8(&version)?);
         // assert_eq!("0002", str::from_utf8(&version)?);
 
         bytes.drain(0..4);
@@ -179,7 +175,6 @@ impl Packfile {
         let largo = &bytes[0..4];
         let largo_packfile: [u8; 4] = largo.try_into().unwrap();
         let largo = u32::from_be_bytes(largo_packfile);
-        println!("largo: {:?}", largo);
         bytes.drain(0..4);
         let mut contador: u32 = 0;
         while contador < largo {
@@ -223,21 +218,14 @@ impl Packfile {
             let _hash = hasher.finalize();
             let hash = format!("{:x}", _hash);
 
-            println!("hash: {:?}", hash);
-
             let ruta = format!("{}{}/{}", &ubicacion, &hash[..2], &hash[2..]);
-            println!("rutarda donde pongo objetos: {:?}", ruta);
 
             let total_out = descompresor.total_out(); // esto es lo que debe matchear el tamanio que se pasa en el header
             let total_in = descompresor.total_in(); // esto es para calcular el offset
-            println!(
-                "total in: {:?}, total out: {:?} ",
-                total_in as usize, total_out as usize
-            );
+
             bytes.drain(0..total_in as usize);
             io::escribir_bytes(ruta, compresion::comprimir_contenido_u8(&objeto).unwrap()).unwrap();
 
-            println!("cant bytes restantes: {:?}", bytes.len());
             contador += 1;
         }
         bytes.drain(0..20); // el checksum

@@ -69,7 +69,6 @@ impl Tree {
 
     /// Escribe en el directorio actual los archivos que se encuentran en el arbol
     pub fn escribir_en_directorio(&self) -> Result<(), String> {
-        println!("escribiendo en directorio: {}", self.directorio.display());
         let objetos = self.obtener_objetos_hoja();
         for objeto in objetos {
             match objeto {

@@ -54,19 +54,15 @@ impl Servidor {
             println!("Conectado al cliente {:?}", socket);
             thread::spawn(move || {
                 let mut comunicacion = Comunicacion::new(stream.try_clone().unwrap());
-                Self::manejar_cliente(&mut comunicacion, &(env!("CARGO_MANIFEST_DIR").to_string() + DIR)).unwrap();
+                Self::manejar_cliente(
+                    &mut comunicacion,
+                    &(env!("CARGO_MANIFEST_DIR").to_string() + DIR),
+                )
+                .unwrap();
             });
         }
         Ok(())
     }
-    // pub fn server_run(&mut self) -> Result<(), ErrorDeComunicacion> {
-    //     loop {
-    //         println!("empezando el loop");
-    //         let (stream, _) = self.listener.accept()?;
-    //         println!("recibida una conexion");
-    //         self.manejar_cliente(&mut Comunicacion::<TcpStream>::new(stream), &self.dir)?;
-    //     }
-    // }
 
     pub fn manejar_cliente(
         comunicacion: &mut Comunicacion<TcpStream>,
@@ -85,10 +81,7 @@ impl Servidor {
         comunicacion: &mut Comunicacion<TcpStream>,
         dir: &str,
     ) -> Result<(), ErrorDeComunicacion> {
-        println!("Recibi: {:?}", linea);
         let pedido: Vec<&str> = linea.split_whitespace().collect();
-        println!("pedido: {:?}", pedido);
-        // veo si es un comando git
         let args: Vec<_> = pedido[1].split('\0').collect();
         let dir_repo = dir.to_string() + args[0];
         let refs: Vec<String>;
@@ -109,7 +102,6 @@ impl Servidor {
                 println!("receive-pack recibido, ejecutando");
                 let path = PathBuf::from(dir_repo);
 
-                println!("Path: {:?}", path);
                 if !path.exists() {
                     gir_io::crear_directorio(&path.join("refs/")).unwrap();
                     gir_io::crear_directorio(&path.join("refs/heads/")).unwrap();
@@ -125,14 +117,10 @@ impl Servidor {
                 }
                 receive_pack(dir.to_string(), comunicacion)
             }
-            _ => {
-                println!("No se reconoce el comando");
-                // cambiar el error
-                Err(ErrorDeComunicacion::IoError(io::Error::new(
-                    io::ErrorKind::NotFound,
-                    "No existe el comando",
-                )))
-            }
+            _ => Err(ErrorDeComunicacion::IoError(io::Error::new(
+                io::ErrorKind::NotFound,
+                "No existe el comando",
+            ))),
         }
     }
 
@@ -142,11 +130,21 @@ impl Servidor {
         let mut refs: Vec<String> = Vec::new();
         let head_ref = gir_io::obtener_ref_head(dir.join("HEAD"));
         match head_ref {
-            Ok(head) => {refs.push(head)},
+            Ok(head) => refs.push(head),
             Err(_) => {}
         }
-        gir_io::obtener_refs_con_largo_hex(&mut refs,dir.join("refs/heads/"), dir.to_str().unwrap()).unwrap();
-        gir_io::obtener_refs_con_largo_hex(&mut refs, dir.join("refs/tags/"), dir.to_str().unwrap()).unwrap();
+        gir_io::obtener_refs_con_largo_hex(
+            &mut refs,
+            dir.join("refs/heads/"),
+            dir.to_str().unwrap(),
+        )
+        .unwrap();
+        gir_io::obtener_refs_con_largo_hex(
+            &mut refs,
+            dir.join("refs/tags/"),
+            dir.to_str().unwrap(),
+        )
+        .unwrap();
         if !refs.is_empty() {
             let ref_con_cap = Self::agregar_capacidades(refs[0].clone());
             refs.remove(0);

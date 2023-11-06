@@ -22,8 +22,7 @@ impl<T: Write + Read> Fetch<T> {
         logger: Arc<Logger>,
         comunicacion: Arc<Comunicacion<TcpStream>>,
     ) -> Result<Fetch<TcpStream>, String> {
-        
-    let remoto = "origin".to_string();
+        let remoto = "origin".to_string();
         //"Por ahora lo hardcoedo necesito el config que no esta en esta rama";
 
         let capacidades_local = Vec::new();
@@ -150,7 +149,6 @@ impl<T: Write + Read> Fetch<T> {
         //POR AHORA NO HACEMOS, NADA CON ESTO: EVALUAR QUE HACER. SOLO LEERMOS
         //PARA SEGUIR EL FLUJO
         let acks_nak = self.comunicacion.obtener_lineas()?;
-        println!("acks_nack: {:?}", acks_nak);
         Ok(())
     }
 
@@ -166,7 +164,7 @@ impl<T: Write + Read> Fetch<T> {
     ) -> Result<bool, String> {
         let capacidades_a_usar_en_la_comunicacion =
             self.obtener_capacidades_en_comun_con_el_servidor(capacidades_servidor);
-        
+
         let commits_de_cabeza_de_rama_faltantes =
             self.obtener_commits_cabeza_de_rama_faltantes(commits_cabezas_y_dir_rama_asosiado)?;
 
@@ -201,7 +199,7 @@ impl<T: Write + Read> Fetch<T> {
             let dir_rama_asosiada_local =
                 self.convertir_de_dir_rama_remota_a_dir_rama_local(dir_rama_asosiada)?;
 
-                if !dir_rama_asosiada_local.exists() {
+            if !dir_rama_asosiada_local.exists() {
                 commits_de_cabeza_de_rama_faltantes.push(commit_cabeza_remoto.to_string());
                 continue;
             }

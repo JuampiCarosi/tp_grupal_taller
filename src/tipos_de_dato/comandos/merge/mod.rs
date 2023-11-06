@@ -310,7 +310,6 @@ impl Merge {
 
     /// Realiza un auto-merge, realizando un merge de cada file que difiera entre los dos commits
     fn automerge(&self, commit_base: String) -> Result<String, String> {
-        println!("Realizando automerge");
         let hash_tree_base = write_tree::conseguir_arbol_from_hash_commit(
             &commit_base,
             String::from(".gir/objects/"),

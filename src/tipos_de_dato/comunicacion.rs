@@ -76,7 +76,6 @@ impl<T: Write + Read> Comunicacion<T> {
             "{} {}\0host={}\0\0version={}\0",
             comando, repositorio, host, numero_de_version
         );
-        println!("Enviando: {}", mensaje);
         self.enviar(&io::obtener_linea_con_largo_hex(&mensaje))?;
         Ok(())
     }
@@ -98,7 +97,7 @@ impl<T: Write + Read> Comunicacion<T> {
         self.flujo.lock().unwrap().read_exact(&mut data)?;
         let linea = str::from_utf8(&data)?;
         // if linea.contains("done") {
-            // self.aceptar_pedido()?;
+        // self.aceptar_pedido()?;
         // }
         Ok(linea.to_string())
     }
@@ -255,7 +254,6 @@ impl<T: Write + Read> Comunicacion<T> {
     }
 
     pub fn obtener_obj_ids(&self, lineas: &Vec<String>) -> Vec<String> {
-        println!("lineas: {:?}", lineas);
         let mut obj_ids: Vec<String> = Vec::new();
         for linea in lineas {
             obj_ids.push(linea.split_whitespace().collect::<Vec<&str>>()[0].to_string());
@@ -271,7 +269,6 @@ impl<T: Write + Read> Comunicacion<T> {
         // hay que checkear que no haya repetidos, usar hashset
         let mut lista_wants: Vec<String> = Vec::new();
         let mut obj_ids = self.obtener_obj_ids(lineas);
-        println!("obj_ids: {:?}", obj_ids);
 
         if !capacidades.is_empty() {
             obj_ids[0].push_str(&(" ".to_string() + &capacidades)); // le aniado las capacidades
