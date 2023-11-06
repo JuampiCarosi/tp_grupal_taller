@@ -27,7 +27,6 @@ impl Pull {
     ) -> Result<Pull, String> {
         let rama_actual = Self::obtener_rama_actual()?;
         let remoto = "origin".to_string(); //momento, necesita ser el mismo que fetch
-
         Ok(Pull {
             rama_actual,
             remoto,

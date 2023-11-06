@@ -101,7 +101,6 @@ impl<T: Write + Read> Comunicacion<T> {
 
     fn leer_del_flujo_tantos_bytes(&self, cantida_bytes_a_leer: usize) -> Result<Vec<u8>, String> {
         let mut data = vec![0; cantida_bytes_a_leer];
-
         self.flujo
             .lock()
             .map_err(|e| format!("Fallo en el mutex de la lectura.\n{}\n", e))?
@@ -139,7 +138,6 @@ impl<T: Write + Read> Comunicacion<T> {
         let tamanio_str = self.leer_del_flujo_tantos_bytes_en_string(bytes_tamanio_linea)?;
         let tamanio_u32 = u32::from_str_radix(&tamanio_str, 16)
             .map_err(|e| format!("Fallo en la conversion a entero\n{}\n", e))?;
-
         Ok(tamanio_u32)
     }
 
@@ -171,9 +169,8 @@ impl<T: Write + Read> Comunicacion<T> {
                 break;
             }
             let linea = self.obtener_contenido_linea(tamanio)?;
-            lineas.push(linea.to_string());
-            println!("linea: {:?}", linea);
             //esto deberia ir antes o despues del push juani  ?? estaba asi
+            lineas.push(linea.clone());
             if linea.contains("NAK")
                 || linea.contains("ACK")
                 || (linea.contains("done") && !linea.contains("ref"))
@@ -183,7 +180,6 @@ impl<T: Write + Read> Comunicacion<T> {
         }
         Ok(lineas)
     }
-
     pub fn responder(&self, lineas: Vec<String>) -> Result<(), ErrorDeComunicacion> {
         if lineas.is_empty() {
             self.flujo

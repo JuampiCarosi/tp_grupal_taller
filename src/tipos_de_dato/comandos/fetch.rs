@@ -22,7 +22,8 @@ impl<T: Write + Read> Fetch<T> {
         logger: Arc<Logger>,
         comunicacion: Arc<Comunicacion<TcpStream>>,
     ) -> Result<Fetch<TcpStream>, String> {
-        let remoto = "origin".to_string();
+        
+    let remoto = "origin".to_string();
         //"Por ahora lo hardcoedo necesito el config que no esta en esta rama";
 
         let capacidades_local = Vec::new();
@@ -132,6 +133,7 @@ impl<T: Write + Read> Fetch<T> {
     fn enviar_lo_que_tengo(&self) -> Result<(), String> {
         let objetos_directorio =
             io::obtener_objetos_del_directorio("./.gir/objects/".to_string()).unwrap();
+        println!("objetos_directorio: {:?}", objetos_directorio);
         if !objetos_directorio.is_empty() {
             self.comunicacion
                 .enviar_lo_que_tengo_al_servidor_pkt(&objetos_directorio)?;
@@ -166,7 +168,7 @@ impl<T: Write + Read> Fetch<T> {
     ) -> Result<bool, String> {
         let capacidades_a_usar_en_la_comunicacion =
             self.obtener_capacidades_en_comun_con_el_servidor(capacidades_servidor);
-
+        
         let commits_de_cabeza_de_rama_faltantes =
             self.obtener_commits_cabeza_de_rama_faltantes(commits_cabezas_y_dir_rama_asosiado)?;
 
@@ -201,7 +203,7 @@ impl<T: Write + Read> Fetch<T> {
             let dir_rama_asosiada_local =
                 self.convertir_de_dir_rama_remota_a_dir_rama_local(dir_rama_asosiada)?;
 
-            if !dir_rama_asosiada_local.exists() {
+                if !dir_rama_asosiada_local.exists() {
                 commits_de_cabeza_de_rama_faltantes.push(commit_cabeza_remoto.to_string());
                 continue;
             }
@@ -257,13 +259,11 @@ impl<T: Write + Read> Fetch<T> {
         String,
     > {
         let mut lineas_recibidas = self.comunicacion.obtener_lineas()?;
-        println!("Recibi: {:?}", lineas_recibidas);
         let version = lineas_recibidas.remove(0); //la version del server
 
         let segunda_linea = lineas_recibidas.remove(0);
 
         let (contenido, capacidades) = self.separara_capacidades(&segunda_linea)?;
-
         let commit_head_remoto =
             self.separar_commit_head_de_ser_necesario(contenido, &mut lineas_recibidas);
 

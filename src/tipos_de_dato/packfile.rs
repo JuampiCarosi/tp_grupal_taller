@@ -187,7 +187,7 @@ impl Packfile {
             let (tipo, tamanio, _bytes_leidos) = decodificar_bytes(bytes);
 
             if tipo == 7 {
-                let _hash_objeto_base = &bytes[0..20];
+                let hash_obj = &bytes[0..20];
                 bytes.drain(0..20);
                 let mut objeto_descomprimido = vec![0; tamanio as usize];
 
@@ -196,12 +196,13 @@ impl Packfile {
                 descompresor
                     .decompress(&bytes, &mut objeto_descomprimido, FlushDecompress::None)
                     .unwrap();
+
                 let total_in = descompresor.total_in();
+
                 bytes.drain(0..total_in as usize);
                 contador += 1;
                 continue;
             }
-
             println!("tipo: {:?}, tamanio: {}", tipo, tamanio);
             // println!("cant bytes post decodificacion: {:?}", bytes.len());
             // println!("tipo: {:?}", tipo);

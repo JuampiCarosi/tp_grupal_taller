@@ -1,5 +1,3 @@
-use flate2::read;
-
 use crate::tipos_de_dato::comandos::write_tree;
 use crate::tipos_de_dato::comunicacion::Comunicacion;
 use crate::tipos_de_dato::logger::Logger;
@@ -32,6 +30,7 @@ impl Push {
                 ),
             );
         }
+        println!("Hashs refs: {:?}", hash_refs);
         Push {
             hash_refs,
             comunicacion,
@@ -41,7 +40,6 @@ impl Push {
     pub fn ejecutar(&mut self) -> Result<String, String> {
         println!("Se ejecuto el comando push");
         let request_data = "git-receive-pack /gir/\0host=example.com\0\0version=1\0"; //en donde dice /.git/ va la dir del repo
-
         let request_data_con_largo_hex = io::obtener_linea_con_largo_hex(request_data);
         self.comunicacion.enviar(&request_data_con_largo_hex)?;
         println!("Le mande las cosas");
@@ -69,10 +67,7 @@ impl Push {
                 Some(hash) => {
                     hash.1 = obj_id.to_string();
                 }
-                None => {
-                    // el server tiene un head que el cliente no tiene, abortar push (no borramos brancahes por lo tanto el sv esta por delante)
-                    // return Err("El servidor tiene un head que el cliente no tiene".to_string());
-                }
+                None => {}
             }
         }
 
@@ -88,11 +83,20 @@ impl Push {
                  //     continue;
                  // }
             if value.1 != value.0 {
-                objetos_a_enviar
-                    .extend(obtener_commits_y_objetos_asociados(&key, &value.1).unwrap());
+                let nuevos_objetos = obtener_commits_y_objetos_asociados(&key, &value.1);
+                match nuevos_objetos {
+                    Ok(nuevos_objetos) => {
+                        objetos_a_enviar.extend(nuevos_objetos);
+                    }
+                    Err(err) => {
+                        //error
+                        return Err(err);
+                    }
+                }
+                // objetos_a_enviar
+                // .extend(obtener_commits_y_objetos_asociados(&key, &value.1).unwrap());
             }
         }
-        println!("hash_refs: {:?}", self.hash_refs);
 
         println!("objetos a enviar: {:?}", objetos_a_enviar);
         println!("actualizaciones: {:?}", actualizaciones);
@@ -133,7 +137,19 @@ fn obtener_commits_y_objetos_asociados(
     // let mut objetos_a_agregar: HashMap<String, CommitObj> = HashMap::new();
     let mut objetos_a_agregar: HashSet<String> = HashSet::new();
     let mut commits_a_revisar: Vec<CommitObj> = Vec::new();
-    commits_a_revisar.push(CommitObj::from_hash(ultimo_commit)?);
+
+    let ultimo_commit = CommitObj::from_hash(ultimo_commit);
+
+    match ultimo_commit {
+        Ok(ultimo_commit) => {
+            commits_a_revisar.push(ultimo_commit);
+        }
+        Err(_) => {
+            return Err(
+                "El servidor tiene cambios, por favor, actualice su repositorio".to_string(),
+            );
+        }
+    }
 
     while let Some(commit) = commits_a_revisar.pop() {
         if objetos_a_agregar.contains(&commit.hash) || commit.hash == *commit_limite {
