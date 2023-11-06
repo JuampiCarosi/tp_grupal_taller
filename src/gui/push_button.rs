@@ -22,9 +22,8 @@ pub fn render(
             .unwrap();
 
         fetching_dialog.set_position(gtk::WindowPosition::Center);
-        Push::new(comunicacion_clone.clone()).ejecutar().unwrap();
-
         fetching_dialog.show_all();
+        Push::new(comunicacion_clone.clone()).ejecutar().unwrap();
         sleep(std::time::Duration::from_secs(3));
         fetching_dialog.close();
     });

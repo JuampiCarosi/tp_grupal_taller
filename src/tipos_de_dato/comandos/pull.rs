@@ -86,6 +86,7 @@ impl Pull {
     }
 
     fn fast_forward_de_cero(&self, commit_head_remoto: String) -> Result<bool, String> {
+        io::escribir_bytes(UBICACION_RAMA_MASTER, &commit_head_remoto)?;
         let hash_tree_padre = write_tree::conseguir_arbol_from_hash_commit(
             &commit_head_remoto,
             String::from(".gir/objects/"),

@@ -85,6 +85,7 @@ impl Servidor {
         dir: &str,
     ) -> Result<(), ErrorDeComunicacion> {
         let pedido: Vec<&str> = linea.split_whitespace().collect();
+        println!("pedido: {:?}", pedido);
         // veo si es un comando git
         let args: Vec<_> = pedido[1].split('\0').collect();
         let dir_repo = dir.to_string() + args[0];

@@ -154,7 +154,8 @@
                 <property name="visible">True</property>
                 <property name="can-focus">False</property>
                 <property name="margin-bottom">5</property>
-                <property name="label" translatable="yes">Introduzca la url del repositorio a clonar</property>
+                <property name="label" translatable="yes">Introduzca el nombre del repositorio a clonar</property>
+                <property name="justify">center</property>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -453,7 +454,7 @@
                 <property name="orientation">vertical</property>
                 <child>
                   <object class="GtkButton" id="push-button">
-                    <property name="label" translatable="yes">button</property>
+                    <property name="label" translatable="yes">push</property>
                     <property name="visible">True</property>
                     <property name="can-focus">True</property>
                     <property name="receives-default">True</property>
@@ -470,28 +471,6 @@
               </packing>
             </child>
           </object>
-        </child>
-        <child>
-          <object class="GtkHeaderBar">
-            <property name="width-request">40</property>
-            <property name="height-request">43</property>
-            <property name="visible">True</property>
-            <property name="can-focus">False</property>
-            <property name="spacing">2</property>
-            <child>
-              <object class="GtkComboBoxText" id="select-branch">
-                <property name="name">select-branch</property>
-                <property name="visible">True</property>
-                <property name="can-focus">False</property>
-                <property name="tooltip-text" translatable="yes">seleccionar una branch</property>
-                <property name="active">0</property>
-                <property name="button-sensitivity">on</property>
-              </object>
-            </child>
-          </object>
-          <packing>
-            <property name="x">685</property>
-          </packing>
         </child>
         <child>
           <object class="GtkBox" id="log-container">
@@ -629,6 +608,45 @@
           <packing>
             <property name="x">388</property>
             <property name="y">277</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkHeaderBar">
+            <property name="width-request">40</property>
+            <property name="height-request">43</property>
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+            <property name="spacing">29</property>
+            <child>
+              <object class="GtkComboBoxText" id="select-branch">
+                <property name="name">select-branch</property>
+                <property name="width-request">40</property>
+                <property name="visible">True</property>
+                <property name="can-focus">False</property>
+                <property name="tooltip-text" translatable="yes">seleccionar una branch</property>
+                <property name="active">0</property>
+                <property name="button-sensitivity">on</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkEventBox" id="refresh-icon">
+                <property name="visible">True</property>
+                <property name="can-focus">False</property>
+                <child>
+                  <object class="GtkImage">
+                    <property name="visible">True</property>
+                    <property name="can-focus">False</property>
+                    <property name="stock">gtk-refresh</property>
+                  </object>
+                </child>
+              </object>
+              <packing>
+                <property name="position">1</property>
+              </packing>
+            </child>
+          </object>
+          <packing>
+            <property name="x">641</property>
           </packing>
         </child>
       </object>
