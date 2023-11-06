@@ -5,7 +5,7 @@ use crate::tipos_de_dato::comandos::cat_file;
 const AMARILLO: &str = "\x1B[33m";
 const RESET: &str = "\x1B[0m";
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct CommitObj {
     pub hash: String,
     pub hash_tree: String,

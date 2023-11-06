@@ -1,0 +1,340 @@
+2023-11-05 17:03:12 | No se ingreso ningun comando
+2023-11-05 17:04:45 | No se ingreso ningun comando
+2023-11-05 17:04:47 | No se ingreso ningun comando
+2023-11-05 17:06:13 | No se ingreso ningun comando
+2023-11-05 17:06:34 | No se ingreso ningun comando
+2023-11-05 17:06:37 | No se ingreso ningun comando
+2023-11-05 17:07:04 | No se ingreso ningun comando
+2023-11-05 17:07:37 | Status terminado
+2023-11-05 17:07:37 | Cambios a ser commiteados:
+         [32mnuevo archivo: test_dir/objetos/archivo.txt[0m
+
+Cambios no en zona de preparacion:
+
+Cambios no trackeados:
+         [31marchivezco.txt[0m
+         [31mCargo.toml[0m
+         [31mfile1.txt[0m
+         [31marchivo2.txt[0m
+         [31mCargo.lock[0m
+         [31mccccc.txt[0m
+         [31mREADME.md[0m
+         [31mtest_file2.txt[0m
+         [31mtest_file.txt[0m
+         [31mlog.txt[0m
+         [31m.log[0m
+         [31m.gitignore[0m
+         [31m.log.txt[0m
+         [31mbbbbb.txt[0m
+         [31m.vscode/[0m
+         [31mtmp/[0m
+         [31maaaaa.txt[0m
+         [31msrv/[0m
+         [31mtes_dir/[0m
+         [31msrc/[0m
+
+2023-11-05 17:07:37 | Comando desconocido
+2023-11-05 17:07:49 | Status terminado
+2023-11-05 17:07:49 | Cambios a ser commiteados:
+         [32mnuevo archivo: test_dir/objetos/archivo.txt[0m
+
+Cambios no en zona de preparacion:
+
+Cambios no trackeados:
+         [31marchivezco.txt[0m
+         [31mCargo.toml[0m
+         [31mfile1.txt[0m
+         [31marchivo2.txt[0m
+         [31mCargo.lock[0m
+         [31mccccc.txt[0m
+         [31mREADME.md[0m
+         [31mtest_file2.txt[0m
+         [31mtest_file.txt[0m
+         [31mlog.txt[0m
+         [31m.log[0m
+         [31m.gitignore[0m
+         [31m.log.txt[0m
+         [31mbbbbb.txt[0m
+         [31m.vscode/[0m
+         [31mtmp/[0m
+         [31maaaaa.txt[0m
+         [31msrv/[0m
+         [31mtes_dir/[0m
+         [31msrc/[0m
+
+2023-11-05 17:14:29 | Comando desconocido
+2023-11-05 17:14:51 | Gui: Renderizando staging area
+2023-11-05 17:14:51 | Gui: Agregando archivo a staging
+2023-11-05 17:16:01 | Gui: Renderizando staging area
+2023-11-05 17:16:01 | Gui: Agregando archivo a staging
+2023-11-05 17:16:44 | Gui: Renderizando staging area
+2023-11-05 17:16:44 | Gui: Agregando archivo a staging
+2023-11-05 17:17:04 | Status terminado
+2023-11-05 17:17:04 | Cambios a ser commiteados:
+         [32mnuevo archivo: test_dir/objetos/archivo.txt[0m
+
+Cambios no en zona de preparacion:
+
+Cambios no trackeados:
+         [31marchivezco.txt[0m
+         [31mCargo.toml[0m
+         [31mfile1.txt[0m
+         [31marchivo2.txt[0m
+         [31mCargo.lock[0m
+         [31mccccc.txt[0m
+         [31mREADME.md[0m
+         [31mtest_file2.txt[0m
+         [31mtest_file.txt[0m
+         [31mlog.txt[0m
+         [31m.log[0m
+         [31m.gitignore[0m
+         [31m.log.txt[0m
+         [31mbbbbb.txt[0m
+         [31m.vscode/[0m
+         [31mtmp/[0m
+         [31maaaaa.txt[0m
+         [31msrv/[0m
+         [31mtes_dir/[0m
+         [31msrc/[0m
+
+2023-11-05 17:17:24 | Gui: Renderizando staging area
+2023-11-05 17:17:24 | Gui: Agregando archivo a staging
+2023-11-05 17:18:04 | Gui: Renderizando staging area
+2023-11-05 17:18:04 | Gui: Agregando archivo a staging
+2023-11-05 17:28:14 | Comando desconocido
+2023-11-05 17:32:28 | Gui: Renderizando staging area
+2023-11-05 17:32:28 | Gui: Agregando archivo a staging
+2023-11-05 17:33:39 | Gui: Renderizando staging area
+2023-11-05 17:33:39 | Gui: Agregando archivo a staging
+2023-11-05 17:35:30 | Gui: Renderizando staging area
+2023-11-05 17:35:30 | Gui: Agregando archivo a staging
+2023-11-05 17:43:04 | Gui: Renderizando staging area
+2023-11-05 17:43:04 | Gui: Agregando archivo a staging
+2023-11-05 17:46:34 | Gui: Renderizando staging area
+2023-11-05 17:46:34 | Gui: Agregando archivo a staging
+2023-11-05 17:53:10 | Gui: Renderizando staging area
+2023-11-05 17:53:10 | Gui: Agregando archivo a staging
+2023-11-05 17:54:24 | Gui: Renderizando staging area
+2023-11-05 17:54:24 | Gui: Agregando archivo a staging
+2023-11-05 17:55:23 | Gui: Renderizando staging area
+2023-11-05 17:55:23 | Gui: Agregando archivo a staging
+2023-11-05 17:56:27 | Comando desconocido
+2023-11-05 17:56:29 | Gui: Renderizando staging area
+2023-11-05 17:56:29 | Gui: Agregando archivo a staging
+2023-11-05 18:06:07 | Gui: Renderizando staging area
+2023-11-05 18:06:07 | Gui: Agregando archivo a staging
+2023-11-05 18:09:18 | Gui: Renderizando staging area
+2023-11-05 18:09:18 | Gui: Agregando archivo a staging
+2023-11-05 18:09:35 | Status terminado
+2023-11-05 18:09:35 | Cambios a ser commiteados:
+         [32mnuevo archivo: test_dir/objetos/archivo.txt[0m
+
+Cambios no en zona de preparacion:
+
+Cambios no trackeados:
+         [31marchivezco.txt[0m
+         [31mCargo.toml[0m
+         [31mfile1.txt[0m
+         [31marchivo2.txt[0m
+         [31mCargo.lock[0m
+         [31mccccc.txt[0m
+         [31mREADME.md[0m
+         [31mtest_file2.txt[0m
+         [31mtest_file.txt[0m
+         [31mlog.txt[0m
+         [31m.log[0m
+         [31m.gitignore[0m
+         [31m.log.txt[0m
+         [31mbbbbb.txt[0m
+         [31m.vscode/[0m
+         [31mtmp/[0m
+         [31maaaaa.txt[0m
+         [31msrv/[0m
+         [31mtes_dir/[0m
+         [31msrc/[0m
+
+2023-11-05 18:09:44 | Ejecutando add
+2023-11-05 18:09:44 | Objeto gir hasheado en archivezco.txt
+2023-11-05 18:09:44 | Objeto gir hasheado en test_dir/objetos/archivo.txt
+2023-11-05 18:09:44 | 
+2023-11-05 18:09:50 | Status terminado
+2023-11-05 18:09:50 | Cambios a ser commiteados:
+         [32mnuevo archivo: archivezco.txt[0m
+         [32mnuevo archivo: test_dir/objetos/archivo.txt[0m
+
+Cambios no en zona de preparacion:
+
+Cambios no trackeados:
+         [31mCargo.toml[0m
+         [31marchivo2.txt[0m
+         [31mCargo.lock[0m
+         [31mccccc.txt[0m
+         [31mREADME.md[0m
+         [31mtest_file2.txt[0m
+         [31mtest_file.txt[0m
+         [31mlog.txt[0m
+         [31m.log[0m
+         [31m.gitignore[0m
+         [31mbbbbb.txt[0m
+         [31m.vscode/[0m
+         [31mtmp/[0m
+         [31maaaaa.txt[0m
+         [31msrv/[0m
+         [31mtes_dir/[0m
+         [31msrc/[0m
+
+2023-11-05 18:10:01 | La cantidad de argumentos es invalida
+2023-11-05 18:16:23 | La cantidad de argumentos es invalida
+2023-11-05 18:19:59 | La cantidad de argumentos es invalida
+2023-11-05 18:20:12 | La cantidad de argumentos es invalida
+2023-11-05 18:21:57 | commit 2cbde51f988f3d747b34d0f965ac5b4789719d3b
+ Author: 
+un commit 
+2023-11-05 18:21:57 | Commit creado
+2023-11-05 18:32:12 | Comando desconocido
+2023-11-05 18:32:24 | Ejecutando comando log
+2023-11-05 18:32:24 | [33mcommit 2cbde51f988f3d747b34d0f965ac5b4789719d3b [0m
+Autor: aaaa <<bbbb>>
+Date: Sun Nov 05 18:21:57 2023 -0300
+
+     un commit
+
+
+2023-11-05 18:32:32 | Status terminado
+2023-11-05 18:32:32 | Cambios a ser commiteados:
+
+Cambios no en zona de preparacion:
+
+Cambios no trackeados:
+         [31mCargo.toml[0m
+         [31mfile1.txt[0m
+         [31marchivo2.txt[0m
+         [31mCargo.lock[0m
+         [31mccccc.txt[0m
+         [31mREADME.md[0m
+         [31mtest_file2.txt[0m
+         [31mtest_file.txt[0m
+         [31mlog.txt[0m
+         [31m.log[0m
+         [31m.gitignore[0m
+         [31m.log.txt[0m
+         [31mbbbbb.txt[0m
+         [31mtest_dir/muchos_objetos/[0m
+         [31m.vscode/[0m
+         [31mtmp/[0m
+         [31maaaaa.txt[0m
+         [31msrv/[0m
+         [31mtes_dir/[0m
+         [31msrc/[0m
+
+2023-11-05 18:32:43 | Ejecutando add
+2023-11-05 18:32:43 | Objeto gir hasheado en ccccc.txt
+2023-11-05 18:32:43 | 
+2023-11-05 18:32:51 | commit c1281d80f2dc708403b6ed33157d0adb3ae4a64d
+ Author: 
+segundo commit 
+2023-11-05 18:32:51 | Commit creado
+2023-11-05 18:56:41 | Comando desconocido
+2023-11-05 18:56:44 | Fallo en la lectura de la respuesta del servidor.
+Connection reset by peer (os error 54)
+
+2023-11-05 19:02:58 | Fallo en la lectura de la respuesta del servidor.
+Connection reset by peer (os error 54)
+
+2023-11-05 19:12:27 | El servidor tiene un head que el cliente no tiene
+2023-11-05 19:12:44 | Status terminado
+2023-11-05 19:12:44 | Cambios a ser commiteados:
+
+Cambios no en zona de preparacion:
+
+Cambios no trackeados:
+         [31mCargo.toml[0m
+         [31mfile1.txt[0m
+         [31marchivo2.txt[0m
+         [31mCargo.lock[0m
+         [31mREADME.md[0m
+         [31mtest_file2.txt[0m
+         [31mtest_file.txt[0m
+         [31mlog.txt[0m
+         [31m.log[0m
+         [31m.gitignore[0m
+         [31m.log.txt[0m
+         [31mbbbbb.txt[0m
+         [31mtest_dir/muchos_objetos/[0m
+         [31m.vscode/[0m
+         [31mtmp/[0m
+         [31maaaaa.txt[0m
+         [31msrv/[0m
+         [31mtes_dir/[0m
+         [31msrc/[0m
+
+2023-11-05 19:12:52 | Ejecutando add
+2023-11-05 19:12:52 | Objeto gir hasheado en Cargo.toml
+2023-11-05 19:12:52 | 
+2023-11-05 19:12:58 | commit e251828a66a1f2922f61ac061c5952ce6d126d0f
+ Author: 
+otro commit 
+2023-11-05 19:12:58 | Commit creado
+2023-11-05 19:15:27 | Ejecutando add
+2023-11-05 19:15:27 | Objeto gir hasheado en file1.txt
+2023-11-05 19:15:27 | 
+2023-11-05 19:15:31 | La cantidad de argumentos es invalida
+2023-11-05 19:15:36 | commit 89e536adba170ecf8cc4a1512f60be44ff08a22d
+ Author: 
+d 
+2023-11-05 19:15:36 | Commit creado
+2023-11-05 19:15:38 | El servidor tiene un head que el cliente no tiene
+2023-11-05 19:19:34 | El servidor tiene un head que el cliente no tiene
+2023-11-05 19:19:56 | El servidor tiene un head que el cliente no tiene
+2023-11-05 19:21:49 | El servidor tiene un head que el cliente no tiene
+2023-11-05 19:22:02 | Comando desconocido
+2023-11-05 22:03:21 | No hay actualizaciones
+2023-11-05 22:09:31 | No hay actualizaciones
+2023-11-05 22:10:08 | No hay actualizaciones
+2023-11-05 22:11:51 | No hay actualizaciones
+2023-11-05 22:12:13 | No hay actualizaciones
+2023-11-05 22:15:50 | No hay actualizaciones
+2023-11-05 22:18:26 | No hay actualizaciones
+2023-11-05 22:20:01 | No hay actualizaciones
+2023-11-05 22:20:55 | No hay actualizaciones
+2023-11-05 22:22:55 | No hay actualizaciones
+2023-11-05 22:24:36 | Comando desconocido
+2023-11-05 22:25:18 | Comando desconocido
+2023-11-05 22:27:09 | No hay actualizaciones
+2023-11-05 22:28:19 | No hay actualizaciones
+2023-11-05 22:30:05 | No hay actualizaciones
+2023-11-05 22:31:01 | No hay actualizaciones
+2023-11-05 22:31:52 | Se intenta crear comando init con args:[]
+2023-11-05 22:31:52 | Se creo correctamente el comando init:[]
+2023-11-05 22:31:52 | Se ejecuta init
+2023-11-05 22:31:52 | Directorio gir creado en ./.gir
+2023-11-05 22:31:52 | Directorio gir creado en ./.gir
+2023-11-05 22:32:02 | Ejecutando add
+2023-11-05 22:32:02 | Objeto gir hasheado en archivezco.txt
+2023-11-05 22:32:02 | 
+2023-11-05 22:32:22 | commit 63852860e3ba759917ecedaf14d57bdbf08444f2
+ Author: 
+aldosivi 
+2023-11-05 22:32:22 | Commit creado
+2023-11-05 22:32:27 | Push ejecutado con exito
+2023-11-05 22:39:14 | Push ejecutado con exito
+2023-11-05 22:41:13 | Push ejecutado con exito
+2023-11-05 22:41:15 | Push ejecutado con exito
+2023-11-05 22:41:31 | Push ejecutado con exito
+2023-11-05 22:42:03 | Comando desconocido
+2023-11-05 22:42:05 | Push ejecutado con exito
+2023-11-05 22:49:46 | Push ejecutado con exito
+2023-11-05 22:51:52 | Push ejecutado con exito
+2023-11-05 22:53:47 | Push ejecutado con exito
+2023-11-05 22:57:11 | Push ejecutado con exito
+2023-11-05 22:57:27 | Push ejecutado con exito
+2023-11-05 22:58:54 | Push ejecutado con exito
+2023-11-05 23:04:57 | Push ejecutado con exito
+2023-11-05 23:05:51 | Push ejecutado con exito
+2023-11-05 23:13:07 | Push ejecutado con exito
+2023-11-05 23:13:31 | Push ejecutado con exito
+2023-11-05 23:13:39 | Push ejecutado con exito
+2023-11-05 23:13:50 | Push ejecutado con exito
+2023-11-05 23:13:51 | Push ejecutado con exito
+2023-11-05 23:13:52 | Push ejecutado con exito
+2023-11-05 23:13:53 | Push ejecutado con exito

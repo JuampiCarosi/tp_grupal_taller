@@ -6,6 +6,7 @@ mod new_branch_dialog;
 mod new_commit_dialog;
 mod staging_area;
 
+use std::fs;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -48,6 +49,11 @@ pub fn ejecutar(logger: Arc<Logger>) {
     inicializar_componentes(&builder, &window, logger.clone(), branch_actual);
 
     window.show_all();
+
+    window.connect_delete_event(|_, _| {
+        gtk::main_quit();
+        gtk::glib::Propagation::Proceed
+    });
 
     gtk::main();
 }

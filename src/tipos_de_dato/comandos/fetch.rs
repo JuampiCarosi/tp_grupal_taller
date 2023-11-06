@@ -12,21 +12,18 @@ const NO_SE_ENVIO_NINGUN_PEDIDO: bool = false;
 
 pub struct Fetch<T: Write + Read> {
     remoto: String,
-    comunicacion: Comunicacion<T>,
+    comunicacion: Arc<Comunicacion<T>>,
     capacidades_local: Vec<String>,
     logger: Arc<Logger>,
 }
 
 impl<T: Write + Read> Fetch<T> {
-    pub fn new(logger: Arc<Logger>) -> Result<Fetch<TcpStream>, String> {
+    pub fn new(
+        logger: Arc<Logger>,
+        comunicacion: Arc<Comunicacion<TcpStream>>,
+    ) -> Result<Fetch<TcpStream>, String> {
         let remoto = "origin".to_string();
         //"Por ahora lo hardcoedo necesito el config que no esta en esta rama";
-
-        let direccion_servidor = "127.0.0.1:9418"; // Cambia la dirección IP si es necesario
-                                                   //se inicia la comunicacon con servidor
-        let comunicacion =
-            Comunicacion::<TcpStream>::new_desde_direccion_servidor(direccion_servidor)?;
-        //esto ya lo deberia recibir el fetch en realidad
 
         let capacidades_local = Vec::new();
         //esto lo deberia tener la comunicacion creo yo
@@ -40,7 +37,7 @@ impl<T: Write + Read> Fetch<T> {
     //pòr ahoar para testing, para mi asi deberia ser recibiendo el comunicacion
     pub fn new_testing(
         logger: Arc<Logger>,
-        comunicacion: Comunicacion<T>,
+        comunicacion: Arc<Comunicacion<T>>,
     ) -> Result<Fetch<T>, String> {
         let remoto = "origin".to_string();
         //"Por ahora lo hardcoedo necesito el config que no esta en esta rama";
@@ -116,7 +113,7 @@ impl<T: Write + Read> Fetch<T> {
     pub fn recivir_packfile_y_guardar_objetos(&self) -> Result<(), String> {
         // aca para git daemon hay que poner un recibir linea mas porque envia un ACK repetido (No entiendo por que...)
         println!("Obteniendo paquete..");
-        let mut packfile = self.comunicacion.obtener_lineas_como_bytes()?;
+        let mut packfile = self.comunicacion.obtener_packfile()?;
         Packfile::new()
             .obtener_paquete_y_escribir(&mut packfile, String::from("./.gir/objects/"))
             .unwrap();
@@ -533,7 +530,7 @@ mod test {
         let comunicacion = Comunicacion::new(mock);
         let logger = Arc::new(Logger::new(PathBuf::from(".log.txt")).unwrap());
         let (capacidades, commit_head, commits_y_ramas, commits_y_tags) =
-            Fetch::new_testing(logger, comunicacion)
+            Fetch::new_testing(logger, comunicacion.into())
                 .unwrap()
                 .fase_de_descubrimiento()
                 .unwrap();
@@ -593,7 +590,7 @@ mod test {
         let comunicacion = Comunicacion::new(mock);
         let logger = Arc::new(Logger::new(PathBuf::from(".log.txt")).unwrap());
         let (capacidades, commit_head, commits_y_ramas, commits_y_tags) =
-            Fetch::new_testing(logger, comunicacion)
+            Fetch::new_testing(logger, comunicacion.into())
                 .unwrap()
                 .fase_de_descubrimiento()
                 .unwrap();

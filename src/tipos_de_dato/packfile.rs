@@ -113,7 +113,7 @@ impl Packfile {
         packfile
     }
 
-    fn verificar_checksum(packfile: &[u8]) -> bool {
+    pub fn verificar_checksum(packfile: &[u8]) -> bool {
         // Get the expected hash from the end of the packfile
         let expected_hash = &packfile[packfile.len() - 20..];
 

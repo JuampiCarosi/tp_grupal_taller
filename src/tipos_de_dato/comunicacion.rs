@@ -1,4 +1,5 @@
 use crate::err_comunicacion::ErrorDeComunicacion;
+use crate::tipos_de_dato::packfile::Packfile;
 use crate::utils::{self, io};
 use std::io::{Read, Write};
 use std::net::TcpStream;
@@ -81,8 +82,9 @@ impl<T: Write + Read> Comunicacion<T> {
 
     pub fn aceptar_pedido(&self) -> Result<String, ErrorDeComunicacion> {
         // lee primera parte, 4 bytes en hexadecimal indican el largo del stream
+
         let mut tamanio_bytes = [0; 4];
-        self.flujo.lock().unwrap().read_exact(&mut tamanio_bytes)?;
+        self.flujo.lock().unwrap().read(&mut tamanio_bytes)?;
         // largo de bytes a str
         let tamanio_str = str::from_utf8(&tamanio_bytes)?;
         // transforma str a u32
@@ -99,6 +101,7 @@ impl<T: Write + Read> Comunicacion<T> {
 
     fn leer_del_flujo_tantos_bytes(&self, cantida_bytes_a_leer: usize) -> Result<Vec<u8>, String> {
         let mut data = vec![0; cantida_bytes_a_leer];
+
         self.flujo
             .lock()
             .map_err(|e| format!("Fallo en el mutex de la lectura.\n{}\n", e))?
@@ -182,7 +185,7 @@ impl<T: Write + Read> Comunicacion<T> {
         Ok(lineas)
     }
 
-    pub fn responder(&mut self, lineas: Vec<String>) -> Result<(), ErrorDeComunicacion> {
+    pub fn responder(&self, lineas: Vec<String>) -> Result<(), ErrorDeComunicacion> {
         if lineas.is_empty() {
             self.flujo
                 .lock()
@@ -194,6 +197,7 @@ impl<T: Write + Read> Comunicacion<T> {
             self.flujo.lock().unwrap().write_all(linea.as_bytes())?;
         }
         if lineas[0].contains("ref") {
+            println!("Envio flush con: {:?}", lineas);
             self.flujo
                 .lock()
                 .unwrap()
@@ -204,6 +208,7 @@ impl<T: Write + Read> Comunicacion<T> {
             && !lineas[0].contains(&"ACK".to_string())
             && !lineas[0].contains(&"done".to_string())
         {
+            println!("Envio flush con: {:?}", lineas);
             self.flujo
                 .lock()
                 .unwrap()
@@ -227,7 +232,7 @@ impl<T: Write + Read> Comunicacion<T> {
         Ok(())
     }
 
-    pub fn obtener_lineas_como_bytes(&self) -> Result<Vec<u8>, String> {
+    pub fn obtener_packfile(&self) -> Result<Vec<u8>, String> {
         let mut buffer = Vec::new();
         let mut temp_buffer = [0u8; 1024]; // Tamaño del búfer de lectura
 
@@ -246,7 +251,12 @@ impl<T: Write + Read> Comunicacion<T> {
             }
             // Copiar los bytes leídos al búfer principal
             buffer.extend_from_slice(&temp_buffer[0..bytes_read]);
+
+            if buffer.len() > 20 && Packfile::verificar_checksum(&buffer) {
+                break;
+            }
         }
+
         Ok(buffer)
     }
 
