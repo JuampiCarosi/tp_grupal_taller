@@ -10,18 +10,18 @@ use std::sync::Arc;
 const SE_ENVIO_ALGUN_PEDIDO: bool = true;
 const NO_SE_ENVIO_NINGUN_PEDIDO: bool = false;
 
-pub struct Fetch<'a, T: Write + Read> {
+pub struct Fetch<T: Write + Read> {
     remoto: String,
-    comunicacion: &'a Comunicacion<T>,
+    comunicacion: Arc<Comunicacion<T>>,
     capacidades_local: Vec<String>,
     logger: Arc<Logger>,
 }
 
-impl<'a, T: Write + Read> Fetch<'a, T> {
+impl<T: Write + Read> Fetch<T> {
     pub fn new(
         logger: Arc<Logger>,
-        comunicacion: &'a Comunicacion<TcpStream>,
-    ) -> Result<Fetch<'a, TcpStream>, String> {
+        comunicacion: Arc<Comunicacion<TcpStream>>,
+    ) -> Result<Fetch<TcpStream>, String> {
         let remoto = "origin".to_string();
         //"Por ahora lo hardcoedo necesito el config que no esta en esta rama";
 
@@ -37,8 +37,8 @@ impl<'a, T: Write + Read> Fetch<'a, T> {
     //pòr ahoar para testing, para mi asi deberia ser recibiendo el comunicacion
     pub fn new_testing(
         logger: Arc<Logger>,
-        comunicacion: &'a Comunicacion<T>,
-    ) -> Result<Fetch<'a, T>, String> {
+        comunicacion: Arc<Comunicacion<T>>,
+    ) -> Result<Fetch<T>, String> {
         let remoto = "origin".to_string();
         //"Por ahora lo hardcoedo necesito el config que no esta en esta rama";
 
@@ -62,7 +62,7 @@ impl<'a, T: Write + Read> Fetch<'a, T> {
     // -------------------------------------------------------------
     //verificar si existe /.git
     pub fn ejecutar(&self) -> Result<String, String> {
-        self.iniciar_git_upload_pack_con_servidor()?;
+        self.comunicacion.iniciar_git_upload_pack_con_servidor()?;
 
         //en caso de clone el commit head se tiene que utilizar
         let (
@@ -93,7 +93,7 @@ impl<'a, T: Write + Read> Fetch<'a, T> {
     // -------------------------------------------------------------
     // -------------------------------------------------------------
 
-    fn fase_de_negociacion(
+    pub fn fase_de_negociacion(
         &self,
         capacidades_servidor: Vec<String>,
         commits_cabezas_y_dir_rama_asosiado: &Vec<(String, PathBuf)>,
@@ -110,7 +110,7 @@ impl<'a, T: Write + Read> Fetch<'a, T> {
 
     //ACA PARA MI HAY UN PROBLEMA DE RESPONSABILIADADES: COMUNICACION DEBERIA RECIBIR EL PACKETE Y FETCH
     //DEBERIA GUARDAR LAS COSAS, PERO COMO NO ENTIENDO EL CODIGO JAJA DENTRO DE COMUNICACION NO METO MANO
-    fn recivir_packfile_y_guardar_objetos(&self) -> Result<(), String> {
+    pub fn recivir_packfile_y_guardar_objetos(&self) -> Result<(), String> {
         // aca para git daemon hay que poner un recibir linea mas porque envia un ACK repetido (No entiendo por que...)
         println!("Obteniendo paquete..");
         let mut packfile = self.comunicacion.obtener_packfile()?;
@@ -245,7 +245,7 @@ impl<'a, T: Write + Read> Fetch<'a, T> {
     /// - vector de tuplas con los hash del commit cabeza de rama y la direccion de la
     ///     carpeta de la rama en el servidor(ojo!! la direccion para el servidor no para el local)
     /// - vector de tuplas con el hash del commit y el tag asosiado
-    fn fase_de_descubrimiento(
+    pub fn fase_de_descubrimiento(
         &self,
     ) -> Result<
         (
@@ -276,26 +276,6 @@ impl<'a, T: Write + Read> Fetch<'a, T> {
             commits_cabezas_y_dir_rama_asosiado,
             commits_y_tags_asosiados,
         ))
-    }
-
-    ///Inicia el comando git upload pack con el servidor, mandole al servidor el siguiente mensaje
-    /// en formato:
-    ///
-    /// - ''git-upload-pack 'directorio'\0host='host'\0\0verision='numero de version'\0''
-    ///
-    fn iniciar_git_upload_pack_con_servidor(&self) -> Result<(), String> {
-        let comando = "git-upload-pack";
-        let repositorio = "/gir/";
-        let host = "example.com";
-        let numero_de_version = 1;
-
-        let mensaje = format!(
-            "{} {}\0host={}\0\0version={}\0",
-            comando, repositorio, host, numero_de_version
-        );
-        self.comunicacion
-            .enviar(&io::obtener_linea_con_largo_hex(&mensaje))?;
-        Ok(())
     }
 
     fn obtener_commits_y_dir_rama_o_tag_asosiados(
@@ -386,7 +366,7 @@ impl<'a, T: Write + Read> Fetch<'a, T> {
     }
 
     ///actuliza a donde apuntan las cabeza del rama de las ramas locales pertenecientes al remoto
-    fn actualizar_ramas_locales_del_remoto(
+    pub fn actualizar_ramas_locales_del_remoto(
         &self,
         commits_cabezas_y_dir_rama_asosiado: &Vec<(String, PathBuf)>,
     ) -> Result<(), String> {
@@ -550,7 +530,7 @@ mod test {
         let comunicacion = Comunicacion::new(mock);
         let logger = Arc::new(Logger::new(PathBuf::from(".log.txt")).unwrap());
         let (capacidades, commit_head, commits_y_ramas, commits_y_tags) =
-            Fetch::new_testing(logger, &comunicacion)
+            Fetch::new_testing(logger, comunicacion.into())
                 .unwrap()
                 .fase_de_descubrimiento()
                 .unwrap();
@@ -610,7 +590,7 @@ mod test {
         let comunicacion = Comunicacion::new(mock);
         let logger = Arc::new(Logger::new(PathBuf::from(".log.txt")).unwrap());
         let (capacidades, commit_head, commits_y_ramas, commits_y_tags) =
-            Fetch::new_testing(logger, &comunicacion)
+            Fetch::new_testing(logger, comunicacion.into())
                 .unwrap()
                 .fase_de_descubrimiento()
                 .unwrap();

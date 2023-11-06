@@ -4,13 +4,13 @@ use super::{
     comandos::{
         add::Add, branch::Branch, cat_file::CatFile, checkout::Checkout, clone::Clone,
         commit::Commit, fetch::Fetch, hash_object::HashObject, init::Init, log::Log, merge::Merge,
-        push::Push, remote::Remote, rm::Remove, status::Status, version::Version,
+        pull::Pull, push::Push, remote::Remote, rm::Remove, status::Status, version::Version,
     },
     comunicacion::Comunicacion,
     logger::Logger,
 };
 
-pub enum Comando<'a> {
+pub enum Comando {
     Init(Init),
     Version(Version),
     HashObject(HashObject),
@@ -21,9 +21,9 @@ pub enum Comando<'a> {
     Branch(Branch),
     Commit(Commit),
     Clone(Clone),
-    Fetch(Fetch<'a, TcpStream>),
-    Push(Push<'a>),
-    // Pull,
+    Fetch(Fetch<TcpStream>),
+    Push(Push),
+    Pull(Pull),
     Log(Log),
     Status(Status),
     Remote(Remote),
@@ -31,11 +31,11 @@ pub enum Comando<'a> {
     Unknown,
 }
 
-impl Comando<'_> {
+impl Comando {
     pub fn new(
         input: Vec<String>,
         logger: Arc<Logger>,
-        comunicacion: &mut Comunicacion<TcpStream>,
+        comunicacion: Arc<Comunicacion<TcpStream>>,
     ) -> Result<Comando, String> {
         let (comando, args) = input.split_first().ok_or("No se ingreso ningun comando")?;
 
@@ -52,9 +52,9 @@ impl Comando<'_> {
             "checkout" => Comando::Checkout(Checkout::from(vector_args, logger)?),
             "commit" => Comando::Commit(Commit::from(&mut vector_args, logger)?),
             "fetch" => Comando::Fetch(Fetch::<TcpStream>::new(logger, comunicacion)?),
-            "clone" => Comando::Clone(Clone::from(logger)),
+            "clone" => Comando::Clone(Clone::from(logger, comunicacion)),
             "push" => Comando::Push(Push::new(comunicacion)),
-            // "pull",
+            "pull" => Comando::Pull(Pull::from(logger, comunicacion)?),
             "log" => Comando::Log(Log::from(&mut vector_args, logger)?),
             "status" => Comando::Status(Status::from(logger)?),
             "remote" => Comando::Remote(Remote::from(&mut vector_args, logger)?),
@@ -83,6 +83,7 @@ impl Comando<'_> {
             Comando::Status(ref mut status) => status.ejecutar(),
             Comando::Remote(ref mut remote) => remote.ejecutar(),
             Comando::Merge(ref mut merge) => merge.ejecutar(),
+            Comando::Pull(ref mut pull) => pull.ejecutar(),
             Comando::Unknown => Err("Comando desconocido".to_string()),
         }
     }

@@ -172,6 +172,12 @@ fn leer_archivo(path: &mut Path) -> Result<String, ErrorDeComunicacion> {
     std::io::BufReader::new(archivo).read_line(&mut contenido)?;
     Ok(contenido.trim().to_string())
 }
+//Devuelve true si la ubicacion esta vacia y false en caso contrario.
+//Si falla se presupone que es porque no existe y por lo tanto esta vacio
+pub fn esta_vacio(ubicacion: String) -> Result<bool, String> {
+    let contenido = leer_a_string(PathBuf::from(ubicacion))?;
+    Ok(contenido.is_empty())
+}
 
 fn obtener_referencia(path: &mut PathBuf, prefijo: &str) -> Result<String, ErrorDeComunicacion> {
     let contenido = leer_archivo(path)?;

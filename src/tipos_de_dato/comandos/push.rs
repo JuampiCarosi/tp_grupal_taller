@@ -1,27 +1,24 @@
 use crate::tipos_de_dato::comandos::write_tree;
 use crate::tipos_de_dato::comunicacion::Comunicacion;
-use crate::tipos_de_dato::logger::Log;
 use crate::tipos_de_dato::logger::Logger;
 use crate::tipos_de_dato::objetos::commit::CommitObj;
 use crate::tipos_de_dato::objetos::tree::Tree;
 use crate::tipos_de_dato::packfile::Packfile;
-use crate::utils::compresion;
 use crate::utils::io;
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::io::Write;
 use std::net::TcpStream;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
 // idea: Key -> (String, String) , primera entrada la ref que tiene el cliente, segunda la que tiene el sv.
-pub struct Push<'a> {
+pub struct Push {
     hash_refs: HashMap<String, (String, String)>,
-    comunicacion: &'a mut Comunicacion<TcpStream>,
+    comunicacion: Arc<Comunicacion<TcpStream>>,
 }
 
-impl<'a> Push<'a> {
-    pub fn new(comunicacion: &'a mut Comunicacion<TcpStream>) -> Self {
+impl Push {
+    pub fn new(comunicacion: Arc<Comunicacion<TcpStream>>) -> Self {
         let mut hash_refs: HashMap<String, (String, String)> = HashMap::new();
         let refs = obtener_refs_de(PathBuf::from("./.gir/refs/"), String::from("./.gir/"));
         for referencia in refs {
@@ -75,6 +72,7 @@ impl<'a> Push<'a> {
                 }
             }
         }
+
         println!("hash_refs: {:?}", self.hash_refs);
 
         for (key, value) in &self.hash_refs {
@@ -83,11 +81,11 @@ impl<'a> Push<'a> {
                 &value.1, &value.0, &key
             ))); // viejo (el del sv), nuevo (cliente), ref
                  // checkear que no existan los objetos antes de appendear
-                //  if value.1 == "0".repeat(40) {
-                //      objetos_a_enviar
-                //          .extend(obtener_commits_y_objetos_asociados(&key, &value.0).unwrap());
-                //     continue;
-                //  }
+            if value.1 == "0".repeat(40) {
+                objetos_a_enviar
+                    .extend(obtener_commits_y_objetos_asociados(&key, &value.0).unwrap());
+                continue;
+            }
             if value.1 != value.0 {
                 objetos_a_enviar
                     .extend(obtener_commits_y_objetos_asociados(&key, &value.1).unwrap());
@@ -136,7 +134,23 @@ fn obtener_commits_y_objetos_asociados(
     commits_a_revisar.push(CommitObj::from_hash(ultimo_commit)?);
 
     while let Some(commit) = commits_a_revisar.pop() {
-        if  commit.hash == *commit_limite {
+        if objetos_a_agregar.contains(&commit.hash) || commit.hash == *commit_limite {
+            objetos_a_agregar.insert(commit.hash.clone());
+            let hash_tree = write_tree::conseguir_arbol_from_hash_commit(
+                &commit.hash,
+                "./.gir/objects/".to_string(),
+            );
+            let tree = Tree::from_hash(
+                hash_tree.clone(),
+                PathBuf::from("./.gir/objects/"),
+                logger.clone(),
+            )?;
+            objetos_a_agregar.insert(hash_tree);
+            objetos_a_agregar.extend(
+                tree.obtener_objetos()
+                    .iter()
+                    .map(|objeto| objeto.obtener_hash()),
+            );
             break;
         }
         objetos_a_agregar.insert(commit.hash.clone());
@@ -144,10 +158,17 @@ fn obtener_commits_y_objetos_asociados(
             &commit.hash,
             "./.gir/objects/".to_string(),
         );
-        let tree = Tree::from_hash(hash_tree.clone(), PathBuf::from("./.gir/objects/"), logger.clone())?;
+        let tree = Tree::from_hash(
+            hash_tree.clone(),
+            PathBuf::from("./.gir/objects/"),
+            logger.clone(),
+        )?;
         objetos_a_agregar.insert(hash_tree);
-        objetos_a_agregar.extend(tree.obtener_objetos().iter().map(|objeto| objeto.obtener_hash()));
-       
+        objetos_a_agregar.extend(
+            tree.obtener_objetos()
+                .iter()
+                .map(|objeto| objeto.obtener_hash()),
+        );
 
         for padre in commit.padres {
             let commit_padre = CommitObj::from_hash(padre)?;
@@ -159,7 +180,6 @@ fn obtener_commits_y_objetos_asociados(
     // commits_vec.sort_by_key(|commit| commit.date.tiempo.clone());
 
     Ok(objetos_a_agregar)
-
 }
 
 fn obtener_refs_de(dir: PathBuf, prefijo: String) -> Vec<String> {
