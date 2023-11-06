@@ -4,6 +4,7 @@ mod log_list;
 mod log_seleccionado;
 mod new_branch_dialog;
 mod new_commit_dialog;
+mod push_button;
 mod staging_area;
 
 use std::fs;
@@ -27,6 +28,7 @@ fn inicializar_componentes(
     log_seleccionado::render(&builder, None);
     staging_area::render(&builder, &window, logger.clone());
     new_commit_dialog::render(&builder, &window, logger.clone());
+    push_button::render(&builder, &window);
 }
 
 pub fn ejecutar(logger: Arc<Logger>) {
