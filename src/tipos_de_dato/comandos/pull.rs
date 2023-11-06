@@ -8,7 +8,7 @@ use crate::{
 use super::{fetch::Fetch, merge::Merge};
 
 const UBICACION_RAMA_MASTER: &str = "./.gir/refs/heads/master";
-pub struct Pull {
+pub struct  Pull {
     rama_actual: String,
     remoto: String,
     logger: Arc<Logger>,
@@ -60,9 +60,8 @@ impl Pull {
 
         fetch.recivir_packfile_y_guardar_objetos()?;
 
-
         fetch.actualizar_ramas_locales_del_remoto(&commits_cabezas_y_dir_rama_asosiado)?;
-
+            
         self.actualizar_master_de_ser_necesario(commit_head_remoto)?;
 
 
@@ -77,6 +76,7 @@ impl Pull {
         &self,
         commit_head_remoto: Option<String>,
     ) -> Result<bool, String> {
+        println!("Actualizando master");
         if !io::esta_vacio(UBICACION_RAMA_MASTER.to_string())? {
             return Ok(false);
         }

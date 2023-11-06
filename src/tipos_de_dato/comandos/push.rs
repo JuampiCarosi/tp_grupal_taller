@@ -42,9 +42,7 @@ impl Push {
         let request_data = "git-receive-pack /gir/\0host=example.com\0\0version=1\0"; //en donde dice /.git/ va la dir del repo
         let request_data_con_largo_hex = io::obtener_linea_con_largo_hex(request_data);
         self.comunicacion.enviar(&request_data_con_largo_hex)?;
-        println!("Le mande las cosas");
         let mut refs_recibidas = self.comunicacion.obtener_lineas()?;
-        println!("refs recibidas: {:?}", refs_recibidas);
         let mut actualizaciones = Vec::new();
         let mut objetos_a_enviar = HashSet::new();
 

@@ -1056,3 +1056,283 @@ failed to fill whole buffer
 2023-11-06 13:01:01 | Se ejecuta init
 2023-11-06 13:01:01 | Ya existe un repositorio en este directorio
 2023-11-06 13:01:02 | Push ejecutado con exito
+2023-11-06 13:06:37 | No hay actualizaciones
+2023-11-06 13:06:46 | Se intenta crear comando init con args:[]
+2023-11-06 13:06:46 | Se creo correctamente el comando init:[]
+2023-11-06 13:06:46 | Se ejecuta init
+2023-11-06 13:06:46 | Directorio gir creado en ./.gir
+2023-11-06 13:06:49 | Se intenta crear comando init con args:[]
+2023-11-06 13:06:49 | Se creo correctamente el comando init:[]
+2023-11-06 13:06:49 | Se ejecuta init
+2023-11-06 13:06:49 | Ya existe un repositorio en este directorio
+2023-11-06 13:07:26 | Push ejecutado con exito
+2023-11-06 13:07:35 | Se intenta crear comando init con args:[]
+2023-11-06 13:07:35 | Se creo correctamente el comando init:[]
+2023-11-06 13:07:35 | Se ejecuta init
+2023-11-06 13:07:35 | Ya existe un repositorio en este directorio
+2023-11-06 13:07:37 | Fallo en obtener la linea al leer los priemeros 4 bytes.
+failed to fill whole buffer
+
+2023-11-06 13:08:31 | Se intenta crear comando init con args:[]
+2023-11-06 13:08:31 | Se creo correctamente el comando init:[]
+2023-11-06 13:08:31 | Se ejecuta init
+2023-11-06 13:08:31 | Directorio gir creado en ./.gir
+2023-11-06 13:08:31 | Pull ejecutado con exito
+2023-11-06 13:08:31 | Clone ejecutado con exito
+2023-11-06 13:08:31 | Clone ejecutado con exito
+2023-11-06 13:08:33 | Push ejecutado con exito
+2023-11-06 13:08:37 | Push ejecutado con exito
+2023-11-06 13:08:40 | Se intenta crear comando init con args:[]
+2023-11-06 13:08:40 | Se creo correctamente el comando init:[]
+2023-11-06 13:08:40 | Se ejecuta init
+2023-11-06 13:08:40 | Ya existe un repositorio en este directorio
+2023-11-06 13:08:41 | El cliente esta actualizado
+2023-11-06 13:08:43 | El cliente esta actualizado
+2023-11-06 13:08:44 | El cliente esta actualizado
+2023-11-06 13:09:23 | Se intenta crear comando init con args:[]
+2023-11-06 13:09:23 | Se creo correctamente el comando init:[]
+2023-11-06 13:09:23 | Se ejecuta init
+2023-11-06 13:09:23 | Directorio gir creado en ./.gir
+2023-11-06 13:09:23 | Pull ejecutado con exito
+2023-11-06 13:09:23 | Clone ejecutado con exito
+2023-11-06 13:09:23 | Clone ejecutado con exito
+2023-11-06 13:09:25 | Push ejecutado con exito
+2023-11-06 13:10:06 | No hay actualizaciones
+2023-11-06 13:22:12 | Se intenta crear comando init con args:[]
+2023-11-06 13:22:12 | Se creo correctamente el comando init:[]
+2023-11-06 13:22:12 | Se ejecuta init
+2023-11-06 13:22:12 | Directorio gir creado en ./.gir
+2023-11-06 13:22:12 | Pull ejecutado con exito
+2023-11-06 13:22:12 | Clone ejecutado con exito
+2023-11-06 13:22:12 | Clone ejecutado con exito
+2023-11-06 13:22:14 | Se intenta crear comando init con args:[]
+2023-11-06 13:22:14 | Se creo correctamente el comando init:[]
+2023-11-06 13:22:14 | Se ejecuta init
+2023-11-06 13:22:14 | Ya existe un repositorio en este directorio
+2023-11-06 13:54:51 | Se intenta crear comando init con args:[]
+2023-11-06 13:54:51 | Se creo correctamente el comando init:[]
+2023-11-06 13:54:51 | Se ejecuta init
+2023-11-06 13:54:51 | Directorio gir creado en ./.gir
+2023-11-06 13:54:51 | Pull ejecutado con exito
+2023-11-06 13:54:51 | Clone ejecutado con exito
+2023-11-06 13:54:51 | Clone ejecutado con exito
+2023-11-06 13:55:25 | Ejecutando add
+2023-11-06 13:55:25 | Objeto gir hasheado en ccccc.txt
+2023-11-06 13:55:25 | 
+2023-11-06 13:55:28 | Status terminado
+2023-11-06 13:55:28 | Cambios a ser commiteados:
+         [32mnuevo archivo: ccccc.txt[0m
+
+Cambios no en zona de preparacion:
+
+Cambios no trackeados:
+         [31m.log.txt[0m
+         [31mfile1.txt[0m
+         [31mtest_dir/[0m
+         [31mCargo.toml[0m
+         [31msrc/[0m
+         [31mtmp/[0m
+         [31mREADME.md[0m
+         [31m.gitignore[0m
+         [31mtest_file2.txt[0m
+         [31marchivezco.txt[0m
+         [31motro_dir/[0m
+         [31mtest_file.txt[0m
+         [31marchivo2.txt[0m
+         [31maaaaa.txt[0m
+         [31mtes_dir/[0m
+         [31mlog.txt[0m
+         [31m.vscode/[0m
+         [31mCargo.lock[0m
+         [31msrv/[0m
+         [31m.log[0m
+         [31mbbbbb.txt[0m
+
+2023-11-06 13:55:35 | Comando desconocido
+2023-11-06 13:55:39 | commit fb92c46e3e4bbdf8e26f6bd3f78d9594340d6934
+ Author: 
+adsadasda 
+2023-11-06 13:55:39 | Commit creado
+2023-11-06 13:55:41 | Push ejecutado con exito
+2023-11-06 13:58:35 | Ejecutando add
+2023-11-06 13:58:35 | 
+2023-11-06 13:58:38 | No se pudo leer el archivo .gir/HEAD
+2023-11-06 13:59:06 | Se intenta crear comando init con args:[]
+2023-11-06 13:59:06 | Se creo correctamente el comando init:[]
+2023-11-06 13:59:06 | Se ejecuta init
+2023-11-06 13:59:06 | Directorio gir creado en ./.gir
+2023-11-06 13:59:06 | Directorio gir creado en ./.gir
+2023-11-06 13:59:10 | Ejecutando add
+2023-11-06 13:59:10 | Objeto gir hasheado en archivezco.txt
+2023-11-06 13:59:10 | 
+2023-11-06 13:59:13 | commit 6090086eb3d5e869e0a12e35bb323dad0961b3fc
+ Author: 
+asdsad 
+2023-11-06 13:59:13 | Commit creado
+2023-11-06 13:59:14 | Push ejecutado con exito
+2023-11-06 14:08:16 | Status terminado
+2023-11-06 14:08:16 | Cambios a ser commiteados:
+
+Cambios no en zona de preparacion:
+
+Cambios no trackeados:
+         [31m.log.txt[0m
+         [31mfile1.txt[0m
+         [31mccccc.txt[0m
+         [31mtest_dir/[0m
+         [31mCargo.toml[0m
+         [31msrc/[0m
+         [31mtmp/[0m
+         [31mREADME.md[0m
+         [31m.gitignore[0m
+         [31mtest_file2.txt[0m
+         [31motro_dir/[0m
+         [31mtest_file.txt[0m
+         [31marchivo2.txt[0m
+         [31maaaaa.txt[0m
+         [31mtes_dir/[0m
+         [31mlog.txt[0m
+         [31m.vscode/[0m
+         [31mCargo.lock[0m
+         [31msrv/[0m
+         [31m.log[0m
+         [31mbbbbb.txt[0m
+
+2023-11-06 14:08:20 | Ejecutando add
+2023-11-06 14:08:20 | Objeto gir hasheado en archivo2.txt
+2023-11-06 14:08:20 | 
+2023-11-06 14:08:24 | commit b632d02b3323f64eaf56c8624eb37388a6390a85
+ Author: 
+Adsadasdsadasdasdasd 
+2023-11-06 14:08:24 | Commit creado
+2023-11-06 14:08:25 | Push ejecutado con exito
+2023-11-06 14:09:05 | Se intenta crear comando init con args:[]
+2023-11-06 14:09:05 | Se creo correctamente el comando init:[]
+2023-11-06 14:09:05 | Se ejecuta init
+2023-11-06 14:09:05 | Directorio gir creado en ./.gir
+2023-11-06 14:09:05 | Directorio gir creado en ./.gir
+2023-11-06 14:09:20 | Ejecutando add
+2023-11-06 14:09:20 | 
+2023-11-06 14:09:22 | No hay archivos trackeados para commitear
+2023-11-06 14:09:25 | Status terminado
+2023-11-06 14:09:25 | Cambios a ser commiteados:
+
+Cambios no en zona de preparacion:
+
+Cambios no trackeados:
+         [31m.log.txt[0m
+         [31mfile1.txt[0m
+         [31mccccc.txt[0m
+         [31mtest_dir/[0m
+         [31mCargo.toml[0m
+         [31msrc/[0m
+         [31mtmp/[0m
+         [31mREADME.md[0m
+         [31m.gitignore[0m
+         [31mtest_file2.txt[0m
+         [31marchivezco.txt[0m
+         [31motro_dir/[0m
+         [31mtest_file.txt[0m
+         [31marchivo2.txt[0m
+         [31maaaaa.txt[0m
+         [31mtes_dir/[0m
+         [31mlog.txt[0m
+         [31m.vscode/[0m
+         [31mCargo.lock[0m
+         [31msrv/[0m
+         [31m.log[0m
+         [31mbbbbb.txt[0m
+
+2023-11-06 14:09:28 | Ejecutando add
+2023-11-06 14:09:28 | Objeto gir hasheado en archivezco.txt
+2023-11-06 14:09:28 | 
+2023-11-06 14:09:31 | commit 5699299636f52c8406840fb622c5791552476c0d
+ Author: 
+asdasd 
+2023-11-06 14:09:31 | Commit creado
+2023-11-06 14:09:32 | Push ejecutado con exito
+2023-11-06 14:10:02 | Ejecutando add
+2023-11-06 14:10:02 | 
+2023-11-06 14:10:08 | No hay archivos trackeados para commitear
+2023-11-06 14:10:13 | Status terminado
+2023-11-06 14:10:13 | Cambios a ser commiteados:
+
+Cambios no en zona de preparacion:
+
+Cambios no trackeados:
+         [31m.log.txt[0m
+         [31mfile1.txt[0m
+         [31mccccc.txt[0m
+         [31mtest_dir/[0m
+         [31mCargo.toml[0m
+         [31msrc/[0m
+         [31mtmp/[0m
+         [31mREADME.md[0m
+         [31m.gitignore[0m
+         [31mtest_file2.txt[0m
+         [31motro_dir/[0m
+         [31mtest_file.txt[0m
+         [31marchivo2.txt[0m
+         [31maaaaa.txt[0m
+         [31mtes_dir/[0m
+         [31mlog.txt[0m
+         [31m.vscode/[0m
+         [31mCargo.lock[0m
+         [31msrv/[0m
+         [31m.log[0m
+         [31mbbbbb.txt[0m
+
+2023-11-06 14:10:17 | Ejecutando add
+2023-11-06 14:10:17 | Objeto gir hasheado en archivo2.txt
+2023-11-06 14:10:17 | 
+2023-11-06 14:10:20 | commit b74237f20c94ff06deed62dae3e678369f15cd60
+ Author: 
+Asdada 
+2023-11-06 14:10:20 | Commit creado
+2023-11-06 14:10:21 | Push ejecutado con exito
+2023-11-06 14:10:53 | Se intenta crear comando init con args:[]
+2023-11-06 14:10:53 | Se creo correctamente el comando init:[]
+2023-11-06 14:10:53 | Se ejecuta init
+2023-11-06 14:10:53 | Directorio gir creado en ./.gir
+2023-11-06 14:10:53 | Directorio gir creado en ./.gir
+2023-11-06 14:21:50 | Comando desconocido
+2023-11-06 14:21:51 | Fetch ejecutado con exito
+2023-11-06 14:21:51 | Fetch ejecutado con exito
+2023-11-06 14:22:04 | Fallo en obtener la linea al leer los priemeros 4 bytes.
+failed to fill whole buffer
+
+2023-11-06 14:22:27 | Se intenta crear comando init con args:[]
+2023-11-06 14:22:27 | Se creo correctamente el comando init:[]
+2023-11-06 14:22:27 | Se ejecuta init
+2023-11-06 14:22:27 | Ya existe un repositorio en este directorio
+2023-11-06 14:23:03 | Se intenta crear comando init con args:[]
+2023-11-06 14:23:03 | Se creo correctamente el comando init:[]
+2023-11-06 14:23:03 | Se ejecuta init
+2023-11-06 14:23:03 | Directorio gir creado en ./.gir
+2023-11-06 14:23:03 | Directorio gir creado en ./.gir
+2023-11-06 14:23:20 | Fallo en el envio del mensaje.
+Broken pipe (os error 32)
+
+2023-11-06 14:23:36 | Fetch ejecutado con exito
+2023-11-06 14:23:36 | Fetch ejecutado con exito
+2023-11-06 14:25:58 | Se intenta crear comando init con args:[]
+2023-11-06 14:25:58 | Se creo correctamente el comando init:[]
+2023-11-06 14:25:58 | Se ejecuta init
+2023-11-06 14:25:58 | Directorio gir creado en ./.gir
+2023-11-06 14:25:58 | Directorio gir creado en ./.gir
+2023-11-06 14:26:05 | Fetch ejecutado con exito
+2023-11-06 14:26:05 | Fetch ejecutado con exito
+2023-11-06 14:27:41 | Se intenta crear comando init con args:[]
+2023-11-06 14:27:41 | Se creo correctamente el comando init:[]
+2023-11-06 14:27:41 | Se ejecuta init
+2023-11-06 14:27:41 | Ya existe un repositorio en este directorio
+2023-11-06 14:28:04 | Se intenta crear comando init con args:[]
+2023-11-06 14:28:04 | Se creo correctamente el comando init:[]
+2023-11-06 14:28:04 | Se ejecuta init
+2023-11-06 14:28:04 | Directorio gir creado en ./.gir
+2023-11-06 14:28:04 | Directorio gir creado en ./.gir
+2023-11-06 14:28:12 | Fetch ejecutado con exito
+2023-11-06 14:28:12 | Fetch ejecutado con exito
+2023-11-06 14:28:17 | El cliente esta actualizado
+2023-11-06 14:28:20 | El cliente esta actualizado
+2023-11-06 14:28:21 | El cliente esta actualizado

@@ -347,7 +347,9 @@ pub fn obtener_ack(nombres_archivos: Vec<String>, dir: String) -> Vec<String> {
             break;
         }
     }
-    ack.push(obtener_linea_con_largo_hex("NAK\n"));
+    if ack.is_empty() {
+        ack.push(obtener_linea_con_largo_hex("NAK\n"));
+    }
     ack
 }
 
