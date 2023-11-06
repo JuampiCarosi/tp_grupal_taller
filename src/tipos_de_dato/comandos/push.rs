@@ -75,7 +75,6 @@ impl<'a> Push<'a> {
                 }
             }
         }
-        
         println!("hash_refs: {:?}", self.hash_refs);
 
         for (key, value) in &self.hash_refs {
@@ -84,11 +83,11 @@ impl<'a> Push<'a> {
                 &value.1, &value.0, &key
             ))); // viejo (el del sv), nuevo (cliente), ref
                  // checkear que no existan los objetos antes de appendear
-                 if value.1 == "0".repeat(40) {
-                     objetos_a_enviar
-                         .extend(obtener_commits_y_objetos_asociados(&key, &value.0).unwrap());
-                    continue;
-                 }
+                //  if value.1 == "0".repeat(40) {
+                //      objetos_a_enviar
+                //          .extend(obtener_commits_y_objetos_asociados(&key, &value.0).unwrap());
+                //     continue;
+                //  }
             if value.1 != value.0 {
                 objetos_a_enviar
                     .extend(obtener_commits_y_objetos_asociados(&key, &value.1).unwrap());
@@ -137,15 +136,7 @@ fn obtener_commits_y_objetos_asociados(
     commits_a_revisar.push(CommitObj::from_hash(ultimo_commit)?);
 
     while let Some(commit) = commits_a_revisar.pop() {
-        if objetos_a_agregar.contains(&commit.hash) || commit.hash == *commit_limite {
-            objetos_a_agregar.insert(commit.hash.clone());
-            let hash_tree = write_tree::conseguir_arbol_from_hash_commit(
-                &commit.hash,
-                "./.gir/objects/".to_string(),
-            );
-            let tree = Tree::from_hash(hash_tree.clone(), PathBuf::from("./.gir/objects/"), logger.clone())?;
-            objetos_a_agregar.insert(hash_tree);
-            objetos_a_agregar.extend(tree.obtener_objetos().iter().map(|objeto| objeto.obtener_hash()));
+        if  commit.hash == *commit_limite {
             break;
         }
         objetos_a_agregar.insert(commit.hash.clone());

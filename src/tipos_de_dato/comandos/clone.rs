@@ -38,7 +38,6 @@ impl Clone {
         comunicacion
             .enviar_linea(request_data_con_largo_hex)
             .unwrap();
-
         let version = comunicacion.aceptar_pedido().unwrap(); // leo la version (cambiar el nombre a esto)
         let mut refs_recibidas = comunicacion.obtener_lineas().unwrap();
 
