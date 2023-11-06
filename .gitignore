@@ -4,5 +4,7 @@ log.txt
 /test_dir
 /tmp/*
 !/tmp/.gitkeep
+/srv/*
+!/srv/.gitkeep
 .log
 .log.txt
