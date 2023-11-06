@@ -95,7 +95,7 @@ fn main() -> Result<(), String> {
 
         if input[0] == "gui" {
             println!("Iniciando GUI...");
-            gir::gui::ejecutar(logger.clone());
+            gir::gui::ejecutar(logger.clone(), comunicacion.clone());
             continue;
         }
 
