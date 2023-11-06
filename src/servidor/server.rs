@@ -8,6 +8,7 @@ use std::io;
 use std::net::{TcpListener, TcpStream};
 use std::path::PathBuf;
 use std::str;
+use std::thread;
 
 const VERSION: &str = "version 1";
 const CAPABILITIES: &str = "multi_ack thin-pack side-band side-band-64k ofs-delta shallow no-progress include-tag multi_ack_detailed no-done symref=HEAD:refs/heads/master agent=git/2.17.1";
@@ -48,26 +49,26 @@ impl Servidor {
         })
     }
 
-    // pub fn iniciar_servidor() -> Result<(), ErrorDeComunicacion> {
-    //     while let Ok((stream, _)) = TcpListener::bind((IP, PORT))?.accept() {
-    //         // thread::spawn(move || {
-    //             let mut comunicacion = Comunicacion::new(stream.try_clone().unwrap());
-    //             Self::manejar_cliente(&mut comunicacion, &(env!("CARGO_MANIFEST_DIR").to_string() + DIR)).unwrap();
-    //         // });
-    //     }
-    //     Ok(())
-    // }
-    pub fn server_run(&mut self) -> Result<(), ErrorDeComunicacion> {
-        loop {
-            println!("empezando el loop");
-            let (stream, _) = self.listener.accept()?;
-            println!("recibida una conexion");
-            self.manejar_cliente(&mut Comunicacion::<TcpStream>::new(stream), &self.dir)?;
+    pub fn iniciar_servidor(direccion_y_puerto: &str) -> Result<(), ErrorDeComunicacion> {
+        while let Ok((stream, socket)) = TcpListener::bind(direccion_y_puerto)?.accept() {
+            println!("Conectado al cliente {:?}", socket);
+            thread::spawn(move || {
+                let mut comunicacion = Comunicacion::new(stream.try_clone().unwrap());
+                Self::manejar_cliente(&mut comunicacion, &(env!("CARGO_MANIFEST_DIR").to_string() + DIR)).unwrap();
+            });
         }
+        Ok(())
     }
+    // pub fn server_run(&mut self) -> Result<(), ErrorDeComunicacion> {
+    //     loop {
+    //         println!("empezando el loop");
+    //         let (stream, _) = self.listener.accept()?;
+    //         println!("recibida una conexion");
+    //         self.manejar_cliente(&mut Comunicacion::<TcpStream>::new(stream), &self.dir)?;
+    //     }
+    // }
 
     pub fn manejar_cliente(
-        &self,
         comunicacion: &mut Comunicacion<TcpStream>,
         dir: &str,
     ) -> Result<(), ErrorDeComunicacion> {
