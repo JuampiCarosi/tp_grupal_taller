@@ -1,5 +1,6 @@
 use crate::err_comunicacion::ErrorDeComunicacion;
-use crate::utils::io;
+use crate::tipos_de_dato::packfile::Packfile;
+use crate::utils::{self, io};
 use std::io::{Read, Write};
 use std::net::TcpStream;
 use std::str;
@@ -7,6 +8,7 @@ use std::sync::Mutex;
 
 pub struct Comunicacion<T: Read + Write> {
     flujo: Mutex<T>,
+    repositorio: String,
 }
 
 impl<T: Write + Read> Comunicacion<T> {
@@ -26,16 +28,31 @@ impl<T: Write + Read> Comunicacion<T> {
             TcpStream::connect(direccion_servidor)
                 .map_err(|e| format!("Fallo en en la conecciion con el servido.\n{}\n", e))?,
         );
+        let repositorio = "/gir/".to_string();
 
-        Ok(Comunicacion { flujo })
+        Ok(Comunicacion { flujo, repositorio })
     }
 
     pub fn new(flujo: T) -> Comunicacion<T> {
+        let repositorio = "/gir/".to_string();
+
         Comunicacion {
             flujo: Mutex::new(flujo),
+            repositorio,
         }
     }
 
+    pub fn new_desde_gir_config() -> Result<Comunicacion<TcpStream>, String> {
+        let direccion_servidor = utils::gir_config::conseguir_direccion_ip_y_puerto()?;
+        let flujo = Mutex::new(
+            TcpStream::connect(direccion_servidor)
+                .map_err(|e| format!("Fallo en en la conecciion con el servido.\n{}\n", e))?,
+        );
+
+        let repositorio = "/gir/".to_string();
+
+        Ok(Comunicacion { flujo, repositorio })
+    }
     pub fn enviar(&self, mensaje: &str) -> Result<(), String> {
         self.flujo
             .lock()
@@ -44,10 +61,30 @@ impl<T: Write + Read> Comunicacion<T> {
             .map_err(|e| format!("Fallo en el envio del mensaje.\n{}\n", e))
     }
 
+    ///Inicia el comando git upload pack con el servidor, mandole al servidor el siguiente mensaje
+    /// en formato:
+    ///
+    /// - ''git-upload-pack 'directorio'\0host='host'\0\0verision='numero de version'\0''
+    ///
+    pub fn iniciar_git_upload_pack_con_servidor(&self) -> Result<(), String> {
+        let comando = "git-upload-pack";
+        let repositorio = &self.repositorio;
+        let host = "gir.com";
+        let numero_de_version = 1;
+
+        let mensaje = format!(
+            "{} {}\0host={}\0\0version={}\0",
+            comando, repositorio, host, numero_de_version
+        );
+        self.enviar(&io::obtener_linea_con_largo_hex(&mensaje))?;
+        Ok(())
+    }
+
     pub fn aceptar_pedido(&self) -> Result<String, ErrorDeComunicacion> {
         // lee primera parte, 4 bytes en hexadecimal indican el largo del stream
+
         let mut tamanio_bytes = [0; 4];
-        self.flujo.lock().unwrap().read_exact(&mut tamanio_bytes)?;
+        self.flujo.lock().unwrap().read(&mut tamanio_bytes)?;
         // largo de bytes a str
         let tamanio_str = str::from_utf8(&tamanio_bytes)?;
         // transforma str a u32
@@ -64,6 +101,7 @@ impl<T: Write + Read> Comunicacion<T> {
 
     fn leer_del_flujo_tantos_bytes(&self, cantida_bytes_a_leer: usize) -> Result<Vec<u8>, String> {
         let mut data = vec![0; cantida_bytes_a_leer];
+
         self.flujo
             .lock()
             .map_err(|e| format!("Fallo en el mutex de la lectura.\n{}\n", e))?
@@ -132,7 +170,6 @@ impl<T: Write + Read> Comunicacion<T> {
             if tamanio == 0 {
                 break;
             }
-
             let linea = self.obtener_contenido_linea(tamanio)?;
             lineas.push(linea.to_string());
             println!("linea: {:?}", linea);
@@ -147,7 +184,7 @@ impl<T: Write + Read> Comunicacion<T> {
         Ok(lineas)
     }
 
-    pub fn responder(&mut self, lineas: Vec<String>) -> Result<(), ErrorDeComunicacion> {
+    pub fn responder(&self, lineas: Vec<String>) -> Result<(), ErrorDeComunicacion> {
         if lineas.is_empty() {
             self.flujo
                 .lock()
@@ -159,6 +196,7 @@ impl<T: Write + Read> Comunicacion<T> {
             self.flujo.lock().unwrap().write_all(linea.as_bytes())?;
         }
         if lineas[0].contains("ref") {
+            println!("Envio flush con: {:?}", lineas);
             self.flujo
                 .lock()
                 .unwrap()
@@ -169,6 +207,7 @@ impl<T: Write + Read> Comunicacion<T> {
             && !lineas[0].contains(&"ACK".to_string())
             && !lineas[0].contains(&"done".to_string())
         {
+            println!("Envio flush con: {:?}", lineas);
             self.flujo
                 .lock()
                 .unwrap()
@@ -192,7 +231,7 @@ impl<T: Write + Read> Comunicacion<T> {
         Ok(())
     }
 
-    pub fn obtener_lineas_como_bytes(&self) -> Result<Vec<u8>, String> {
+    pub fn obtener_packfile(&self) -> Result<Vec<u8>, String> {
         let mut buffer = Vec::new();
         let mut temp_buffer = [0u8; 1024]; // Tamaño del búfer de lectura
 
@@ -206,12 +245,14 @@ impl<T: Write + Read> Comunicacion<T> {
                     format!("Fallo en la lectura de la respuesta del servidor.\n{}\n", e)
                 })?;
 
-            if bytes_read == 0 {
-                break; // No hay más bytes disponibles, salir del bucle
-            }
             // Copiar los bytes leídos al búfer principal
             buffer.extend_from_slice(&temp_buffer[0..bytes_read]);
+
+            if buffer.len() > 20 && Packfile::verificar_checksum(&buffer) {
+                break;
+            }
         }
+
         Ok(buffer)
     }
 

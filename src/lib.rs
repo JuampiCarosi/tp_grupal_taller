@@ -29,6 +29,7 @@ pub mod tipos_de_dato {
         pub mod init;
         pub mod log;
         pub mod merge;
+        pub mod pull;
         pub mod push;
         pub mod remote;
         pub mod rm;

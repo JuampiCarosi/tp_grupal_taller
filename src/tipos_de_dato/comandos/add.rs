@@ -2,7 +2,10 @@ use std::{path::PathBuf, sync::Arc};
 
 use crate::{
     tipos_de_dato::{logger::Logger, objeto::Objeto},
-    utils::index::{crear_index, escribir_index, leer_index, ObjetoIndex},
+    utils::{
+        self,
+        index::{crear_index, escribir_index, leer_index, ObjetoIndex},
+    },
 };
 
 use super::status::obtener_arbol_del_commit_head;
@@ -48,10 +51,27 @@ impl Add {
         })
     }
 
+    fn es_directorio_a_ignorar(&self, ubicacion: &PathBuf) -> Result<bool, String> {
+        let path = ubicacion.to_str().unwrap();
+        let log_dir = utils::gir_config::conseguir_ubicacion_log_config()?;
+        Ok(path.contains(".gir")
+            || path.contains(".git")
+            || path.contains(".log")
+            || path.contains(&format!("{}", log_dir.display())))
+    }
+
     pub fn ejecutar(&mut self) -> Result<String, String> {
         self.logger.log("Ejecutando add".to_string());
 
         for ubicacion in self.ubicaciones.clone() {
+            if self.es_directorio_a_ignorar(&ubicacion)? {
+                continue;
+            }
+
+            self.logger.log(format!(
+                "Agregando {} al index",
+                ubicacion.to_str().unwrap()
+            ));
             if ubicacion.is_dir() {
                 Err("No se puede agregar un directorio".to_string())?;
             }
@@ -87,6 +107,7 @@ impl Add {
                 self.index.push(nuevo_objeto_index);
             }
         }
+
         escribir_index(self.logger.clone(), &mut self.index)?;
         Ok("".to_string())
     }

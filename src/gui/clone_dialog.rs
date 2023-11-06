@@ -1,8 +1,12 @@
-use std::{path::PathBuf, sync::Arc};
+use std::{net::TcpStream, path::PathBuf, sync::Arc, thread};
 
 use gtk::prelude::*;
 
-use crate::tipos_de_dato::logger::Logger;
+use crate::tipos_de_dato::{
+    comandos::clone::Clone,
+    comunicacion::{self, Comunicacion},
+    logger::Logger,
+};
 
 fn run_dialog(builder: &gtk::Builder) {
     let dialog: gtk::MessageDialog = builder.object("clone").unwrap();
@@ -10,14 +14,20 @@ fn run_dialog(builder: &gtk::Builder) {
     dialog.hide();
 }
 
-fn boton_confimar_dialog(builder: &gtk::Builder, logger: Arc<Logger>) {
+fn clonar_dialog(
+    builder: &gtk::Builder,
+    logger: Arc<Logger>,
+    comunicacion: Arc<Comunicacion<TcpStream>>,
+) {
     let confirm: gtk::Button = builder.object("confirm-clone").unwrap();
     let dialog: gtk::MessageDialog = builder.object("clone").unwrap();
     let input: gtk::Entry = builder.object("clone-input").unwrap();
     dialog.set_position(gtk::WindowPosition::Center);
 
     confirm.connect_clicked(move |_| {
-        // Clone::from(logger.clone()).ejecutar().unwrap();
+        Clone::from(logger.clone(), comunicacion.clone())
+            .ejecutar()
+            .unwrap();
         input.set_text("");
         dialog.hide();
     });
@@ -36,8 +46,12 @@ fn error_no_repo_dialog(builder: &gtk::Builder) {
     dialog.run();
 }
 
-pub fn render(builder: &gtk::Builder, logger: Arc<Logger>) -> bool {
-    boton_confimar_dialog(builder, logger);
+pub fn render(
+    builder: &gtk::Builder,
+    logger: Arc<Logger>,
+    comunicacion: Arc<Comunicacion<TcpStream>>,
+) -> bool {
+    clonar_dialog(builder, logger, comunicacion);
     run_dialog(builder);
 
     if !PathBuf::from(".gir").is_dir() {
