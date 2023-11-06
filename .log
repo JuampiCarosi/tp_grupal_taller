@@ -1026,3 +1026,33 @@ failed to fill whole buffer
 2023-11-06 12:49:41 | Se ejecuta init
 2023-11-06 12:49:41 | Ya existe un repositorio en este directorio
 2023-11-06 12:49:44 | El cliente esta actualizado
+2023-11-06 12:50:58 | Se intenta crear comando init con args:[]
+2023-11-06 12:50:58 | Se creo correctamente el comando init:[]
+2023-11-06 12:50:58 | Se ejecuta init
+2023-11-06 12:50:58 | Directorio gir creado en ./.gir
+2023-11-06 12:50:58 | Pull ejecutado con exito
+2023-11-06 12:50:58 | Clone ejecutado con exito
+2023-11-06 12:50:58 | Clone ejecutado con exito
+2023-11-06 12:51:01 | Se intenta crear comando init con args:[]
+2023-11-06 12:51:01 | Se creo correctamente el comando init:[]
+2023-11-06 12:51:01 | Se ejecuta init
+2023-11-06 12:51:01 | Ya existe un repositorio en este directorio
+2023-11-06 12:51:02 | Push ejecutado con exito
+2023-11-06 12:51:06 | El cliente esta actualizado
+2023-11-06 12:51:07 | El cliente esta actualizado
+2023-11-06 13:00:58 | Se intenta crear comando init con args:[]
+2023-11-06 13:00:58 | Se creo correctamente el comando init:[]
+2023-11-06 13:00:58 | Se ejecuta init
+2023-11-06 13:00:58 | Directorio gir creado en ./.gir
+2023-11-06 13:00:58 | Pull ejecutado con exito
+2023-11-06 13:00:58 | Clone ejecutado con exito
+2023-11-06 13:00:58 | Clone ejecutado con exito
+2023-11-06 13:01:00 | Se intenta crear comando init con args:[]
+2023-11-06 13:01:00 | Se creo correctamente el comando init:[]
+2023-11-06 13:01:00 | Se ejecuta init
+2023-11-06 13:01:00 | Ya existe un repositorio en este directorio
+2023-11-06 13:01:01 | Se intenta crear comando init con args:[]
+2023-11-06 13:01:01 | Se creo correctamente el comando init:[]
+2023-11-06 13:01:01 | Se ejecuta init
+2023-11-06 13:01:01 | Ya existe un repositorio en este directorio
+2023-11-06 13:01:02 | Push ejecutado con exito

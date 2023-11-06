@@ -11,8 +11,9 @@ fn main() -> Result<(), ()> {
     }
 
     let address = "127.0.0.1:".to_owned() + &argv[1];
-    let mut sv = Servidor::new(&address).unwrap();
-    sv.server_run().unwrap();
+    Servidor::iniciar_servidor(&address).unwrap();
+    // let mut sv = Servidor::new(&address).unwrap();
+    // sv.server_run().unwrap();
     Ok(())
 }
 
