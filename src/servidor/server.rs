@@ -27,23 +27,23 @@ impl Servidor {
         // busca la carpeta raiz del proyecto (evita hardcodear la ruta)
         let dir = env!("CARGO_MANIFEST_DIR").to_string() + "/srv";
         // esto es para checkear, no tengo implementado nada de lo que dice xd
-        let capacidades: Vec<String> = [
-            "multi_ack",
-            "thin-pack",
-            "side-band",
-            "side-band-64k",
-            "ofs-delta",
-            "shallow",
-            "no-progress",
-            "include-tag",
-        ]
-        .iter()
-        .map(|x| x.to_string())
-        .collect();
+        // let capacidades: Vec<String> = [
+        //     "multi_ack",
+        //     "thin-pack",
+        //     "side-band",
+        //     "side-band-64k",
+        //     "ofs-delta",
+        //     "shallow",
+        //     "no-progress",
+        //     "include-tag",
+        // ]
+        // .iter()
+        // .map(|x| x.to_string())
+        // .collect();
         Ok(Servidor {
             listener,
             dir,
-            capacidades,
+            capacidades: Vec::new(),
         })
     }
 

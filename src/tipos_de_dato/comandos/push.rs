@@ -1,3 +1,5 @@
+use flate2::read;
+
 use crate::tipos_de_dato::comandos::write_tree;
 use crate::tipos_de_dato::comunicacion::Comunicacion;
 use crate::tipos_de_dato::logger::Logger;
@@ -41,10 +43,9 @@ impl Push {
         let request_data = "git-receive-pack /gir/\0host=example.com\0\0version=1\0"; //en donde dice /.git/ va la dir del repo
 
         let request_data_con_largo_hex = io::obtener_linea_con_largo_hex(request_data);
-
         self.comunicacion.enviar(&request_data_con_largo_hex)?;
         println!("Le mande las cosas");
-        let mut refs_recibidas = self.comunicacion.obtener_lineas().unwrap();
+        let mut refs_recibidas = self.comunicacion.obtener_lineas()?;
         println!("refs recibidas: {:?}", refs_recibidas);
         let mut actualizaciones = Vec::new();
         let mut objetos_a_enviar = HashSet::new();
@@ -52,11 +53,13 @@ impl Push {
         let _version = refs_recibidas.remove(0);
         let first_ref = refs_recibidas.remove(0);
         // caso en el que el server no tiene refs
-        if first_ref.contains(&"0".repeat(40)) {
-            let referencia_y_capacidades = first_ref.split('\0').collect::<Vec<&str>>();
-            let capacidades = referencia_y_capacidades[0].to_string();
-            // refs_recibidas.push(referencia_y_capacidades[0].to_string());
-        }
+        // if first_ref.contains(&"0".repeat(40)) {
+        let referencia_y_capacidades = first_ref.split('\0').collect::<Vec<&str>>();
+        let referencia = referencia_y_capacidades[0].to_string();
+        let capacidades = referencia_y_capacidades[1].to_string();
+        if  !referencia.contains(&"0".repeat(40)){ 
+            refs_recibidas.push(referencia_y_capacidades[0].to_string());
+        } 
         println!("refs recibidas: {:?}", refs_recibidas);
         for referencia in &refs_recibidas {
             let obj_id = referencia.split(' ').collect::<Vec<&str>>()[0];
@@ -73,7 +76,6 @@ impl Push {
             }
         }
 
-        println!("hash_refs: {:?}", self.hash_refs);
 
         for (key, value) in &self.hash_refs {
             actualizaciones.push(io::obtener_linea_con_largo_hex(&format!(
@@ -91,7 +93,10 @@ impl Push {
                     .extend(obtener_commits_y_objetos_asociados(&key, &value.1).unwrap());
             }
         }
+        println!("hash_refs: {:?}", self.hash_refs);
+
         println!("objetos a enviar: {:?}", objetos_a_enviar);
+        println!("actualizaciones: {:?}", actualizaciones);
 
         if !actualizaciones.is_empty() {
             self.comunicacion.responder(actualizaciones).unwrap();

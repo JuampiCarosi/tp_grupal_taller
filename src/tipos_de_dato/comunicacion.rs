@@ -170,7 +170,6 @@ impl<T: Write + Read> Comunicacion<T> {
             if tamanio == 0 {
                 break;
             }
-
             let linea = self.obtener_contenido_linea(tamanio)?;
             lineas.push(linea.to_string());
             println!("linea: {:?}", linea);
