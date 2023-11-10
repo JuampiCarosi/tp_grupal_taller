@@ -51,7 +51,7 @@ impl Comando {
             "branch" => Comando::Branch(Branch::from(&mut vector_args, logger)?),
             "checkout" => Comando::Checkout(Checkout::from(vector_args, logger)?),
             "commit" => Comando::Commit(Commit::from(&mut vector_args, logger)?),
-            "fetch" => Comando::Fetch(Fetch::<TcpStream>::new(logger, comunicacion)?),
+            "fetch" => Comando::Fetch(Fetch::<TcpStream>::new(vector_args, logger, comunicacion)?),
             "clone" => Comando::Clone(Clone::from(logger, comunicacion)),
             "push" => Comando::Push(Push::new(comunicacion)),
             "pull" => Comando::Pull(Pull::from(logger, comunicacion)?),

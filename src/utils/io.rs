@@ -15,7 +15,7 @@ pub fn obtener_objetos_del_directorio(dir: String) -> Result<Vec<String>, ErrorD
                     && archivo.file_name().into_string().unwrap() != "info"
                     && archivo.file_name().into_string().unwrap() != "pack"
                 {
-                    let path = archivo.path();
+                    let path = archivo.path(); //que onda este if
                     if !path.to_string_lossy().contains("log.txt") {
                         let _nombre_carpeta = archivo.file_name().into_string().unwrap();
                         objetos.append(&mut obtener_objetos_con_nombre_carpeta(path.clone())?);

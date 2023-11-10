@@ -25,7 +25,7 @@ impl Pull {
         logger: Arc<Logger>,
         comunicacion: Arc<Comunicacion<TcpStream>>,
     ) -> Result<Pull, String> {
-        let rama_actual = Self::obtener_rama_actual()?;
+        let rama_actual = utils::ramas::obtener_rama_actual()?;
         let remoto = "origin".to_string(); //momento, necesita ser el mismo que fetch
         Ok(Pull {
             rama_actual,
@@ -33,19 +33,6 @@ impl Pull {
             logger,
             comunicacion,
         })
-    }
-    fn obtener_rama_actual() -> Result<String, String> {
-        let dir_rama_actual = Self::obtener_dir_rama_actual()?;
-        let rama = utils::path_buf::obtener_nombre(&dir_rama_actual)?;
-        Ok(rama)
-    }
-
-    fn obtener_dir_rama_actual() -> Result<PathBuf, String> {
-        let contenido_head = io::leer_a_string("./.gir/HEAD")?;
-        let (_, dir_rama_actual) = contenido_head
-            .split_once(' ')
-            .ok_or(format!("Fallo al obtener la rama actual\n"))?;
-        Ok(PathBuf::from(dir_rama_actual.trim()))
     }
 
     fn obtener_head_remoto(&self) -> Result<String, String> {
@@ -55,7 +42,8 @@ impl Pull {
 
     pub fn ejecutar(&self) -> Result<String, String> {
         self.comunicacion.iniciar_git_upload_pack_con_servidor()?;
-        let fetch = Fetch::<TcpStream>::new(self.logger.clone(), self.comunicacion.clone())?;
+        let fetch =
+            Fetch::<TcpStream>::new(Vec::new(), self.logger.clone(), self.comunicacion.clone())?;
         //en caso de clone el commit head se tiene que utilizar
         let (
             capacidades_servidor,

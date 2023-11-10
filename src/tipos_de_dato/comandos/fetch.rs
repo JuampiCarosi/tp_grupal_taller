@@ -1,4 +1,5 @@
 use crate::tipos_de_dato::comunicacion::Comunicacion;
+use crate::tipos_de_dato::config::Config;
 use crate::tipos_de_dato::logger::Logger;
 use crate::tipos_de_dato::packfile::Packfile;
 use crate::utils::{self, io};
@@ -9,7 +10,7 @@ use std::sync::Arc;
 
 const SE_ENVIO_ALGUN_PEDIDO: bool = true;
 const NO_SE_ENVIO_NINGUN_PEDIDO: bool = false;
-
+const GIR_FETCH: &str = "gir fetch <remoto>";
 pub struct Fetch<T: Write + Read> {
     remoto: String,
     comunicacion: Arc<Comunicacion<T>>,
@@ -19,11 +20,13 @@ pub struct Fetch<T: Write + Read> {
 
 impl<T: Write + Read> Fetch<T> {
     pub fn new(
+        args: Vec<String>,
         logger: Arc<Logger>,
         comunicacion: Arc<Comunicacion<TcpStream>>,
     ) -> Result<Fetch<TcpStream>, String> {
-        let remoto = "origin".to_string();
-        //"Por ahora lo hardcoedo necesito el config que no esta en esta rama";
+        Self::verificar_argumentos(&args)?;
+
+        let remoto = Self::obtener_remoto(args)?;
 
         let capacidades_local = Vec::new();
         //esto lo deberia tener la comunicacion creo yo
@@ -34,13 +37,14 @@ impl<T: Write + Read> Fetch<T> {
             logger,
         })
     }
+
+    #[cfg(test)]
     //pòr ahoar para testing, para mi asi deberia ser recibiendo el comunicacion
-    pub fn new_testing(
+    fn new_testing(
         logger: Arc<Logger>,
         comunicacion: Arc<Comunicacion<T>>,
     ) -> Result<Fetch<T>, String> {
         let remoto = "origin".to_string();
-        //"Por ahora lo hardcoedo necesito el config que no esta en esta rama";
 
         let capacidades_local = Vec::new();
         //esto lo deberia tener la comunicacion creo yo
@@ -50,6 +54,44 @@ impl<T: Write + Read> Fetch<T> {
             capacidades_local,
             logger,
         })
+    }
+
+    fn verificar_argumentos(args: &Vec<String>) -> Result<(), String> {
+        if args.len() > 1 {
+            return Err(format!(
+                "Parametros desconocidos {}\n {}",
+                args.join(" "),
+                GIR_FETCH
+            ));
+        };
+        Ok(())
+    }
+
+    fn obtener_remoto(args: Vec<String>) -> Result<String, String> {
+        let remoto = if args.len() == 1 {
+            Self::verificar_remoto(&args[0])?
+        } else {
+            Self::obtener_remoto_rama_actual()?
+        };
+        Ok(remoto)
+    }
+
+    ///verifica si el remoto envio por el usario existe
+    fn verificar_remoto(remoto: &String) -> Result<String, String> {
+        if let false = Config::leer_config()?.existe_remote(remoto) {
+            return  Err(format!("Remoto desconocido{}\nSi quiere añadir un nuevo remoto:\n\ngir remote add [<nombre-remote>] [<url-remote>]\n\n", remoto));
+        };
+
+        Ok(remoto.clone())
+    }
+
+    ///obtiene el remo asosiado a la rama remota actual. Falla si no existe
+    fn obtener_remoto_rama_actual() -> Result<String, String> {
+        Config::leer_config()?
+            .obtener_remoto_rama_actual()
+            .ok_or(format!(
+                "La rama actual no se encuentra asosiado a ningun remoto\nUtilice:\n\ngir remote add [<nombre-remote>] [<url-remote>]\n\nDespues:\n\n{}\n\n", GIR_FETCH
+            ))
     }
 
     // -------------------------------------------------------------
@@ -131,6 +173,7 @@ impl<T: Write + Read> Fetch<T> {
     fn enviar_lo_que_tengo(&self) -> Result<(), String> {
         let objetos_directorio =
             io::obtener_objetos_del_directorio("./.gir/objects/".to_string()).unwrap();
+
         if !objetos_directorio.is_empty() {
             self.comunicacion
                 .enviar_lo_que_tengo_al_servidor_pkt(&objetos_directorio)?;
@@ -148,7 +191,7 @@ impl<T: Write + Read> Fetch<T> {
     fn recivir_nack(&self) -> Result<(), String> {
         //POR AHORA NO HACEMOS, NADA CON ESTO: EVALUAR QUE HACER. SOLO LEERMOS
         //PARA SEGUIR EL FLUJO
-        let acks_nak = self.comunicacion.obtener_lineas()?;
+        let _acks_nak = self.comunicacion.obtener_lineas()?;
         Ok(())
     }
 
@@ -197,7 +240,10 @@ impl<T: Write + Read> Fetch<T> {
 
         for (commit_cabeza_remoto, dir_rama_asosiada) in commits_cabezas_y_dir_rama_asosiado {
             let dir_rama_asosiada_local =
-                self.convertir_de_dir_rama_remota_a_dir_rama_local(dir_rama_asosiada)?;
+                utils::ramas::convertir_de_dir_rama_remota_a_dir_rama_local(
+                    &self.remoto,
+                    dir_rama_asosiada,
+                )?;
 
             if !dir_rama_asosiada_local.exists() {
                 commits_de_cabeza_de_rama_faltantes.push(commit_cabeza_remoto.to_string());
@@ -255,7 +301,7 @@ impl<T: Write + Read> Fetch<T> {
         String,
     > {
         let mut lineas_recibidas = self.comunicacion.obtener_lineas()?;
-        let version = lineas_recibidas.remove(0); //la version del server
+        let _version = lineas_recibidas.remove(0); //la version del server
 
         let segunda_linea = lineas_recibidas.remove(0);
 
@@ -285,7 +331,7 @@ impl<T: Write + Read> Fetch<T> {
         for linea in lineas_recibidas {
             let (commit, dir) = self.obtener_commit_y_dir_asosiado(&linea)?;
 
-            if self.es_la_ruta_a_una_rama(&dir) {
+            if utils::ramas::es_la_ruta_a_una_rama(&dir) {
                 commits_cabezas_y_dir_rama_asosiados.push((commit, dir));
             } else {
                 commits_y_tags_asosiados.push((commit, dir));
@@ -296,35 +342,6 @@ impl<T: Write + Read> Fetch<T> {
             commits_cabezas_y_dir_rama_asosiados,
             commits_y_tags_asosiados,
         ))
-    }
-
-    ///Comprueba si dir es el la ruta a una carpeta que corresponde a una rama o a una
-    /// tag.
-    ///
-    /// Si el path contien heads entonces es una rama, devuelve true. Caso contrio es un tag,
-    /// devuelve false
-    fn es_la_ruta_a_una_rama(&self, dir: &PathBuf) -> bool {
-        for componente in dir.iter() {
-            if let Some(componente_str) = componente.to_str() {
-                if componente_str == "heads" {
-                    return true;
-                }
-            }
-        }
-        false
-    }
-
-    fn convertir_de_dir_rama_remota_a_dir_rama_local(
-        &self,
-        dir_rama_remota: &PathBuf,
-    ) -> Result<PathBuf, String> {
-        let carpeta_del_remoto = format!("./.gir/refs/remotes/{}/", self.remoto);
-        //"./.gir/refs/remotes/origin/";
-
-        let rama_remota = utils::path_buf::obtener_nombre(dir_rama_remota)?;
-        let dir_rama_local = PathBuf::from(carpeta_del_remoto + rama_remota.as_str());
-
-        Ok(dir_rama_local)
     }
 
     fn separara_capacidades(
@@ -368,7 +385,10 @@ impl<T: Write + Read> Fetch<T> {
     ) -> Result<(), String> {
         for (commit_cabeza_de_rama, dir_rama_remota) in commits_cabezas_y_dir_rama_asosiado {
             let dir_rama_local_del_remoto =
-                self.convertir_de_dir_rama_remota_a_dir_rama_local(&dir_rama_remota)?;
+                utils::ramas::convertir_de_dir_rama_remota_a_dir_rama_local(
+                    &self.remoto,
+                    &dir_rama_remota,
+                )?;
 
             io::escribir_bytes(dir_rama_local_del_remoto, commit_cabeza_de_rama)?;
         }
