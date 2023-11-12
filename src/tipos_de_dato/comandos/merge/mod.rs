@@ -102,17 +102,25 @@ impl Merge {
         Err("No se encontro un commit base entre las dos ramas".to_string())
     }
 
-    /// Devuelve un vector con las lineas que difieren entre dos objetos
+    /// Devuelve un vector con las lineas que difieren entre dos archivos
+    fn obtener_diffs_entre_dos_archivos(
+        archivo_1: &String,
+        archivo_2: &String,
+    ) -> Result<Vec<(usize, DiffType)>, String> {
+        let archivo_1_splitteado = archivo_1.split('\n').collect::<Vec<&str>>();
+        let archivo_2_splitteado = archivo_2.split('\n').collect::<Vec<&str>>();
+        let diff = Self::obtener_diff(archivo_1_splitteado, archivo_2_splitteado);
+        Ok(diff)
+    }
+
+    /// Devuelve un vector con las lineas que difieren entre dos archivos
     fn obtener_diffs_entre_dos_objetos(
         hash_objeto1: String,
         hash_objeto2: String,
     ) -> Result<Vec<(usize, DiffType)>, String> {
         let (_, contenido1) = cat_file::obtener_contenido_objeto(hash_objeto1)?;
         let (_, contenido2) = cat_file::obtener_contenido_objeto(hash_objeto2)?;
-        let contenido1_splitteado = contenido1.split('\n').collect::<Vec<&str>>();
-        let contenido2_splitteado = contenido2.split('\n').collect::<Vec<&str>>();
-        let diff = Self::obtener_diff(contenido1_splitteado, contenido2_splitteado);
-        Ok(diff)
+        Self::obtener_diffs_entre_dos_archivos(&contenido1, &contenido2)
     }
 
     /// Calcula la matriz de Longet Common Subsequence entre dos textos
@@ -138,56 +146,6 @@ impl Merge {
         matriz_lcs
     }
 
-    /// Devuelve la cantidad de lineas anteriores que solo tienen removes,
-    /// por ejemplo si el diff es:
-    /// [(1, Removed("hola")), (2, Removed("chau")), (2, Added("juampi"))]
-    /// la cantidad de lineas anteriores que solo tienen removes es 1, ya que en la linea 1
-    /// se removio hola, pero en la 2 se removio chau y se agrego juampi.
-    /// Esto sirve para reindexar los resultados de obtener_diff, ya que en los casos donde
-    /// la linea anterior solo tiene removes, el indice de la linea actual se debe mover
-    fn cantidad_de_anteriores_solo_con_remove(
-        resultados: &Vec<(usize, DiffType)>,
-        i: usize,
-    ) -> usize {
-        let mut cantidad = 0;
-        let mut i = i;
-        let mut linea = resultados[i].0;
-        let mut tiene_solo_remove = true;
-        while i != 0 {
-            if linea != resultados[i].0 {
-                if tiene_solo_remove {
-                    cantidad += 1;
-                }
-                linea = resultados[i].0;
-                tiene_solo_remove = true;
-            }
-            match resultados[i].1 {
-                DiffType::Removed(_) => i -= 1,
-                _ => {
-                    tiene_solo_remove = false;
-                    i -= 1;
-                }
-            }
-        }
-        if tiene_solo_remove {
-            cantidad += 1;
-        }
-        cantidad
-    }
-
-    /// los resultados pueden venir con lineas donde solo hay removes, por lo que hay que mover el usize los add
-    /// en los casos donde la linea anterior solo tiene removes
-    /// TODO: hacer mas eficiente con PD de la mano con cantidad_de_anteriores_solo_con_remove
-    fn reindexar_resultados(resultados: &mut Vec<(usize, DiffType)>) {
-        for i in 0..resultados.len() {
-            if let DiffType::Added(_) = resultados[i].1 {
-                let cantidad_anteriores_solo_con_remove =
-                    Self::cantidad_de_anteriores_solo_con_remove(resultados, i);
-                resultados[i].0 -= cantidad_anteriores_solo_con_remove;
-            }
-        }
-    }
-
     /// Devuelve un vector con las lineas que difieren entre dos textos
     /// donde los textos son separados en lineas, En el vector se encuentra una tupla con
     /// el diff y el indice de la linea en el texto1. El texto1 es el texto base, y el texto2
@@ -200,7 +158,7 @@ impl Merge {
 
         while i != 0 || j != 0 {
             if i == 0 {
-                resultado_diff.push((j, DiffType::Added(texto2[j - 1].trim().to_string())));
+                resultado_diff.push((i, DiffType::Added(texto2[j - 1].trim().to_string())));
                 j -= 1;
             } else if j == 0 {
                 resultado_diff.push((i, DiffType::Removed(texto1[i - 1].trim().to_string())));
@@ -218,7 +176,6 @@ impl Merge {
             }
         }
         resultado_diff.reverse();
-        Self::reindexar_resultados(&mut resultado_diff);
         resultado_diff
     }
 
@@ -250,7 +207,7 @@ impl Merge {
     }
 
     /// Devuelve el contenido del archivo mergeado y un booleano que indica si hubo conflictos
-    fn mergear_archivos(
+    fn mergear_diffs(
         diff_actual: Vec<(usize, DiffType)>,
         diff_a_mergear: Vec<(usize, DiffType)>,
         archivo_base: String,
@@ -275,25 +232,37 @@ impl Merge {
         let mut contenido_por_regiones: Vec<Region> = Vec::new();
         let lineas_archivo_base = archivo_base.split('\n').collect::<Vec<&str>>();
 
+        let mut anterior_fue_conflicto = false;
+        // println!("{:?}", posibles_conflictos);
         for i in 0..posibles_conflictos.len() {
             let posible_conflicto = &posibles_conflictos[i];
             if Self::hay_conflicto(posible_conflicto) {
-                hubo_conflictos = true;
                 contenido_por_regiones.push(Self::resolver_conflicto(
                     posible_conflicto,
                     lineas_archivo_base.iter().nth(i).unwrap_or(&""),
                 ));
+                hubo_conflictos = true;
+                anterior_fue_conflicto = true;
             } else if posible_conflicto.len() == 2 {
                 contenido_por_regiones.push(resolver_merge_len_2(
                     posible_conflicto,
                     lineas_archivo_base[i],
+                    anterior_fue_conflicto,
                 ));
+                anterior_fue_conflicto = false
             } else {
-                for (diff, _) in posible_conflicto {
-                    if let DiffType::Added(linea) = diff {
-                        contenido_por_regiones.push(Region::Normal(linea.clone()))
+                if anterior_fue_conflicto {
+                    contenido_por_regiones
+                        .push(conflicto_len_3(posible_conflicto, lineas_archivo_base[i]));
+                } else {
+                    for (diff, _) in posible_conflicto {
+                        if let DiffType::Added(linea) = diff {
+                            contenido_por_regiones.push(Region::Normal(linea.clone()))
+                        }
                     }
                 }
+
+                anterior_fue_conflicto = false
             }
         }
 
@@ -370,7 +339,7 @@ impl Merge {
             let contenido_base = descomprimir_objeto_gir(objeto_base.obtener_hash())?;
 
             let (resultado, hubo_conflictos) =
-                Self::mergear_archivos(diff_actual, diff_a_mergear, contenido_base);
+                Self::mergear_diffs(diff_actual, diff_a_mergear, contenido_base);
 
             io::escribir_bytes(objeto_base.obtener_path(), resultado)?;
             if hubo_conflictos {
@@ -515,52 +484,131 @@ impl Merge {
     }
 }
 
-// #[cfg(test)]
-// mod tests{
-//     use crate::tipos_de_dato::comandos::hash_object::HashObject;
+#[cfg(test)]
+mod tests {
 
-//     use super::*;
+    use super::*;
 
-//     #[test]
-//     fn test_computar_lcs_grid() {
-//         let mut args = vec!["-w".to_string(), "aaaaa.txt".to_string()];
-//         let logger = Rc::new(Logger::new(PathBuf::from("tmp/hash_object_test01")).unwrap());
-//         let hash_object = HashObject::from(&mut args, logger.clone()).unwrap();
-//         let hash_a = hash_object.ejecutar().unwrap();
+    #[test]
+    fn test_mergear_archivos_sin_conflictos() {
+        let base = "primera linea
+        segunda linea
+        tercera linea
+        cuarta linea
+        "
+        .to_string();
 
-//         let mut args = vec!["-w".to_string(), "bbbbb.txt".to_string()];
-//         let hash_object = HashObject::from(&mut args, logger).unwrap();
-//         let hash_b = hash_object.ejecutar().unwrap();
+        let version_1 = "primera linea
+        segunda linea
+        3ra linea
+        cuarta linea"
+            .to_string();
 
-//         let diff =
-//             Merge::obtener_diffs_entre_dos_objetos(hash_a.to_string(), hash_b.to_string()).unwrap();
-//         println!("{:?}", diff);
-//         assert_eq!("aaa", "b");
-//     }
+        let version_2 = "primera linea
+        segunda linea
+        tercera linea
+        cuarta linea"
+            .to_string();
 
-//     #[test]
-//     fn test_merge_entre_files_segun_base() {
-//         let mut args = vec!["-w".to_string(), "aaaaa.txt".to_string()];
-//         let logger = Rc::new(Logger::new(PathBuf::from("tmp/hash_object_test01")).unwrap());
-//         let hash_object = HashObject::from(&mut args, logger.clone()).unwrap();
-//         let hash_a = hash_object.ejecutar().unwrap();
+        let diff_1 = Merge::obtener_diffs_entre_dos_archivos(&base, &version_1).unwrap();
+        let diff_2 = Merge::obtener_diffs_entre_dos_archivos(&base, &version_2).unwrap();
+        let (contenido_final, _conflictos) = Merge::mergear_diffs(diff_1, diff_2, base);
+        println!("{}", contenido_final);
 
-//         let mut args = vec!["-w".to_string(), "bbbbb.txt".to_string()];
-//         let hash_object = HashObject::from(&mut args, logger.clone()).unwrap();
-//         let hash_b = hash_object.ejecutar().unwrap();
+        assert_eq!(
+            contenido_final,
+            "primera linea\nsegunda linea\n3ra linea\ncuarta linea\n"
+        )
+    }
 
-//         let mut args = vec!["-w".to_string(), "ccccc.txt".to_string()];
-//         let hash_object = HashObject::from(&mut args, logger).unwrap();
-//         let hash_c = hash_object.ejecutar().unwrap();
-//         let contenido_base = leer_a_string("ccccc.txt").unwrap();
+    #[test]
+    fn test_mergear_archivos_con_cambios_cerca() {
+        let base = "primera linea
+        segunda linea
+        tercera linea
+        cuarta linea
+        "
+        .to_string();
 
-//         let diff_a_c =
-//             Merge::obtener_diffs_entre_dos_objetos(hash_c.to_string(), hash_a.to_string()).unwrap();
-//         let diff_b_c =
-//             Merge::obtener_diffs_entre_dos_objetos(hash_c.to_string(), hash_b.to_string()).unwrap();
-//         let (contenido_final, conflictos) =
-//             Merge::mergear_archivos(diff_a_c, diff_b_c, contenido_base);
-//         println!("{:?}", contenido_final);
-//         assert_eq!(contenido_final, "hola\njuampi\nronaldo\n");
-//     }
-// }
+        let version_1 = "primera linea
+        segunda_linea
+        3ra linea
+        cuarta linea"
+            .to_string();
+
+        let version_2 = "primera linea
+        2da linea
+        tercera linea
+        cuarta linea"
+            .to_string();
+
+        let diff_1 = Merge::obtener_diffs_entre_dos_archivos(&base, &version_1).unwrap();
+        let diff_2 = Merge::obtener_diffs_entre_dos_archivos(&base, &version_2).unwrap();
+        let (contenido_final, _conflictos) = Merge::mergear_diffs(diff_1, diff_2, base);
+        println!("{}", contenido_final);
+
+        assert_eq!(
+            contenido_final,
+            "primera linea\n<<<<<< HEAD\nsegunda_linea\n3ra linea\n\n======\n2da linea\ntercera linea\n>>>>>> Entrante\ncuarta linea\n"
+        )
+    }
+    #[test]
+    fn test_mergear_archivos_con_cambios_lejos() {
+        let base = "primera linea
+        segunda linea
+        tercera linea
+        cuarta linea"
+            .to_string();
+
+        let version_1 = "primera linea
+        2da linea
+        tercera linea
+        cuarta linea"
+            .to_string();
+
+        let version_2 = "primera linea
+        segunda linea
+        tercera linea
+        4ta linea"
+            .to_string();
+
+        let diff_1 = Merge::obtener_diffs_entre_dos_archivos(&base, &version_1).unwrap();
+        let diff_2 = Merge::obtener_diffs_entre_dos_archivos(&base, &version_2).unwrap();
+        let (contenido_final, _conflictos) = Merge::mergear_diffs(diff_1, diff_2, base);
+        println!("{}", contenido_final);
+
+        assert_eq!(
+            contenido_final,
+            "primera linea\n2da linea\ntercera linea\n4ta linea\n",
+        )
+    }
+
+    #[test]
+    fn test_mergear_archivos_con_muchos_conflictos() {
+        let base = "primera linea
+        segunda linea
+        tercera linea
+        cuarta linea"
+            .to_string();
+
+        let version_1 = "primera linea
+        3 linea
+        cuarta linea"
+            .to_string();
+
+        let version_2 = "primera linea
+        2da linea
+        3ra linea
+        cuarta linea"
+            .to_string();
+
+        let diff_1 = Merge::obtener_diffs_entre_dos_archivos(&base, &version_1).unwrap();
+        let diff_2 = Merge::obtener_diffs_entre_dos_archivos(&base, &version_2).unwrap();
+        let (contenido_final, _conflictos) = Merge::mergear_diffs(diff_1, diff_2, base);
+
+        assert_eq!(
+            contenido_final,
+            "primera linea\n<<<<<< HEAD\n3 linea\n======\n2da linea\n3ra linea\n>>>>>> Entrante\ncuarta linea\n"
+        )
+    }
+}
