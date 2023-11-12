@@ -246,13 +246,11 @@ impl Merge {
 
             let region = if Self::hay_conflicto(posible_conflicto) {
                 hubo_conflictos = true;
-                anterior_fue_conflicto = true;
                 Self::resolver_conflicto(
                     posible_conflicto,
                     lineas_archivo_base.iter().nth(i).unwrap_or(&""),
                 )
             } else if posible_conflicto.len() == 2 {
-                anterior_fue_conflicto = false;
                 resolver_merge_len_2(
                     posible_conflicto,
                     lineas_archivo_base[i],
@@ -266,6 +264,7 @@ impl Merge {
                 )
             };
 
+            anterior_fue_conflicto = Self::hay_conflicto(posible_conflicto);
             contenido_por_regiones.push(region);
         }
 
@@ -493,7 +492,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_mergear_archivos_sin_conflictos() {
+    fn test01_mergear_archivos_sin_conflictos() {
         let base = "primera linea
         segunda linea
         tercera linea
@@ -525,7 +524,7 @@ mod tests {
     }
 
     #[test]
-    fn test_mergear_archivos_con_cambios_cerca() {
+    fn test02_mergear_archivos_con_cambios_cerca() {
         let base = "primera linea
         segunda linea
         tercera linea
@@ -556,7 +555,7 @@ mod tests {
         )
     }
     #[test]
-    fn test_mergear_archivos_con_cambios_lejos() {
+    fn test03_mergear_archivos_con_cambios_lejos() {
         let base = "primera linea
         segunda linea
         tercera linea
@@ -587,7 +586,7 @@ mod tests {
     }
 
     #[test]
-    fn test_mergear_archivos_con_muchos_conflictos() {
+    fn test04_mergear_archivos_con_muchos_conflictos() {
         let base = "primera linea
         segunda linea
         tercera linea
@@ -612,6 +611,38 @@ mod tests {
         assert_eq!(
             contenido_final,
             "primera linea\n<<<<<< HEAD\n3 linea\n======\n2da linea\n3ra linea\n>>>>>> Entrante\ncuarta linea\n"
+        )
+    }
+
+    #[test]
+    fn test05_mergear_archivos_con_conflictos_y_lineas_repetidas() {
+        let base = "primera linea
+        segunda linea
+        tercera linea
+        cuarta linea
+        quinta linea"
+            .to_string();
+
+        let version_1 = "primera linea
+        3 linea
+        cuarta linea
+        quinta linea"
+            .to_string();
+
+        let version_2 = "primera linea
+        2da linea
+        3ra linea
+        cuarta linea
+        quinta linea"
+            .to_string();
+
+        let diff_1 = Merge::obtener_diffs_entre_dos_archivos(&base, &version_1).unwrap();
+        let diff_2 = Merge::obtener_diffs_entre_dos_archivos(&base, &version_2).unwrap();
+        let (contenido_final, _conflictos) = Merge::mergear_diffs(diff_1, diff_2, base);
+
+        assert_eq!(
+            contenido_final,
+            "primera linea\n<<<<<< HEAD\n3 linea\n======\n2da linea\n3ra linea\n>>>>>> Entrante\ncuarta linea\nquinta linea\n"
         )
     }
 }
