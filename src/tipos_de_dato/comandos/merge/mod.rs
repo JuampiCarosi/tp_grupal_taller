@@ -22,7 +22,7 @@ use crate::{
     },
 };
 
-use self::estrategias_conflictos::{conflicto_len_3, conflicto_len_4};
+use self::estrategias_conflictos::{conflicto_len_3, conflicto_len_4, resolver_merge_len_3};
 
 use super::{
     cat_file,
@@ -206,14 +206,11 @@ impl Merge {
         }
     }
 
-    /// Devuelve el contenido del archivo mergeado y un booleano que indica si hubo conflictos
-    fn mergear_diffs(
+    fn obtener_posibles_conflictos(
         diff_actual: Vec<(usize, DiffType)>,
         diff_a_mergear: Vec<(usize, DiffType)>,
-        archivo_base: String,
-    ) -> (String, bool) {
+    ) -> Vec<ConflictoAtomico> {
         let mut posibles_conflictos: Vec<ConflictoAtomico> = Vec::new();
-        let mut hubo_conflictos = false;
 
         for diff in diff_actual {
             if diff.0 > posibles_conflictos.len() {
@@ -229,41 +226,47 @@ impl Merge {
             posibles_conflictos[diff.0 - 1].push((diff.1, LadoConflicto::Entrante));
         }
 
-        let mut contenido_por_regiones: Vec<Region> = Vec::new();
+        posibles_conflictos
+    }
+
+    /// Devuelve el contenido del archivo mergeado y un booleano que indica si hubo conflictos
+    fn mergear_diffs(
+        diff_actual: Vec<(usize, DiffType)>,
+        diff_a_mergear: Vec<(usize, DiffType)>,
+        archivo_base: String,
+    ) -> (String, bool) {
+        let mut hubo_conflictos = false;
         let lineas_archivo_base = archivo_base.split('\n').collect::<Vec<&str>>();
+        let mut contenido_por_regiones: Vec<Region> = Vec::new();
+        let posibles_conflictos = Self::obtener_posibles_conflictos(diff_actual, diff_a_mergear);
 
         let mut anterior_fue_conflicto = false;
-        // println!("{:?}", posibles_conflictos);
         for i in 0..posibles_conflictos.len() {
             let posible_conflicto = &posibles_conflictos[i];
-            if Self::hay_conflicto(posible_conflicto) {
-                contenido_por_regiones.push(Self::resolver_conflicto(
-                    posible_conflicto,
-                    lineas_archivo_base.iter().nth(i).unwrap_or(&""),
-                ));
+
+            let region = if Self::hay_conflicto(posible_conflicto) {
                 hubo_conflictos = true;
                 anterior_fue_conflicto = true;
+                Self::resolver_conflicto(
+                    posible_conflicto,
+                    lineas_archivo_base.iter().nth(i).unwrap_or(&""),
+                )
             } else if posible_conflicto.len() == 2 {
-                contenido_por_regiones.push(resolver_merge_len_2(
+                anterior_fue_conflicto = false;
+                resolver_merge_len_2(
                     posible_conflicto,
                     lineas_archivo_base[i],
                     anterior_fue_conflicto,
-                ));
-                anterior_fue_conflicto = false
+                )
             } else {
-                if anterior_fue_conflicto {
-                    contenido_por_regiones
-                        .push(conflicto_len_3(posible_conflicto, lineas_archivo_base[i]));
-                } else {
-                    for (diff, _) in posible_conflicto {
-                        if let DiffType::Added(linea) = diff {
-                            contenido_por_regiones.push(Region::Normal(linea.clone()))
-                        }
-                    }
-                }
+                resolver_merge_len_3(
+                    posible_conflicto,
+                    lineas_archivo_base[i],
+                    anterior_fue_conflicto,
+                )
+            };
 
-                anterior_fue_conflicto = false
-            }
+            contenido_por_regiones.push(region);
         }
 
         let regiones_unificadas = unificar_regiones(contenido_por_regiones);
