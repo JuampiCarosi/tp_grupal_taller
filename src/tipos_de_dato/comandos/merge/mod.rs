@@ -113,7 +113,7 @@ impl Merge {
         Ok(diff)
     }
 
-    /// Devuelve un vector con las lineas que difieren entre dos archivos
+    /// Devuelve un vector con las lineas que difieren entre dos objetos
     fn obtener_diffs_entre_dos_objetos(
         hash_objeto1: String,
         hash_objeto2: String,
