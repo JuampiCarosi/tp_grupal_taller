@@ -50,6 +50,7 @@ impl Servidor {
     }
 
     pub fn iniciar_servidor(direccion_y_puerto: &str) -> Result<(), ErrorDeComunicacion> {
+        println!("Escuchando en {}", direccion_y_puerto);
         while let Ok((stream, socket)) = TcpListener::bind(direccion_y_puerto)?.accept() {
             println!("Conectado al cliente {:?}", socket);
             thread::spawn(move || {

@@ -429,7 +429,7 @@ impl Merge {
         if contenido_index.is_empty() {
             return Ok(false);
         }
-        Ok(contenido_index.iter().all(|objeto| !objeto.merge))
+        Ok(contenido_index.iter().any(|objeto| objeto.merge))
     }
 
     /// Busca en el merge head si hay un commit para
