@@ -1,6 +1,10 @@
 use std::{path::PathBuf, sync::Arc};
 
-use crate::tipos_de_dato::{logger::Logger, objeto::Objeto, objetos::tree::Tree};
+use crate::tipos_de_dato::{
+    logger::Logger, objeto::Objeto, objetos::tree::Tree, visualizaciones::Visualizaciones,
+};
+
+use super::cat_file::CatFile;
 
 pub struct LsTree {
     logger: Arc<Logger>,
@@ -81,10 +85,17 @@ impl LsTree {
             match objeto {
                 Objeto::Blob(ref blob) => {
                     if self.con_size {
+                        let tamanio = CatFile {
+                            hash_objeto: blob.obtener_hash(),
+                            logger: self.logger.clone(),
+                            visualizacion: Visualizaciones::Tamanio,
+                        }
+                        .ejecutar()?;
+
                         string_resultante.push_str(&format!(
-                            "100644 blob {} {}    {}\n",
+                            "100644 blob {} {: >7}    {}\n",
                             blob.obtener_hash(),
-                            blob.obtener_tamanio()?,
+                            tamanio,
                             blob.ubicacion.display()
                         ));
                     } else {
