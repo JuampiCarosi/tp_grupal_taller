@@ -25,7 +25,7 @@ impl std::fmt::Display for Region {
             Region::Conflicto(contenido_head, contenido_entrante) => {
                 write!(
                     f,
-                    "<<<<<< HEAD\n{}\n======\n{}\n>>>>>> Entrante\n)",
+                    "<<<<<< HEAD\n{}\n======\n{}\n>>>>>> Entrante",
                     contenido_head, contenido_entrante
                 )
             }
@@ -39,13 +39,19 @@ impl std::fmt::Display for Region {
 pub fn unificar_regiones(regiones: Vec<Region>) -> Vec<Region> {
     let mut regiones_unificadas: Vec<Region> = Vec::new();
     let mut i = 0;
+
     while i < regiones.len() {
         match &regiones[i] {
             Region::Normal(_) => {
                 regiones_unificadas.push(regiones[i].clone());
                 i += 1;
             }
-            Region::Conflicto(_, _) => {
+            Region::Conflicto(a, b) => {
+                if (a, b) == (&"".to_string(), &"".to_string()) {
+                    i += 1;
+                    continue;
+                }
+
                 let mut j = i;
                 let mut buffer_head = String::new();
                 let mut buffer_entrante = String::new();
@@ -64,5 +70,42 @@ pub fn unificar_regiones(regiones: Vec<Region>) -> Vec<Region> {
             }
         }
     }
-    regiones_unificadas
+    purgar_conflictos(regiones_unificadas)
+}
+
+/// Si se tienen regiones vacias las elimina, y si hay conflictos que terminan con la misma linea,
+/// extrae la linea como una linea normal.
+pub fn purgar_conflictos(regiones: Vec<Region>) -> Vec<Region> {
+    let mut regiones_purgadas: Vec<Region> = Vec::new();
+
+    for region in regiones {
+        match region {
+            Region::Normal(_) => regiones_purgadas.push(region),
+            Region::Conflicto(head, entrante) => {
+                if head == "".to_string() && entrante == "".to_string() {
+                    continue;
+                }
+
+                let mut head_split = head.split("\n").collect::<Vec<&str>>();
+                let mut entrante_split = entrante.split("\n").collect::<Vec<&str>>();
+
+                let mut regiones_normales: Vec<Region> = Vec::new();
+
+                while head_split.last() == entrante_split.last() {
+                    let linea = head_split.pop().unwrap();
+                    entrante_split.pop();
+                    regiones_normales.push(Region::Normal(linea.to_string()));
+                }
+
+                regiones_purgadas.push(Region::Conflicto(
+                    head_split.join("\n"),
+                    entrante_split.join("\n"),
+                ));
+
+                regiones_purgadas.extend(regiones_normales);
+            }
+        }
+    }
+
+    regiones_purgadas
 }
