@@ -53,6 +53,7 @@ impl Tree {
         }
         objetos
     }
+
     pub fn obtener_objetos(&self) -> Vec<Objeto> {
         let mut objetos: Vec<Objeto> = Vec::new();
         for objeto in &self.objetos {
