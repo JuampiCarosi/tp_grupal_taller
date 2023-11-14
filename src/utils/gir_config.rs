@@ -71,7 +71,7 @@ fn buscar_en_config_el_valor_de(parametro_a_buscar: &str) -> Result<String, Stri
     let contenido_config = io::leer_a_string(config_path)?;
 
     for linea_config in contenido_config.lines() {
-        if linea_config.trim().starts_with(&parametro_a_buscar) {
+        if linea_config.trim().starts_with(parametro_a_buscar) {
             if let Some(repositorio) = linea_config.split('=').nth(1) {
                 return Ok(repositorio.trim().to_string());
             }

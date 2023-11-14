@@ -82,12 +82,12 @@ pub fn purgar_conflictos(regiones: Vec<Region>) -> Vec<Region> {
         match region {
             Region::Normal(_) => regiones_purgadas.push(region),
             Region::Conflicto(head, entrante) => {
-                if head == "".to_string() && entrante == "".to_string() {
+                if head == *"" && entrante == *"" {
                     continue;
                 }
 
-                let mut head_split = head.split("\n").collect::<Vec<&str>>();
-                let mut entrante_split = entrante.split("\n").collect::<Vec<&str>>();
+                let mut head_split = head.split('\n').collect::<Vec<&str>>();
+                let mut entrante_split = entrante.split('\n').collect::<Vec<&str>>();
 
                 let mut regiones_normales: Vec<Region> = Vec::new();
 

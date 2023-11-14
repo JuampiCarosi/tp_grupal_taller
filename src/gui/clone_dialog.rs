@@ -1,10 +1,10 @@
-use std::{net::TcpStream, path::PathBuf, sync::Arc, thread};
+use std::{net::TcpStream, path::PathBuf, sync::Arc};
 
 use gtk::prelude::*;
 
 use crate::tipos_de_dato::{
     comandos::clone::Clone,
-    comunicacion::{self, Comunicacion},
+    comunicacion::{Comunicacion},
     logger::Logger,
 };
 
@@ -59,7 +59,7 @@ pub fn render(
     run_dialog(builder);
 
     if !PathBuf::from(".gir").is_dir() {
-        error_no_repo_dialog(&builder);
+        error_no_repo_dialog(builder);
         return false;
     }
 

@@ -71,7 +71,7 @@ impl Servidor {
     ) -> Result<(), ErrorDeComunicacion> {
         loop {
             let pedido = comunicacion.aceptar_pedido()?; // acepto la primera linea
-            Self::parse_line(&pedido, comunicacion, &dir)?; // parse de la liena para ver que se pide
+            Self::parse_line(&pedido, comunicacion, dir)?; // parse de la liena para ver que se pide
         }
 
         Ok(())

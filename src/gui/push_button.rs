@@ -1,5 +1,5 @@
 use gtk::{self};
-use gtk::{prelude::*, Spinner};
+use gtk::{prelude::*};
 use std::net::TcpStream;
 use std::sync::Arc;
 use std::thread::sleep;
@@ -11,7 +11,7 @@ use super::error_dialog;
 
 pub fn render(
     builder: &gtk::Builder,
-    window: &gtk::Window,
+    _window: &gtk::Window,
     comunicacion: Arc<Comunicacion<TcpStream>>,
 ) {
     let push_button = builder.object::<gtk::Button>("push-button").unwrap();

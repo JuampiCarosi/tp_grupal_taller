@@ -26,7 +26,7 @@ pub fn un_lado_conflicto_len_3(conflicto: Vec<&DiffType>, linea_base: &str) -> S
     if conflicto.len() == 1 {
         match conflicto[0] {
             DiffType::Added(ref linea) => lado.push_str(&format!("{linea_base}\n{linea}\n")),
-            DiffType::Unchanged(ref linea) => lado.push_str(&format!("{linea}")),
+            DiffType::Unchanged(ref linea) => lado.push_str(&linea.to_string()),
             _ => {}
         };
     } else {

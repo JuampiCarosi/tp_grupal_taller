@@ -34,7 +34,7 @@ impl Clone {
         Pull::from(self.logger.clone(), self.comunicacion.clone())?.ejecutar()?;
 
 
-        let mensaje = format!("Clone ejecutado con exito");
+        let mensaje = "Clone ejecutado con exito".to_string();
         self.logger.log(mensaje.clone());
         Ok(mensaje)
     }
