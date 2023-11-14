@@ -10,14 +10,10 @@ mod push_button;
 mod refresh;
 mod staging_area;
 
-
-use std::net::TcpStream;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-
 use crate::tipos_de_dato::comandos::commit::Commit;
-use crate::tipos_de_dato::comunicacion::{Comunicacion};
 use crate::tipos_de_dato::logger::Logger;
 use gtk::prelude::*;
 use gtk::{self};
@@ -27,7 +23,6 @@ fn hidratar_componentes(
     window: &gtk::Window,
     logger: Arc<Logger>,
     branch_actual: String,
-    comunicacion: Arc<Comunicacion<TcpStream>>,
 ) {
     new_branch_dialog::render(builder, window, logger.clone());
     branch_selector::render(builder, window, logger.clone());
@@ -35,25 +30,13 @@ fn hidratar_componentes(
     log_seleccionado::render(builder, None);
     staging_area::render(builder, window, logger.clone());
     new_commit_dialog::render(builder, window, logger.clone());
-    push_button::render(builder, window, comunicacion.clone());
+    push_button::render(builder, window, logger.clone());
     error_dialog::setup(builder);
-    pull_button::render(
-        builder,
-        window,
-        comunicacion.clone(),
-        logger.clone(),
-        branch_actual.clone(),
-    );
-    refresh::render(
-        builder,
-        window,
-        logger.clone(),
-        branch_actual.clone(),
-        comunicacion.clone(),
-    );
+    pull_button::render(builder, window, logger.clone(), branch_actual.clone());
+    refresh::render(builder, window, logger.clone(), branch_actual.clone());
 }
 
-pub fn ejecutar(logger: Arc<Logger>, comunicacion: Arc<Comunicacion<TcpStream>>) {
+pub fn ejecutar(logger: Arc<Logger>) {
     if gtk::init().is_err() {
         println!("Failed to initialize GTK.");
         return;
@@ -64,21 +47,13 @@ pub fn ejecutar(logger: Arc<Logger>, comunicacion: Arc<Comunicacion<TcpStream>>)
     let window: gtk::Window = builder.object("home").unwrap();
     window.set_position(gtk::WindowPosition::Center);
 
-    if !PathBuf::from(".gir").is_dir()
-        && !clone_dialog::render(&builder, logger.clone(), comunicacion.clone())
-    {
+    if !PathBuf::from(".gir").is_dir() && !clone_dialog::render(&builder, logger.clone()) {
         return;
     }
 
     let branch_actual = Commit::obtener_branch_actual().unwrap();
 
-    hidratar_componentes(
-        &builder,
-        &window,
-        logger.clone(),
-        branch_actual,
-        comunicacion,
-    );
+    hidratar_componentes(&builder, &window, logger.clone(), branch_actual);
 
     window.show_all();
 

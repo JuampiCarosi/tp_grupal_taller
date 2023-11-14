@@ -1,23 +1,18 @@
+use gtk::prelude::*;
 use gtk::{self};
-use gtk::{prelude::*};
-use std::net::TcpStream;
+
 use std::sync::Arc;
 use std::thread::sleep;
 
 use crate::tipos_de_dato::comandos::push::Push;
-use crate::tipos_de_dato::comunicacion::Comunicacion;
+use crate::tipos_de_dato::logger::Logger;
 
 use super::error_dialog;
 
-pub fn render(
-    builder: &gtk::Builder,
-    _window: &gtk::Window,
-    comunicacion: Arc<Comunicacion<TcpStream>>,
-) {
+pub fn render(builder: &gtk::Builder, _window: &gtk::Window, logger: Arc<Logger>) {
     let push_button = builder.object::<gtk::Button>("push-button").unwrap();
 
     let builder_clone = builder.clone();
-    let comunicacion_clone = comunicacion.clone();
     push_button.connect_clicked(move |_| {
         let fetching_dialog = builder_clone
             .object::<gtk::Dialog>("fetching-dialog")
@@ -25,7 +20,15 @@ pub fn render(
 
         fetching_dialog.set_position(gtk::WindowPosition::Center);
         fetching_dialog.show_all();
-        match Push::new(comunicacion_clone.clone()).ejecutar() {
+        let mut push = match Push::new(logger.clone()) {
+            Ok(push) => push,
+            Err(err) => {
+                error_dialog::mostrar_error(&err);
+                return;
+            }
+        };
+
+        match push.ejecutar() {
             Ok(_) => {}
             Err(err) => {
                 error_dialog::mostrar_error(&err);

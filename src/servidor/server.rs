@@ -2,12 +2,14 @@ use crate::err_comunicacion::ErrorDeComunicacion;
 use crate::servidor::receive_pack::receive_pack;
 use crate::servidor::upload_pack::upload_pack;
 use crate::tipos_de_dato::comunicacion::Comunicacion;
+use crate::tipos_de_dato::logger::Logger;
 use crate::utils::io as gir_io;
 use std::env;
 use std::io;
 use std::net::{TcpListener, TcpStream};
 use std::path::PathBuf;
 use std::str;
+use std::sync::Arc;
 use std::thread;
 
 const VERSION: &str = "version 1";
@@ -20,10 +22,11 @@ pub struct Servidor {
     listener: TcpListener,
     dir: String,
     capacidades: Vec<String>,
+    logger: Arc<Logger>,
 }
 
 impl Servidor {
-    pub fn new(address: &str) -> std::io::Result<Servidor> {
+    pub fn new(address: &str, logger: Arc<Logger>) -> std::io::Result<Servidor> {
         let listener = TcpListener::bind(address)?;
         println!("Escuchando en {}", address);
         // busca la carpeta raiz del proyecto (evita hardcodear la ruta)
@@ -44,17 +47,22 @@ impl Servidor {
         // .collect();
         Ok(Servidor {
             listener,
+            logger,
             dir,
             capacidades: Vec::new(),
         })
     }
 
-    pub fn iniciar_servidor(direccion_y_puerto: &str) -> Result<(), ErrorDeComunicacion> {
+    pub fn iniciar_servidor(
+        direccion_y_puerto: &str,
+        logger: Arc<Logger>,
+    ) -> Result<(), ErrorDeComunicacion> {
         println!("Escuchando en {}", direccion_y_puerto);
         while let Ok((stream, socket)) = TcpListener::bind(direccion_y_puerto)?.accept() {
             println!("Conectado al cliente {:?}", socket);
+            let logge_clone = logger.clone();
             thread::spawn(move || {
-                let mut comunicacion = Comunicacion::new(stream.try_clone().unwrap());
+                let mut comunicacion = Comunicacion::new(stream.try_clone().unwrap(), logge_clone);
                 Self::manejar_cliente(
                     &mut comunicacion,
                     &(env!("CARGO_MANIFEST_DIR").to_string() + DIR),
@@ -73,8 +81,6 @@ impl Servidor {
             let pedido = comunicacion.aceptar_pedido()?; // acepto la primera linea
             Self::parse_line(&pedido, comunicacion, dir)?; // parse de la liena para ver que se pide
         }
-
-        Ok(())
     }
 
     fn parse_line(

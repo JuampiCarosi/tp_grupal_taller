@@ -18,12 +18,12 @@ pub struct Fetch<T: Write + Read> {
 }
 
 impl<T: Write + Read> Fetch<T> {
-    pub fn new(
-        logger: Arc<Logger>,
-        comunicacion: Arc<Comunicacion<TcpStream>>,
-    ) -> Result<Fetch<TcpStream>, String> {
+    pub fn new(logger: Arc<Logger>) -> Result<Fetch<TcpStream>, String> {
         let remoto = "origin".to_string();
         //"Por ahora lo hardcoedo necesito el config que no esta en esta rama";
+        let comunicacion = Arc::new(Comunicacion::<TcpStream>::new_desde_gir_config(
+            logger.clone(),
+        )?);
 
         let capacidades_local = Vec::new();
         //esto lo deberia tener la comunicacion creo yo
@@ -62,6 +62,7 @@ impl<T: Write + Read> Fetch<T> {
     // -------------------------------------------------------------
     //verificar si existe /.git
     pub fn ejecutar(&self) -> Result<String, String> {
+        self.logger.log("Se ejecuto el comando fetch".to_string());
         self.comunicacion.iniciar_git_upload_pack_con_servidor()?;
         //en caso de clone el commit head se tiene que utilizar
         let (
@@ -331,7 +332,9 @@ impl<T: Write + Read> Fetch<T> {
         &self,
         primera_linea: &String,
     ) -> Result<(String, Vec<String>), String> {
-        let (contenido, capacidades) = primera_linea.split_once('\0').ok_or("Fallo al separar la linea en commit y capacidades\n".to_string())?;
+        let (contenido, capacidades) = primera_linea
+            .split_once('\0')
+            .ok_or("Fallo al separar la linea en commit y capacidades\n".to_string())?;
 
         let capacidades_vector: Vec<String> = capacidades
             .split_whitespace()
@@ -351,7 +354,9 @@ impl<T: Write + Read> Fetch<T> {
         &self,
         referencia: &String,
     ) -> Result<(String, PathBuf), String> {
-        let (commit_cabeza_de_rama, dir) = referencia.split_once(' ').ok_or("Fallo al separar el conendio en actualizar referencias\n".to_string())?;
+        let (commit_cabeza_de_rama, dir) = referencia
+            .split_once(' ')
+            .ok_or("Fallo al separar el conendio en actualizar referencias\n".to_string())?;
 
         let dir_path = PathBuf::from(dir.trim());
         Ok((commit_cabeza_de_rama.to_string(), dir_path))
@@ -386,83 +391,6 @@ impl<T: Write + Read> Fetch<T> {
         }
         commit_head_remoto
     }
-
-    //     pub fn ejecutar(&mut self) -> Result<String, String> {
-    //         println!("Se ejecutó el comando fetch");
-    //         // esto deberia llamar a fetch-pack
-    //         // let server_address = "127.0.0.1:9418"; // hardcodeado
-    //         let mut client = TcpStream::connect(("localhost", 9418)).unwrap();
-    //         let mut comunicacion = Comunicacion::new(client.try_clone().unwrap());
-
-    //         // si es un push, tengo que calcular los commits de diferencia entre el cliente y el server, y mandarlos como packfiles.
-    //         // hay una funcion que hace el calculo
-    //         // obtener_listas_de_commits
-    //         // ===============================================================================
-    //         // EN LUGAR DE GIR HAY QUE PONER EL NOMBRE DE LA CARPETA QUE LO CONTIENE
-    //         // ===============================================================================
-    //         let request_data = "git-upload-pack /gir/\0host=example.com\0\0version=1\0"; //en donde dice /.git/ va la dir del repo
-    //         let request_data_con_largo_hex = io::obtener_linea_con_largo_hex(request_data);
-
-    //         client.write_all(request_data_con_largo_hex.as_bytes()).unwrap();
-    //         let mut refs_recibidas = comunicacion.obtener_lineas().unwrap();
-
-    //         if refs_recibidas.len() == 1 {
-    //             return Ok(String::from("No hay refs"));
-    //         }
-    //         println!("refs: {:?}", refs_recibidas);
-
-    //         if refs_recibidas.is_empty() {
-    //             return Err(String::from("No se recibieron referencias"));
-    //         }
-    //         let version = refs_recibidas.remove(0);
-    //         let first_ref = refs_recibidas.remove(0);
-    //         let referencia_y_capacidades = first_ref.split('\0').collect::<Vec<&str>>();
-    //         let capacidades = referencia_y_capacidades[1];
-    //         let diferencias = io::obtener_diferencias_remote(refs_recibidas, "./.gir/".to_string());
-    //         if diferencias.is_empty(){
-    //             comunicacion.enviar_flush_pkt().unwrap();
-    //             return Ok(String::from("El cliente esta actualizado"));
-    //         }
-    //         let wants = comunicacion.obtener_wants_pkt(&diferencias, "".to_string()).unwrap();
-    //         println!("wants: {:?}", wants);
-    //         comunicacion.responder(wants.clone()).unwrap();
-
-    //         let objetos_directorio = io::obtener_objetos_del_directorio("./.gir/objects/".to_string()).unwrap();
-
-    //         let haves = comunicacion.obtener_haves_pkt(&objetos_directorio);
-    //         if !haves.is_empty() {
-    //             println!("Haves: {:?}", haves);
-    //             comunicacion.responder(haves).unwrap();
-    //             let acks_nak = comunicacion.obtener_lineas().unwrap();
-    //             comunicacion.responder(vec![io::obtener_linea_con_largo_hex("done\n")]).unwrap();
-    //             // let acks_nak = comunicacion.obtener_lineas().unwrap();
-    //             println!("acks_nack: {:?}", acks_nak);
-    //         } else {
-    //             comunicacion.responder(vec![io::obtener_linea_con_largo_hex("done\n")]).unwrap();
-    //             let acks_nak = comunicacion.obtener_lineas().unwrap();
-    //             println!("acks_nack: {:?}", acks_nak);
-
-    //         }
-
-    //         println!("Obteniendo paquete..");
-    //         let mut packfile = comunicacion.obtener_lineas_como_bytes().unwrap();
-    //         Packfile::new().obtener_paquete_y_escribir(&mut packfile, String::from("./.gir/objects/")).unwrap();
-    //         escribir_en_remote_origin_las_referencias(&diferencias);
-
-    //         Ok(String::from("Fetch ejecutado con exito"))
-    //     }
-    // }
-
-    // fn escribir_en_remote_origin_las_referencias(referencias: &Vec<String>) {
-    //     let remote_origin = "./.gir/refs/remotes/origin/";
-
-    //     for referencia in referencias {
-    //         let referencia_y_contenido = referencia.split_whitespace().collect::<Vec<&str>>();
-    //         let referencia_con_remote_origin = PathBuf::from(referencia_y_contenido[1]);
-    //         let nombre_referencia = referencia_con_remote_origin.file_name().unwrap();
-    //         let dir = PathBuf::from(remote_origin.to_string() + nombre_referencia.to_str().unwrap());
-    //         println!("Voy a escribir en: {:?}", dir);
-    //         escribir_bytes(dir, referencia_y_contenido[0]).unwrap();
 }
 
 #[cfg(test)]
@@ -504,6 +432,7 @@ mod test {
 
     #[test]
     fn test01_la_fase_de_descubrimiento_funcion() {
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/fetch_01.txt")).unwrap());
         let contenido_mock = "000eversion 1 \
         00887217a7c7e582c46cec22a130adf4b9d7d950fba0 HEAD\0multi_ack thin-pack \
         side-band side-band-64k ofs-delta shallow no-progress include-tag \
@@ -519,7 +448,7 @@ mod test {
             escritura_data: Vec::new(),
         };
 
-        let comunicacion = Comunicacion::new(mock);
+        let comunicacion = Comunicacion::new(mock, logger);
         let logger = Arc::new(Logger::new(PathBuf::from(".log.txt")).unwrap());
         let (capacidades, commit_head, commits_y_ramas, commits_y_tags) =
             Fetch::new_testing(logger, comunicacion.into())
@@ -578,8 +507,9 @@ mod test {
             lectura_data: contenido_mock.as_bytes().to_vec(),
             escritura_data: Vec::new(),
         };
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/fetch_02.txt")).unwrap());
 
-        let comunicacion = Comunicacion::new(mock);
+        let comunicacion = Comunicacion::new(mock, logger);
         let logger = Arc::new(Logger::new(PathBuf::from(".log.txt")).unwrap());
         let (capacidades, commit_head, commits_y_ramas, commits_y_tags) =
             Fetch::new_testing(logger, comunicacion.into())
@@ -621,38 +551,4 @@ mod test {
         ];
         assert_eq!(commits_y_tags_esperados, commits_y_tags)
     }
-
-    // #[test]
-    // fn test03_la_fase_de_negociacion_funciona(){
-    //     let nuevo_dir = "test03_fetch";
-    //     let viejo_dir = crear_y_cambiar_directorio(nuevo_dir);
-
-    //     let mock = MockTcpStream {
-    //         lectura_data: Vec::new(),
-    //         escritura_data: Vec::new(),
-    //     };
-
-    //     let comunicacion = Comunicacion::new(mock);
-    //     let logger = Rc::new(Logger::new(PathBuf::from(".log.txt")).unwrap());
-    //     let capacidades_servidor = vec!["multi_ack".to_string(), "thin-pack".to_string(), "side-band".to_string(), "side-band-64k".to_string(), "ofs-delta".to_string(), "shallow".to_string(), "no-progress".to_string(),  "include-tag".to_string()];
-    //     let commits_y_ramas = vec![("1d3fcd5ced445d1abc402225c0b8a1299641f497".to_string(), PathBuf::from("refs/heads/integration")),("7217a7c7e582c46cec22a130adf4b9d7d950fba0".to_string(), PathBuf::from("refs/heads/master"))];
-
-    //     Fetch::new_testing(logger, comunicacion).unwrap().fase_de_negociacion(capacidades_servidor, &commits_y_ramas).unwrap();
-
-    //     volver_al_viejo_dir_y_borrar_el_nuevo(nuevo_dir, viejo_dir);
-    // }
-
-    // fn volver_al_viejo_dir_y_borrar_el_nuevo(nuevo_dir: &str, viejo_dir: PathBuf) {
-    //     std::env::set_current_dir(viejo_dir).unwrap();
-    //     std::fs::remove_dir_all(nuevo_dir).unwrap();
-    // }
-
-    // fn crear_y_cambiar_directorio(nombre: &str)-> PathBuf{
-    //     let viejo_dir = env::current_dir().unwrap();
-
-    //     fs::create_dir_all(nombre).unwrap();
-    //     std::env::set_current_dir(nombre).unwrap();
-
-    //     viejo_dir
-    // }
 }
