@@ -3,8 +3,9 @@ use std::{net::TcpStream, sync::Arc};
 use super::{
     comandos::{
         add::Add, branch::Branch, cat_file::CatFile, checkout::Checkout, clone::Clone,
-        commit::Commit, fetch::Fetch, hash_object::HashObject, init::Init, log::Log, merge::Merge,
-        pull::Pull, push::Push, remote::Remote, rm::Remove, status::Status, version::Version,
+        commit::Commit, fetch::Fetch, hash_object::HashObject, init::Init, log::Log,
+        ls_tree::LsTree, merge::Merge, pull::Pull, push::Push, remote::Remote, rm::Remove,
+        status::Status, version::Version,
     },
     comunicacion::Comunicacion,
     logger::Logger,
@@ -28,6 +29,7 @@ pub enum Comando {
     Status(Status),
     Remote(Remote),
     Merge(Merge),
+    LsTree(LsTree),
     Unknown,
 }
 
@@ -59,6 +61,7 @@ impl Comando {
             "status" => Comando::Status(Status::from(logger)?),
             "remote" => Comando::Remote(Remote::from(&mut vector_args, logger)?),
             "merge" => Comando::Merge(Merge::from(&mut vector_args, logger)?),
+            "ls-tree" => Comando::LsTree(LsTree::new(logger, &mut vector_args)?),
             _ => Comando::Unknown,
         };
 
@@ -84,6 +87,7 @@ impl Comando {
             Comando::Remote(ref mut remote) => remote.ejecutar(),
             Comando::Merge(ref mut merge) => merge.ejecutar(),
             Comando::Pull(ref mut pull) => pull.ejecutar(),
+            Comando::LsTree(ref mut ls_tree) => ls_tree.ejecutar(),
             Comando::Unknown => Err("Comando desconocido".to_string()),
         }
     }

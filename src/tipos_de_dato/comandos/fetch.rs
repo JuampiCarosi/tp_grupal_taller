@@ -79,7 +79,7 @@ impl<T: Write + Read> Fetch<T> {
 
         self.actualizar_ramas_locales_del_remoto(&commits_cabezas_y_dir_rama_asosiado)?;
 
-        let mensaje = format!("Fetch ejecutado con exito");
+        let mensaje = "Fetch ejecutado con exito".to_string();
         self.logger.log(mensaje.clone());
         Ok(mensaje)
     }
@@ -98,7 +98,7 @@ impl<T: Write + Read> Fetch<T> {
         commits_cabezas_y_dir_rama_asosiado: &Vec<(String, PathBuf)>,
     ) -> Result<bool, String> {
         // no hay pedidos :D
-        if !self.enviar_pedidos(&capacidades_servidor, &commits_cabezas_y_dir_rama_asosiado)? {
+        if !self.enviar_pedidos(&capacidades_servidor, commits_cabezas_y_dir_rama_asosiado)? {
             return Ok(NO_SE_ENVIO_NINGUN_PEDIDO);
         }
 
@@ -148,7 +148,7 @@ impl<T: Write + Read> Fetch<T> {
     fn recivir_nack(&self) -> Result<(), String> {
         //POR AHORA NO HACEMOS, NADA CON ESTO: EVALUAR QUE HACER. SOLO LEERMOS
         //PARA SEGUIR EL FLUJO
-        let acks_nak = self.comunicacion.obtener_lineas()?;
+        let _acks_nak = self.comunicacion.obtener_lineas()?;
         Ok(())
     }
 
@@ -206,7 +206,7 @@ impl<T: Write + Read> Fetch<T> {
 
             let commit_cabeza_local = io::leer_a_string(dir_rama_asosiada_local)?;
 
-            if commit_cabeza_local != commit_cabeza_remoto.to_string() {
+            if commit_cabeza_local != *commit_cabeza_remoto {
                 commits_de_cabeza_de_rama_faltantes.push(commit_cabeza_remoto.to_string());
             }
         }
@@ -222,7 +222,7 @@ impl<T: Write + Read> Fetch<T> {
     ) -> String {
         let mut capacidades_a_usar_en_la_comunicacion: Vec<&str> = Vec::new();
 
-        capacidades_servidor.into_iter().for_each(|capacidad| {
+        capacidades_servidor.iter().for_each(|capacidad| {
             if self.capacidades_local.contains(&capacidad.to_string()) {
                 capacidades_a_usar_en_la_comunicacion.push(capacidad);
             }
@@ -255,7 +255,7 @@ impl<T: Write + Read> Fetch<T> {
         String,
     > {
         let mut lineas_recibidas = self.comunicacion.obtener_lineas()?;
-        let version = lineas_recibidas.remove(0); //la version del server
+        let _version = lineas_recibidas.remove(0); //la version del server
 
         let segunda_linea = lineas_recibidas.remove(0);
 
@@ -283,7 +283,7 @@ impl<T: Write + Read> Fetch<T> {
         let mut commits_y_tags_asosiados: Vec<(String, PathBuf)> = Vec::new();
 
         for linea in lineas_recibidas {
-            let (commit, dir) = self.obtener_commit_y_dir_asosiado(&linea)?;
+            let (commit, dir) = self.obtener_commit_y_dir_asosiado(linea)?;
 
             if self.es_la_ruta_a_una_rama(&dir) {
                 commits_cabezas_y_dir_rama_asosiados.push((commit, dir));
@@ -331,9 +331,7 @@ impl<T: Write + Read> Fetch<T> {
         &self,
         primera_linea: &String,
     ) -> Result<(String, Vec<String>), String> {
-        let (contenido, capacidades) = primera_linea.split_once('\0').ok_or(format!(
-            "Fallo al separar la linea en commit y capacidades\n"
-        ))?;
+        let (contenido, capacidades) = primera_linea.split_once('\0').ok_or("Fallo al separar la linea en commit y capacidades\n".to_string())?;
 
         let capacidades_vector: Vec<String> = capacidades
             .split_whitespace()
@@ -353,9 +351,7 @@ impl<T: Write + Read> Fetch<T> {
         &self,
         referencia: &String,
     ) -> Result<(String, PathBuf), String> {
-        let (commit_cabeza_de_rama, dir) = referencia.split_once(' ').ok_or(format!(
-            "Fallo al separar el conendio en actualizar referencias\n"
-        ))?;
+        let (commit_cabeza_de_rama, dir) = referencia.split_once(' ').ok_or("Fallo al separar el conendio en actualizar referencias\n".to_string())?;
 
         let dir_path = PathBuf::from(dir.trim());
         Ok((commit_cabeza_de_rama.to_string(), dir_path))
@@ -368,7 +364,7 @@ impl<T: Write + Read> Fetch<T> {
     ) -> Result<(), String> {
         for (commit_cabeza_de_rama, dir_rama_remota) in commits_cabezas_y_dir_rama_asosiado {
             let dir_rama_local_del_remoto =
-                self.convertir_de_dir_rama_remota_a_dir_rama_local(&dir_rama_remota)?;
+                self.convertir_de_dir_rama_remota_a_dir_rama_local(dir_rama_remota)?;
 
             io::escribir_bytes(dir_rama_local_del_remoto, commit_cabeza_de_rama)?;
         }

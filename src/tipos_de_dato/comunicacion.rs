@@ -317,14 +317,14 @@ impl<T: Write + Read> Comunicacion<T> {
     }
     ///recibi el hash de un commit y le da el formato correcto para hacer el want
     fn dar_formato_de_solicitud(&self, hash_commit: &mut String) -> String {
-        io::obtener_linea_con_largo_hex(&("want ".to_string() + &hash_commit + "\n"))
+        io::obtener_linea_con_largo_hex(&("want ".to_string() + hash_commit + "\n"))
     }
 
     pub fn obtener_haves_pkt(&self, lineas: &Vec<String>) -> Vec<String> {
         let mut haves: Vec<String> = Vec::new();
         for linea in lineas {
             haves.push(io::obtener_linea_con_largo_hex(
-                &("have ".to_string() + &linea + "\n"),
+                &("have ".to_string() + linea + "\n"),
             ))
         }
         haves
@@ -358,7 +358,7 @@ impl<T: Write + Read> Comunicacion<T> {
 
     ///recibi el hash de un objeto y le da el formato correcto para hacer el have
     fn dar_formato_have(&self, hash_commit: &String) -> String {
-        io::obtener_linea_con_largo_hex(&("have ".to_string() + &hash_commit + "\n"))
+        io::obtener_linea_con_largo_hex(&("have ".to_string() + hash_commit + "\n"))
     }
 }
 

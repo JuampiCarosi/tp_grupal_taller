@@ -31,7 +31,7 @@ impl Packfile {
         // DESHARCODEAR EL ./.GIR
         let ruta_objeto = format!("{}{}/{}", dir, &objeto[..2], &objeto[2..]);
         // println!("ruta objeto: {}", ruta_objeto);
-        let _objeto_comprimido = io::leer_bytes(&ruta_objeto).unwrap();
+        let _objeto_comprimido = io::leer_bytes(ruta_objeto).unwrap();
         let log = Arc::new(Logger::new(PathBuf::from("log.txt")).unwrap());
         // en este catfile hay cosas hardcodeadas que hay que cambiar :{
         let tamanio_objeto_str = match {
@@ -49,7 +49,7 @@ impl Packfile {
 
         let tamanio_objeto = tamanio_objeto_str.trim().parse::<u32>().unwrap_or(0);
 
-        let tipo_objeto = cat_file::obtener_tipo_objeto_de(&objeto, &dir)?;
+        let tipo_objeto = cat_file::obtener_tipo_objeto_de(&objeto, dir)?;
         // codifica el tamanio del archivo descomprimido y su tipo en un tipo variable de longitud
         let nbyte = match tipo_objeto.as_str() {
             "commit" => codificar_bytes(1, tamanio_objeto),    //1
@@ -164,10 +164,10 @@ impl Packfile {
             true => println!("Checksum correcto"),
             false => println!("Checksum incorrecto"),
         }
-        let firma = &bytes[0..4];
+        let _firma = &bytes[0..4];
         // assert_eq!("PACK", str::from_utf8(&firma).unwrap());
         bytes.drain(0..4);
-        let version = &bytes[0..4];
+        let _version = &bytes[0..4];
         // assert_eq!("0002", str::from_utf8(&version)?);
 
         bytes.drain(0..4);
@@ -182,14 +182,14 @@ impl Packfile {
             let (tipo, tamanio, _bytes_leidos) = decodificar_bytes(bytes);
 
             if tipo == 7 {
-                let hash_obj = &bytes[0..20];
+                let _hash_obj = &bytes[0..20];
                 bytes.drain(0..20);
                 let mut objeto_descomprimido = vec![0; tamanio as usize];
 
                 let mut descompresor = Decompress::new(true);
 
                 descompresor
-                    .decompress(&bytes, &mut objeto_descomprimido, FlushDecompress::None)
+                    .decompress(bytes, &mut objeto_descomprimido, FlushDecompress::None)
                     .unwrap();
 
                 let total_in = descompresor.total_in();
@@ -208,7 +208,7 @@ impl Packfile {
             let mut descompresor = Decompress::new(true);
 
             descompresor
-                .decompress(&bytes, &mut objeto_descomprimido, FlushDecompress::None)
+                .decompress(bytes, &mut objeto_descomprimido, FlushDecompress::None)
                 .unwrap();
 
             // calculo el hash
@@ -220,7 +220,7 @@ impl Packfile {
 
             let ruta = format!("{}{}/{}", &ubicacion, &hash[..2], &hash[2..]);
 
-            let total_out = descompresor.total_out(); // esto es lo que debe matchear el tamanio que se pasa en el header
+            let _total_out = descompresor.total_out(); // esto es lo que debe matchear el tamanio que se pasa en el header
             let total_in = descompresor.total_in(); // esto es para calcular el offset
 
             bytes.drain(0..total_in as usize);
