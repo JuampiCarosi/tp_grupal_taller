@@ -8,6 +8,11 @@ use std::sync::{Arc, Mutex};
 
 use super::logger::Logger;
 
+pub enum RespuestaDePedido {
+    Mensaje(String),
+    Terminate,
+}
+
 pub struct Comunicacion<T: Read + Write> {
     flujo: Mutex<T>,
     repositorio: String,
@@ -90,17 +95,21 @@ impl<T: Write + Read> Comunicacion<T> {
         Ok(())
     }
 
-    pub fn aceptar_pedido(&self) -> Result<String, ErrorDeComunicacion> {
+    pub fn aceptar_pedido(&self) -> Result<RespuestaDePedido, ErrorDeComunicacion> {
         // lee primera parte, 4 bytes en hexadecimal indican el largo del stream
 
         let mut tamanio_bytes = [0; 4];
         self.flujo.lock().unwrap().read(&mut tamanio_bytes)?;
         // largo de bytes a str
+        if tamanio_bytes == [0, 0, 0, 0] {
+            return Ok(RespuestaDePedido::Terminate);
+        }
+
         let tamanio_str = str::from_utf8(&tamanio_bytes)?;
         // transforma str a u32
         let tamanio = u32::from_str_radix(tamanio_str, 16).unwrap();
         if tamanio == 0 {
-            return Ok('\0'.to_string());
+            return Ok(RespuestaDePedido::Mensaje('\0'.to_string()));
         }
         // lee el resto del flujo
         let mut data = vec![0; (tamanio - 4) as usize];
@@ -109,7 +118,7 @@ impl<T: Write + Read> Comunicacion<T> {
         // if linea.contains("done") {
         // self.aceptar_pedido()?;
         // }
-        Ok(linea.to_string())
+        Ok(RespuestaDePedido::Mensaje(linea.to_string()))
     }
 
     fn leer_del_flujo_tantos_bytes(&self, cantida_bytes_a_leer: usize) -> Result<Vec<u8>, String> {
@@ -124,7 +133,6 @@ impl<T: Write + Read> Comunicacion<T> {
                     e
                 )
             })?;
-        println!("data: {:?}", data);
         Ok(data)
     }
 

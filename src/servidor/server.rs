@@ -2,6 +2,8 @@ use crate::err_comunicacion::ErrorDeComunicacion;
 use crate::servidor::receive_pack::receive_pack;
 use crate::servidor::upload_pack::upload_pack;
 use crate::tipos_de_dato::comunicacion::Comunicacion;
+use crate::tipos_de_dato::comunicacion::RespuestaDePedido;
+use crate::tipos_de_dato::logger;
 use crate::tipos_de_dato::logger::Logger;
 use crate::utils::io as gir_io;
 use std::env;
@@ -78,9 +80,13 @@ impl Servidor {
         dir: &str,
     ) -> Result<(), ErrorDeComunicacion> {
         loop {
-            let pedido = comunicacion.aceptar_pedido()?; // acepto la primera linea
+            let pedido = match comunicacion.aceptar_pedido()? {
+                RespuestaDePedido::Mensaje(mensaje) => mensaje,
+                RespuestaDePedido::Terminate => break,
+            }; // acepto la primera linea
             Self::parse_line(&pedido, comunicacion, dir)?; // parse de la liena para ver que se pide
         }
+        Ok(())
     }
 
     fn parse_line(
