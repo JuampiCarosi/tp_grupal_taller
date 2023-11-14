@@ -49,21 +49,8 @@ impl Pull {
 
     pub fn ejecutar(&self) -> Result<String, String> {
         let fetch = Fetch::<TcpStream>::new(self.logger.clone())?;
-        //en caso de clone el commit head se tiene que utilizar
-        let (
-            capacidades_servidor,
-            _commit_head_remoto,
-            commits_cabezas_y_dir_rama_asosiado,
-            _commits_y_tags_asosiados,
-        ) = fetch.fase_de_descubrimiento()?;
+        fetch.ejecutar()?;
 
-        if !fetch.fase_de_negociacion(capacidades_servidor, &commits_cabezas_y_dir_rama_asosiado)? {
-            return Ok(String::from("El cliente esta actualizado"));
-        }
-
-        fetch.recivir_packfile_y_guardar_objetos()?;
-
-        fetch.actualizar_ramas_locales_del_remoto(&commits_cabezas_y_dir_rama_asosiado)?;
         let commit_head_remoto = self.obtener_head_remoto()?;
 
         if io::esta_vacio(UBICACION_RAMA_MASTER.to_string())? {
