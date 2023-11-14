@@ -2,59 +2,40 @@ use crate::err_comunicacion::ErrorDeComunicacion;
 use crate::servidor::receive_pack::receive_pack;
 use crate::servidor::upload_pack::upload_pack;
 use crate::tipos_de_dato::comunicacion::Comunicacion;
+use crate::tipos_de_dato::comunicacion::RespuestaDePedido;
+use crate::tipos_de_dato::logger::Logger;
 use crate::utils::io as gir_io;
 use std::env;
 use std::io;
 use std::net::{TcpListener, TcpStream};
 use std::path::PathBuf;
 use std::str;
+use std::sync::Arc;
 use std::thread;
 
 const VERSION: &str = "version 1";
 const CAPABILITIES: &str = "multi_ack thin-pack side-band side-band-64k ofs-delta shallow no-progress include-tag multi_ack_detailed no-done symref=HEAD:refs/heads/master agent=git/2.17.1";
-const IP: &str = "127.0.0.1";
-const PORT: u16 = 9418;
 const DIR: &str = "/srv"; // direccion relativa
 
 pub struct Servidor {
     listener: TcpListener,
-    dir: String,
-    capacidades: Vec<String>,
+    logger: Arc<Logger>,
 }
 
 impl Servidor {
-    pub fn new(address: &str) -> std::io::Result<Servidor> {
+    pub fn new(address: &str, logger: Arc<Logger>) -> std::io::Result<Servidor> {
         let listener = TcpListener::bind(address)?;
         println!("Escuchando en {}", address);
-        // busca la carpeta raiz del proyecto (evita hardcodear la ruta)
-        let dir = env!("CARGO_MANIFEST_DIR").to_string() + "/srv";
-        // esto es para checkear, no tengo implementado nada de lo que dice xd
-        // let capacidades: Vec<String> = [
-        //     "multi_ack",
-        //     "thin-pack",
-        //     "side-band",
-        //     "side-band-64k",
-        //     "ofs-delta",
-        //     "shallow",
-        //     "no-progress",
-        //     "include-tag",
-        // ]
-        // .iter()
-        // .map(|x| x.to_string())
-        // .collect();
-        Ok(Servidor {
-            listener,
-            dir,
-            capacidades: Vec::new(),
-        })
+
+        Ok(Servidor { listener, logger })
     }
 
-    pub fn iniciar_servidor(direccion_y_puerto: &str) -> Result<(), ErrorDeComunicacion> {
-        println!("Escuchando en {}", direccion_y_puerto);
-        while let Ok((stream, socket)) = TcpListener::bind(direccion_y_puerto)?.accept() {
+    pub fn iniciar_servidor(&self) -> Result<(), ErrorDeComunicacion> {
+        while let Ok((stream, socket)) = self.listener.accept() {
             println!("Conectado al cliente {:?}", socket);
+            let logge_clone = self.logger.clone();
             thread::spawn(move || {
-                let mut comunicacion = Comunicacion::new(stream.try_clone().unwrap());
+                let mut comunicacion = Comunicacion::new(stream.try_clone().unwrap(), logge_clone);
                 Self::manejar_cliente(
                     &mut comunicacion,
                     &(env!("CARGO_MANIFEST_DIR").to_string() + DIR),
@@ -70,10 +51,12 @@ impl Servidor {
         dir: &str,
     ) -> Result<(), ErrorDeComunicacion> {
         loop {
-            let pedido = comunicacion.aceptar_pedido()?; // acepto la primera linea
+            let pedido = match comunicacion.aceptar_pedido()? {
+                RespuestaDePedido::Mensaje(mensaje) => mensaje,
+                RespuestaDePedido::Terminate => break,
+            }; // acepto la primera linea
             Self::parse_line(&pedido, comunicacion, dir)?; // parse de la liena para ver que se pide
         }
-
         Ok(())
     }
 

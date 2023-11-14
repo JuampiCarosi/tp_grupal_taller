@@ -1,12 +1,8 @@
-use std::{net::TcpStream, path::PathBuf, sync::Arc};
+use std::{path::PathBuf, sync::Arc};
 
 use gtk::prelude::*;
 
-use crate::tipos_de_dato::{
-    comandos::clone::Clone,
-    comunicacion::{Comunicacion},
-    logger::Logger,
-};
+use crate::tipos_de_dato::{comandos::clone::Clone, logger::Logger};
 
 use super::error_dialog;
 
@@ -16,18 +12,24 @@ fn run_dialog(builder: &gtk::Builder) {
     dialog.hide();
 }
 
-fn clonar_dialog(
-    builder: &gtk::Builder,
-    logger: Arc<Logger>,
-    comunicacion: Arc<Comunicacion<TcpStream>>,
-) {
+fn clonar_dialog(builder: &gtk::Builder, logger: Arc<Logger>) {
     let confirm: gtk::Button = builder.object("confirm-clone").unwrap();
     let dialog: gtk::MessageDialog = builder.object("clone").unwrap();
     let input: gtk::Entry = builder.object("clone-input").unwrap();
     dialog.set_position(gtk::WindowPosition::Center);
 
     confirm.connect_clicked(move |_| {
-        match Clone::from(logger.clone(), comunicacion.clone()).ejecutar() {
+        let mut clone = match Clone::from(logger.clone()) {
+            Ok(clone) => clone,
+            Err(err) => {
+                error_dialog::mostrar_error(&err);
+                input.set_text("");
+                dialog.hide();
+                return;
+            }
+        };
+
+        match clone.ejecutar() {
             Ok(_) => {}
             Err(err) => error_dialog::mostrar_error(&err),
         }
@@ -50,12 +52,8 @@ fn error_no_repo_dialog(builder: &gtk::Builder) {
     dialog.run();
 }
 
-pub fn render(
-    builder: &gtk::Builder,
-    logger: Arc<Logger>,
-    comunicacion: Arc<Comunicacion<TcpStream>>,
-) -> bool {
-    clonar_dialog(builder, logger, comunicacion);
+pub fn render(builder: &gtk::Builder, logger: Arc<Logger>) -> bool {
+    clonar_dialog(builder, logger);
     run_dialog(builder);
 
     if !PathBuf::from(".gir").is_dir() {

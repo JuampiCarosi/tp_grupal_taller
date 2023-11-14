@@ -15,12 +15,17 @@ use std::sync::Arc;
 pub struct Push {
     hash_refs: HashMap<String, (String, String)>,
     comunicacion: Arc<Comunicacion<TcpStream>>,
+    logger: Arc<Logger>,
 }
 
 impl Push {
-    pub fn new(comunicacion: Arc<Comunicacion<TcpStream>>) -> Self {
+    pub fn new(logger: Arc<Logger>) -> Result<Self, String> {
         let mut hash_refs: HashMap<String, (String, String)> = HashMap::new();
         let refs = obtener_refs_de(PathBuf::from("./.gir/refs/"), String::from("./.gir/"));
+        let comunicacion = Arc::new(Comunicacion::<TcpStream>::new_desde_gir_config(
+            logger.clone(),
+        )?);
+
         for referencia in refs {
             hash_refs.insert(
                 referencia.split(' ').collect::<Vec<&str>>()[1].to_string(),
@@ -30,14 +35,15 @@ impl Push {
                 ),
             );
         }
-        Push {
+        Ok(Push {
             hash_refs,
+            logger,
             comunicacion,
-        }
+        })
     }
 
     pub fn ejecutar(&mut self) -> Result<String, String> {
-        println!("Se ejecuto el comando push");
+        self.logger.log("Se ejecuto el comando push".to_string());
         let request_data = "git-receive-pack /gir/\0host=example.com\0\0version=1\0"; //en donde dice /.git/ va la dir del repo
         let request_data_con_largo_hex = io::obtener_linea_con_largo_hex(request_data);
         self.comunicacion.enviar(&request_data_con_largo_hex)?;
