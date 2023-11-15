@@ -5,7 +5,7 @@ use super::{
         add::Add, branch::Branch, cat_file::CatFile, checkout::Checkout, clone::Clone,
         commit::Commit, fetch::Fetch, hash_object::HashObject, init::Init, log::Log,
         ls_tree::LsTree, merge::Merge, pull::Pull, push::Push, remote::Remote, rm::Remove,
-        status::Status, version::Version,
+        show_ref::ShowRef, status::Status, version::Version,
     },
     logger::Logger,
 };
@@ -22,6 +22,7 @@ pub enum Comando {
     Commit(Commit),
     Clone(Clone),
     Fetch(Fetch<TcpStream>),
+    ShowRef(ShowRef),
     Push(Push),
     Pull(Pull),
     Log(Log),
@@ -57,6 +58,7 @@ impl Comando {
             "remote" => Comando::Remote(Remote::from(&mut vector_args, logger)?),
             "merge" => Comando::Merge(Merge::from(&mut vector_args, logger)?),
             "ls-tree" => Comando::LsTree(LsTree::new(logger, &mut vector_args)?),
+            "show-ref" => Comando::ShowRef(ShowRef::from(vector_args, logger)?),
             _ => Comando::Unknown,
         };
 
@@ -83,6 +85,7 @@ impl Comando {
             Comando::Merge(ref mut merge) => merge.ejecutar(),
             Comando::Pull(ref mut pull) => pull.ejecutar(),
             Comando::LsTree(ref mut ls_tree) => ls_tree.ejecutar(),
+            Comando::ShowRef(ref mut show_ref) => show_ref.ejecutar(),
             Comando::Unknown => Err("Comando desconocido".to_string()),
         }
     }
