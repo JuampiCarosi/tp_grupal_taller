@@ -8,6 +8,7 @@ use super::{
         status::Status, version::Version,
     },
     logger::Logger,
+    tag::Tag,
 };
 
 pub enum Comando {
@@ -29,6 +30,7 @@ pub enum Comando {
     Remote(Remote),
     Merge(Merge),
     LsTree(LsTree),
+    Tag(Tag),
     Unknown,
 }
 
@@ -57,6 +59,7 @@ impl Comando {
             "remote" => Comando::Remote(Remote::from(&mut vector_args, logger)?),
             "merge" => Comando::Merge(Merge::from(&mut vector_args, logger)?),
             "ls-tree" => Comando::LsTree(LsTree::new(logger, &mut vector_args)?),
+            "tag" => Comando::Tag(Tag::from(vector_args, logger)?),
             _ => Comando::Unknown,
         };
 
@@ -83,6 +86,7 @@ impl Comando {
             Comando::Merge(ref mut merge) => merge.ejecutar(),
             Comando::Pull(ref mut pull) => pull.ejecutar(),
             Comando::LsTree(ref mut ls_tree) => ls_tree.ejecutar(),
+            Comando::Tag(ref mut tag) => tag.ejecutar(),
             Comando::Unknown => Err("Comando desconocido".to_string()),
         }
     }
