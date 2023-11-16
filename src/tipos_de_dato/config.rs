@@ -11,9 +11,9 @@ pub struct RemoteInfo {
 #[derive(Debug, Clone)]
 
 pub struct BranchInfo {
-    nombre: String,
-    remote: String,
-    merge: String,
+    pub nombre: String,
+    pub remote: String,
+    pub merge: String,
 }
 
 pub struct Config {
