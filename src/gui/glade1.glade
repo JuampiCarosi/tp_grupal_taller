@@ -386,7 +386,7 @@
       <placeholder/>
     </child>
   </object>
-  <object class="GtkDialog" id="fetching-dialog">
+  <object class="GtkMessageDialog" id="fetching-dialog">
     <property name="width-request">200</property>
     <property name="height-request">120</property>
     <property name="can-focus">False</property>

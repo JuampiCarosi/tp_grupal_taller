@@ -18,6 +18,6 @@ pub fn render(
     let window = window.clone();
     icon.connect_button_press_event(move |_, _| {
         hidratar_componentes(&builder, &window, logger.clone(), branch_actual.clone());
-        gtk::glib::Propagation::Proceed
+        gtk::glib::Propagation::Stop
     });
 }
