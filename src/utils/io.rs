@@ -8,21 +8,20 @@ use std::str;
 use super::path_buf;
 
 pub fn obtener_objetos_del_directorio(dir: String) -> Result<Vec<String>, String> {
-    let path = PathBuf::from(dir);
-    let dir_abierto = leer_directorio(dir)?;
+    let dir_abierto = leer_directorio(&dir)?;
 
     let mut objetos: Vec<String> = Vec::new();
 
-    for archivo in dir_abierto {
-        match archivo {
-            Ok(archivo) => {
-                if archivo.file_type().unwrap().is_dir()
-                    && archivo.file_name().into_string().unwrap() != "info"
-                    && archivo.file_name().into_string().unwrap() != "pack"
+    for entrada in dir_abierto {
+        match entrada {
+            Ok(entrada) => {
+                if es_dir(entrada.path())
+                    && entrada.file_name().to_string_lossy() != "info"
+                    && entrada.file_name().to_string_lossy() != "pack"
                 {
-                    //que onda este if
-                    if !path.to_string_lossy().contains("log.txt") {
-                        objetos.append(&mut obtener_objetos_con_nombre_carpeta(archivo.path())?);
+                    //que onda este if?? JUANI
+                    if !entrada.path().to_string_lossy().contains("log.txt") {
+                        objetos.append(&mut obtener_objetos_con_nombre_carpeta(entrada.path())?);
                     }
                 }
             }
@@ -64,7 +63,7 @@ pub fn obtener_objetos(dir: PathBuf) -> Result<String, ErrorDeComunicacion> {
 /// -Si no existe dir
 /// -Si no tiene contendio
 pub fn obtener_objetos_con_nombre_carpeta(dir: PathBuf) -> Result<Vec<String>, String> {
-    let directorio = leer_directorio(dir)?;
+    let directorio = leer_directorio(&dir)?;
 
     let mut objetos = Vec::new();
     let nombre_directorio = path_buf::obtener_nombre(&dir)?;
@@ -72,7 +71,9 @@ pub fn obtener_objetos_con_nombre_carpeta(dir: PathBuf) -> Result<Vec<String>, S
     for archivo in directorio {
         match archivo {
             Ok(archivo) => {
-                objetos.push(nombre_directorio + archivo.file_name().to_string_lossy().as_ref());
+                objetos.push(
+                    nombre_directorio.clone() + archivo.file_name().to_string_lossy().as_ref(),
+                );
             }
             Err(error) => {
                 return Err(format!("Error leyendo directorio: {}", error));
@@ -206,15 +207,15 @@ pub fn obtener_ref_head(path: PathBuf) -> Result<String, ErrorDeComunicacion> {
 }
 
 ///Lee un directorio. Devuelve su iterador. Falla si no existe o si no es un directoro
-pub fn leer_directorio<P: AsRef<Path> + Clone + Debug>(directorio: P) -> Result<ReadDir, String> {
-    let metadada_dir =
-        fs::metadata(directorio).map_err(|_| format!("Error no existe el dir {:?}", directorio))?;
+pub fn leer_directorio<P: AsRef<Path> + Clone + Debug>(directorio: &P) -> Result<ReadDir, String> {
+    let metadada_dir = fs::metadata(&directorio)
+        .map_err(|_| format!("Error no existe el dir {:?}", directorio))?;
 
     if !metadada_dir.is_dir() {
         return Err(format!("Error {:?} no es un dir", directorio));
     }
 
-    fs::read_dir(directorio).map_err(|e| format!("Error al leer {:?}: {}", directorio, e))
+    fs::read_dir(&directorio).map_err(|e| format!("Error al leer {:?}: {}", directorio, e))
 }
 
 ///Devuelve True si el directororio es un directorio o false en caso contrario o si no existe

@@ -172,8 +172,9 @@ impl<T: Write + Read> Fetch<T> {
 
     ///Envia todo los objetos (sus hash) que ya se tienen y por lo tanto no es necesario que el servidor manda
     fn enviar_lo_que_tengo(&self) -> Result<(), String> {
-        let objetos_directorio =
-            io::obtener_objetos_del_directorio("./.gir/objects/".to_string()).unwrap();
+        //ESTAMOS ENVIANDO TODOS LOS OBJETOS QUE TENEMOS SIN DISTINCION, DE QUE RAMA ESTAN. FUNCIONA
+        //PERO SE PODRIA ENVIAR SOLO DE LAS QUE LE PEDISTE
+        let objetos_directorio = io::obtener_objetos_del_directorio("./.gir/objects/".to_string())?;
 
         if !objetos_directorio.is_empty() {
             self.comunicacion

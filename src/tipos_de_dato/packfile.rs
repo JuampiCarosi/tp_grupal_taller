@@ -76,7 +76,7 @@ impl Packfile {
     // funcion que recorrer el directorio y aniade los objetos al packfile junto a su indice correspondiente
     fn obtener_objetos_del_dir(&mut self, dir: &str) -> Result<(), ErrorDeComunicacion> {
         // esto porque es un clone, deberia pasarle los objetos que quiero
-        let objetos = io::obtener_objetos_del_directorio(dir.to_string())?;
+        let objetos = io::obtener_objetos_del_directorio(dir.to_string()).unwrap();
         // ---
         for objeto in objetos {
             let inicio = self.objetos.len() as u32; // obtengo el len previo a aniadir el objeto
@@ -164,10 +164,10 @@ impl Packfile {
             true => println!("Checksum correcto"),
             false => println!("Checksum incorrecto"),
         }
-        let firma = &bytes[0..4];
+        let _firma = &bytes[0..4];
         // assert_eq!("PACK", str::from_utf8(&firma).unwrap());
         bytes.drain(0..4);
-        let version = &bytes[0..4];
+        let _version = &bytes[0..4];
         // assert_eq!("0002", str::from_utf8(&version)?);
 
         bytes.drain(0..4);
@@ -182,7 +182,7 @@ impl Packfile {
             let (tipo, tamanio, _bytes_leidos) = decodificar_bytes(bytes);
 
             if tipo == 7 {
-                let hash_obj = &bytes[0..20];
+                let _hash_obj = &bytes[0..20];
                 bytes.drain(0..20);
                 let mut objeto_descomprimido = vec![0; tamanio as usize];
 
@@ -220,7 +220,7 @@ impl Packfile {
 
             let ruta = format!("{}{}/{}", &ubicacion, &hash[..2], &hash[2..]);
 
-            let total_out = descompresor.total_out(); // esto es lo que debe matchear el tamanio que se pasa en el header
+            let _total_out = descompresor.total_out(); // esto es lo que debe matchear el tamanio que se pasa en el header
             let total_in = descompresor.total_in(); // esto es para calcular el offset
 
             bytes.drain(0..total_in as usize);
