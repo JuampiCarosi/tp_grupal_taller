@@ -17,11 +17,11 @@ fn estilar_log_info(builder: &gtk::Builder) {
 
 pub fn render(builder: &gtk::Builder, commit: Option<&str>) {
     let log_info: gtk::TextBuffer = builder.object("log-info").unwrap();
+    estilar_log_info(builder);
     if let Some(commit) = commit {
         let contenido = descomprimir_objeto_gir(commit.to_string()).unwrap();
         let contenido_split = contenido.split('\0').collect::<Vec<&str>>();
         log_info.set_text(contenido_split[1]);
-        estilar_log_info(builder);
     } else {
         log_info.set_text("Ningun commit seleccionado");
     }

@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use gtk::prelude::*;
+use gtk::{gdk, prelude::*};
 
 use crate::{
     tipos_de_dato::{comandos::log::Log, objetos::commit::CommitObj},
@@ -53,6 +53,7 @@ fn crear_label(string: &str) -> gtk::EventBox {
     label.set_margin_top(3);
     // label.set_margin_bottom(2);
     event_box.style_context().add_class("commit-label");
+
     event_box
 }
 

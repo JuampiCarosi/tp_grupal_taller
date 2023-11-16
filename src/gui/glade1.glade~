@@ -216,6 +216,74 @@
       <class name="app"/>
     </style>
   </object>
+  <object class="GtkWindow" id="conflicts-window">
+    <property name="can-focus">False</property>
+    <child>
+      <object class="GtkNotebook">
+        <property name="visible">True</property>
+        <property name="can-focus">True</property>
+        <child>
+          <object class="GtkLabel">
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+            <property name="label" translatable="yes">tab1</property>
+          </object>
+        </child>
+        <child type="tab">
+          <object class="GtkLabel">
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+            <property name="label" translatable="yes">page 1</property>
+          </object>
+          <packing>
+            <property name="tab-fill">False</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkLabel">
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+            <property name="label" translatable="yes">tab2</property>
+          </object>
+          <packing>
+            <property name="position">1</property>
+          </packing>
+        </child>
+        <child type="tab">
+          <object class="GtkLabel">
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+            <property name="label" translatable="yes">page 2</property>
+          </object>
+          <packing>
+            <property name="position">1</property>
+            <property name="tab-fill">False</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkLabel">
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+            <property name="label" translatable="yes">tab3</property>
+          </object>
+          <packing>
+            <property name="position">2</property>
+          </packing>
+        </child>
+        <child type="tab">
+          <object class="GtkLabel">
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+            <property name="label" translatable="yes">page 3</property>
+          </object>
+          <packing>
+            <property name="position">2</property>
+            <property name="tab-fill">False</property>
+          </packing>
+        </child>
+      </object>
+    </child>
+  </object>
   <object class="GtkMessageDialog" id="error-dialog">
     <property name="width-request">350</property>
     <property name="can-focus">False</property>
@@ -388,6 +456,7 @@
       <class name="app"/>
     </style>
   </object>
+  <object class="GtkTextBuffer" id="log-info"/>
   <object class="GtkWindow" id="home-v2">
     <property name="name">home-v2</property>
     <property name="width-request">800</property>
@@ -405,6 +474,7 @@
             <property name="can-focus">False</property>
             <child>
               <object class="GtkStatusbar">
+                <property name="height-request">1</property>
                 <property name="visible">True</property>
                 <property name="can-focus">False</property>
                 <property name="valign">center</property>
@@ -444,6 +514,7 @@
                     <property name="can-focus">True</property>
                     <property name="receives-default">True</property>
                     <property name="tooltip-text" translatable="yes">crear una branch nueva</property>
+                    <property name="valign">center</property>
                     <style>
                       <class name="button"/>
                     </style>
@@ -524,10 +595,11 @@
                 <property name="margin-bottom">6</property>
                 <property name="spacing">10</property>
                 <child>
-                  <object class="GtkButton">
+                  <object class="GtkButton" id="conflicts-button">
                     <property name="visible">True</property>
                     <property name="can-focus">True</property>
                     <property name="receives-default">True</property>
+                    <property name="tooltip-text" translatable="yes">Resolver Conflictos</property>
                     <child>
                       <object class="GtkBox">
                         <property name="visible">True</property>
@@ -549,7 +621,7 @@
                           <object class="GtkLabel">
                             <property name="visible">True</property>
                             <property name="can-focus">False</property>
-                            <property name="label" translatable="yes">Resolver Conflictos</property>
+                            <property name="label" translatable="yes">conflictos</property>
                           </object>
                           <packing>
                             <property name="expand">False</property>
@@ -642,7 +714,7 @@
                     <property name="visible">True</property>
                     <property name="can-focus">False</property>
                     <property name="halign">start</property>
-                    <property name="margin-bottom">10</property>
+                    <property name="margin-bottom">9</property>
                     <property name="label" translatable="yes">Commits en branch actual:</property>
                     <attributes>
                       <attribute name="weight" value="semibold"/>
@@ -818,7 +890,6 @@
       <class name="app"/>
     </style>
   </object>
-  <object class="GtkTextBuffer" id="log-info"/>
   <object class="GtkMessageDialog" id="no-repo-dialog">
     <property name="width-request">350</property>
     <property name="can-focus">False</property>
