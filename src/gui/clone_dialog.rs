@@ -60,6 +60,5 @@ pub fn render(builder: &gtk::Builder, logger: Arc<Logger>) -> bool {
         error_no_repo_dialog(builder);
         return false;
     }
-
     true
 }

@@ -12,12 +12,11 @@ pub fn render(
     logger: Arc<Logger>,
     branch_actual: String,
 ) {
-    let icon = builder.object::<gtk::EventBox>("refresh-icon").unwrap();
+    let icon = builder.object::<gtk::Button>("refresh-button").unwrap();
 
     let builder = builder.clone();
     let window = window.clone();
-    icon.connect_button_press_event(move |_, _| {
+    icon.connect_clicked(move |_| {
         hidratar_componentes(&builder, &window, logger.clone(), branch_actual.clone());
-        gtk::glib::Propagation::Stop
     });
 }

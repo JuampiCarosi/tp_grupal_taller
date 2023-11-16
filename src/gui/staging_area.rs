@@ -106,34 +106,9 @@ fn escribir_archivos_index(builder: &gtk::Builder, logger: Arc<Logger>) {
 }
 
 fn estilar_lista_archivos(builder: &gtk::Builder) {
-    let window: gtk::ScrolledWindow = builder.object("scrolled-window").unwrap();
+    // let window: gtk::ScrolledWindow = builder.object("scrolled-window").unwrap();
 
-    let css_provider = gtk::CssProvider::new();
-    css_provider
-        .load_from_data(
-            "
-           scrolledwindow  {
-              font-size: 12px;
-              font-family: monospace;
-              background-color: #DDDDDD;
-              border-radius: 8px;
-              border: 1px solid #9A9A9A;
-              padding: 8px;
-          }
-
-      "
-            .as_bytes(),
-        )
-        .unwrap();
-
-    let context = window.style_context();
-    gtk::StyleContext::add_provider(
-        &context,
-        &css_provider,
-        gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
-    );
-
-    window.style_context().add_class("contenedor-commits");
+    // window.style_context().add_class("contenedor-commits");
 }
 
 fn escribir_archivos_modificados(
