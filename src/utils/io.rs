@@ -1,8 +1,11 @@
 use crate::err_comunicacion::ErrorDeComunicacion;
-use std::fs::{self, File};
+use std::fmt::Debug;
+use std::fs::{self, File, ReadDir};
 use std::io::{self, BufRead};
 use std::path::{Path, PathBuf};
 use std::str;
+
+use super::path_buf;
 
 pub fn obtener_objetos_del_directorio(dir: String) -> Result<Vec<String>, ErrorDeComunicacion> {
     let path = PathBuf::from(dir);
@@ -49,12 +52,10 @@ pub fn obtener_objetos(dir: PathBuf) -> Result<String, ErrorDeComunicacion> {
     )))
 }
 
-pub fn obtener_objetos_con_nombre_carpeta(
-    dir: PathBuf,
-) -> Result<Vec<String>, ErrorDeComunicacion> {
+pub fn obtener_objetos_con_nombre_carpeta(dir: PathBuf) -> Result<Vec<String>, String> {
     let directorio = fs::read_dir(dir.clone())?;
     let mut nombres = Vec::new();
-    let nombre_directorio = dir.file_name().unwrap().to_string_lossy().to_string();
+    let nombre_directorio = path_buf::obtener_nombre(&dir)?;
     for archivo in directorio {
         match archivo {
             Ok(archivo) => {
@@ -190,6 +191,18 @@ pub fn obtener_ref_head(path: PathBuf) -> Result<String, ErrorDeComunicacion> {
             "No existe HEAD",
         )))
     }
+}
+
+//Lee un directorio. Devuelve su iterador. Falla si no existe o si no es un directoro
+pub fn leer_directorio<P: AsRef<Path> + Clone + Debug>(directorio: P) -> Result<ReadDir, String> {
+    let metadada_dir =
+        fs::metadata(directorio).map_err(|_| format!("Error no existe el dir {:?}", directorio))?;
+
+    if !metadada_dir.is_dir() {
+        return Err(format!("Error {:?} no es un dir", directorio));
+    }
+
+    fs::read_dir(directorio).map_err(|e| format!("Error al leer {:?}: {}", directorio, e))
 }
 
 pub fn crear_directorio<P: AsRef<Path> + Clone>(directorio: P) -> Result<(), String> {

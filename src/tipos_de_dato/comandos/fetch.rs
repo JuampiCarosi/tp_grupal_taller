@@ -11,6 +11,7 @@ use std::sync::Arc;
 const SE_ENVIO_ALGUN_PEDIDO: bool = true;
 const NO_SE_ENVIO_NINGUN_PEDIDO: bool = false;
 const GIR_FETCH: &str = "gir fetch <remoto>";
+
 pub struct Fetch<T: Write + Read> {
     remoto: String,
     comunicacion: Arc<Comunicacion<T>>,

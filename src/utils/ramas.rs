@@ -34,12 +34,17 @@ pub fn es_la_ruta_a_una_rama(dir: &PathBuf) -> bool {
     false
 }
 
+/// Convierte una rama que el servidor la ve como local a una en la cual el cliente ve como remota
+///
+/// # Ejemplo:
+///
+/// recive:  ./.gir/refs/heads/master
+/// devuelve: ./.gir/refs/remotes/{remoto}/master
 pub fn convertir_de_dir_rama_remota_a_dir_rama_local(
     remoto: &String,
     dir_rama_remota: &PathBuf,
 ) -> Result<PathBuf, String> {
     let carpeta_del_remoto = format!("./.gir/refs/remotes/{}/", remoto);
-    //"./.gir/refs/remotes/origin/";
 
     let rama_remota = path_buf::obtener_nombre(dir_rama_remota)?;
     let dir_rama_local = PathBuf::from(carpeta_del_remoto + rama_remota.as_str());
