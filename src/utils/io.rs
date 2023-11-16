@@ -7,10 +7,12 @@ use std::str;
 
 use super::path_buf;
 
-pub fn obtener_objetos_del_directorio(dir: String) -> Result<Vec<String>, ErrorDeComunicacion> {
+pub fn obtener_objetos_del_directorio(dir: String) -> Result<Vec<String>, String> {
     let path = PathBuf::from(dir);
+    let dir_abierto = leer_directorio(dir)?;
+
     let mut objetos: Vec<String> = Vec::new();
-    let dir_abierto = fs::read_dir(path.clone())?;
+
     for archivo in dir_abierto {
         match archivo {
             Ok(archivo) => {
@@ -18,15 +20,14 @@ pub fn obtener_objetos_del_directorio(dir: String) -> Result<Vec<String>, ErrorD
                     && archivo.file_name().into_string().unwrap() != "info"
                     && archivo.file_name().into_string().unwrap() != "pack"
                 {
-                    let path = archivo.path(); //que onda este if
+                    //que onda este if
                     if !path.to_string_lossy().contains("log.txt") {
-                        let _nombre_carpeta = archivo.file_name().into_string().unwrap();
-                        objetos.append(&mut obtener_objetos_con_nombre_carpeta(path.clone())?);
+                        objetos.append(&mut obtener_objetos_con_nombre_carpeta(archivo.path())?);
                     }
                 }
             }
             Err(error) => {
-                eprintln!("Error leyendo directorio: {}", error);
+                return Err(format!("Error leyendo directorio: {}", error));
             }
         }
     }
@@ -52,30 +53,41 @@ pub fn obtener_objetos(dir: PathBuf) -> Result<String, ErrorDeComunicacion> {
     )))
 }
 
+///Obitiene todos los objetos asosiados a una carpeta dentro dir. Dado una carpeta, devuelve
+/// todo los objtetos asosiados a este
+///
+/// ## Ejemplo
+/// - recive: jk/
+/// - devuleve: jksfsfsffafasfas...fdfdf, kjsfsfaftyhththht, jkiodf235453535355fs, ...
+///
+/// ## Error
+/// -Si no existe dir
+/// -Si no tiene contendio
 pub fn obtener_objetos_con_nombre_carpeta(dir: PathBuf) -> Result<Vec<String>, String> {
-    let directorio = fs::read_dir(dir.clone())?;
-    let mut nombres = Vec::new();
+    let directorio = leer_directorio(dir)?;
+
+    let mut objetos = Vec::new();
     let nombre_directorio = path_buf::obtener_nombre(&dir)?;
+
     for archivo in directorio {
         match archivo {
             Ok(archivo) => {
-                nombres.push(
-                    nombre_directorio.clone() + archivo.file_name().to_string_lossy().as_ref(),
-                );
+                objetos.push(nombre_directorio + archivo.file_name().to_string_lossy().as_ref());
             }
             Err(error) => {
-                eprintln!("Error leyendo directorio: {}", error);
+                return Err(format!("Error leyendo directorio: {}", error));
             }
         }
     }
 
-    if nombres.is_empty() {
-        return Err(ErrorDeComunicacion::IoError(io::Error::new(
-            io::ErrorKind::NotFound,
-            "No se encontraron objetos en el directorio",
-        )));
+    if objetos.is_empty() {
+        return Err(format!(
+            "Error el directorio {} no tiene cotenido",
+            nombre_directorio
+        ));
     }
-    Ok(nombres)
+
+    Ok(objetos)
 }
 
 pub fn obtener_refs_con_largo_hex(
@@ -193,7 +205,7 @@ pub fn obtener_ref_head(path: PathBuf) -> Result<String, ErrorDeComunicacion> {
     }
 }
 
-//Lee un directorio. Devuelve su iterador. Falla si no existe o si no es un directoro
+///Lee un directorio. Devuelve su iterador. Falla si no existe o si no es un directoro
 pub fn leer_directorio<P: AsRef<Path> + Clone + Debug>(directorio: P) -> Result<ReadDir, String> {
     let metadada_dir =
         fs::metadata(directorio).map_err(|_| format!("Error no existe el dir {:?}", directorio))?;
@@ -205,6 +217,13 @@ pub fn leer_directorio<P: AsRef<Path> + Clone + Debug>(directorio: P) -> Result<
     fs::read_dir(directorio).map_err(|e| format!("Error al leer {:?}: {}", directorio, e))
 }
 
+///Devuelve True si el directororio es un directorio o false en caso contrario o si no existe
+pub fn es_dir<P: AsRef<Path> + Clone + Debug>(entrada: P) -> bool {
+    match fs::metadata(entrada) {
+        Ok(metadata_contenido) => metadata_contenido.is_dir(),
+        Err(_) => false,
+    }
+}
 pub fn crear_directorio<P: AsRef<Path> + Clone>(directorio: P) -> Result<(), String> {
     let dir = fs::metadata(directorio.clone());
     if dir.is_ok() {
