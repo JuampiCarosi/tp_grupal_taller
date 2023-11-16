@@ -2,7 +2,7 @@ use crate::tipos_de_dato::comunicacion::Comunicacion;
 use crate::tipos_de_dato::config::Config;
 use crate::tipos_de_dato::logger::Logger;
 use crate::tipos_de_dato::packfile::Packfile;
-use crate::utils::{self, io};
+use crate::utils::{self, io, objects};
 use std::io::{Read, Write};
 use std::net::TcpStream;
 use std::path::PathBuf;
@@ -11,6 +11,7 @@ use std::sync::Arc;
 const SE_ENVIO_ALGUN_PEDIDO: bool = true;
 const NO_SE_ENVIO_NINGUN_PEDIDO: bool = false;
 const GIR_FETCH: &str = "gir fetch <remoto>";
+const UBICACION_RAMA_MASTER: &str = "./.gir/refs/heads/master";
 
 pub struct Fetch<T: Write + Read> {
     remoto: String,
@@ -109,7 +110,7 @@ impl<T: Write + Read> Fetch<T> {
         //en caso de clone el commit head se tiene que utilizar
         let (
             capacidades_servidor,
-            _commit_head_remoto,
+            commit_head_remoto,
             commits_cabezas_y_dir_rama_asosiado,
             _commits_y_tags_asosiados,
         ) = self.fase_de_descubrimiento()?;
@@ -121,6 +122,8 @@ impl<T: Write + Read> Fetch<T> {
         self.recivir_packfile_y_guardar_objetos()?;
 
         self.actualizar_ramas_locales_del_remoto(&commits_cabezas_y_dir_rama_asosiado)?;
+
+        self.acutualizar_head_de_ser_necesario(&commit_head_remoto)?;
 
         let mensaje = format!("Fetch ejecutado con exito");
         self.logger.log(mensaje.clone());
@@ -170,15 +173,30 @@ impl<T: Write + Read> Fetch<T> {
             .enviar(&io::obtener_linea_con_largo_hex("done\n"))
     }
 
+    fn acutualizar_head_de_ser_necesario(
+        &self,
+        commit_head_remoto: &Option<String>,
+    ) -> Result<(), String> {
+        if !io::esta_vacio(UBICACION_RAMA_MASTER.to_string()) {
+            return Ok(());
+        }
+
+        if let Some(hash) = commit_head_remoto {
+            io::escribir_bytes(UBICACION_RAMA_MASTER, hash)?;
+        }
+
+        Ok(())
+    }
+
     ///Envia todo los objetos (sus hash) que ya se tienen y por lo tanto no es necesario que el servidor manda
     fn enviar_lo_que_tengo(&self) -> Result<(), String> {
         //ESTAMOS ENVIANDO TODOS LOS OBJETOS QUE TENEMOS SIN DISTINCION, DE QUE RAMA ESTAN. FUNCIONA
         //PERO SE PODRIA ENVIAR SOLO DE LAS QUE LE PEDISTE
-        let objetos_directorio = io::obtener_objetos_del_directorio("./.gir/objects/".to_string())?;
+        let objetos = objects::obtener_objetos()?;
 
-        if !objetos_directorio.is_empty() {
+        if !objetos.is_empty() {
             self.comunicacion
-                .enviar_lo_que_tengo_al_servidor_pkt(&objetos_directorio)?;
+                .enviar_lo_que_tengo_al_servidor_pkt(&objetos)?;
             self.recivir_nack()?;
             self.finalizar_pedido()?
         } else {

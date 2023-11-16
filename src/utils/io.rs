@@ -7,6 +7,7 @@ use std::str;
 
 use super::path_buf;
 
+//la idea es dejar de usar esta funcion, ->ya hay una mejor en objects
 pub fn obtener_objetos_del_directorio(dir: String) -> Result<Vec<String>, String> {
     let dir_abierto = leer_directorio(&dir)?;
 
@@ -166,9 +167,11 @@ fn leer_archivo(path: &mut Path) -> Result<String, ErrorDeComunicacion> {
 }
 //Devuelve true si la ubicacion esta vacia y false en caso contrario.
 //Si falla se presupone que es porque no existe y por lo tanto esta vacio
-pub fn esta_vacio(ubicacion: String) -> Result<bool, String> {
-    let contenido = leer_a_string(PathBuf::from(ubicacion))?;
-    Ok(contenido.is_empty())
+pub fn esta_vacio(ubicacion: String) -> bool {
+    match fs::metadata(ubicacion) {
+        Ok(metadata) => metadata.len() == 0,
+        Err(_) => false,
+    }
 }
 
 fn obtener_referencia(path: &mut PathBuf, prefijo: &str) -> Result<String, ErrorDeComunicacion> {

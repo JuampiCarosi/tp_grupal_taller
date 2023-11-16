@@ -42,8 +42,11 @@ impl Pull {
 
     pub fn ejecutar(&self) -> Result<String, String> {
         self.comunicacion.iniciar_git_upload_pack_con_servidor()?;
-        let fetch =
-            Fetch::<TcpStream>::new(Vec::new(), self.logger.clone(), self.comunicacion.clone())?;
+        let fetch = Fetch::<TcpStream>::new(
+            vec![self.remoto.clone()],
+            self.logger.clone(),
+            self.comunicacion.clone(),
+        )?;
         //en caso de clone el commit head se tiene que utilizar
         let (
             capacidades_servidor,
@@ -61,7 +64,7 @@ impl Pull {
         fetch.actualizar_ramas_locales_del_remoto(&commits_cabezas_y_dir_rama_asosiado)?;
         let commit_head_remoto = self.obtener_head_remoto()?;
 
-        if io::esta_vacio(UBICACION_RAMA_MASTER.to_string())? {
+        if io::esta_vacio(UBICACION_RAMA_MASTER.to_string()) {
             self.fast_forward_de_cero(commit_head_remoto)?;
         } else {
             self.mergear_rama()?;

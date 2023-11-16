@@ -121,7 +121,7 @@ impl Checkout {
     }
 
     fn comprobar_que_no_haya_contenido_index(&self) -> Result<(), String> {
-        if !utils::index::esta_vacio_el_index()? {
+        if !utils::index::esta_vacio_el_index() {
             Err("Fallo, tiene contendio sin guardar. Por favor, haga commit para no perder los cambios".to_string())
         } else {
             Ok(())

@@ -39,7 +39,7 @@ pub fn obtener_objetos() -> Result<Vec<String>, String> {
 /// ## Error
 /// -Si no existe dir
 /// -Si no tiene conti8dio
-pub fn obtener_objetos_con_nombre_carpeta(dir: PathBuf) -> Result<Vec<String>, String> {
+fn obtener_objetos_con_nombre_carpeta(dir: PathBuf) -> Result<Vec<String>, String> {
     let directorio = io::leer_directorio(&dir)?;
 
     let mut objetos = Vec::new();
