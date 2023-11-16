@@ -1,10 +1,10 @@
-use std::{net::TcpStream, path::PathBuf, sync::Arc, thread};
+use std::{net::TcpStream, path::PathBuf, sync::Arc};
 
 use gtk::prelude::*;
 
 use crate::tipos_de_dato::{
     comandos::clone::Clone,
-    comunicacion::{self, Comunicacion},
+    comunicacion::{Comunicacion},
     logger::Logger,
 };
 

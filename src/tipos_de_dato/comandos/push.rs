@@ -51,7 +51,7 @@ impl Push {
         // if first_ref.contains(&"0".repeat(40)) {
         let referencia_y_capacidades = first_ref.split('\0').collect::<Vec<&str>>();
         let referencia = referencia_y_capacidades[0].to_string();
-        let capacidades = referencia_y_capacidades[1].to_string();
+        let _capacidades = referencia_y_capacidades[1].to_string();
         if !referencia.contains(&"0".repeat(40)) {
             refs_recibidas.push(referencia_y_capacidades[0].to_string());
         }

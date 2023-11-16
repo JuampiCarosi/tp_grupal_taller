@@ -45,6 +45,7 @@ pub mod utils {
     pub mod gir_config;
     pub mod index;
     pub mod io;
+    pub mod objects;
     pub mod path_buf;
     pub mod ramas;
     pub mod strings;

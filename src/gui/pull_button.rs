@@ -1,10 +1,10 @@
 use gtk::{self};
-use gtk::{prelude::*, Spinner};
+use gtk::{prelude::*};
 use std::net::TcpStream;
 use std::sync::Arc;
 use std::thread::sleep;
 
-use crate::tipos_de_dato::comandos::branch;
+
 use crate::tipos_de_dato::comandos::pull::Pull;
 use crate::tipos_de_dato::comunicacion::Comunicacion;
 

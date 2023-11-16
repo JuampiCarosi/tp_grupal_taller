@@ -10,14 +10,14 @@ mod push_button;
 mod refresh;
 mod staging_area;
 
-use std::fs;
+
 use std::net::TcpStream;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use crate::tipos_de_dato::comandos::branch;
+
 use crate::tipos_de_dato::comandos::commit::Commit;
-use crate::tipos_de_dato::comunicacion::{self, Comunicacion};
+use crate::tipos_de_dato::comunicacion::{Comunicacion};
 use crate::tipos_de_dato::logger::Logger;
 use gtk::prelude::*;
 use gtk::{self};

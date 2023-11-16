@@ -38,7 +38,7 @@ pub fn upload_pack(
     // let have_obj_ids = utilidades_strings::eliminar_prefijos(&mut lineas_siguientes, "have");
     let respuesta_acks_nak = git_io::obtener_ack(have_objs_ids.clone(), dir.clone() + "objects/");
     comunicacion.responder(respuesta_acks_nak).unwrap();
-    let ultimo_done = comunicacion.obtener_lineas().unwrap();
+    let _ultimo_done = comunicacion.obtener_lineas().unwrap();
     let faltantes = git_io::obtener_archivos_faltantes(have_objs_ids, dir.clone());
     // obtener un packfile de los faltantes...
     let packfile =

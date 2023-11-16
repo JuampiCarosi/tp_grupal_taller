@@ -10,8 +10,7 @@ static CLIENT_ARGS: usize = 2;
 use gir::{
     tipos_de_dato::{comando::Comando, comunicacion::Comunicacion, logger::Logger},
     utils::{
-        gir_config::{conseguir_ubicacion_log_config, obtener_gir_config_path},
-        io::leer_a_string,
+        gir_config::{conseguir_ubicacion_log_config},
     },
 };
 
