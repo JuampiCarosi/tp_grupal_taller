@@ -3,10 +3,10 @@ use std::{net::TcpStream, sync::Arc};
 use super::{
     comandos::{
         add::Add, branch::Branch, cat_file::CatFile, checkout::Checkout, clone::Clone,
-        commit::Commit, fetch::Fetch, hash_object::HashObject, init::Init, log::Log, merge::Merge,
-        pull::Pull, push::Push, remote::Remote, rm::Remove, status::Status, version::Version,
+        commit::Commit, fetch::Fetch, hash_object::HashObject, init::Init, log::Log,
+        ls_tree::LsTree, merge::Merge, pull::Pull, push::Push, remote::Remote, rm::Remove,
+        status::Status, version::Version,
     },
-    comunicacion::Comunicacion,
     logger::Logger,
 };
 
@@ -28,15 +28,12 @@ pub enum Comando {
     Status(Status),
     Remote(Remote),
     Merge(Merge),
+    LsTree(LsTree),
     Unknown,
 }
 
 impl Comando {
-    pub fn new(
-        input: Vec<String>,
-        logger: Arc<Logger>,
-        comunicacion: Arc<Comunicacion<TcpStream>>,
-    ) -> Result<Comando, String> {
+    pub fn new(input: Vec<String>, logger: Arc<Logger>) -> Result<Comando, String> {
         let (comando, args) = input.split_first().ok_or("No se ingreso ningun comando")?;
 
         let mut vector_args = args.to_vec();
@@ -51,14 +48,15 @@ impl Comando {
             "branch" => Comando::Branch(Branch::from(&mut vector_args, logger)?),
             "checkout" => Comando::Checkout(Checkout::from(vector_args, logger)?),
             "commit" => Comando::Commit(Commit::from(&mut vector_args, logger)?),
-            "fetch" => Comando::Fetch(Fetch::<TcpStream>::new(vector_args, logger, comunicacion)?),
-            "clone" => Comando::Clone(Clone::from(logger, comunicacion)),
-            "push" => Comando::Push(Push::new(comunicacion)),
-            "pull" => Comando::Pull(Pull::from(logger, comunicacion)?),
+            "fetch" => Comando::Fetch(Fetch::<TcpStream>::new(vector_args, logger)?),
+            "clone" => Comando::Clone(Clone::from(logger)?),
+            "push" => Comando::Push(Push::new(logger)?),
+            "pull" => Comando::Pull(Pull::from(logger)?),
             "log" => Comando::Log(Log::from(&mut vector_args, logger)?),
             "status" => Comando::Status(Status::from(logger)?),
             "remote" => Comando::Remote(Remote::from(&mut vector_args, logger)?),
             "merge" => Comando::Merge(Merge::from(&mut vector_args, logger)?),
+            "ls-tree" => Comando::LsTree(LsTree::new(logger, &mut vector_args)?),
             _ => Comando::Unknown,
         };
 
@@ -84,6 +82,7 @@ impl Comando {
             Comando::Remote(ref mut remote) => remote.ejecutar(),
             Comando::Merge(ref mut merge) => merge.ejecutar(),
             Comando::Pull(ref mut pull) => pull.ejecutar(),
+            Comando::LsTree(ref mut ls_tree) => ls_tree.ejecutar(),
             Comando::Unknown => Err("Comando desconocido".to_string()),
         }
     }

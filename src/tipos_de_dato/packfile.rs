@@ -31,7 +31,7 @@ impl Packfile {
         // DESHARCODEAR EL ./.GIR
         let ruta_objeto = format!("{}{}/{}", dir, &objeto[..2], &objeto[2..]);
         // println!("ruta objeto: {}", ruta_objeto);
-        let _objeto_comprimido = io::leer_bytes(&ruta_objeto).unwrap();
+        let _objeto_comprimido = io::leer_bytes(ruta_objeto).unwrap();
         let log = Arc::new(Logger::new(PathBuf::from("log.txt")).unwrap());
         // en este catfile hay cosas hardcodeadas que hay que cambiar :{
         let tamanio_objeto_str = match {
@@ -49,7 +49,7 @@ impl Packfile {
 
         let tamanio_objeto = tamanio_objeto_str.trim().parse::<u32>().unwrap_or(0);
 
-        let tipo_objeto = cat_file::obtener_tipo_objeto_de(&objeto, &dir)?;
+        let tipo_objeto = cat_file::obtener_tipo_objeto_de(&objeto, dir)?;
         // codifica el tamanio del archivo descomprimido y su tipo en un tipo variable de longitud
         let nbyte = match tipo_objeto.as_str() {
             "commit" => codificar_bytes(1, tamanio_objeto),    //1
@@ -189,7 +189,7 @@ impl Packfile {
                 let mut descompresor = Decompress::new(true);
 
                 descompresor
-                    .decompress(&bytes, &mut objeto_descomprimido, FlushDecompress::None)
+                    .decompress(bytes, &mut objeto_descomprimido, FlushDecompress::None)
                     .unwrap();
 
                 let total_in = descompresor.total_in();
@@ -208,7 +208,7 @@ impl Packfile {
             let mut descompresor = Decompress::new(true);
 
             descompresor
-                .decompress(&bytes, &mut objeto_descomprimido, FlushDecompress::None)
+                .decompress(bytes, &mut objeto_descomprimido, FlushDecompress::None)
                 .unwrap();
 
             // calculo el hash

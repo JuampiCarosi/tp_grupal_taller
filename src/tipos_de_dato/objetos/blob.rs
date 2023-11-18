@@ -28,11 +28,9 @@ impl Blob {
     pub fn obtener_hash(&self) -> String {
         self.hash.clone()
     }
+
     pub fn obtener_tamanio(&self) -> Result<usize, String> {
-        let contenido_blob = descomprimir_objeto(
-            self.hash.clone(),
-            self.ubicacion.to_string_lossy().to_string(),
-        )?;
+        let contenido_blob = descomprimir_objeto(self.hash.clone(), ".gir/objects/".to_string())?;
         let tamanio_blob = conseguir_tamanio(contenido_blob)?;
         match tamanio_blob.parse::<usize>() {
             Ok(tamanio) => Ok(tamanio),

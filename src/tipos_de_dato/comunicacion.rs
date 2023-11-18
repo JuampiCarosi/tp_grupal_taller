@@ -4,11 +4,19 @@ use crate::utils::{self, io};
 use std::io::{Read, Write};
 use std::net::TcpStream;
 use std::str;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
+
+use super::logger::Logger;
+
+pub enum RespuestaDePedido {
+    Mensaje(String),
+    Terminate,
+}
 
 pub struct Comunicacion<T: Read + Write> {
     flujo: Mutex<T>,
     repositorio: String,
+    logger: Arc<Logger>,
 }
 
 impl<T: Write + Read> Comunicacion<T> {
@@ -23,6 +31,7 @@ impl<T: Write + Read> Comunicacion<T> {
     /// -Puede fallar el flujo
     pub fn new_desde_direccion_servidor(
         direccion_servidor: &str,
+        logger: Arc<Logger>,
     ) -> Result<Comunicacion<TcpStream>, String> {
         let flujo = Mutex::new(
             TcpStream::connect(direccion_servidor)
@@ -30,12 +39,19 @@ impl<T: Write + Read> Comunicacion<T> {
         );
         let repositorio = "/gir/".to_string();
 
-        Ok(Comunicacion { flujo, repositorio })
+        Ok(Comunicacion {
+            flujo,
+            repositorio,
+            logger,
+        })
     }
 
     ///Crea una comunicacion en base a una url.
     /// La url tiene el formato ip:puerto/repositorio/
-    pub fn new_desde_url(url: &str) -> Result<Comunicacion<TcpStream>, String> {
+    pub fn new_desde_url(
+        url: &str,
+        logger: Arc<Logger>,
+    ) -> Result<Comunicacion<TcpStream>, String> {
         let (ip_puerto, repositorio) = Self::obtener_ip_puerto_y_repositorio(url)?;
 
         let flujo = Mutex::new(
@@ -43,7 +59,11 @@ impl<T: Write + Read> Comunicacion<T> {
                 .map_err(|e| format!("Fallo en en la conecciion con el servido.\n{}\n", e))?,
         );
 
-        Ok(Comunicacion { flujo, repositorio })
+        Ok(Comunicacion {
+            flujo,
+            repositorio,
+            logger,
+        })
     }
 
     ///Obtiene de la url el ip puerto y el repositorio
@@ -59,25 +79,24 @@ impl<T: Write + Read> Comunicacion<T> {
         Ok((ip_puerto_str.to_string(), "/".to_string() + repositorio))
     }
 
-    pub fn new_para_testing(flujo: T) -> Comunicacion<T> {
+    pub fn new_para_testing(flujo: T, logger: Arc<Logger>) -> Comunicacion<T> {
         let repositorio = "/gir/".to_string();
 
         Comunicacion {
+            logger,
             flujo: Mutex::new(flujo),
             repositorio,
         }
     }
 
-    pub fn new_desde_gir_config() -> Result<Comunicacion<TcpStream>, String> {
-        let direccion_servidor = utils::gir_config::conseguir_direccion_ip_y_puerto()?;
-        let flujo = Mutex::new(
-            TcpStream::connect(direccion_servidor)
-                .map_err(|e| format!("Fallo en en la conecciion con el servido.\n{}\n", e))?,
-        );
-
-        let repositorio = "/gir/".to_string();
-
-        Ok(Comunicacion { flujo, repositorio })
+    pub fn new_desde_gir_config(logger: Arc<Logger>) -> Result<Comunicacion<TcpStream>, String> {
+        let direccion_servidor = match utils::gir_config::conseguir_url_servidor() {
+            Some(direccion_servidor) => direccion_servidor,
+            None => {
+                return Err("No se pudo obtener la direccion del servidor del config".to_string())
+            }
+        };
+        Self::new_desde_direccion_servidor(&direccion_servidor, logger)
     }
 
     pub fn enviar(&self, mensaje: &str) -> Result<(), String> {
@@ -94,6 +113,8 @@ impl<T: Write + Read> Comunicacion<T> {
     /// - ''git-upload-pack 'directorio'\0host='host'\0\0verision='numero de version'\0''
     ///
     pub fn iniciar_git_upload_pack_con_servidor(&self) -> Result<(), String> {
+        self.logger
+            .log("Iniciando git upload pack con el servidor".to_string());
         let comando = "git-upload-pack";
         let repositorio = &self.repositorio;
         let host = "gir.com";
@@ -103,21 +124,26 @@ impl<T: Write + Read> Comunicacion<T> {
             "{} {}\0host={}\0\0version={}\0",
             comando, repositorio, host, numero_de_version
         );
-        self.enviar(&io::obtener_linea_con_largo_hex(&mensaje))?;
+        let payload = io::obtener_linea_con_largo_hex(&mensaje);
+        self.enviar(&payload)?;
         Ok(())
     }
 
-    pub fn aceptar_pedido(&self) -> Result<String, ErrorDeComunicacion> {
+    pub fn aceptar_pedido(&self) -> Result<RespuestaDePedido, ErrorDeComunicacion> {
         // lee primera parte, 4 bytes en hexadecimal indican el largo del stream
 
         let mut tamanio_bytes = [0; 4];
         self.flujo.lock().unwrap().read(&mut tamanio_bytes)?;
         // largo de bytes a str
+        if tamanio_bytes == [0, 0, 0, 0] {
+            return Ok(RespuestaDePedido::Terminate);
+        }
+
         let tamanio_str = str::from_utf8(&tamanio_bytes)?;
         // transforma str a u32
         let tamanio = u32::from_str_radix(tamanio_str, 16).unwrap();
         if tamanio == 0 {
-            return Ok('\0'.to_string());
+            return Ok(RespuestaDePedido::Mensaje('\0'.to_string()));
         }
         // lee el resto del flujo
         let mut data = vec![0; (tamanio - 4) as usize];
@@ -126,7 +152,7 @@ impl<T: Write + Read> Comunicacion<T> {
         // if linea.contains("done") {
         // self.aceptar_pedido()?;
         // }
-        Ok(linea.to_string())
+        Ok(RespuestaDePedido::Mensaje(linea.to_string()))
     }
 
     fn leer_del_flujo_tantos_bytes(&self, cantida_bytes_a_leer: usize) -> Result<Vec<u8>, String> {
@@ -134,7 +160,7 @@ impl<T: Write + Read> Comunicacion<T> {
         self.flujo
             .lock()
             .map_err(|e| format!("Fallo en el mutex de la lectura.\n{}\n", e))?
-            .read_exact(&mut data)
+            .read(&mut data)
             .map_err(|e| {
                 format!(
                     "Fallo en obtener la linea al leer los priemeros 4 bytes.\n{}\n",
@@ -344,14 +370,14 @@ impl<T: Write + Read> Comunicacion<T> {
     }
     ///recibi el hash de un commit y le da el formato correcto para hacer el want
     fn dar_formato_de_solicitud(&self, hash_commit: &mut String) -> String {
-        io::obtener_linea_con_largo_hex(&("want ".to_string() + &hash_commit + "\n"))
+        io::obtener_linea_con_largo_hex(&("want ".to_string() + hash_commit + "\n"))
     }
 
     pub fn obtener_haves_pkt(&self, lineas: &Vec<String>) -> Vec<String> {
         let mut haves: Vec<String> = Vec::new();
         for linea in lineas {
             haves.push(io::obtener_linea_con_largo_hex(
-                &("have ".to_string() + &linea + "\n"),
+                &("have ".to_string() + linea + "\n"),
             ))
         }
         haves
@@ -385,15 +411,15 @@ impl<T: Write + Read> Comunicacion<T> {
 
     ///recibi el hash de un objeto y le da el formato correcto para hacer el have
     fn dar_formato_have(&self, hash_commit: &String) -> String {
-        io::obtener_linea_con_largo_hex(&("have ".to_string() + &hash_commit + "\n"))
+        io::obtener_linea_con_largo_hex(&("have ".to_string() + hash_commit + "\n"))
     }
 }
 
 #[cfg(test)]
 mod test {
-    use std::{io::Read, io::Write};
+    use std::{io::Read, io::Write, path::PathBuf};
 
-    use super::Comunicacion;
+    use super::*;
 
     struct MockTcpStream {
         lectura_data: Vec<u8>,
@@ -421,12 +447,14 @@ mod test {
     #[test]
 
     fn test01_se_envia_mensajes_de_forma_correcta() {
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/comunicacion_test02.txt")).unwrap());
+
         let mut mock = MockTcpStream {
             lectura_data: Vec::new(),
             escritura_data: Vec::new(),
         };
 
-        Comunicacion::new_para_testing(&mut mock)
+        Comunicacion::new_para_testing(&mut mock, logger)
             .enviar("Hola server, soy siro. Todo bien ??")
             .unwrap();
 
@@ -439,6 +467,7 @@ mod test {
     #[test]
 
     fn test02_se_obtiene_el_contenido_del_server_de_forma_correcta() {
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/comunicacion_test02.txt")).unwrap());
         let contenido_mock = "000eversion 1 \
         00887217a7c7e582c46cec22a130adf4b9d7d950fba0 HEAD\0multi_ack thin-pack \
         side-band side-band-64k ofs-delta shallow no-progress include-tag \
@@ -454,7 +483,7 @@ mod test {
             escritura_data: Vec::new(),
         };
 
-        let lineas = Comunicacion::new_para_testing(&mut mock)
+        let lineas = Comunicacion::new_para_testing(&mut mock, logger)
             .obtener_lineas()
             .unwrap()
             .join("\n");
@@ -477,6 +506,7 @@ mod test {
             lectura_data: Vec::new(),
             escritura_data: Vec::new(),
         };
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/comunicacion_test02.txt")).unwrap());
 
         let contenido = vec![
             "74730d410fcb6603ace96f1dc55ea6196122532d".to_string(),
@@ -485,7 +515,7 @@ mod test {
         ];
         let capacidades = "multi_ack side-band-64k ofs-delta".to_string();
 
-        Comunicacion::new_para_testing(&mut mock)
+        Comunicacion::new_para_testing(&mut mock, logger)
             .enviar_pedidos_al_servidor_pkt(contenido, capacidades)
             .unwrap();
 
@@ -507,13 +537,14 @@ mod test {
             lectura_data: Vec::new(),
             escritura_data: Vec::new(),
         };
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/comunicacion_test02.txt")).unwrap());
 
         let contenido = vec![
             "7e47fe2bd8d01d481f44d7af0531bd93d3b21c01".to_string(),
             "74730d410fcb6603ace96f1dc55ea6196122532d".to_string(),
         ];
 
-        Comunicacion::new_para_testing(&mut mock)
+        Comunicacion::new_para_testing(&mut mock, logger)
             .enviar_lo_que_tengo_al_servidor_pkt(&contenido)
             .unwrap();
 
