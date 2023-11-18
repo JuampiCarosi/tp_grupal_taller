@@ -17,7 +17,7 @@ pub struct RamasInfo {
 }
 
 pub struct Config {
-    pub remotes: Vec<RemoteInfo>,
+    pub remotos: Vec<RemoteInfo>,
     pub ramas: Vec<RamasInfo>,
 }
 
@@ -25,11 +25,11 @@ impl Config {
     pub fn leer_config() -> Result<Config, String> {
         let contenido = io::leer_a_string(".gir/config")?;
         let contenido_spliteado = contenido.split('[').collect::<Vec<&str>>();
-        let mut remotes: Vec<RemoteInfo> = Vec::new();
+        let mut remotos: Vec<RemoteInfo> = Vec::new();
         let mut ramas: Vec<RamasInfo> = Vec::new();
 
         if contenido.is_empty() {
-            return Ok(Config { remotes, ramas });
+            return Ok(Config { remotos, ramas });
         }
 
         for contenido_raw in contenido_spliteado {
@@ -51,7 +51,7 @@ impl Config {
                         nombre: header[1].replace('\"', "").to_string(),
                         url: informacion_remote[1].trim().to_string(),
                     };
-                    remotes.push(remote);
+                    remotos.push(remote);
                 }
                 "branch" => {
                     let informacion_branch = contenido[1].split('\n').collect::<Vec<&str>>();
@@ -83,13 +83,13 @@ impl Config {
             }
         }
 
-        Ok(Config { remotes, ramas })
+        Ok(Config { remotos, ramas })
     }
 
     ///busca dentro de los remote del config, si remote efectivente existe.
     /// Si existe devuelve true, caso contrario false
     pub fn existe_remote(&self, remote: &String) -> bool {
-        self.remotes.iter().any(|x| x.nombre == *remote)
+        self.remotos.iter().any(|x| x.nombre == *remote)
     }
 
     ///en caso de existir un remoto asosiado a la rama actual, lo devuelve
@@ -102,10 +102,22 @@ impl Config {
         }
     }
 
+    ///Da el url asosiado al remoto
+    pub fn obtenet_url_asosiado_remoto(&self, remoto: &String) -> Result<String, String> {
+        match self
+            .remotos
+            .iter()
+            .find(|remoto_i| remoto_i.nombre == *remoto)
+        {
+            Some(remoto) => Ok(remoto.url.clone()),
+            None => Err(format!("Fallo en la busqueda de {}", remoto)),
+        }
+    }
+
     pub fn guardar_config(&self) -> Result<(), String> {
         let mut contenido = String::new();
 
-        for remote in &self.remotes {
+        for remote in &self.remotos {
             contenido.push_str(&format!("[remote \"{}\"]\n", remote.nombre));
             contenido.push_str(&format!("   url = {}\n", remote.url));
         }
@@ -132,11 +144,11 @@ mod tests {
     fn test01_guardar_config() {
         let remote = RemoteInfo {
             nombre: "origin".to_string(),
-            url: "localhost:3000".to_string(),
+            url: "localhost:3000/test_repo/".to_string(),
         };
 
         let config = Config {
-            remotes: vec![remote],
+            remotos: vec![remote],
             ramas: vec![],
         };
 
@@ -144,7 +156,10 @@ mod tests {
 
         let file = io::leer_a_string(".gir/config").unwrap();
 
-        assert_eq!(file, "[remote \"origin\"]\n   url = localhost:3000\n");
+        assert_eq!(
+            file,
+            "[remote \"origin\"]\n   url = localhost:3000/test_repo/\n"
+        );
     }
 
     #[test]
@@ -152,11 +167,11 @@ mod tests {
     fn test02_leer_config() {
         let remote = RemoteInfo {
             nombre: "origin".to_string(),
-            url: "localhost:3000".to_string(),
+            url: "localhost:3000/test_repo/".to_string(),
         };
 
         let config = Config {
-            remotes: vec![remote],
+            remotos: vec![remote],
             ramas: vec![],
         };
 
@@ -164,14 +179,14 @@ mod tests {
 
         let config = Config::leer_config().unwrap();
 
-        assert_eq!(config.remotes[0].nombre, "origin");
-        assert_eq!(config.remotes[0].url, "localhost:3000");
+        assert_eq!(config.remotos[0].nombre, "origin");
+        assert_eq!(config.remotos[0].url, "localhost:3000/test_repo/");
     }
 
     #[test]
     fn test03_existe_remoto() {
         let mut config = Config {
-            remotes: vec![],
+            remotos: vec![],
             ramas: vec![],
         };
 
@@ -183,7 +198,7 @@ mod tests {
             url: "localhost:3000".to_string(),
         };
 
-        config.remotes.push(remote);
+        config.remotos.push(remote);
 
         //coso tiene algo pero no lo que se busca
         assert!(!config.existe_remote(&"origin".to_string()));
@@ -193,7 +208,7 @@ mod tests {
             url: "localhost:3000".to_string(),
         };
 
-        config.remotes.push(remote);
+        config.remotos.push(remote);
         assert!(config.existe_remote(&"origin".to_string()));
     }
 }

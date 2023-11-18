@@ -11,7 +11,6 @@ use std::sync::Arc;
 const SE_ENVIO_ALGUN_PEDIDO: bool = true;
 const NO_SE_ENVIO_NINGUN_PEDIDO: bool = false;
 const GIR_FETCH: &str = "gir fetch <remoto>";
-const UBICACION_RAMA_MASTER: &str = "./.gir/refs/heads/master";
 
 pub struct Fetch<T: Write + Read> {
     remoto: String,
@@ -24,14 +23,19 @@ impl<T: Write + Read> Fetch<T> {
     pub fn new(
         args: Vec<String>,
         logger: Arc<Logger>,
-        comunicacion: Arc<Comunicacion<TcpStream>>,
+        _comunicacion: Arc<Comunicacion<TcpStream>>,
     ) -> Result<Fetch<TcpStream>, String> {
         Self::verificar_argumentos(&args)?;
 
         let remoto = Self::obtener_remoto(args)?;
+        let url = Self::obtener_url(&remoto)?;
 
         let capacidades_local = Vec::new();
         //esto lo deberia tener la comunicacion creo yo
+
+        //fijarse si sigue siendo necesario el arc
+        let comunicacion = Arc::new(Comunicacion::<TcpStream>::new_desde_url(&url)?);
+
         Ok(Fetch {
             remoto,
             comunicacion,
@@ -67,6 +71,11 @@ impl<T: Write + Read> Fetch<T> {
             ));
         };
         Ok(())
+    }
+
+    ///Le pide al config el url asosiado a la rama
+    fn obtener_url(remoto: &String) -> Result<String, String> {
+        Config::leer_config()?.obtenet_url_asosiado_remoto(&remoto)
     }
 
     fn obtener_remoto(args: Vec<String>) -> Result<String, String> {
@@ -123,7 +132,7 @@ impl<T: Write + Read> Fetch<T> {
 
         self.actualizar_ramas_locales_del_remoto(&commits_cabezas_y_dir_rama_asosiado)?;
 
-        self.acutualizar_head_de_ser_necesario(&commit_head_remoto)?;
+        self.acutualizar_archivo_head_remoto(&commit_head_remoto)?;
 
         let mensaje = format!("Fetch ejecutado con exito");
         self.logger.log(mensaje.clone());
@@ -173,16 +182,17 @@ impl<T: Write + Read> Fetch<T> {
             .enviar(&io::obtener_linea_con_largo_hex("done\n"))
     }
 
-    fn acutualizar_head_de_ser_necesario(
+    ///Actuliza el archivo head correspondiente al remoto que se hizo fetch o si no existe lo crea.
+    /// Si se hizo fetch del remoto 'san_lorenzo' -> se actuliza o crea el archivo `SAN_LORENZO_HEAD`
+    /// con el commit hash cabeza recibido del servidor    
+    fn acutualizar_archivo_head_remoto(
         &self,
         commit_head_remoto: &Option<String>,
     ) -> Result<(), String> {
-        if !io::esta_vacio(UBICACION_RAMA_MASTER.to_string()) {
-            return Ok(());
-        }
-
         if let Some(hash) = commit_head_remoto {
-            io::escribir_bytes(UBICACION_RAMA_MASTER, hash)?;
+            let ubicacion_archivo_head_remoto =
+                format!("/.gir/{}_HEAD", self.remoto.to_uppercase());
+            io::escribir_bytes(ubicacion_archivo_head_remoto, hash)?;
         }
 
         Ok(())
@@ -436,7 +446,7 @@ impl<T: Write + Read> Fetch<T> {
     //         // esto deberia llamar a fetch-pack
     //         // let server_address = "127.0.0.1:9418"; // hardcodeado
     //         let mut client = TcpStream::connect(("localhost", 9418)).unwrap();
-    //         let mut comunicacion = Comunicacion::new(client.try_clone().unwrap());
+    //         let mut comunicacion = Comunicacion::new_para_testing(client.try_clone().unwrap());
 
     //         // si es un push, tengo que calcular los commits de diferencia entre el cliente y el server, y mandarlos como packfiles.
     //         // hay una funcion que hace el calculo
@@ -563,7 +573,7 @@ mod test {
             escritura_data: Vec::new(),
         };
 
-        let comunicacion = Comunicacion::new(mock);
+        let comunicacion = Comunicacion::new_para_testing(mock);
         let logger = Arc::new(Logger::new(PathBuf::from(".log.txt")).unwrap());
         let (capacidades, commit_head, commits_y_ramas, commits_y_tags) =
             Fetch::new_testing(logger, comunicacion.into())
@@ -623,7 +633,7 @@ mod test {
             escritura_data: Vec::new(),
         };
 
-        let comunicacion = Comunicacion::new(mock);
+        let comunicacion = Comunicacion::new_para_testing(mock);
         let logger = Arc::new(Logger::new(PathBuf::from(".log.txt")).unwrap());
         let (capacidades, commit_head, commits_y_ramas, commits_y_tags) =
             Fetch::new_testing(logger, comunicacion.into())
@@ -676,7 +686,7 @@ mod test {
     //         escritura_data: Vec::new(),
     //     };
 
-    //     let comunicacion = Comunicacion::new(mock);
+    //     let comunicacion = Comunicacion::new_para_testing(mock);
     //     let logger = Rc::new(Logger::new(PathBuf::from(".log.txt")).unwrap());
     //     let capacidades_servidor = vec!["multi_ack".to_string(), "thin-pack".to_string(), "side-band".to_string(), "side-band-64k".to_string(), "ofs-delta".to_string(), "shallow".to_string(), "no-progress".to_string(),  "include-tag".to_string()];
     //     let commits_y_ramas = vec![("1d3fcd5ced445d1abc402225c0b8a1299641f497".to_string(), PathBuf::from("refs/heads/integration")),("7217a7c7e582c46cec22a130adf4b9d7d950fba0".to_string(), PathBuf::from("refs/heads/master"))];

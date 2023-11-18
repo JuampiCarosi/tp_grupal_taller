@@ -53,7 +53,7 @@ impl Servidor {
         while let Ok((stream, socket)) = TcpListener::bind(direccion_y_puerto)?.accept() {
             println!("Conectado al cliente {:?}", socket);
             thread::spawn(move || {
-                let mut comunicacion = Comunicacion::new(stream.try_clone().unwrap());
+                let mut comunicacion = Comunicacion::new_para_testing(stream.try_clone().unwrap());
                 Self::manejar_cliente(
                     &mut comunicacion,
                     &(env!("CARGO_MANIFEST_DIR").to_string() + DIR),
