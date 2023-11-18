@@ -35,33 +35,14 @@ impl Pull {
         })
     }
 
-    fn obtener_head_remoto(&self) -> Result<String, String> {
-        let path_remoto = format!("./.gir/refs/remotes/{}/{}", self.remoto, self.rama_actual);
-        leer_a_string(path_remoto)
-    }
-
     pub fn ejecutar(&self) -> Result<String, String> {
-        self.comunicacion.iniciar_git_upload_pack_con_servidor()?;
-        let fetch = Fetch::<TcpStream>::new(
+        Fetch::<TcpStream>::new(
             vec![self.remoto.clone()],
             self.logger.clone(),
             self.comunicacion.clone(),
-        )?;
-        //en caso de clone el commit head se tiene que utilizar
-        let (
-            capacidades_servidor,
-            _commit_head_remoto,
-            commits_cabezas_y_dir_rama_asosiado,
-            _commits_y_tags_asosiados,
-        ) = fetch.fase_de_descubrimiento()?;
+        )?
+        .ejecutar()?;
 
-        if !fetch.fase_de_negociacion(capacidades_servidor, &commits_cabezas_y_dir_rama_asosiado)? {
-            return Ok(String::from("El cliente esta actualizado"));
-        }
-
-        fetch.recivir_packfile_y_guardar_objetos()?;
-
-        fetch.actualizar_ramas_locales_del_remoto(&commits_cabezas_y_dir_rama_asosiado)?;
         let commit_head_remoto = self.obtener_head_remoto()?;
 
         if io::esta_vacio(UBICACION_RAMA_MASTER.to_string()) {
@@ -73,6 +54,11 @@ impl Pull {
         let mensaje = format!("Pull ejecutado con exito");
         self.logger.log(mensaje.clone());
         Ok(mensaje)
+    }
+
+    fn obtener_head_remoto(&self) -> Result<String, String> {
+        let path_remoto = format!("/.gir/{}_HEAD", self.remoto.to_uppercase());
+        leer_a_string(path_remoto)
     }
 
     fn fast_forward_de_cero(&self, commit_head_remoto: String) -> Result<bool, String> {

@@ -147,7 +147,7 @@ impl<T: Write + Read> Fetch<T> {
     // -------------------------------------------------------------
     // -------------------------------------------------------------
 
-    pub fn fase_de_negociacion(
+    fn fase_de_negociacion(
         &self,
         capacidades_servidor: Vec<String>,
         commits_cabezas_y_dir_rama_asosiado: &Vec<(String, PathBuf)>,
@@ -164,7 +164,7 @@ impl<T: Write + Read> Fetch<T> {
 
     //ACA PARA MI HAY UN PROBLEMA DE RESPONSABILIADADES: COMUNICACION DEBERIA RECIBIR EL PACKETE Y FETCH
     //DEBERIA GUARDAR LAS COSAS, PERO COMO NO ENTIENDO EL CODIGO JAJA DENTRO DE COMUNICACION NO METO MANO
-    pub fn recivir_packfile_y_guardar_objetos(&self) -> Result<(), String> {
+    fn recivir_packfile_y_guardar_objetos(&self) -> Result<(), String> {
         // aca para git daemon hay que poner un recibir linea mas porque envia un ACK repetido (No entiendo por que...)
         println!("Obteniendo paquete..");
         let mut packfile = self.comunicacion.obtener_packfile()?;
@@ -319,7 +319,7 @@ impl<T: Write + Read> Fetch<T> {
     /// - vector de tuplas con los hash del commit cabeza de rama y la direccion de la
     ///     carpeta de la rama en el servidor(ojo!! la direccion para el servidor no para el local)
     /// - vector de tuplas con el hash del commit y el tag asosiado
-    pub fn fase_de_descubrimiento(
+    fn fase_de_descubrimiento(
         &self,
     ) -> Result<
         (
@@ -409,7 +409,7 @@ impl<T: Write + Read> Fetch<T> {
     }
 
     ///actuliza a donde apuntan las cabeza del rama de las ramas locales pertenecientes al remoto
-    pub fn actualizar_ramas_locales_del_remoto(
+    fn actualizar_ramas_locales_del_remoto(
         &self,
         commits_cabezas_y_dir_rama_asosiado: &Vec<(String, PathBuf)>,
     ) -> Result<(), String> {
