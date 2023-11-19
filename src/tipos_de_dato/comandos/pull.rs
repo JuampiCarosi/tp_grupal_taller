@@ -142,7 +142,7 @@ impl Pull {
     }
 
     fn obtener_head_remoto(&self) -> Result<String, String> {
-        let path_remoto = format!("/.gir/{}_HEAD", self.remoto.to_uppercase());
+        let path_remoto = format!("./.gir/{}_HEAD", self.remoto.to_uppercase());
         leer_a_string(path_remoto)
     }
 
