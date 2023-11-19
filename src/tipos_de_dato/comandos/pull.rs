@@ -9,7 +9,7 @@ use crate::{
     },
 };
 
-use super::{fetch::Fetch, merge::Merge};
+use super::{fetch::Fetch, merge::Merge, set_upstream::SetUpstream};
 
 const UBICACION_RAMA_MASTER: &str = "./.gir/refs/heads/master";
 const GIR_PULL: &str = "gir pull <remoto> <rama>";
@@ -123,7 +123,13 @@ impl Pull {
 
     pub fn ejecutar(&self) -> Result<String, String> {
         if self.set_upstream {
-            return Ok("Hacer acordar a Siro, que implemente esto :)".to_string());
+            SetUpstream::new(
+                self.remoto.clone(),
+                self.rama_merge.clone(),
+                utils::ramas::obtener_rama_actual()?,
+                self.logger.clone(),
+            )?
+            .ejecutar()?;
         }
 
         Fetch::<TcpStream>::new(vec![self.remoto.clone()], self.logger.clone())?.ejecutar()?;
