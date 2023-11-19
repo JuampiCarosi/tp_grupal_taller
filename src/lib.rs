@@ -42,11 +42,12 @@ pub mod tipos_de_dato {
 pub mod gui;
 
 pub mod utils {
-
     pub mod compresion;
     pub mod gir_config;
     pub mod index;
     pub mod io;
+    pub mod objects;
     pub mod path_buf;
+    pub mod ramas;
     pub mod strings;
 }

@@ -1,6 +1,5 @@
 use gtk::prelude::*;
 use gtk::{self};
-
 use std::sync::Arc;
 use std::thread::sleep;
 
