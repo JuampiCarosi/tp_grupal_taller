@@ -61,3 +61,13 @@ pub fn existe_la_rama_remota(rama_remota: &String) -> bool {
 
     dir_rama_remota.exists()
 }
+
+///Verificar si la rama existe, devuelve true. Caso contrario false
+///
+/// ## Argumentos
+/// - rama: nombre de la rama(Ej: aaaa)
+pub fn existe_la_rama(rama: &String) -> bool {
+    let dir_rama_remota = PathBuf::from(format!("./.gir/refs/heads/{}", rama));
+
+    dir_rama_remota.exists()
+}
