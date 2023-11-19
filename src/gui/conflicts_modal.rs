@@ -141,8 +141,9 @@ fn crear_notebook(builder: &gtk::Builder, logger: Arc<Logger>) {
     let sin_mergear: Vec<_> = index.iter().filter(|objeto| objeto.merge).collect();
     let notebook: gtk::Notebook = builder.object("conflicts-notebook").unwrap();
     notebook.set_vexpand(true);
-    for objeto_viejo in notebook.children() {
-        notebook.remove(&objeto_viejo);
+    let pages = notebook.n_pages();
+    for _ in 0..pages {
+        notebook.remove_page(Some(0));
     }
 
     for objeto in sin_mergear {
@@ -151,8 +152,6 @@ fn crear_notebook(builder: &gtk::Builder, logger: Arc<Logger>) {
             &objeto.objeto.obtener_path().to_string_lossy().to_string(),
         ));
         notebook.append_page(&text_area, Some(&label));
-        println!("{}", objeto.objeto.obtener_path().display());
-        text_area.show();
     }
 }
 
@@ -166,7 +165,7 @@ fn modal(builder: &gtk::Builder, logger: Arc<Logger>) {
         gtk::glib::Propagation::Stop
     });
     modal.set_position(gtk::WindowPosition::Center);
-    modal.show();
+    modal.show_all();
 }
 
 pub fn render(builder: &gtk::Builder, window: &gtk::Window, logger: Arc<Logger>) {
