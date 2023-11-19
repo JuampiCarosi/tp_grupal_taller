@@ -1,7 +1,7 @@
 use std::{net::TcpStream, path::PathBuf, sync::Arc};
 
 use crate::{
-    tipos_de_dato::{comandos::write_tree, logger::Logger, objetos::tree::Tree},
+    tipos_de_dato::{comandos::write_tree, config::Config, logger::Logger, objetos::tree::Tree},
     utils::{
         self,
         io::{self, leer_a_string},
@@ -11,22 +11,77 @@ use crate::{
 use super::{fetch::Fetch, merge::Merge};
 
 const UBICACION_RAMA_MASTER: &str = "./.gir/refs/heads/master";
+const GIR_PULL: &str = "gir pull <remoto> <rama>";
 pub struct Pull {
-    rama_actual: String,
+    rama_merge: String,
     remoto: String,
     logger: Arc<Logger>,
+    set_upstream: bool,
 }
 
 impl Pull {
-    pub fn from(logger: Arc<Logger>) -> Result<Pull, String> {
-        let rama_actual = utils::ramas::obtener_rama_actual()?;
-        let remoto = "origin".to_string(); //momento, necesita ser el mismo que fetch
+    pub fn from(args: Vec<String>, logger: Arc<Logger>) -> Result<Pull, String> {
+        Self::verificar_argumentos(&args)?;
+        let set_upstream = false;
+        // if Self::hay_flags(&args){
+        //     if args[0] == "-u".to_string() {}
+        // }
+
+        let remoto = Self::obtener_remoto(args)?; //momento, necesita ser el mismo que fetch
+
+        let rama_merge = utils::ramas::obtener_rama_actual()?;
 
         Ok(Pull {
-            rama_actual,
+            rama_merge,
             remoto,
             logger,
+            set_upstream,
         })
+    }
+
+    fn hay_flags(args: &Vec<String>) -> bool {
+        args.len() == 2
+    }
+
+    fn parsear_flags(args:){}
+
+    fn verificar_argumentos(args: &Vec<String>) -> Result<(), String> {
+        if args.len() > 3 {
+            return Err(format!(
+                "Parametros desconocidos {}\n {}",
+                args.join(" "),
+                GIR_PULL
+            ));
+        };
+        Ok(())
+    }
+    ///obtiene el remoto para el comando, si argumentos lo contiene y es valido lo saca de argumentos. Si no hay argumetos lo saca 
+    /// del remoto asosiado a la rama actual. Si no esta configura la rama actual para ningun remoto devuleve error. 
+    fn obtener_remoto(args: Vec<String>) -> Result<String, String> {
+        let remoto = if args.len() == 1 {
+            Self::verificar_remoto(&args[0])?
+        } else {
+            Self::obtener_remoto_rama_actual()?
+        };
+        Ok(remoto)
+    }
+
+    ///verifica si el remoto envio por el usario existe
+    fn verificar_remoto(remoto: &String) -> Result<String, String> {
+        if let false = Config::leer_config()?.existe_remote(remoto) {
+            return  Err(format!("Remoto desconocido{}\nSi quiere añadir un nuevo remoto:\n\ngir remote add [<nombre-remote>] [<url-remote>]\n\n", remoto));
+        };
+
+        Ok(remoto.clone())
+    }
+
+    ///obtiene el remo asosiado a la rama remota actual. Falla si no existe
+    fn obtener_remoto_rama_actual() -> Result<String, String> {
+        Config::leer_config()?
+            .obtener_remoto_rama_actual()
+            .ok_or(format!(
+                "La rama actual no se encuentra asosiado a ningun remoto\nUtilice:\n\ngir remote add [<nombre-remote>] [<url-remote>]\n\nDespues:\n\n{}\n\n", GIR_PULL
+            ))
     }
 
     pub fn ejecutar(&self) -> Result<String, String> {
@@ -65,7 +120,7 @@ impl Pull {
     }
 
     fn mergear_rama(&self) -> Result<(), String> {
-        let rama_a_mergear = format!("{}/{}", &self.remoto, &self.rama_actual);
+        let rama_a_mergear = format!("{}/{}", &self.remoto, &self.rama_merge);
         Merge::from(&mut vec![rama_a_mergear], self.logger.clone())?.ejecutar()?;
 
         Ok(())

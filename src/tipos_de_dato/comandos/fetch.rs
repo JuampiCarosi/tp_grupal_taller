@@ -30,7 +30,10 @@ impl<T: Write + Read> Fetch<T> {
         //esto lo deberia tener la comunicacion creo yo
 
         //fijarse si sigue siendo necesario el arc
-        let comunicacion = Arc::new(Comunicacion::<TcpStream>::new_desde_url(&url, logger)?);
+        let comunicacion = Arc::new(Comunicacion::<TcpStream>::new_desde_url(
+            &url,
+            logger.clone(),
+        )?);
 
         Ok(Fetch {
             remoto,
@@ -493,8 +496,7 @@ mod test {
             escritura_data: Vec::new(),
         };
 
-        let logger = Arc::new(Logger::new(PathBuf::from(".log.txt")).unwrap());
-        let comunicacion = Comunicacion::new_para_testing(mock, logger);
+        let comunicacion = Comunicacion::new_para_testing(mock, logger.clone());
         let (capacidades, commit_head, commits_y_ramas, commits_y_tags) =
             Fetch::new_testing(logger, comunicacion.into())
                 .unwrap()
