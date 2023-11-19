@@ -16,8 +16,7 @@ use std::sync::Arc;
 
 use crate::tipos_de_dato::comandos::commit::Commit;
 use crate::tipos_de_dato::logger::Logger;
-use gtk::gdk::ffi::GdkScreen;
-use gtk::{self, Settings, StyleContext};
+use gtk::{self, StyleContext};
 use gtk::{gdk, prelude::*};
 
 fn hidratar_componentes(
@@ -37,7 +36,7 @@ fn hidratar_componentes(
     push_button::render(builder, window, logger.clone());
     error_dialog::setup(builder);
     pull_button::render(builder, window, logger.clone(), branch_actual.clone());
-    conflicts_modal::render(builder, window, logger.clone());
+    conflicts_modal::render(builder, logger.clone());
     refresh::render(builder, window, logger.clone(), branch_actual.clone());
 }
 

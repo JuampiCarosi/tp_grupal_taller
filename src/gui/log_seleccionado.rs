@@ -26,16 +26,3 @@ pub fn render(builder: &gtk::Builder, commit: Option<&str>) {
         log_info.set_text("Ningun commit seleccionado");
     }
 }
-/*
-<<<<<<< HEAD (rama en la que estás)
-Estás en la rama 1.
-Línea de contenido en común.
-Línea específica para la rama 1.
-=======
-Estás en la rama 2.
-Línea de contenido en común.
-Línea específica para la rama 2.
->>>>>>> rama2 (rama que estás fusionando)
-
-
-*/

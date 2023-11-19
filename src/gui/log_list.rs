@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use gtk::{gdk, prelude::*};
+use gtk::prelude::*;
 
 use crate::{
     tipos_de_dato::{comandos::log::Log, objetos::commit::CommitObj},

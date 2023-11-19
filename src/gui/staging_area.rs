@@ -105,12 +105,6 @@ fn escribir_archivos_index(builder: &gtk::Builder, logger: Arc<Logger>) {
     }
 }
 
-fn estilar_lista_archivos(builder: &gtk::Builder) {
-    // let window: gtk::ScrolledWindow = builder.object("scrolled-window").unwrap();
-
-    // window.style_context().add_class("contenedor-commits");
-}
-
 fn escribir_archivos_modificados(
     builder: &gtk::Builder,
     logger: Arc<Logger>,
@@ -194,7 +188,6 @@ fn limpiar_archivos(builder: &gtk::Builder) {
 pub fn render(builder: &gtk::Builder, window: &gtk::Window, logger: Arc<Logger>) {
     logger.log("Gui: Renderizando staging area".to_string());
     limpiar_archivos(builder);
-    estilar_lista_archivos(builder);
     escribir_archivos_index(builder, logger.clone());
     escribir_archivos_modificados(builder, logger.clone(), window);
     escribir_archivos_untrackeados(builder, logger, window);

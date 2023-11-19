@@ -280,7 +280,7 @@
                 <property name="margin-bottom">6</property>
                 <property name="spacing">2</property>
                 <child>
-                  <object class="GtkButton">
+                  <object class="GtkButton" id="marcar-resuelto">
                     <property name="label" translatable="yes">Marcar como resuelto</property>
                     <property name="visible">True</property>
                     <property name="can-focus">True</property>
