@@ -13,7 +13,7 @@ pub struct RemoteInfo {
 pub struct RamasInfo {
     nombre: String,
     remote: String,
-    merge: String,
+    merge: PathBuf,
 }
 
 pub struct Config {
@@ -23,12 +23,12 @@ pub struct Config {
 
 impl Config {
     pub fn leer_config() -> Result<Config, String> {
-        let contenido = io::leer_a_string(".gir/config")?;
-        let contenido_spliteado = contenido.split('[').collect::<Vec<&str>>();
+        let contenido_config = io::leer_a_string(".gir/config")?;
+        let contenido_spliteado = contenido_config.split('[').collect::<Vec<&str>>();
         let mut remotos: Vec<RemoteInfo> = Vec::new();
         let mut ramas: Vec<RamasInfo> = Vec::new();
 
-        if contenido.is_empty() {
+        if contenido_config.is_empty() {
             return Ok(Config { remotos, ramas });
         }
 
@@ -54,20 +54,20 @@ impl Config {
                     remotos.push(remote);
                 }
                 "branch" => {
-                    let informacion_branch = contenido[1].split('\n').collect::<Vec<&str>>();
+                    let informacion_branch = contenido[1].trim().split('\n').collect::<Vec<&str>>();
                     let mut remote = String::new();
-                    let mut merge = String::new();
+                    let mut merge = PathBuf::new();
 
                     for linea in informacion_branch {
                         let linea = linea.split(" = ").collect::<Vec<&str>>();
-                        match linea[0] {
+                        match linea[0].trim() {
                             "remote" => remote = linea[1].to_string(),
-                            "merge" => merge = linea[1].to_string(),
+                            "merge" => merge.push(linea[1]),
                             _ => return Err("Error en el archivo de configuracion".to_string()),
                         }
                     }
 
-                    if remote.is_empty() || merge.is_empty() {
+                    if remote.is_empty() || merge.to_string_lossy().is_empty() {
                         return Err("Error en el archivo de configuracion".to_string());
                     }
 
@@ -102,6 +102,16 @@ impl Config {
         }
     }
 
+    ///en caso de existir un remoto y un rama_merge (osea si la rama actual esta configurada)asosiado a la rama actual, lo devuelve
+    pub fn obtener_remoto_y_rama_merge_rama_actual(&self) -> Option<(String, PathBuf)> {
+        let rama_actual = utils::ramas::obtener_rama_actual().err()?;
+
+        match self.ramas.iter().find(|&rama| rama.nombre == rama_actual) {
+            Some(rama) => Some(((*rama.remote).to_string(), (*rama.merge).to_path_buf())),
+            None => None,
+        }
+    }
+
     ///Da el url asosiado al remoto
     pub fn obtenet_url_asosiado_remoto(&self, remoto: &String) -> Result<String, String> {
         match self
@@ -125,7 +135,7 @@ impl Config {
         for branch in &self.ramas {
             contenido.push_str(&format!("[branch \"{}\"]\n", branch.nombre));
             contenido.push_str(&format!("   remote = {}\n", branch.remote));
-            contenido.push_str(&format!("   merge = {}\n", branch.merge));
+            contenido.push_str(&format!("   merge = {}\n", branch.merge.to_string_lossy()));
         }
 
         io::escribir_bytes(PathBuf::from(".gir/config"), contenido)?;
@@ -147,9 +157,15 @@ mod tests {
             url: "localhost:3000/test_repo/".to_string(),
         };
 
+        let rama = RamasInfo {
+            nombre: "aaa".to_string(),
+            remote: "origin".to_string(),
+            merge: PathBuf::from("refs/heads/aaa"),
+        };
+
         let config = Config {
             remotos: vec![remote],
-            ramas: vec![],
+            ramas: vec![rama],
         };
 
         config.guardar_config().unwrap();
@@ -158,7 +174,8 @@ mod tests {
 
         assert_eq!(
             file,
-            "[remote \"origin\"]\n   url = localhost:3000/test_repo/\n"
+            "[remote \"origin\"]\n   url = localhost:3000/test_repo/\n\
+            [branch \"aaa\"]\n   remote = origin\n   merge = refs/heads/aaa\n"
         );
     }
 
@@ -170,9 +187,15 @@ mod tests {
             url: "localhost:3000/test_repo/".to_string(),
         };
 
+        let rama = RamasInfo {
+            nombre: "aaa".to_string(),
+            remote: "origin".to_string(),
+            merge: PathBuf::from("refs/heads/aaa"),
+        };
+
         let config = Config {
             remotos: vec![remote],
-            ramas: vec![],
+            ramas: vec![rama],
         };
 
         config.guardar_config().unwrap();
@@ -181,6 +204,9 @@ mod tests {
 
         assert_eq!(config.remotos[0].nombre, "origin");
         assert_eq!(config.remotos[0].url, "localhost:3000/test_repo/");
+        assert_eq!(config.ramas[0].nombre, "aaa");
+        assert_eq!(config.ramas[0].remote, "origin");
+        assert_eq!(config.ramas[0].merge, PathBuf::from("refs/heads/aaa"));
     }
 
     #[test]

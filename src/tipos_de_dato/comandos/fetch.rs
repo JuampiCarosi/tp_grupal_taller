@@ -77,6 +77,8 @@ impl<T: Write + Read> Fetch<T> {
         Config::leer_config()?.obtenet_url_asosiado_remoto(&remoto)
     }
 
+    ///obtiene el remoto para el comando, si argumentos lo contiene y es valido lo saca de argumentos. Si no hay argumetos lo saca
+    /// del remoto asosiado a la rama actual. Si no esta configura la rama actual para ningun remoto devuleve error.
     fn obtener_remoto(args: Vec<String>) -> Result<String, String> {
         let remoto = if args.len() == 1 {
             Self::verificar_remoto(&args[0])?

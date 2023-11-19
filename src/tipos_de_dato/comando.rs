@@ -49,7 +49,7 @@ impl Comando {
             "checkout" => Comando::Checkout(Checkout::from(vector_args, logger)?),
             "commit" => Comando::Commit(Commit::from(&mut vector_args, logger)?),
             "fetch" => Comando::Fetch(Fetch::<TcpStream>::new(vector_args, logger)?),
-            "clone" => Comando::Clone(Clone::from(vector_args, logger)?),
+            "clone" => Comando::Clone(Clone::from(logger)?),
             "push" => Comando::Push(Push::new(logger)?),
             "pull" => Comando::Pull(Pull::from(vector_args, logger)?),
             "log" => Comando::Log(Log::from(&mut vector_args, logger)?),

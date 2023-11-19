@@ -12,11 +12,11 @@ pub struct Clone {
 }
 
 impl Clone {
-    pub fn from(args: Vec<String>, logger: Arc<Logger>) -> Result<Clone, String> {
-        Self::verificar_argumentos(&args)?;
+    pub fn from(logger: Arc<Logger>) -> Result<Clone, String> {
+        //Self::verificar_argumentos(&args)?;
 
-        let url = args[0];
-
+        //let url = args[0];
+        let url = String::new();
         Ok(Clone { logger, url })
     }
 

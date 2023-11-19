@@ -12,6 +12,9 @@ use super::{fetch::Fetch, merge::Merge};
 
 const UBICACION_RAMA_MASTER: &str = "./.gir/refs/heads/master";
 const GIR_PULL: &str = "gir pull <remoto> <rama>";
+const FLAG_SET_UPSTREAM: &str = "--set-upstream";
+const FLAG_U: &str = "-u";
+
 pub struct Pull {
     rama_merge: String,
     remoto: String,
@@ -20,15 +23,17 @@ pub struct Pull {
 }
 
 impl Pull {
-    pub fn from(args: Vec<String>, logger: Arc<Logger>) -> Result<Pull, String> {
+    pub fn from(mut args: Vec<String>, logger: Arc<Logger>) -> Result<Pull, String> {
         Self::verificar_argumentos(&args)?;
+
         let set_upstream = false;
+
         // if Self::hay_flags(&args){
         //     if args[0] == "-u".to_string() {}
         // }
+        if args.len() == 2 {}
 
-        let remoto = Self::obtener_remoto(args)?; //momento, necesita ser el mismo que fetch
-
+        let remoto = Self::obtener_remoto(&mut args)?; //momento, necesita ser el mismo que fetch
         let rama_merge = utils::ramas::obtener_rama_actual()?;
 
         Ok(Pull {
@@ -40,10 +45,23 @@ impl Pull {
     }
 
     fn hay_flags(args: &Vec<String>) -> bool {
-        args.len() == 2
+        args.len() == 3
     }
 
-    fn parsear_flags(args:){}
+    fn parsear_flags(mut args: Vec<String>, set_upstream: &mut bool) -> Result<(), String> {
+        let flag = args.remove(0);
+
+        if flag == FLAG_U || flag == FLAG_SET_UPSTREAM {
+            *set_upstream = true;
+            Ok(())
+        } else {
+            Err(format!(
+                "Parametros desconocidos {}\n {}",
+                args.join(" "),
+                GIR_PULL
+            ))
+        }
+    }
 
     fn verificar_argumentos(args: &Vec<String>) -> Result<(), String> {
         if args.len() > 3 {
@@ -55,13 +73,16 @@ impl Pull {
         };
         Ok(())
     }
-    ///obtiene el remoto para el comando, si argumentos lo contiene y es valido lo saca de argumentos. Si no hay argumetos lo saca 
-    /// del remoto asosiado a la rama actual. Si no esta configura la rama actual para ningun remoto devuleve error. 
-    fn obtener_remoto(args: Vec<String>) -> Result<String, String> {
-        let remoto = if args.len() == 1 {
-            Self::verificar_remoto(&args[0])?
+
+    fn obtener_remoto(args: &mut Vec<String>) -> Result<String, String> {
+        let mut remoto = String::new();
+        let mut rama_merge = String::new();
+
+        if args.len() == 2 {
+            remoto = Self::verificar_remoto(&args[0])?;
+            rama_merge = args.remove(1);
         } else {
-            Self::obtener_remoto_rama_actual()?
+            Self::obtener_remoto_y_rama_merge_de_rama_actual()?;
         };
         Ok(remoto)
     }
@@ -76,9 +97,9 @@ impl Pull {
     }
 
     ///obtiene el remo asosiado a la rama remota actual. Falla si no existe
-    fn obtener_remoto_rama_actual() -> Result<String, String> {
+    fn obtener_remoto_y_rama_merge_de_rama_actual() -> Result<(String, PathBuf), String> {
         Config::leer_config()?
-            .obtener_remoto_rama_actual()
+            .obtener_remoto_y_rama_merge_rama_actual()
             .ok_or(format!(
                 "La rama actual no se encuentra asosiado a ningun remoto\nUtilice:\n\ngir remote add [<nombre-remote>] [<url-remote>]\n\nDespues:\n\n{}\n\n", GIR_PULL
             ))
