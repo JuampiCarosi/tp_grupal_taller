@@ -37,8 +37,24 @@ impl Clone {
 
     pub fn ejecutar(&mut self) -> Result<String, String> {
         let (_, repositorio) = utils::strings::obtener_ip_puerto_y_repositorio(&self.url)?;
-        utils::io::crear_carpeta(repositorio)?;
 
+        utils::io::crear_carpeta(repositorio)?;
+        utils::io::cambiar_directorio(&repositorio)?;
+
+        let resutado = self.crear_repositorio(repositorio);
+        utils::io::cambiar_directorio("..")?;
+
+        if let Err(e) = resutado {
+            utils::io::rm_directorio(repositorio)?;
+            return Err(e);
+        }
+
+        let mensaje = "Clone ejecutado con exito".to_string();
+        self.logger.log(mensaje.clone());
+        Ok(mensaje)
+    }
+
+    fn crear_repositorio(&mut self, repositorio: String) -> Result<(), String> {
         Init::from(Vec::new(), self.logger.clone())?.ejecutar()?;
 
         let remote_args = &mut vec!["add".to_string(), "origin".to_string(), self.url.clone()];
@@ -46,9 +62,6 @@ impl Clone {
 
         let pull_args = vec!["-u".to_string(), "origin".to_string(), "master".to_string()];
         Pull::from(pull_args, self.logger.clone())?.ejecutar()?;
-
-        let mensaje = "Clone ejecutado con exito".to_string();
-        self.logger.log(mensaje.clone());
-        Ok(mensaje)
+        Ok(())
     }
 }
