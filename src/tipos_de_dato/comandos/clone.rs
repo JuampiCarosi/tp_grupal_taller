@@ -1,9 +1,11 @@
 use crate::tipos_de_dato::logger::Logger;
+use crate::utils;
 
 use std::sync::Arc;
 
 use super::init::Init;
 use super::pull::Pull;
+use super::remote::Remote;
 
 const GIR_CLONE: &str = "gir clone <ip:puerto/repositorio/>";
 pub struct Clone {
@@ -12,11 +14,13 @@ pub struct Clone {
 }
 
 impl Clone {
-    pub fn from(logger: Arc<Logger>) -> Result<Clone, String> {
-        //Self::verificar_argumentos(&args)?;
+    pub fn from(args: Vec<String>, logger: Arc<Logger>) -> Result<Clone, String> {
+        Self::verificar_argumentos(&args)?;
 
-        //let url = args[0];
-        let url = String::new();
+        let url = args[0];
+
+        logger.log(format!("Se creo clone con exito - url: {}", url));
+
         Ok(Clone { logger, url })
     }
 
@@ -32,8 +36,16 @@ impl Clone {
     }
 
     pub fn ejecutar(&mut self) -> Result<String, String> {
+        let (_, repositorio) = utils::strings::obtener_ip_puerto_y_repositorio(&self.url)?;
+        utils::io::crear_carpeta(repositorio)?;
+
         Init::from(Vec::new(), self.logger.clone())?.ejecutar()?;
-        Pull::from(Vec::new(), self.logger.clone())?.ejecutar()?;
+
+        let remote_args = &mut vec!["add".to_string(), "origin".to_string(), self.url.clone()];
+        Remote::from(remote_args, self.logger.clone())?.ejecutar()?;
+
+        let pull_args = vec!["-u".to_string(), "origin".to_string(), "master".to_string()];
+        Pull::from(pull_args, self.logger.clone())?.ejecutar()?;
 
         let mensaje = "Clone ejecutado con exito".to_string();
         self.logger.log(mensaje.clone());
