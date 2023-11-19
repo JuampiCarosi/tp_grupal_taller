@@ -3,6 +3,7 @@ use std::{net::TcpStream, path::PathBuf, sync::Arc};
 use crate::{
     tipos_de_dato::{comandos::write_tree, config::Config, logger::Logger, objetos::tree::Tree},
     utils::{
+        self,
         io::{self, leer_a_string},
         path_buf::obtener_nombre,
     },
@@ -161,7 +162,20 @@ impl Pull {
 
     fn mergear_rama(&self) -> Result<(), String> {
         let rama_a_mergear = format!("{}/{}", &self.remoto, &self.rama_merge);
+        self.verificar_rama_mergear(&rama_a_mergear)?;
+
         Merge::from(&mut vec![rama_a_mergear], self.logger.clone())?.ejecutar()?;
+
+        Ok(())
+    }
+
+    fn verificar_rama_mergear(&self, rama_a_mergar: &String) -> Result<(), String> {
+        if !utils::ramas::existe_la_rama_remota(rama_a_mergar) {
+            return Err(format!(
+                "Fallo en la operacion de merge, no exise la rama remota {}",
+                self.rama_merge
+            ));
+        }
 
         Ok(())
     }

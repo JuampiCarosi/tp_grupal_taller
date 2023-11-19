@@ -51,3 +51,10 @@ pub fn convertir_de_dir_rama_remota_a_dir_rama_local(
 
     Ok(dir_rama_local)
 }
+
+///Verificar si la rama remota existe, devuelve true. Caso contrario false
+pub fn existe_la_rama_remota(rama_remota: &String) -> bool {
+    let dir_rama_remota = PathBuf::from(format!("./.gir/refs/remotes/{}", rama_remota));
+
+    dir_rama_remota.exists()
+}
