@@ -3,8 +3,8 @@ use std::{net::TcpStream, path::PathBuf, sync::Arc};
 use crate::{
     tipos_de_dato::{comandos::write_tree, config::Config, logger::Logger, objetos::tree::Tree},
     utils::{
-        self,
         io::{self, leer_a_string},
+        path_buf::obtener_nombre,
     },
 };
 
@@ -26,15 +26,13 @@ impl Pull {
     pub fn from(mut args: Vec<String>, logger: Arc<Logger>) -> Result<Pull, String> {
         Self::verificar_argumentos(&args)?;
 
-        let set_upstream = false;
+        let mut set_upstream = false;
 
-        // if Self::hay_flags(&args){
-        //     if args[0] == "-u".to_string() {}
-        // }
-        if args.len() == 2 {}
+        if Self::hay_flags(&args) {
+            Self::parsear_flags(&mut args, &mut set_upstream)?;
+        }
 
-        let remoto = Self::obtener_remoto(&mut args)?; //momento, necesita ser el mismo que fetch
-        let rama_merge = utils::ramas::obtener_rama_actual()?;
+        let (remoto, rama_merge) = Self::parsear_argumentos(&mut args, set_upstream)?;
 
         Ok(Pull {
             rama_merge,
@@ -47,8 +45,8 @@ impl Pull {
     fn hay_flags(args: &Vec<String>) -> bool {
         args.len() == 3
     }
-
-    fn parsear_flags(mut args: Vec<String>, set_upstream: &mut bool) -> Result<(), String> {
+    ///Setea pull segun los flags recibidos
+    fn parsear_flags(args: &mut Vec<String>, set_upstream: &mut bool) -> Result<(), String> {
         let flag = args.remove(0);
 
         if flag == FLAG_U || flag == FLAG_SET_UPSTREAM {
@@ -74,17 +72,31 @@ impl Pull {
         Ok(())
     }
 
-    fn obtener_remoto(args: &mut Vec<String>) -> Result<String, String> {
-        let mut remoto = String::new();
-        let mut rama_merge = String::new();
+    ///Obtiene acorde a los argumentos recibidos, el remoto y la rama merge. En caso de no estar,
+    /// busca si esta seteada la rama actual. Si esto no es asi, hay un error
+    fn parsear_argumentos(
+        args: &mut Vec<String>,
+        set_upstream: bool,
+    ) -> Result<(String, String), String> {
+        let remoto;
+        let rama_merge;
 
         if args.len() == 2 {
             remoto = Self::verificar_remoto(&args[0])?;
             rama_merge = args.remove(1);
+        } else if args.len() == 0 && !set_upstream {
+            //si no hay argumentos ni flags, quiere decir que deberia
+            //estar configurada la rama
+            (remoto, rama_merge) = Self::obtener_remoto_y_rama_merge_de_rama_actual()?;
         } else {
-            Self::obtener_remoto_y_rama_merge_de_rama_actual()?;
-        };
-        Ok(remoto)
+            return Err(format!(
+                "Parametros faltantes {}\n {}",
+                args.join(" "),
+                GIR_PULL
+            ));
+        }
+
+        Ok((remoto, rama_merge))
     }
 
     ///verifica si el remoto envio por el usario existe
@@ -96,16 +108,23 @@ impl Pull {
         Ok(remoto.clone())
     }
 
-    ///obtiene el remo asosiado a la rama remota actual. Falla si no existe
-    fn obtener_remoto_y_rama_merge_de_rama_actual() -> Result<(String, PathBuf), String> {
-        Config::leer_config()?
+    ///obtiene el remoto  y la rama merge asosiado a la rama remota actual. Falla si no existe
+    fn obtener_remoto_y_rama_merge_de_rama_actual() -> Result<(String, String), String> {
+        let (remoto, rama_merge) = Config::leer_config()?
             .obtener_remoto_y_rama_merge_rama_actual()
             .ok_or(format!(
                 "La rama actual no se encuentra asosiado a ningun remoto\nUtilice:\n\ngir remote add [<nombre-remote>] [<url-remote>]\n\nDespues:\n\n{}\n\n", GIR_PULL
-            ))
+            ))?;
+        //CORREGIR MENSAJE DE ERROR DEBERIA SER QUE USE SET BRANCH
+
+        Ok((remoto, obtener_nombre(&rama_merge)?))
     }
 
     pub fn ejecutar(&self) -> Result<String, String> {
+        if self.set_upstream {
+            return Ok("Hacer acordar a Siro, que implemente esto :)".to_string());
+        }
+
         Fetch::<TcpStream>::new(vec![self.remoto.clone()], self.logger.clone())?.ejecutar()?;
 
         let commit_head_remoto = self.obtener_head_remoto()?;
