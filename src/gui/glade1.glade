@@ -219,67 +219,26 @@
   <object class="GtkWindow" id="conflicts-window">
     <property name="can-focus">False</property>
     <child>
-      <object class="GtkNotebook">
+      <object class="GtkNotebook" id="conflicts-notebook">
         <property name="visible">True</property>
         <property name="can-focus">True</property>
         <child>
-          <object class="GtkLabel">
-            <property name="visible">True</property>
-            <property name="can-focus">False</property>
-            <property name="label" translatable="yes">tab1</property>
-          </object>
+          <placeholder/>
         </child>
         <child type="tab">
-          <object class="GtkLabel">
-            <property name="visible">True</property>
-            <property name="can-focus">False</property>
-            <property name="label" translatable="yes">page 1</property>
-          </object>
-          <packing>
-            <property name="tab-fill">False</property>
-          </packing>
+          <placeholder/>
         </child>
         <child>
-          <object class="GtkLabel">
-            <property name="visible">True</property>
-            <property name="can-focus">False</property>
-            <property name="label" translatable="yes">tab2</property>
-          </object>
-          <packing>
-            <property name="position">1</property>
-          </packing>
+          <placeholder/>
         </child>
         <child type="tab">
-          <object class="GtkLabel">
-            <property name="visible">True</property>
-            <property name="can-focus">False</property>
-            <property name="label" translatable="yes">page 2</property>
-          </object>
-          <packing>
-            <property name="position">1</property>
-            <property name="tab-fill">False</property>
-          </packing>
+          <placeholder/>
         </child>
         <child>
-          <object class="GtkLabel">
-            <property name="visible">True</property>
-            <property name="can-focus">False</property>
-            <property name="label" translatable="yes">tab3</property>
-          </object>
-          <packing>
-            <property name="position">2</property>
-          </packing>
+          <placeholder/>
         </child>
         <child type="tab">
-          <object class="GtkLabel">
-            <property name="visible">True</property>
-            <property name="can-focus">False</property>
-            <property name="label" translatable="yes">page 3</property>
-          </object>
-          <packing>
-            <property name="position">2</property>
-            <property name="tab-fill">False</property>
-          </packing>
+          <placeholder/>
         </child>
         <style>
           <class name="notebook"/>
@@ -790,6 +749,7 @@
                       <object class="GtkTextView" id="log-description">
                         <property name="visible">True</property>
                         <property name="can-focus">True</property>
+                        <property name="editable">False</property>
                         <property name="buffer">log-info</property>
                       </object>
                       <packing>
