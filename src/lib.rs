@@ -28,6 +28,7 @@ pub mod tipos_de_dato {
         pub mod hash_object;
         pub mod init;
         pub mod log;
+        pub mod ls_files;
         pub mod ls_tree;
         pub mod merge;
         pub mod pull;

@@ -4,8 +4,8 @@ use super::{
     comandos::{
         add::Add, branch::Branch, cat_file::CatFile, checkout::Checkout, clone::Clone,
         commit::Commit, fetch::Fetch, hash_object::HashObject, init::Init, log::Log,
-        ls_tree::LsTree, merge::Merge, pull::Pull, push::Push, remote::Remote, rm::Remove,
-        status::Status, version::Version,
+        ls_files::LsFiles, ls_tree::LsTree, merge::Merge, pull::Pull, push::Push, remote::Remote,
+        rm::Remove, status::Status, version::Version,
     },
     logger::Logger,
 };
@@ -29,6 +29,7 @@ pub enum Comando {
     Remote(Remote),
     Merge(Merge),
     LsTree(LsTree),
+    LsFiles(LsFiles),
     Unknown,
 }
 
@@ -57,6 +58,7 @@ impl Comando {
             "remote" => Comando::Remote(Remote::from(&mut vector_args, logger)?),
             "merge" => Comando::Merge(Merge::from(&mut vector_args, logger)?),
             "ls-tree" => Comando::LsTree(LsTree::new(logger, &mut vector_args)?),
+            "ls-files" => Comando::LsFiles(LsFiles::from(logger, &mut vector_args)?),
             _ => Comando::Unknown,
         };
 
@@ -83,6 +85,7 @@ impl Comando {
             Comando::Merge(ref mut merge) => merge.ejecutar(),
             Comando::Pull(ref mut pull) => pull.ejecutar(),
             Comando::LsTree(ref mut ls_tree) => ls_tree.ejecutar(),
+            Comando::LsFiles(ref mut ls_files) => ls_files.ejecutar(),
             Comando::Unknown => Err("Comando desconocido".to_string()),
         }
     }
