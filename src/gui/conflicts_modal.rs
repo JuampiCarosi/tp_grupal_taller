@@ -37,49 +37,88 @@ fn linea_contenido_incoming(linea: &str) -> String {
     "<span bgcolor=\"#a5f3fc\" >".to_string() + &linea + "</span>\n"
 }
 
+fn resaltar_linea(buffer: &gtk::TextBuffer, numero_linea: i32, tag: &str) {
+    let start_iter = buffer.iter_at_line(numero_linea);
+    let end_iter = buffer.iter_at_line(numero_linea + 1);
+    buffer.apply_tag_by_name(tag, &start_iter, &end_iter);
+}
+
+fn limpiar_resaltado_linea(buffer: &gtk::TextBuffer, numero_linea: i32) {
+    let start_iter = buffer.iter_at_line(numero_linea);
+    let end_iter = buffer.iter_at_line(numero_linea + 1);
+    buffer.remove_all_tags(&start_iter, &end_iter);
+}
+
+fn crear_tags(buffer: &gtk::TextBuffer) {
+    let head_titulo = gtk::TextTag::new(Some("head_titulo"));
+    head_titulo.set_paragraph_background(Some("#5eead4"));
+    let head_contenido = gtk::TextTag::new(Some("head_contenido"));
+    head_contenido.set_paragraph_background(Some("#99f6e4"));
+    let incoming_titulo = gtk::TextTag::new(Some("incoming_titulo"));
+    incoming_titulo.set_paragraph_background(Some("#67e8f9"));
+    let incoming_contenido = gtk::TextTag::new(Some("incoming_contenido"));
+    incoming_contenido.set_paragraph_background(Some("#a5f3fc"));
+    let table = buffer.tag_table().unwrap();
+    table.add(&head_titulo);
+    table.add(&head_contenido);
+    table.add(&incoming_titulo);
+    table.add(&incoming_contenido);
+}
+
+#[derive(PartialEq)]
+enum Estado {
+    Head,
+    Incoming,
+    None,
+}
+
 fn resaltar_conflictos(buffer: &gtk::TextBuffer) {
     let texto = buffer
         .text(&buffer.start_iter(), &buffer.end_iter(), false)
         .unwrap();
     let lineas = texto.split('\n').collect::<Vec<&str>>();
-    buffer.set_text("");
-    let mut i = 0;
-    while i < lineas.len() {
-        if lineas[i].starts_with("<<<<<<<") {
-            buffer.insert_markup(&mut buffer.end_iter(), &linea_head(lineas[i]));
-            i += 1;
-            while i < lineas.len() && !lineas[i].starts_with("=======") {
-                buffer.insert_markup(&mut buffer.end_iter(), &linea_contenido_head(lineas[i]));
-
-                i += 1;
+    let mut estado = Estado::None;
+    for (i, linea) in lineas.iter().enumerate() {
+        match *linea {
+            l if l.starts_with("<<<<<<<") => {
+                resaltar_linea(buffer, i as i32, "head_titulo");
+                estado = Estado::Head;
+                continue;
             }
-            if i < lineas.len() {
-                buffer.insert_markup(&mut buffer.end_iter(), &(lineas[i].to_string() + "\n"));
-
-                i += 1;
-                while i < lineas.len() && !lineas[i].starts_with(">>>>>>>") {
-                    buffer.insert_markup(
-                        &mut buffer.end_iter(),
-                        &linea_contenido_incoming(lineas[i]),
-                    );
-
-                    i += 1;
-                }
-                if i < lineas.len() {
-                    buffer.insert_markup(&mut buffer.end_iter(), &linea_incoming(lineas[i]));
-
-                    i += 1;
-                }
+            l if l.starts_with(">>>>>>>") => {
+                resaltar_linea(buffer, i as i32, "incoming_titulo");
+                estado = Estado::None;
+                continue;
             }
-        } else {
-            buffer.insert_markup(&mut buffer.end_iter(), &(lineas[i].to_string() + "\n"));
-            i += 1;
+            "=======" => {
+                estado = Estado::Incoming;
+                continue;
+            }
+            _ => {}
+        }
+        match estado {
+            Estado::Head => {
+                resaltar_linea(buffer, i as i32, "head_contenido");
+            }
+            Estado::Incoming => {
+                resaltar_linea(buffer, i as i32, "incoming_contenido");
+            }
+            Estado::None => {}
         }
     }
 }
 
-fn crear_text_area_de_objeto(objeto: &Objeto) -> gtk::TextView {
+fn crear_text_area_de_objeto(objeto: &Objeto) -> gtk::ScrolledWindow {
+    let scrollable_window = gtk::ScrolledWindow::new(gtk::Adjustment::NONE, gtk::Adjustment::NONE);
+    scrollable_window.set_shadow_type(gtk::ShadowType::None);
+    scrollable_window.set_height_request(400);
+    scrollable_window.set_width_request(600);
+    let viewport = gtk::Viewport::new(gtk::Adjustment::NONE, gtk::Adjustment::NONE);
     let text = gtk::TextView::new();
+
+    scrollable_window.add(&viewport);
+    viewport.add(&text);
+
     text.set_left_margin(5);
     text.set_right_margin(5);
     text.set_top_margin(5);
@@ -88,40 +127,32 @@ fn crear_text_area_de_objeto(objeto: &Objeto) -> gtk::TextView {
     let contenido = leer_a_string(objeto.obtener_path()).unwrap();
     let buffer = text.buffer().unwrap();
     buffer.set_text(&contenido);
+    crear_tags(&buffer);
     resaltar_conflictos(&buffer);
+    buffer.connect_changed(|buffer| {
+        resaltar_conflictos(buffer);
+    });
 
-    text
-}
-
-fn contenedor(objeto: &Objeto) -> gtk::Box {
-    let contenedor = gtk::Box::new(gtk::Orientation::Vertical, 0);
-    contenedor.set_margin_start(5);
-    contenedor.set_margin_end(5);
-    contenedor.set_margin_top(5);
-    contenedor.set_margin_bottom(5);
-    let texto_1 = crear_text_area_de_objeto(objeto);
-    let texto_2 = crear_text_area_de_objeto(objeto);
-
-    texto_1.style_context().add_class("text-red");
-
-    contenedor.add(&texto_1);
-    contenedor.add(&texto_2);
-    contenedor
+    scrollable_window
 }
 
 fn crear_notebook(builder: &gtk::Builder, logger: Arc<Logger>) {
     let index = leer_index(logger).unwrap();
     let sin_mergear: Vec<_> = index.iter().filter(|objeto| objeto.merge).collect();
     let notebook: gtk::Notebook = builder.object("conflicts-notebook").unwrap();
+    notebook.set_vexpand(true);
     for objeto_viejo in notebook.children() {
         notebook.remove(&objeto_viejo);
     }
+
     for objeto in sin_mergear {
-        let text_area = contenedor(&objeto.objeto);
+        let text_area = crear_text_area_de_objeto(&objeto.objeto);
         let label = gtk::Label::new(Some(
             &objeto.objeto.obtener_path().to_string_lossy().to_string(),
         ));
         notebook.append_page(&text_area, Some(&label));
+        println!("{}", objeto.objeto.obtener_path().display());
+        text_area.show();
     }
 }
 
@@ -130,15 +161,12 @@ fn modal(builder: &gtk::Builder, logger: Arc<Logger>) {
     modal.set_position(gtk::WindowPosition::Center);
     crear_notebook(builder, logger.clone());
 
-    let screen = gdk::Screen::default().unwrap();
-    estilos(screen);
-
     modal.connect_delete_event(|modal, _| {
         modal.hide();
         gtk::glib::Propagation::Stop
     });
     modal.set_position(gtk::WindowPosition::Center);
-    modal.show_all();
+    modal.show();
 }
 
 pub fn render(builder: &gtk::Builder, window: &gtk::Window, logger: Arc<Logger>) {

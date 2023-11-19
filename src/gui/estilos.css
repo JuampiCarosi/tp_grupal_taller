@@ -18,15 +18,41 @@ combobox window menu {
 }
 
 .notebook tabs {
-  background-color: #334155;
-  color: #f3f4f6;
+  background-color: #f8fafc;
+  border-bottom: 0.5px solid #cbd5e1;
 }
 .notebook tabs label {
-  color: #f3f4f6;
+  color: #64748b;
+}
+
+header > tabs > tab:checked label {
+  color: rgb(48, 108, 187);
 }
 
 .notebook tab:hover {
-  background-color: #1e293b;
+  background-color: #e2e8f0;
+  border-bottom: 0;
+}
+
+.notebook textview text {
+  background-color: #f8fafc;
+  border-radius: 0px;
+}
+
+.notebook scrolledwindow {
+  font-size: 12px;
+  background-color: #f8fafc;
+  border: 0;
+  font-family: monospace;
+  border-radius: 4px;
+  padding: 8px;
+}
+.notebook viewport {
+  background-color: #f1f5f9;
+  border: 0;
+}
+.notebook {
+  border: 0;
 }
 
 .label {
@@ -61,52 +87,16 @@ combobox window menu {
   border: 0.5px solid #94a3b8;
 }
 
-textview text {
+.files-container textview text {
   background-color: #f1f5f9;
   border-radius: 0px;
 }
 
-scrolledwindow {
+.files-container scrolledwindow {
   font-size: 12px;
   font-family: monospace;
   background-color: rgba(225, 231, 239, 0.65);
   border-radius: 4px;
   border: 0.5px solid #94a3b8;
   padding: 8px;
-}
-
-.head-title text {
-  background-color: #5eead4;
-}
-
-/* 
-fn linea_head(linea: &str) -> String {
-    "<span bgcolor=\"#5eead4\" >".to_string() + &linea.replace("<", "&lt;") + "</span>\n"
-}
-
-fn linea_incoming(linea: &str) -> String {
-    "<span bgcolor=\"#67e8f9\" >".to_string() + &linea + "</span>\n"
-}
-
-fn linea_contenido_head(linea: &str) -> String {
-    "<span bgcolor=\"#99f6e4\" >".to_string() + &linea + "</span>\n"
-}
-
-fn linea_contenido_incoming(linea: &str) -> String {
-    "<span bgcolor=\"#a5f3fc\" >".to_string() + &linea + "</span>\n"
-} */
-
-.head-titulo text {
-  background-color: #5eead4;
-}
-.head-contenido text {
-  background-color: #99f6e4;
-}
-
-.incoming-titulo text {
-  background-color: #67e8f9;
-}
-
-.incoming-contenido text {
-  background-color: #a5f3fc;
 }
