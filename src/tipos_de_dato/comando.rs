@@ -4,8 +4,9 @@ use super::{
     comandos::{
         add::Add, branch::Branch, cat_file::CatFile, checkout::Checkout, clone::Clone,
         commit::Commit, fetch::Fetch, hash_object::HashObject, init::Init, log::Log,
+
         ls_tree::LsTree, merge::Merge, pull::Pull, push::Push, remote::Remote, rm::Remove,
-        status::Status, version::Version,
+        show_ref::ShowRef, status::Status, version::Version,
     },
     logger::Logger,
     tag::Tag,
@@ -23,6 +24,7 @@ pub enum Comando {
     Commit(Commit),
     Clone(Clone),
     Fetch(Fetch<TcpStream>),
+    ShowRef(ShowRef),
     Push(Push),
     Pull(Pull),
     Log(Log),
@@ -31,6 +33,7 @@ pub enum Comando {
     Merge(Merge),
     LsTree(LsTree),
     Tag(Tag),
+    LsFiles(LsFiles),
     Unknown,
 }
 
@@ -50,16 +53,18 @@ impl Comando {
             "branch" => Comando::Branch(Branch::from(&mut vector_args, logger)?),
             "checkout" => Comando::Checkout(Checkout::from(vector_args, logger)?),
             "commit" => Comando::Commit(Commit::from(&mut vector_args, logger)?),
-            "fetch" => Comando::Fetch(Fetch::<TcpStream>::new(logger)?),
+            "fetch" => Comando::Fetch(Fetch::<TcpStream>::new(vector_args, logger)?),
             "clone" => Comando::Clone(Clone::from(logger)?),
             "push" => Comando::Push(Push::new(logger)?),
-            "pull" => Comando::Pull(Pull::from(logger)?),
+            "pull" => Comando::Pull(Pull::from(vector_args, logger)?),
             "log" => Comando::Log(Log::from(&mut vector_args, logger)?),
             "status" => Comando::Status(Status::from(logger)?),
             "remote" => Comando::Remote(Remote::from(&mut vector_args, logger)?),
             "merge" => Comando::Merge(Merge::from(&mut vector_args, logger)?),
             "ls-tree" => Comando::LsTree(LsTree::new(logger, &mut vector_args)?),
             "tag" => Comando::Tag(Tag::from(vector_args, logger)?),
+            "show-ref" => Comando::ShowRef(ShowRef::from(vector_args, logger)?),
+            "ls-files" => Comando::LsFiles(LsFiles::from(logger, &mut vector_args)?),
             _ => Comando::Unknown,
         };
 
@@ -87,6 +92,8 @@ impl Comando {
             Comando::Pull(ref mut pull) => pull.ejecutar(),
             Comando::LsTree(ref mut ls_tree) => ls_tree.ejecutar(),
             Comando::Tag(ref mut tag) => tag.ejecutar(),
+            Comando::ShowRef(ref mut show_ref) => show_ref.ejecutar(),
+            Comando::LsFiles(ref mut ls_files) => ls_files.ejecutar(),
             Comando::Unknown => Err("Comando desconocido".to_string()),
         }
     }

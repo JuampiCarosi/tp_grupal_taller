@@ -35,7 +35,8 @@ impl Servidor {
             println!("Conectado al cliente {:?}", socket);
             let logge_clone = self.logger.clone();
             thread::spawn(move || {
-                let mut comunicacion = Comunicacion::new(stream.try_clone().unwrap(), logge_clone);
+                let mut comunicacion =
+                    Comunicacion::new_para_testing(stream.try_clone().unwrap(), logge_clone);
                 Self::manejar_cliente(
                     &mut comunicacion,
                     &(env!("CARGO_MANIFEST_DIR").to_string() + DIR),

@@ -25,7 +25,7 @@ pub fn render(
         fetching_dialog.set_position(gtk::WindowPosition::Center);
         fetching_dialog.show_all();
 
-        match Pull::from(logger.clone()).unwrap().ejecutar() {
+        match Pull::from(Vec::new(), logger.clone()).unwrap().ejecutar() {
             Ok(_) => {}
             Err(err) => {
                 error_dialog::mostrar_error(&err);

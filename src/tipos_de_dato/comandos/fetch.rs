@@ -1,7 +1,8 @@
 use crate::tipos_de_dato::comunicacion::Comunicacion;
+use crate::tipos_de_dato::config::Config;
 use crate::tipos_de_dato::logger::Logger;
 use crate::tipos_de_dato::packfile::Packfile;
-use crate::utils::{self, io};
+use crate::utils::{self, io, objects};
 use std::io::{Read, Write};
 use std::net::TcpStream;
 use std::path::PathBuf;
@@ -9,6 +10,7 @@ use std::sync::Arc;
 
 const SE_ENVIO_ALGUN_PEDIDO: bool = true;
 const NO_SE_ENVIO_NINGUN_PEDIDO: bool = false;
+const GIR_FETCH: &str = "gir fetch <remoto>";
 
 pub struct Fetch<T: Write + Read> {
     remoto: String,
@@ -18,12 +20,36 @@ pub struct Fetch<T: Write + Read> {
 }
 
 impl<T: Write + Read> Fetch<T> {
-    pub fn new(logger: Arc<Logger>) -> Result<Fetch<TcpStream>, String> {
-        let remoto = "origin".to_string();
-        //"Por ahora lo hardcoedo necesito el config que no esta en esta rama";
-        let comunicacion = Arc::new(Comunicacion::<TcpStream>::new_desde_gir_config(
+    pub fn new(args: Vec<String>, logger: Arc<Logger>) -> Result<Fetch<TcpStream>, String> {
+        Self::verificar_argumentos(&args)?;
+
+        let remoto = Self::obtener_remoto(args)?;
+        let url = Self::obtener_url(&remoto)?;
+
+        let capacidades_local = Vec::new();
+        //esto lo deberia tener la comunicacion creo yo
+
+        //fijarse si sigue siendo necesario el arc
+        let comunicacion = Arc::new(Comunicacion::<TcpStream>::new_desde_url(
+            &url,
             logger.clone(),
         )?);
+
+        Ok(Fetch {
+            remoto,
+            comunicacion,
+            capacidades_local,
+            logger,
+        })
+    }
+
+    #[cfg(test)]
+    //pòr ahoar para testing, para mi asi deberia ser recibiendo el comunicacion
+    fn new_testing(
+        logger: Arc<Logger>,
+        comunicacion: Arc<Comunicacion<T>>,
+    ) -> Result<Fetch<T>, String> {
+        let remoto = "origin".to_string();
 
         let capacidades_local = Vec::new();
         //esto lo deberia tener la comunicacion creo yo
@@ -34,22 +60,50 @@ impl<T: Write + Read> Fetch<T> {
             logger,
         })
     }
-    //pòr ahoar para testing, para mi asi deberia ser recibiendo el comunicacion
-    pub fn new_testing(
-        logger: Arc<Logger>,
-        comunicacion: Arc<Comunicacion<T>>,
-    ) -> Result<Fetch<T>, String> {
-        let remoto = "origin".to_string();
-        //"Por ahora lo hardcoedo necesito el config que no esta en esta rama";
 
-        let capacidades_local = Vec::new();
-        //esto lo deberia tener la comunicacion creo yo
-        Ok(Fetch {
-            remoto,
-            comunicacion,
-            capacidades_local,
-            logger,
-        })
+    fn verificar_argumentos(args: &Vec<String>) -> Result<(), String> {
+        if args.len() > 1 {
+            return Err(format!(
+                "Parametros desconocidos {}\n {}",
+                args.join(" "),
+                GIR_FETCH
+            ));
+        };
+        Ok(())
+    }
+
+    ///Le pide al config el url asosiado a la rama
+    fn obtener_url(remoto: &String) -> Result<String, String> {
+        Config::leer_config()?.obtenet_url_asosiado_remoto(&remoto)
+    }
+
+    ///obtiene el remoto para el comando, si argumentos lo contiene y es valido lo saca de argumentos. Si no hay argumetos lo saca
+    /// del remoto asosiado a la rama actual. Si no esta configura la rama actual para ningun remoto devuleve error.
+    fn obtener_remoto(args: Vec<String>) -> Result<String, String> {
+        let remoto = if args.len() == 1 {
+            Self::verificar_remoto(&args[0])?
+        } else {
+            Self::obtener_remoto_rama_actual()?
+        };
+        Ok(remoto)
+    }
+
+    ///verifica si el remoto envio por el usario existe
+    fn verificar_remoto(remoto: &String) -> Result<String, String> {
+        if let false = Config::leer_config()?.existe_remote(remoto) {
+            return  Err(format!("Remoto desconocido{}\nSi quiere añadir un nuevo remoto:\n\ngir remote add [<nombre-remote>] [<url-remote>]\n\n", remoto));
+        };
+
+        Ok(remoto.clone())
+    }
+
+    ///obtiene el remo asosiado a la rama remota actual. Falla si no existe
+    fn obtener_remoto_rama_actual() -> Result<String, String> {
+        Config::leer_config()?
+            .obtener_remoto_rama_actual()
+            .ok_or(format!(
+                "La rama actual no se encuentra asosiado a ningun remoto\nUtilice:\n\ngir remote add [<nombre-remote>] [<url-remote>]\n\nDespues:\n\n{}\n\n", GIR_FETCH
+            ))
     }
 
     // -------------------------------------------------------------
@@ -67,7 +121,7 @@ impl<T: Write + Read> Fetch<T> {
         //en caso de clone el commit head se tiene que utilizar
         let (
             capacidades_servidor,
-            _commit_head_remoto,
+            commit_head_remoto,
             commits_cabezas_y_dir_rama_asosiado,
             _commits_y_tags_asosiados,
         ) = self.fase_de_descubrimiento()?;
@@ -80,6 +134,8 @@ impl<T: Write + Read> Fetch<T> {
 
         self.actualizar_ramas_locales_del_remoto(&commits_cabezas_y_dir_rama_asosiado)?;
 
+        self.acutualizar_archivo_head_remoto(&commit_head_remoto)?;
+        
         let mensaje = "Fetch ejecutado con exito".to_string();
         self.logger.log(mensaje.clone());
         Ok(mensaje)
@@ -93,7 +149,7 @@ impl<T: Write + Read> Fetch<T> {
     // -------------------------------------------------------------
     // -------------------------------------------------------------
 
-    pub fn fase_de_negociacion(
+    fn fase_de_negociacion(
         &self,
         capacidades_servidor: Vec<String>,
         commits_cabezas_y_dir_rama_asosiado: &Vec<(String, PathBuf)>,
@@ -110,7 +166,7 @@ impl<T: Write + Read> Fetch<T> {
 
     //ACA PARA MI HAY UN PROBLEMA DE RESPONSABILIADADES: COMUNICACION DEBERIA RECIBIR EL PACKETE Y FETCH
     //DEBERIA GUARDAR LAS COSAS, PERO COMO NO ENTIENDO EL CODIGO JAJA DENTRO DE COMUNICACION NO METO MANO
-    pub fn recivir_packfile_y_guardar_objetos(&self) -> Result<(), String> {
+    fn recivir_packfile_y_guardar_objetos(&self) -> Result<(), String> {
         // aca para git daemon hay que poner un recibir linea mas porque envia un ACK repetido (No entiendo por que...)
         println!("Obteniendo paquete..");
         let mut packfile = self.comunicacion.obtener_packfile()?;
@@ -128,13 +184,33 @@ impl<T: Write + Read> Fetch<T> {
             .enviar(&io::obtener_linea_con_largo_hex("done\n"))
     }
 
+    ///Actuliza el archivo head correspondiente al remoto que se hizo fetch o si no existe lo crea.
+    /// Si se hizo fetch del remoto 'san_lorenzo' -> se actuliza o crea el archivo `SAN_LORENZO_HEAD`
+    /// con el commit hash cabeza recibido del servidor    
+    fn acutualizar_archivo_head_remoto(
+        &self,
+        commit_head_remoto: &Option<String>,
+    ) -> Result<(), String> {
+        if let Some(hash) = commit_head_remoto {
+            let ubicacion_archivo_head_remoto =
+                format!("./.gir/{}_HEAD", self.remoto.to_uppercase());
+
+            println!("ubicacion_archivo_head_remoto: {}", ubicacion_archivo_head_remoto);
+            io::escribir_bytes(ubicacion_archivo_head_remoto, hash)?;
+        }
+
+        Ok(())
+    }
+
     ///Envia todo los objetos (sus hash) que ya se tienen y por lo tanto no es necesario que el servidor manda
     fn enviar_lo_que_tengo(&self) -> Result<(), String> {
-        let objetos_directorio =
-            io::obtener_objetos_del_directorio("./.gir/objects/".to_string()).unwrap();
-        if !objetos_directorio.is_empty() {
+        //ESTAMOS ENVIANDO TODOS LOS OBJETOS QUE TENEMOS SIN DISTINCION, DE QUE RAMA ESTAN. FUNCIONA
+        //PERO SE PODRIA ENVIAR SOLO DE LAS QUE LE PEDISTE
+        let objetos = objects::obtener_objetos()?;
+
+        if !objetos.is_empty() {
             self.comunicacion
-                .enviar_lo_que_tengo_al_servidor_pkt(&objetos_directorio)?;
+                .enviar_lo_que_tengo_al_servidor_pkt(&objetos)?;
             self.recivir_nack()?;
             self.finalizar_pedido()?
         } else {
@@ -198,7 +274,10 @@ impl<T: Write + Read> Fetch<T> {
 
         for (commit_cabeza_remoto, dir_rama_asosiada) in commits_cabezas_y_dir_rama_asosiado {
             let dir_rama_asosiada_local =
-                self.convertir_de_dir_rama_remota_a_dir_rama_local(dir_rama_asosiada)?;
+                utils::ramas::convertir_de_dir_rama_remota_a_dir_rama_local(
+                    &self.remoto,
+                    dir_rama_asosiada,
+                )?;
 
             if !dir_rama_asosiada_local.exists() {
                 commits_de_cabeza_de_rama_faltantes.push(commit_cabeza_remoto.to_string());
@@ -244,7 +323,7 @@ impl<T: Write + Read> Fetch<T> {
     /// - vector de tuplas con los hash del commit cabeza de rama y la direccion de la
     ///     carpeta de la rama en el servidor(ojo!! la direccion para el servidor no para el local)
     /// - vector de tuplas con el hash del commit y el tag asosiado
-    pub fn fase_de_descubrimiento(
+    fn fase_de_descubrimiento(
         &self,
     ) -> Result<
         (
@@ -286,7 +365,7 @@ impl<T: Write + Read> Fetch<T> {
         for linea in lineas_recibidas {
             let (commit, dir) = self.obtener_commit_y_dir_asosiado(linea)?;
 
-            if self.es_la_ruta_a_una_rama(&dir) {
+            if utils::ramas::es_la_ruta_a_una_rama(&dir) {
                 commits_cabezas_y_dir_rama_asosiados.push((commit, dir));
             } else {
                 commits_y_tags_asosiados.push((commit, dir));
@@ -297,35 +376,6 @@ impl<T: Write + Read> Fetch<T> {
             commits_cabezas_y_dir_rama_asosiados,
             commits_y_tags_asosiados,
         ))
-    }
-
-    ///Comprueba si dir es el la ruta a una carpeta que corresponde a una rama o a una
-    /// tag.
-    ///
-    /// Si el path contien heads entonces es una rama, devuelve true. Caso contrio es un tag,
-    /// devuelve false
-    fn es_la_ruta_a_una_rama(&self, dir: &PathBuf) -> bool {
-        for componente in dir.iter() {
-            if let Some(componente_str) = componente.to_str() {
-                if componente_str == "heads" {
-                    return true;
-                }
-            }
-        }
-        false
-    }
-
-    fn convertir_de_dir_rama_remota_a_dir_rama_local(
-        &self,
-        dir_rama_remota: &PathBuf,
-    ) -> Result<PathBuf, String> {
-        let carpeta_del_remoto = format!("./.gir/refs/remotes/{}/", self.remoto);
-        //"./.gir/refs/remotes/origin/";
-
-        let rama_remota = utils::path_buf::obtener_nombre(dir_rama_remota)?;
-        let dir_rama_local = PathBuf::from(carpeta_del_remoto + rama_remota.as_str());
-
-        Ok(dir_rama_local)
     }
 
     fn separara_capacidades(
@@ -363,13 +413,16 @@ impl<T: Write + Read> Fetch<T> {
     }
 
     ///actuliza a donde apuntan las cabeza del rama de las ramas locales pertenecientes al remoto
-    pub fn actualizar_ramas_locales_del_remoto(
+    fn actualizar_ramas_locales_del_remoto(
         &self,
         commits_cabezas_y_dir_rama_asosiado: &Vec<(String, PathBuf)>,
     ) -> Result<(), String> {
         for (commit_cabeza_de_rama, dir_rama_remota) in commits_cabezas_y_dir_rama_asosiado {
             let dir_rama_local_del_remoto =
-                self.convertir_de_dir_rama_remota_a_dir_rama_local(dir_rama_remota)?;
+                utils::ramas::convertir_de_dir_rama_remota_a_dir_rama_local(
+                    &self.remoto,
+                    &dir_rama_remota,
+                )?;
 
             io::escribir_bytes(dir_rama_local_del_remoto, commit_cabeza_de_rama)?;
         }
@@ -448,8 +501,7 @@ mod test {
             escritura_data: Vec::new(),
         };
 
-        let comunicacion = Comunicacion::new(mock, logger);
-        let logger = Arc::new(Logger::new(PathBuf::from(".log.txt")).unwrap());
+        let comunicacion = Comunicacion::new_para_testing(mock, logger.clone());
         let (capacidades, commit_head, commits_y_ramas, commits_y_tags) =
             Fetch::new_testing(logger, comunicacion.into())
                 .unwrap()
@@ -509,7 +561,7 @@ mod test {
         };
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/fetch_02.txt")).unwrap());
 
-        let comunicacion = Comunicacion::new(mock, logger);
+        let comunicacion = Comunicacion::new_para_testing(mock, logger.clone());
         let logger = Arc::new(Logger::new(PathBuf::from(".log.txt")).unwrap());
         let (capacidades, commit_head, commits_y_ramas, commits_y_tags) =
             Fetch::new_testing(logger, comunicacion.into())
@@ -551,4 +603,38 @@ mod test {
         ];
         assert_eq!(commits_y_tags_esperados, commits_y_tags)
     }
+
+    // #[test]
+    // fn test03_la_fase_de_negociacion_funciona(){
+    //     let nuevo_dir = "test03_fetch";
+    //     let viejo_dir = crear_y_cambiar_directorio(nuevo_dir);
+
+    //     let mock = MockTcpStream {
+    //         lectura_data: Vec::new(),
+    //         escritura_data: Vec::new(),
+    //     };
+
+    //     let comunicacion = Comunicacion::new_para_testing(mock);
+    //     let logger = Rc::new(Logger::new(PathBuf::from(".log.txt")).unwrap());
+    //     let capacidades_servidor = vec!["multi_ack".to_string(), "thin-pack".to_string(), "side-band".to_string(), "side-band-64k".to_string(), "ofs-delta".to_string(), "shallow".to_string(), "no-progress".to_string(),  "include-tag".to_string()];
+    //     let commits_y_ramas = vec![("1d3fcd5ced445d1abc402225c0b8a1299641f497".to_string(), PathBuf::from("refs/heads/integration")),("7217a7c7e582c46cec22a130adf4b9d7d950fba0".to_string(), PathBuf::from("refs/heads/master"))];
+
+    //     Fetch::new_testing(logger, comunicacion).unwrap().fase_de_negociacion(capacidades_servidor, &commits_y_ramas).unwrap();
+
+    //     volver_al_viejo_dir_y_borrar_el_nuevo(nuevo_dir, viejo_dir);
+    // }
+
+    // fn volver_al_viejo_dir_y_borrar_el_nuevo(nuevo_dir: &str, viejo_dir: PathBuf) {
+    //     std::env::set_current_dir(viejo_dir).unwrap();
+    //     std::fs::remove_dir_all(nuevo_dir).unwrap();
+    // }
+
+    // fn crear_y_cambiar_directorio(nombre: &str)-> PathBuf{
+    //     let viejo_dir = env::current_dir().unwrap();
+
+    //     fs::create_dir_all(nombre).unwrap();
+    //     std::env::set_current_dir(nombre).unwrap();
+
+    //     viejo_dir
+    // }
 }
