@@ -76,7 +76,7 @@ impl Packfile {
     // funcion que recorrer el directorio y aniade los objetos al packfile junto a su indice correspondiente
     fn obtener_objetos_del_dir(&mut self, dir: &str) -> Result<(), ErrorDeComunicacion> {
         // esto porque es un clone, deberia pasarle los objetos que quiero
-        let objetos = io::obtener_objetos_del_directorio(dir.to_string())?;
+        let objetos = io::obtener_objetos_del_directorio(dir.to_string()).unwrap();
         // ---
         for objeto in objetos {
             let inicio = self.objetos.len() as u32; // obtengo el len previo a aniadir el objeto

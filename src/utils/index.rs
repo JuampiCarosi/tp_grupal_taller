@@ -28,7 +28,7 @@ pub fn crear_index() {
 
 //Devuelve true si el index esta vacio y false en caso contrario.
 //Si falla se presupone que es porque no existe y por lo tanto esta vacio
-pub fn esta_vacio_el_index() -> Result<bool, String> {
+pub fn esta_vacio_el_index() -> bool {
     io::esta_vacio(PATH_INDEX.to_string())
 }
 
