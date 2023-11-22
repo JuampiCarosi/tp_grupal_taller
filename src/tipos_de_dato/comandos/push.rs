@@ -84,7 +84,8 @@ impl Push {
                  //     continue;
                  // }
             if value.1 != value.0 {
-                let nuevos_objetos = obtener_commits_y_objetos_asociados(key, &value.1);
+                let nuevos_objetos =
+                    obtener_commits_y_objetos_asociados(key, &value.1, self.logger.clone());
                 match nuevos_objetos {
                     Ok(nuevos_objetos) => {
                         objetos_a_enviar.extend(nuevos_objetos);
@@ -120,6 +121,7 @@ impl Push {
 fn obtener_commits_y_objetos_asociados(
     referencia: &String,
     commit_limite: &String,
+    logger: Arc<Logger>,
 ) -> Result<HashSet<String>, String> {
     let logger = Arc::new(Logger::new(PathBuf::from("./tmp/aa"))?);
     let ruta = format!(".gir/{}", referencia);
@@ -132,7 +134,7 @@ fn obtener_commits_y_objetos_asociados(
     let mut objetos_a_agregar: HashSet<String> = HashSet::new();
     let mut commits_a_revisar: Vec<CommitObj> = Vec::new();
 
-    let ultimo_commit = CommitObj::from_hash(ultimo_commit);
+    let ultimo_commit = CommitObj::from_hash(ultimo_commit, logger.clone());
 
     match ultimo_commit {
         Ok(ultimo_commit) => {
@@ -163,7 +165,7 @@ fn obtener_commits_y_objetos_asociados(
         );
 
         for padre in commit.padres {
-            let commit_padre = CommitObj::from_hash(padre)?;
+            let commit_padre = CommitObj::from_hash(padre, logger.clone())?;
             commits_a_revisar.push(commit_padre);
         }
     }

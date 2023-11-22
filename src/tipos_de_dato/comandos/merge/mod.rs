@@ -12,8 +12,11 @@ use crate::{
         comandos::merge::{
             estrategias_conflictos::resolver_merge_len_2, region::unificar_regiones,
         },
+        conflicto::Conflicto,
+        lado_conflicto::LadoConflicto,
         logger::Logger,
         objetos::{commit::CommitObj, tree::Tree},
+        tipo_diff::TipoDiff,
     },
     utils::{
         compresion::descomprimir_objeto_gir,
@@ -36,20 +39,6 @@ pub struct Merge {
     pub branch_actual: String,
     pub branch_a_mergear: String,
 }
-#[derive(Debug, Clone)]
-
-pub enum LadoConflicto {
-    Head,
-    Entrante,
-}
-#[derive(Debug, Clone)]
-
-pub enum DiffType {
-    Added(String),
-    Removed(String),
-    Unchanged(String),
-}
-type ConflictoAtomico = Vec<(DiffType, LadoConflicto)>;
 
 type DiffGrid = Vec<Vec<usize>>;
 
@@ -81,15 +70,18 @@ impl Merge {
     /// Por ejemplo en el arbol a-b-c vs d-b-e, el commit base es b
     fn obtener_commit_base_entre_dos_branches(&self) -> Result<String, String> {
         // ab5f798d5ab
-        let hash_commit_actual = Commit::obtener_hash_del_padre_del_commit()?;
+        let hash_commit_actual = Commit::obtener_hash_commit_actual()?;
         // ab5f798d5ab
         let hash_commit_a_mergear = Self::obtener_commit_de_branch(&self.branch_a_mergear)?;
 
-        let commit_obj_actual = CommitObj::from_hash(hash_commit_actual)?;
-        let commit_obj_a_mergear = CommitObj::from_hash(hash_commit_a_mergear)?;
+        let commit_obj_actual = CommitObj::from_hash(hash_commit_actual, self.logger.clone())?;
+        let commit_obj_a_mergear =
+            CommitObj::from_hash(hash_commit_a_mergear, self.logger.clone())?;
 
-        let commits_branch_actual = Log::obtener_listas_de_commits(commit_obj_actual)?;
-        let commits_branch_a_mergear = Log::obtener_listas_de_commits(commit_obj_a_mergear)?;
+        let commits_branch_actual =
+            Log::obtener_listas_de_commits(commit_obj_actual, self.logger.clone())?;
+        let commits_branch_a_mergear =
+            Log::obtener_listas_de_commits(commit_obj_a_mergear, self.logger.clone())?;
 
         for commit_actual in commits_branch_actual {
             for commit_branch_merge in commits_branch_a_mergear.clone() {
@@ -106,7 +98,7 @@ impl Merge {
     fn obtener_diffs_entre_dos_archivos(
         archivo_1: &String,
         archivo_2: &String,
-    ) -> Result<Vec<(usize, DiffType)>, String> {
+    ) -> Result<Vec<(usize, TipoDiff)>, String> {
         let archivo_1_splitteado = archivo_1.split('\n').collect::<Vec<&str>>();
         let archivo_2_splitteado = archivo_2.split('\n').collect::<Vec<&str>>();
         let diff = Self::obtener_diff(archivo_1_splitteado, archivo_2_splitteado);
@@ -117,7 +109,7 @@ impl Merge {
     fn obtener_diffs_entre_dos_objetos(
         hash_objeto1: String,
         hash_objeto2: String,
-    ) -> Result<Vec<(usize, DiffType)>, String> {
+    ) -> Result<Vec<(usize, TipoDiff)>, String> {
         let (_, contenido1) = cat_file::obtener_contenido_objeto(hash_objeto1)?;
         let (_, contenido2) = cat_file::obtener_contenido_objeto(hash_objeto2)?;
         Self::obtener_diffs_entre_dos_archivos(&contenido1, &contenido2)
@@ -150,28 +142,28 @@ impl Merge {
     /// donde los textos son separados en lineas, En el vector se encuentra una tupla con
     /// el diff y el indice de la linea en el texto1. El texto1 es el texto base, y el texto2
     /// es el texto que se quiere mergear
-    fn obtener_diff(texto1: Vec<&str>, texto2: Vec<&str>) -> Vec<(usize, DiffType)> {
+    pub fn obtener_diff(texto1: Vec<&str>, texto2: Vec<&str>) -> Vec<(usize, TipoDiff)> {
         let diff_grid = Self::computar_lcs_grid(&texto1, &texto2);
         let mut i = texto1.len();
         let mut j = texto2.len();
-        let mut resultado_diff: Vec<(usize, DiffType)> = Vec::new();
+        let mut resultado_diff: Vec<(usize, TipoDiff)> = Vec::new();
 
         while i != 0 || j != 0 {
             if i == 0 {
-                resultado_diff.push((i, DiffType::Added(texto2[j - 1].trim().to_string())));
+                resultado_diff.push((i, TipoDiff::Added(texto2[j - 1].trim().to_string())));
                 j -= 1;
             } else if j == 0 {
-                resultado_diff.push((i, DiffType::Removed(texto1[i - 1].trim().to_string())));
+                resultado_diff.push((i, TipoDiff::Removed(texto1[i - 1].trim().to_string())));
                 i -= 1;
             } else if texto1[i - 1] == texto2[j - 1] {
-                resultado_diff.push((i, DiffType::Unchanged(texto1[i - 1].trim().to_string())));
+                resultado_diff.push((i, TipoDiff::Unchanged(texto1[i - 1].trim().to_string())));
                 i -= 1;
                 j -= 1;
             } else if diff_grid[i - 1][j] <= diff_grid[i][j - 1] {
-                resultado_diff.push((i, DiffType::Added(texto2[j - 1].trim().to_string())));
+                resultado_diff.push((i, TipoDiff::Added(texto2[j - 1].trim().to_string())));
                 j -= 1;
             } else {
-                resultado_diff.push((i, DiffType::Removed(texto1[i - 1].trim().to_string())));
+                resultado_diff.push((i, TipoDiff::Removed(texto1[i - 1].trim().to_string())));
                 i -= 1
             }
         }
@@ -183,22 +175,22 @@ impl Merge {
     /// un solo diff y es un add, no hay conflicto. Si hay mas de un diff y hay un
     /// unchange significa que no hay conflicto ya que la contraposicion puede ser
     /// aplicada sin problemas
-    fn hay_conflicto(posibles_conflictos: &Vec<(DiffType, LadoConflicto)>) -> bool {
+    fn hay_conflicto(posibles_conflictos: &Vec<(TipoDiff, LadoConflicto)>) -> bool {
         if posibles_conflictos.len() == 1 {
-            if let DiffType::Added(_) = posibles_conflictos[0].0 {
+            if let TipoDiff::Added(_) = posibles_conflictos[0].0 {
                 return false;
             }
         }
 
         posibles_conflictos.iter().all(|(diff, _)| match diff {
-            DiffType::Unchanged(_) => false,
+            TipoDiff::Unchanged(_) => false,
             _ => true,
         })
     }
 
     /// Resuelve los conflictos con distintas estrategias basandose en la cantidad de
     /// diffs que hay.
-    fn resolver_conflicto(conflicto: &ConflictoAtomico, linea_base: &str) -> Region {
+    fn resolver_conflicto(conflicto: &Conflicto, linea_base: &str) -> Region {
         if conflicto.len() == 4 {
             conflicto_len_4(conflicto)
         } else {
@@ -207,10 +199,10 @@ impl Merge {
     }
 
     fn obtener_posibles_conflictos(
-        diff_actual: Vec<(usize, DiffType)>,
-        diff_a_mergear: Vec<(usize, DiffType)>,
-    ) -> Vec<ConflictoAtomico> {
-        let mut posibles_conflictos: Vec<ConflictoAtomico> = Vec::new();
+        diff_actual: Vec<(usize, TipoDiff)>,
+        diff_a_mergear: Vec<(usize, TipoDiff)>,
+    ) -> Vec<Conflicto> {
+        let mut posibles_conflictos: Vec<Conflicto> = Vec::new();
 
         for diff in diff_actual {
             if diff.0 > posibles_conflictos.len() {
@@ -231,8 +223,8 @@ impl Merge {
 
     /// Devuelve el contenido del archivo mergeado y un booleano que indica si hubo conflictos
     fn mergear_diffs(
-        diff_actual: Vec<(usize, DiffType)>,
-        diff_a_mergear: Vec<(usize, DiffType)>,
+        diff_actual: Vec<(usize, TipoDiff)>,
+        diff_a_mergear: Vec<(usize, TipoDiff)>,
         archivo_base: String,
     ) -> (String, bool) {
         let mut hubo_conflictos = false;
@@ -243,6 +235,7 @@ impl Merge {
         let mut anterior_fue_conflicto = false;
         for i in 0..posibles_conflictos.len() {
             let posible_conflicto = &posibles_conflictos[i];
+            println!("{:?}", posible_conflicto);
 
             let region = if Self::hay_conflicto(posible_conflicto) {
                 hubo_conflictos = true;
@@ -465,7 +458,7 @@ impl Merge {
             return Err("Ya hay un merge en curso".to_string());
         }
         //
-        let commit_actual = Commit::obtener_hash_del_padre_del_commit()?;
+        let commit_actual = Commit::obtener_hash_commit_actual()?;
         let commit_a_mergear = Self::obtener_commit_de_branch(&self.branch_a_mergear)?;
         let commit_base = self.obtener_commit_base_entre_dos_branches()?;
 

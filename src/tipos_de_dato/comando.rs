@@ -4,9 +4,8 @@ use super::{
     comandos::{
         add::Add, branch::Branch, cat_file::CatFile, checkout::Checkout, clone::Clone,
         commit::Commit, fetch::Fetch, hash_object::HashObject, init::Init, log::Log,
-
-        ls_tree::LsTree, merge::Merge, pull::Pull, push::Push, remote::Remote, rm::Remove,
-        show_ref::ShowRef, status::Status, version::Version, ls_files::LsFiles,
+        ls_files::LsFiles, ls_tree::LsTree, merge::Merge, pull::Pull, push::Push, rebase::Rebase,
+        remote::Remote, rm::Remove, show_ref::ShowRef, status::Status, version::Version,
     },
     logger::Logger,
     tag::Tag,
@@ -32,9 +31,10 @@ pub enum Comando {
     Status(Status),
     Remote(Remote),
     Merge(Merge),
-    LsTree(LsTree),
     Tag(Tag),
+    LsTree(LsTree),
     LsFiles(LsFiles),
+    Rebase(Rebase),
     Unknown,
 }
 
@@ -66,6 +66,7 @@ impl Comando {
             "tag" => Comando::Tag(Tag::from(vector_args, logger)?),
             "show-ref" => Comando::ShowRef(ShowRef::from(vector_args, logger)?),
             "ls-files" => Comando::LsFiles(LsFiles::from(logger, &mut vector_args)?),
+            "rebase" => Comando::Rebase(Rebase::from(vector_args, logger)?),
             _ => Comando::Unknown,
         };
 
@@ -95,6 +96,7 @@ impl Comando {
             Comando::LsTree(ref mut ls_tree) => ls_tree.ejecutar(),
             Comando::Tag(ref mut tag) => tag.ejecutar(),
             Comando::ShowRef(ref mut show_ref) => show_ref.ejecutar(),
+            Comando::Rebase(ref mut rebase) => rebase.ejecutar(),
             Comando::LsFiles(ref mut ls_files) => ls_files.ejecutar(),
             Comando::Unknown => Err("Comando desconocido".to_string()),
         }

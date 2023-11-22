@@ -8,10 +8,13 @@ pub mod tipos_de_dato {
     pub mod comando;
     pub mod comunicacion;
     pub mod config;
+    pub mod conflicto;
+    pub mod lado_conflicto;
     pub mod logger;
     pub mod objeto;
     pub mod packfile;
     pub mod tag;
+    pub mod tipo_diff;
     pub mod visualizaciones;
     pub mod objetos {
         pub mod blob;
@@ -34,6 +37,7 @@ pub mod tipos_de_dato {
         pub mod merge;
         pub mod pull;
         pub mod push;
+        pub mod rebase;
         pub mod remote;
         pub mod rm;
         pub mod show_ref;

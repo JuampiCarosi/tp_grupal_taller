@@ -1,6 +1,17 @@
+use std::{ path::PathBuf, sync::Arc};
+
 use chrono::{FixedOffset, LocalResult, TimeZone};
 
-use crate::tipos_de_dato::comandos::cat_file;
+use crate::{
+    tipos_de_dato::{
+        comandos::{cat_file, add::Add},
+        logger::Logger,
+        tipo_diff::TipoDiff,
+    },
+    utils::io::{leer_a_string, escribir_bytes},
+};
+
+use super::tree::Tree;
 
 const AMARILLO: &str = "\x1B[33m";
 const RESET: &str = "\x1B[0m";
@@ -21,6 +32,7 @@ pub struct CommitObj {
     pub mensaje: String,
     /// Hash de los commits padres del commit.
     pub padres: Vec<String>,
+    pub logger: Arc<Logger>,
 }
 #[derive(Clone, Debug)]
 
@@ -74,10 +86,77 @@ impl CommitObj {
         Self::format_timestamp(timestamp, offset_horas, offset_minutos)
     }
 
-    /// Crea un objeto commit a partir de un hash de commit escrito en base.
+    pub fn aplicar_a_directorio(self) -> Result<(), String> {
+        println!("Aplicando commit: {}", self.mensaje);
+        let tree_actual = Tree::from_hash(
+            self.hash_tree.clone(),
+            PathBuf::from("."),
+            self.logger.clone(),
+        )?;
+
+        let hash_tree_padre =
+            CommitObj::from_hash(self.padres[0].clone(), self.logger.clone())?.hash_tree;
+            
+           
+            let tree_padre = Tree::from_hash(hash_tree_padre, PathBuf::from("."), self.logger.clone())?;
+
+        let deep_diffs = tree_padre.deep_changes(&tree_actual)?;
+
+        println!("Diffs: {:?}", deep_diffs);
+
+        for (archivo, diffs) in deep_diffs {
+            let lineas = leer_a_string(&archivo)?;
+            let mut lineas = lineas
+                .lines()
+                .map(|s| s.to_owned())
+                .collect::<Vec<String>>();
+
+            for i in 0..lineas.len() {
+                let diffs_linea: Vec<_> = diffs.iter().filter(|(linea, _)| *linea - 1 == i).collect();
+                if diffs_linea.len() == 1 {
+                    match &diffs_linea[0].1 {
+                        TipoDiff::Added(linea) => lineas.insert(i, linea.to_string()),
+                        TipoDiff::Removed(linea) => {
+                            if lineas[i] != *linea {
+                                return Err(format!(
+                                    "No se pudo aplicar el commit {} porque el archivo {} fue modificado",
+                                    self.hash.clone(), 
+                                    archivo
+                                ));
+                            }
+                            lineas.remove(i);
+                        }
+                        TipoDiff::Unchanged(_) => {}
+                       
+                    }
+                } else if diffs_linea.len() == 2 {
+                    if let TipoDiff::Removed(linea) = &diffs_linea[0].1 {
+                        if let TipoDiff::Added(linea2) = &diffs_linea[1].1 {
+                            if lineas[i] != *linea {
+                                return Err(format!(
+                                    "No se pudo aplicar el commit {} porque el archivo {} fue modificado",
+                                    self.hash.clone(), 
+                                    archivo
+                                ));
+                            }
+                            lineas[i] = linea2.to_string();
+                        }
+                    }
+                }
+            }
+            let contenido_a_escribir = lineas.join("\n");
+            escribir_bytes(&archivo, &contenido_a_escribir)?;
+            println!("Escrito: {}", contenido_a_escribir);
+            let mut add = Add::from(vec![archivo], self.logger.clone())?;
+            add.ejecutar()?;
+        }
+        Ok(())
+    }
+
+      /// Crea un objeto commit a partir de un hash de commit escrito en base.
     /// Devuelve un error si el hash no es valido o si no se pudo obtener el contenido del commit.
     /// Devuelve error si no se logran llenar todos los campos del commit.
-    pub fn from_hash(hash: String) -> Result<CommitObj, String> {
+    pub fn from_hash(hash: String, logger: Arc<Logger>) -> Result<CommitObj, String> {
         if hash.len() != 40 {
             return Err("Hash invalido".to_string());
         }
@@ -127,6 +206,7 @@ impl CommitObj {
             date,
             mensaje,
             padres,
+            logger,
         };
 
         Ok(objeto)
@@ -170,7 +250,7 @@ mod tests {
     #[test]
     fn test02_formatear_log() {
         let hash_commit = "1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p7q8r9s0t".to_string();
-
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/commit_obj_test02")).unwrap());
         let objeto = CommitObj {
             hash: hash_commit.clone(),
             autor: "nombre_apellido".to_string(),
@@ -182,6 +262,7 @@ mod tests {
             mensaje: "Mensaje del commit".to_string(),
             padres: vec![],
             hash_tree: "1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p7q8r9s0t".to_string(),
+            logger,
         };
 
         let contenido_log = objeto.format_log().unwrap();

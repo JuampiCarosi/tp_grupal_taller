@@ -60,7 +60,7 @@ impl Tag {
         }
 
         let ubicacion = format!(".gir/refs/tags/{}", tag);
-        let commit = Commit::obtener_hash_del_padre_del_commit()?;
+        let commit = Commit::obtener_hash_commit_actual()?;
 
         io::escribir_bytes(ubicacion, &commit)?;
 
