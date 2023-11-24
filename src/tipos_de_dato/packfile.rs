@@ -539,7 +539,9 @@ pub fn leer_packfile_y_escribir(bytes: &Vec<u8>, ubicacion: String) -> Result<()
         }
         if tipo == 6 {
             let (obj_type, obj_data) = _read_ofs_delta_obj( bytes, tamanio, &mut offset, offset_previo);
-            print!("obj_type: {:?}, obj_data: {:?}", obj_type, obj_data);
+            // print!("obj_type: {:?}, obj_data: {:?}", obj_type, obj_data);
+            contador += 1;
+            continue;
         }
         let mut objeto_descomprimido = vec![0; tamanio as usize];
 
@@ -706,14 +708,14 @@ fn _read_ofs_delta_obj(bytes: &Vec<u8>, obj_size: u32, actual_offset: &mut usize
  
     // # read the base object offset
     // let delta_obj_offset = actual_offset.clone();
-    println!("offset con el que entro a read_ofs_delta_obj: {}", *actual_offset);
+    // println!("offset con el que entro a read_ofs_delta_obj: {}", *actual_offset);
     let offset = read_vli_be(bytes, actual_offset, true);
-    println!("offset despues de leer vli_be {}", *actual_offset);
+    // println!("offset despues de leer vli_be {}", *actual_offset);
 
-    println!("offset: {}", offset);
+    // println!("offset: {}", offset);
     let base_obj_offset = offset_pre_varint - offset;
-    println!("base obj offset: {}", base_obj_offset);
-    println!("actual offset: {}", *actual_offset);
+    // println!("base obj offset: {}", base_obj_offset);
+    // println!("actual offset: {}", *actual_offset);
     // trace( "- offset = 0x{:x} (relative=0x{:x})", base_obj_offset, offset, depth=depth )
  
     // # get the base object
@@ -758,24 +760,24 @@ fn _make_delta_obj(bytes: &Vec<u8>, actual_offset: &mut usize, base_obj_type: u8
     // data = decompress_stream( fp )
     // trace( "- transformation data:", depth=depth, data=data )
     // assert len(data) == obj_size
-    println!("total out: {}", descompresor.total_out());
-    println!("total in: {}", descompresor.total_in());
-    println!("obj size: {}", obj_size);
+    // println!("total out: {}", descompresor.total_out());
+    // println!("total in: {}", descompresor.total_in());
+    // println!("obj size: {}", obj_size);
     
     // # set up a new input stream for the transformation data
     // fp2 = io.BytesIO( data )
     let mut data_descomprimida_offset: usize = 0;
     let base_obj_size = read_varint_le(&objeto_descomprimido, &mut data_descomprimida_offset);
     let obj_size2 = read_varint_le(&objeto_descomprimido, &mut data_descomprimida_offset);
-    println!("base obj size: {}, obj size: {}", base_obj_size, obj_size2);
-    println!("offset de la data descomprimida: {}", data_descomprimida_offset);
+    // println!("base obj size: {}, obj size: {}", base_obj_size, obj_size2);
+    // println!("offset de la data descomprimida: {}", data_descomprimida_offset);
     // trace( "- base_obj_size={}, obj_size={}", base_obj_size, obj_size2, depth=depth )
 
     // Transformation commands
     // # process the delta commands
     let mut obj_data: Vec<u8> = Vec::new();
 
-    for _i in 0..objeto_descomprimido.len() {
+    while data_descomprimida_offset < objeto_descomprimido.len() {
         // let ch = fp2.read( 1 )
         let byt = &objeto_descomprimido[data_descomprimida_offset];
         data_descomprimida_offset += 1;
@@ -785,23 +787,24 @@ fn _make_delta_obj(bytes: &Vec<u8>, actual_offset: &mut usize, base_obj_type: u8
         }
         if (byt & 0x80) != 0 {
             // # copy data from base object
+            // println!("Tipo de operacion: copy");
             let mut vals: Vec<u8> = Vec::new();
             for i in 0..6+1 {
                 let bmask = 1 << i;
                 if (byt & bmask) != 0 { 
                     // vals.append( fp2.read( 1 )[0] )
                     vals.push(objeto_descomprimido[data_descomprimida_offset]);
+                    data_descomprimida_offset += 1;
                 }
                 else {
                     // vals.append( 0 )
                     vals.push(0);
                 }
-                data_descomprimida_offset += 1;
             }
            
             let start: usize = u32::from_le_bytes(vals[0..4].try_into().unwrap()) as usize;
             let mut nbytes: usize = u16::from_le_bytes(vals[4..6].try_into().unwrap()) as usize;
-            println!("Start: {}, nbytes: {}", start, nbytes);
+            // println!("Start: {}, nbytes: {}", start, nbytes);
             // start = int.from_bytes( vals[0:4], byteorder="little" )
             // nbytes = int.from_bytes( vals[4:6], byteorder="little" )
 
@@ -816,11 +819,13 @@ fn _make_delta_obj(bytes: &Vec<u8>, actual_offset: &mut usize, base_obj_type: u8
         }
         
         else {
+            // println!("Tipo de operacion: data");
             // # add new datas
             let nbytes = byt & 0x7f;
             // trace( "- APPEND NEW BYTES: #bytes={}", nbytes, depth=depth )
             // obj_data += fp2.read( nbytes )
             obj_data.extend(&objeto_descomprimido[data_descomprimida_offset..data_descomprimida_offset + nbytes as usize]);
+            data_descomprimida_offset += nbytes as usize;
         }
     }
     // trace( "- Final object data: #bytes={}", len(obj_data), depth=depth, data=obj_data )
