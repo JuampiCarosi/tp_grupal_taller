@@ -688,7 +688,7 @@ fn read_vli_be(bytes: &Vec<u8>, actual_offset: &mut usize, offset: bool) -> usiz
 
 fn _read_pack_object(bytes: &Vec<u8>, offset: &mut usize) -> (u8, Vec<u8>) { 
     let (tipo, tamanio) = decodificar_bytes_sin_borrado(bytes, offset);
-    println!("Tipo: {}, tamanio: {}", tipo, tamanio);
+    println!("Estoy en read_pack_object, leo un objeto de tipo: {}, tamanio: {}", tipo, tamanio);
     let mut objeto_descomprimido = vec![0; tamanio as usize];
 
     let mut descompresor = Decompress::new(true);
@@ -748,7 +748,7 @@ fn _make_delta_obj(bytes: &Vec<u8>, actual_offset: &mut usize, base_obj_type: u8
     println!("===============================");    
     println!("===============================");    
     println!("===============================");    
-    println!("leyendo operaciones desde offset: {}", *actual_offset);
+    println!("leyendo operaciones delta desde offset: {}", *actual_offset);
     let mut descompresor = Decompress::new(true);
     // decompress_vec maneja el largo del vector, en este caso es necesario ya que no se sabe el largo de la data 
     descompresor
