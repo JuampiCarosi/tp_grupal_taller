@@ -408,6 +408,7 @@ pub fn verificar_checksum(packfile: &[u8]) -> bool {
 	// Compare the expected hash to the actual hash
 	expected_hash == actual_hash.as_slice()
 }
+
 pub fn leer_packfile_y_escribir(bytes: &Vec<u8>, ubicacion: String) -> Result<(), ErrorDeComunicacion> {
     let checksum = verificar_checksum(bytes);
     match checksum {
@@ -431,6 +432,8 @@ pub fn leer_packfile_y_escribir(bytes: &Vec<u8>, ubicacion: String) -> Result<()
     let mut contador: u32 = 0;
 
     while contador < largo {
+        let offset_previo = offset.clone();
+        println!("Offset: {}", offset);
         let (tipo, tamanio) = decodificar_bytes_sin_borrado(bytes, &mut offset);
         println!("tipo: {}, tamanio: {}", tipo, tamanio);
         if tipo == 7 {
@@ -531,7 +534,7 @@ pub fn leer_packfile_y_escribir(bytes: &Vec<u8>, ubicacion: String) -> Result<()
 
         }
         if tipo == 6 {
-            let (obj_type, obj_data) = _read_ofs_delta_obj( bytes, tamanio, &mut offset );
+            let (obj_type, obj_data) = _read_ofs_delta_obj( bytes, tamanio, &mut offset, offset_previo);
             print!("obj_type: {:?}, obj_data: {:?}", obj_type, obj_data);
         }
         let mut objeto_descomprimido = vec![0; tamanio as usize];
@@ -549,8 +552,8 @@ pub fn leer_packfile_y_escribir(bytes: &Vec<u8>, ubicacion: String) -> Result<()
         let _hash = hasher.finalize();
         let hash = format!("{:x}", _hash);
         
+        // println!("Objeto descomprimido: {:?}", String::from_utf8(objeto.clone()));
         println!("hash: {:?}", hash);
-
         // let ruta = format!("{}{}/{}", &ubicacion, &hash[..2], &hash[2..]);
         // println!("rutarda donde pongo objetos: {:?}", ruta);
 
@@ -558,10 +561,10 @@ pub fn leer_packfile_y_escribir(bytes: &Vec<u8>, ubicacion: String) -> Result<()
         let total_in = descompresor.total_in(); // esto es para calcular el offset
         // println!("total in: {:?}, total out: {:?} ", total_in as usize, total_out as usize);
         offset += total_in as usize;
-        println!("Offset post descompresion: {:?}", offset);
+        // println!("Offset post descompresion: {:?}", offset);
         // bytes.drain(0..total_in as usize);
         // io::escribir_bytes(ruta, compresion::comprimir_contenido_u8(&objeto).unwrap()).unwrap();
-        println!("cant bytes restantes: {:?}", bytes.len() - offset);
+        // println!("cant bytes restantes: {:?}", bytes.len() - offset);
         contador += 1;
 
     }
@@ -650,14 +653,14 @@ fn buscar_en_packfile(hash: &str, packfile: &Vec<u8>, ubicacion: &str) -> Result
 }
 
 
-fn read_vli_be(bytes: &Vec<u8>, actual_offset: &mut usize, offset: bool) -> u8{
+fn read_vli_be(bytes: &Vec<u8>, actual_offset: &mut usize, offset: bool) -> usize{
 //     """Read a variable-length integer (big-endian)."""
-    let mut val = 0;
+    let mut val: usize = 0;
     loop { 
 //         # add in the next 7 bits of data
         let byt = &bytes[*actual_offset];
         *actual_offset += 1;
-        val = (val << 7) | (byt & 0x7f);
+        val = (val << 7) | (byt & 0x7f) as usize;
         if byt & 0x80 == 0{
             // # nb: that was the last byte
             break 
@@ -679,7 +682,7 @@ fn read_vli_be(bytes: &Vec<u8>, actual_offset: &mut usize, offset: bool) -> u8{
 
 fn _read_pack_object(bytes: &Vec<u8>, offset: &mut usize) -> (u8, Vec<u8>) { 
     let (tipo, tamanio) = decodificar_bytes_sin_borrado(bytes, offset);
-   
+    println!("Tipo: {}, tamanio: {}", tipo, tamanio);
     let mut objeto_descomprimido = vec![0; tamanio as usize];
 
     let mut descompresor = Decompress::new(true);
@@ -695,13 +698,14 @@ fn _read_pack_object(bytes: &Vec<u8>, offset: &mut usize) -> (u8, Vec<u8>) {
     (tipo, objeto)
 }
 
-fn _read_ofs_delta_obj(bytes: &Vec<u8>, obj_size: u32, actual_offset: &mut usize) -> (u8, Vec<u8>){
+fn _read_ofs_delta_obj(bytes: &Vec<u8>, obj_size: u32, actual_offset: &mut usize, offset_pre_varint: usize) -> (u8, Vec<u8>){
     // """Read an OBJ_OFS_DELTA object."""
  
     // # read the base object offset
+    // let delta_obj_offset = actual_offset.clone();
     let offset = read_vli_be(bytes, actual_offset, true);
     println!("offset: {}", offset);
-    let base_obj_offset = *actual_offset - offset as usize;
+    let base_obj_offset = offset_pre_varint - offset;
     println!("base obj offset: {}", base_obj_offset);
     println!("actual offset: {}", *actual_offset);
     // trace( "- offset = 0x{:x} (relative=0x{:x})", base_obj_offset, offset, depth=depth )
@@ -716,7 +720,7 @@ fn _read_ofs_delta_obj(bytes: &Vec<u8>, obj_size: u32, actual_offset: &mut usize
     // # Calling it again here gives us the recursive behavior we need.
     let (base_obj_type, mut base_obj_data) = _read_pack_object( bytes, &mut (base_obj_offset as usize));
     // assert base_obj_type in ( "commit", "tree", "blob", "tag" )
-    // fp.seek( prev_fpos )
+    // fp.seek( prev_fpos ) 
     // trace( "- Read base object: type={}", base_obj_type, depth=depth, data=base_obj_data )
  
     // # reconstruct the delta'fied object
@@ -733,6 +737,7 @@ fn _make_delta_obj(bytes: &Vec<u8>, actual_offset: &mut usize, base_obj_type: u8
     // # read the transformation data
     // let mut objeto_descomprimido = vec![0; tamanio as usize];
     let mut data_descomprimida = Vec::new();
+    println!("Reconstruyendo objeto...");
     let mut descompresor = Decompress::new(true);
     // decompress_vec maneja el largo del vector, en este caso es necesario ya que no se sabe el largo de la data 
     descompresor
