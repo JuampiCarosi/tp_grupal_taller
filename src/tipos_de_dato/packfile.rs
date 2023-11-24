@@ -1,15 +1,19 @@
 use crate::err_comunicacion::ErrorDeComunicacion;
 use crate::tipos_de_dato::comandos::cat_file;
 use crate::tipos_de_dato::logger::Logger;
+use crate::tipos_de_dato::objeto;
 use crate::tipos_de_dato::objetos::tree::Tree;
 use crate::utils::compresion;
 use crate::utils::{self, io};
 use flate2::{Decompress, FlushDecompress};
+use flate2::{read::ZlibDecoder, write::ZlibEncoder, Compression};
 use sha1::{Digest, Sha1};
 use std::convert::TryInto;
 use std::path::PathBuf;
 use std::str;
 use std::sync::Arc;
+
+
 pub struct Packfile {
     objetos: Vec<u8>,
     indice: Vec<u8>,
@@ -693,7 +697,6 @@ fn _read_pack_object(bytes: &Vec<u8>, offset: &mut usize) -> (u8, Vec<u8>) {
 
     // calculo el hash
     let objeto = obtener_objeto_con_header(tipo, tamanio, &mut objeto_descomprimido);
-
     *offset += descompresor.total_in() as usize;
     (tipo, objeto)
 }
@@ -703,7 +706,10 @@ fn _read_ofs_delta_obj(bytes: &Vec<u8>, obj_size: u32, actual_offset: &mut usize
  
     // # read the base object offset
     // let delta_obj_offset = actual_offset.clone();
+    println!("offset con el que entro a read_ofs_delta_obj: {}", *actual_offset);
     let offset = read_vli_be(bytes, actual_offset, true);
+    println!("offset despues de leer vli_be {}", *actual_offset);
+
     println!("offset: {}", offset);
     let base_obj_offset = offset_pre_varint - offset;
     println!("base obj offset: {}", base_obj_offset);
@@ -735,58 +741,67 @@ fn _make_delta_obj(bytes: &Vec<u8>, actual_offset: &mut usize, base_obj_type: u8
     // """Reconstruct a delta'fied object."""
  
     // # read the transformation data
-    // let mut objeto_descomprimido = vec![0; tamanio as usize];
-    let mut data_descomprimida = Vec::new();
-    println!("Reconstruyendo objeto...");
+    let mut objeto_descomprimido = vec![0; obj_size as usize];
+    // let mut data_descomprimida = Vec::new();
+    println!("===============================");    
+    println!("===============================");    
+    println!("===============================");    
+    println!("leyendo operaciones desde offset: {}", *actual_offset);
     let mut descompresor = Decompress::new(true);
     // decompress_vec maneja el largo del vector, en este caso es necesario ya que no se sabe el largo de la data 
     descompresor
-        .decompress_vec(&bytes[*actual_offset..], &mut data_descomprimida, FlushDecompress::None)
+        .decompress(&bytes[*actual_offset..], &mut objeto_descomprimido, FlushDecompress::None)
         .unwrap();
     *actual_offset += descompresor.total_in() as usize;
+
+
     // data = decompress_stream( fp )
     // trace( "- transformation data:", depth=depth, data=data )
     // assert len(data) == obj_size
-    println!("len data descomprimida: {}", data_descomprimida.len());
+    println!("total out: {}", descompresor.total_out());
+    println!("total in: {}", descompresor.total_in());
     println!("obj size: {}", obj_size);
- 
+    
     // # set up a new input stream for the transformation data
     // fp2 = io.BytesIO( data )
-    let base_obj_size = leer_varint_sin_consumir_bytes(bytes, actual_offset);
-    let obj_size2 = leer_varint_sin_consumir_bytes(bytes, actual_offset);
+    let mut data_descomprimida_offset: usize = 0;
+    let base_obj_size = read_varint_le(&objeto_descomprimido, &mut data_descomprimida_offset);
+    let obj_size2 = read_varint_le(&objeto_descomprimido, &mut data_descomprimida_offset);
     println!("base obj size: {}, obj size: {}", base_obj_size, obj_size2);
+    println!("offset de la data descomprimida: {}", data_descomprimida_offset);
     // trace( "- base_obj_size={}, obj_size={}", base_obj_size, obj_size2, depth=depth )
 
     // Transformation commands
     // # process the delta commands
     let mut obj_data: Vec<u8> = Vec::new();
 
-    for _i in 0..data_descomprimida.len() {
+    for _i in 0..objeto_descomprimido.len() {
         // let ch = fp2.read( 1 )
-        let byt = &bytes[*actual_offset];
-        *actual_offset += 1;
+        let byt = &objeto_descomprimido[data_descomprimida_offset];
+        data_descomprimida_offset += 1;
         // byt = ch[0];
         if *byt == 0x00 {
             continue
         }
         if (byt & 0x80) != 0 {
-
             // # copy data from base object
             let mut vals: Vec<u8> = Vec::new();
             for i in 0..6+1 {
                 let bmask = 1 << i;
                 if (byt & bmask) != 0 { 
                     // vals.append( fp2.read( 1 )[0] )
-                    vals.push(bytes[*actual_offset]);
+                    vals.push(objeto_descomprimido[data_descomprimida_offset]);
                 }
                 else {
                     // vals.append( 0 )
                     vals.push(0);
                 }
+                data_descomprimida_offset += 1;
             }
            
             let start: usize = u32::from_le_bytes(vals[0..4].try_into().unwrap()) as usize;
             let mut nbytes: usize = u16::from_le_bytes(vals[4..6].try_into().unwrap()) as usize;
+            println!("Start: {}, nbytes: {}", start, nbytes);
             // start = int.from_bytes( vals[0:4], byteorder="little" )
             // nbytes = int.from_bytes( vals[4:6], byteorder="little" )
 
@@ -805,11 +820,34 @@ fn _make_delta_obj(bytes: &Vec<u8>, actual_offset: &mut usize, base_obj_type: u8
             let nbytes = byt & 0x7f;
             // trace( "- APPEND NEW BYTES: #bytes={}", nbytes, depth=depth )
             // obj_data += fp2.read( nbytes )
-            obj_data.extend(&bytes[*actual_offset..*actual_offset + nbytes as usize]);
+            obj_data.extend(&objeto_descomprimido[data_descomprimida_offset..data_descomprimida_offset + nbytes as usize]);
         }
     }
     // trace( "- Final object data: #bytes={}", len(obj_data), depth=depth, data=obj_data )
     // assert len(obj_data) == obj_size2
     (base_obj_type, obj_data)
 }
-    
+
+
+
+
+
+fn read_varint_le(input: &Vec<u8>, offset: &mut usize) -> u32 {
+    let mut result = 0u32;
+    let mut shift = 0;
+    // let mut index = offset;
+
+    loop {
+
+        let byte = input[*offset];
+        result |= ((byte & 0x7F) as u32) << shift;
+        shift += 7;
+        *offset += 1;
+
+        if byte & 0x80 == 0 {
+            break;
+        }
+    }
+    result
+    // Some((result, index - offset))
+}
