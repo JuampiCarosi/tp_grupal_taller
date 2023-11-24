@@ -1,6 +1,7 @@
 use crate::err_comunicacion::ErrorDeComunicacion;
 use crate::tipos_de_dato::comandos::cat_file;
 use crate::tipos_de_dato::logger::Logger;
+use crate::tipos_de_dato::objetos::tree::Tree;
 use crate::utils::compresion;
 use crate::utils::{self, io};
 use flate2::{Decompress, FlushDecompress};
@@ -320,8 +321,490 @@ pub fn decodificar_bytes(bytes: &mut Vec<u8>) -> (u8, u32, u32) {
     (tipo, numero_decodificado, bytes_leidos)
 }
 
-// tree ef55aae678e3a636dc72d68f3b10f60b2ad2c306
-// author JuaniFIUBA <jperezd@fi.uba.ar> 1698954872 -0300
-// committer JuaniFIUBA <jperezd@fi.uba.ar> 1698954872 -0300
 
-// archivezco
+// -------------------------------------------------------------------------------------------------------------------------
+
+fn decodificar_bytes_sin_borrado(bytes: &Vec<u8>, offset: &mut usize) -> (u8, u32) {
+    let mut numero_decodificado: u32;
+    let mut corrimiento: u32 = 0;
+    let mut continua = false;
+
+    // decodifico el primer byte que es distinto
+    let tipo = &bytes[*offset] >> 4 & 0x07; // deduzco el tipo
+    numero_decodificado = (bytes[*offset] & 0x0f) as u32; // obtengo los primeros 4 bits
+
+    if bytes[*offset] & 0x80 != 0 {
+        continua = true;
+    }
+	*offset += 1;
+    // bytes.remove(0);
+    corrimiento += 4;
+    // bytes_leidos += 1;
+    loop {
+        if !continua {
+            break;
+        }
+        // flujo.read_exact(&mut byte).unwrap();
+        if bytes[*offset] & 0x80 == 0 {
+            continua = false;
+        }
+        numero_decodificado |= ((&bytes[*offset] & 0x7f) as u32) << corrimiento;
+        corrimiento += 7;
+		*offset += 1;
+        // bytes_leidos += 1;
+        // bytes.remove(0);
+    }
+    (tipo, numero_decodificado)
+}
+
+
+
+fn leer_varint(bytes: &mut Vec<u8>) -> u32 {
+	let mut val: u32 = 0;
+	loop {
+		let byt: u32 = bytes[0] as u32;
+		val = (val << 7) | (byt & 0x7f);
+		if byt & 0x80 == 0 {
+			return val; 
+		} 
+		bytes.remove(0);
+	}	
+}
+
+fn leer_varint_sin_consumir_bytes(bytes: &Vec<u8>, offset: &mut usize) -> u32 {
+	let mut val: u32 = 0;
+	loop {
+		let byt: u32 = bytes[*offset] as u32;
+		val = (val << 7) | (byt & 0x7f);
+		if byt & 0x80 == 0 {
+			return val; 
+		} 
+		*offset += 1;
+		// bytes.remove(0);
+	}	
+}
+
+fn obtener_objeto_con_header(tipo: u8, tamanio: u32, contenido_descomprimido: &mut Vec<u8>) -> Vec<u8>{
+	let mut header: Vec<u8> = Vec::new();
+	match tipo {
+		1 => {header = format!("{} {}\0", "commit", tamanio).as_bytes().to_vec();},
+		2 => {header = format!("{} {}\0", "tree", tamanio).as_bytes().to_vec();},
+		3 => {header = format!("{} {}\0", "blob", tamanio).as_bytes().to_vec();},
+		_ => {eprintln!("Tipo de objeto invalido");} 
+	}            
+	header.append(contenido_descomprimido);
+	header
+}
+
+pub fn verificar_checksum(packfile: &[u8]) -> bool {
+	// Get the expected hash from the end of the packfile
+	let expected_hash = &packfile[packfile.len() - 20..];
+
+	// Compute the SHA-1 hash of the packfile data
+	let mut hasher = Sha1::new();
+	hasher.update(&packfile[..packfile.len() - 20]);
+	let actual_hash = hasher.finalize();
+
+	// Compare the expected hash to the actual hash
+	expected_hash == actual_hash.as_slice()
+}
+pub fn leer_packfile_y_escribir(bytes: &Vec<u8>, ubicacion: String) -> Result<(), ErrorDeComunicacion> {
+    let checksum = verificar_checksum(bytes);
+    match checksum {
+        true => println!("Checksum correcto"),
+        false => println!("Checksum incorrecto"),
+    }
+    let mut offset = 0;
+    let firma = &bytes[offset..offset + 4];
+    println!("firma: {:?}", str::from_utf8(&firma));
+    offset += 4;
+    // assert_eq!("PACK", str::from_utf8(&firma).unwrap());
+    let version = &bytes[offset..offset + 4];
+    offset += 4;
+    println!("version: {:?}", str::from_utf8(&version)?);
+    let largo = &bytes[offset..offset + 4];
+    offset += 4;
+    let largo_packfile: [u8; 4] = largo.try_into().unwrap();
+    let largo = u32::from_be_bytes(largo_packfile);
+    println!("largo: {:?}", largo);
+
+    let mut contador: u32 = 0;
+
+    while contador < largo {
+        let (tipo, tamanio) = decodificar_bytes_sin_borrado(bytes, &mut offset);
+        println!("tipo: {}, tamanio: {}", tipo, tamanio);
+        if tipo == 7 {
+            let hash_obj = Tree::encode_hex(&bytes[offset..offset + 20]);
+            offset += 20;
+            println!("Objeto base (hash): {:?}", &hash_obj);
+
+
+            let mut objeto_descomprimido = vec![0; tamanio as usize];
+
+            let mut descompresor = Decompress::new(true);
+
+            descompresor
+                .decompress(&bytes[offset..], &mut objeto_descomprimido, FlushDecompress::None)
+                .unwrap();
+
+            let total_in = descompresor.total_in(); // cantidad de bytes en instrucciones 
+            offset += total_in as usize;
+
+            // bytes.drain(0..total_in as usize);
+            let mut _offset = 0;
+            let tamanio_objeto_base = leer_varint(&mut objeto_descomprimido);
+            println!("tamanio objeto base: {:?}", tamanio_objeto_base);
+            let tamanio_objeto_reconstruido = leer_varint(&mut objeto_descomprimido);
+            println!("tamanio objeto reconstruido: {:?}", tamanio_objeto_reconstruido);
+
+            let byte_codificado: u8 = objeto_descomprimido[0];
+            objeto_descomprimido.drain(0..1);
+            // // copy indica con el offset de donde se parte a copiar los bytes y el size indica la cantidad de bytes a copiar
+            // // luego pueden venir mas operaciones como append (al copy)
+            // // ej: copiar un archivo de punta a punta y agregarle un ! seria offset = 0, size = len(), data instruction con !
+            match byte_codificado & 0x80 {
+                0 => {
+                    // Data
+                    // los 7 lsb del byte decodificado dicen el largo en bytes de la data a appendear
+                    println!("Una instruccion data");
+                    let largo = byte_codificado & 0x7F;
+                    println!("el largo de la data es: {}", largo);
+                    println!("De objeto descomprimido quedan: {}", objeto_descomprimido.len());
+                    let data = &objeto_descomprimido[0..largo as usize]; //data a appendear	
+                    let ruta_base = format!("{}{}/{}", &ubicacion, &hash_obj[..2], &hash_obj[2..]);
+                    if !PathBuf::from(&ruta_base).exists() {
+                        buscar_en_packfile(&hash_obj, bytes, &ubicacion).unwrap();
+                    } else {
+                        let mut archivo_base = io::leer_bytes(PathBuf::from(&ruta_base)).unwrap();
+                        archivo_base.append(&mut data.to_vec());
+                        let mut hasher = Sha1::new();
+                        hasher.update(archivo_base.clone());
+                        let _hash = hasher.finalize();
+                        let hash = format!("{:x}", _hash);
+                        println!("Hash nuevo: {:?}", hash);
+                        let ruta = format!("{}{}/{}", &ubicacion, &hash[..2], &hash[2..]);
+                        io::escribir_bytes(ruta, archivo_base).unwrap();
+                    }
+                    break;
+                }, 
+                1 => {
+                    println!("Una instruccion copy");
+                    // Copy
+                    // 0b1_001_0101 indica (4 primeros indican la mascara del offset, 3 siguientes la del offset)
+                    // Offset: 0b00000000yyyyyyyy00000000xxxxxxxx
+                    // Size:          0b0000000000000000zzzzzzzz 
+                    // let mut _offset = &bytes[0..4];
+                    // let mut offset = u32::from_be_bytes(_offset.try_into().unwrap());
+                    // bytes.drain(0..4);
+                    
+                    // let _size = &bytes[0..3];
+                    // let mut size = u32::from_be_bytes(_size.try_into().unwrap());  
+
+                    // bytes.drain(0..3);  
+
+                    // let mascara = 0x000000FF;
+                    // for i in 0..4 { 
+                    //     let bmask = 1 << i;
+                    //     if (byte_codificado & bmask) != 0 {
+                    //         offset |= mascara << (i * 8);
+                            
+                    //     } else {
+                    //         // offset_size.append(0)
+                    //     }
+                    // }
+                    // for i in 4..7 {
+                    //     let bmask = 1 << i;
+                    //     if (byte_codificado & bmask) != 0 {
+                    //         // offset_size.push()
+                    //         // offset_size.append( fp2.read( 1 )[0] )
+                            
+                    //     } else {
+                    //         // offset_size.append(0)
+                    //     }
+                    // }
+                    
+                }
+                _ => {println!("Error, no se reconoce la instruccion de reconstruccion");}
+            }
+            contador += 1;
+            continue;
+
+        }
+        if tipo == 6 {
+            let (obj_type, obj_data) = _read_ofs_delta_obj( bytes, tamanio, &mut offset );
+            print!("obj_type: {:?}, obj_data: {:?}", obj_type, obj_data);
+        }
+        let mut objeto_descomprimido = vec![0; tamanio as usize];
+
+        let mut descompresor = Decompress::new(true);
+
+        descompresor
+            .decompress(&bytes[offset..], &mut objeto_descomprimido, FlushDecompress::None)
+            .unwrap();
+
+        // calculo el hash
+        let objeto = obtener_objeto_con_header(tipo, tamanio, &mut objeto_descomprimido);
+        let mut hasher = Sha1::new();
+        hasher.update(objeto.clone());
+        let _hash = hasher.finalize();
+        let hash = format!("{:x}", _hash);
+        
+        println!("hash: {:?}", hash);
+
+        // let ruta = format!("{}{}/{}", &ubicacion, &hash[..2], &hash[2..]);
+        // println!("rutarda donde pongo objetos: {:?}", ruta);
+
+        // let total_out = descompresor.total_out(); // esto es lo que debe matchear el tamanio que se pasa en el header
+        let total_in = descompresor.total_in(); // esto es para calcular el offset
+        // println!("total in: {:?}, total out: {:?} ", total_in as usize, total_out as usize);
+        offset += total_in as usize;
+        println!("Offset post descompresion: {:?}", offset);
+        // bytes.drain(0..total_in as usize);
+        // io::escribir_bytes(ruta, compresion::comprimir_contenido_u8(&objeto).unwrap()).unwrap();
+        println!("cant bytes restantes: {:?}", bytes.len() - offset);
+        contador += 1;
+
+    }
+    Ok(())	
+}
+
+
+// busco, si es delta ref, aniado el append de la busqueda del objeto base (recursion)
+fn buscar_en_packfile(hash: &str, packfile: &Vec<u8>, ubicacion: &str) -> Result<Vec<u8>, String> {
+	println!("Buscando el objeto: {}", &hash);
+	let mut offset = 8; 
+	let largo = &packfile[offset..offset + 4];
+	let largo_packfile: [u8; 4] = largo.try_into().unwrap();
+	let largo = u32::from_be_bytes(largo_packfile);
+	println!("largo: {:?}", largo);
+	offset += 4;	
+	let mut contador: u32 = 0;
+
+	while contador < largo { 
+		let (tipo, tamanio) = decodificar_bytes_sin_borrado(packfile, &mut offset);
+		// println!("Tipo: {}, tamanio: {}", tipo, tamanio);
+		if tipo == 7 {
+			let hash_obj = Tree::encode_hex(&packfile[offset..offset + 20]);
+			// println!("Buscando el objeto base: {}", &hash_obj);
+			offset += 20;
+			let mut objeto_descomprimido = vec![0; tamanio as usize];
+			let mut descompresor = Decompress::new(true);
+			
+			descompresor
+			.decompress(&packfile[offset..], &mut objeto_descomprimido, FlushDecompress::None)
+			.unwrap();
+		
+			let total_in = descompresor.total_in(); // cantidad de bytes en instrucciones 
+			offset += total_in as usize;
+			if hash_obj != hash { 
+				continue;
+			}
+			println!("ENCONTRE AL OBJETO");
+		
+			let ruta_base = format!("{}{}/{}", &ubicacion, &hash_obj[..2], &hash_obj[2..]);
+			println!("El objeto esta? {}", &ruta_base);
+			if !PathBuf::from(&ruta_base).exists() {
+				let mut objeto_base_transformado = buscar_en_packfile(&hash_obj, packfile, ubicacion).unwrap();
+				// objeto_base_transformado.append(&mut objeto_descomprimido);
+
+				let mut hasher = Sha1::new();
+				hasher.update(objeto_base_transformado.clone());
+				let _hash = hasher.finalize();
+				let hash = format!("{:x}", _hash);
+				println!("Hash nuevo: {:?}", hash);
+
+				let ruta = format!("{}{}/{}", &ubicacion, &hash[..2], &hash[2..]);
+				io::escribir_bytes(ruta, &objeto_base_transformado).unwrap();
+				return Ok(objeto_base_transformado);
+			} else {
+				println!("Si, esta");
+				let mut objeto_base = io::leer_bytes(PathBuf::from(&ruta_base)).unwrap();
+				// objeto_base.append(&mut objeto_descomprimido);
+				return Ok(objeto_base);
+			}
+		}	
+		let mut objeto_descomprimido: Vec<u8> = vec![0; tamanio as usize];
+
+		let mut descompresor = Decompress::new(true);
+
+		descompresor
+			.decompress(&packfile[offset..], &mut objeto_descomprimido, FlushDecompress::None)
+			.unwrap();
+
+		let total_in = descompresor.total_in(); // cantidad de bytes en instrucciones 
+		offset += total_in as usize;
+
+		let objeto = obtener_objeto_con_header(tipo, tamanio, &mut objeto_descomprimido);
+
+		let mut hasher = Sha1::new();
+		hasher.update(objeto.clone());
+		let _hash = hasher.finalize();
+		let hash_objeto = format!("{:x}", _hash);
+		if hash == hash_objeto {
+			println!("Encontre al objeto: {}", hash);
+			return Ok(objeto);
+		}
+		contador += 1;
+	}
+	Err("No existe el objeto, error".to_string())
+}
+
+
+fn read_vli_be(bytes: &Vec<u8>, actual_offset: &mut usize, offset: bool) -> u8{
+//     """Read a variable-length integer (big-endian)."""
+    let mut val = 0;
+    loop { 
+//         # add in the next 7 bits of data
+        let byt = &bytes[*actual_offset];
+        *actual_offset += 1;
+        val = (val << 7) | (byt & 0x7f);
+        if byt & 0x80 == 0{
+            // # nb: that was the last byte
+            break 
+        }
+        if offset {
+        //             # NOTE: When reading offsets for delta'fied objects, there is an additional twist :-/
+        //             # The sequences [ 0xxxxxxx ] and [ 10000000, 0xxxxxxx ] would normally be read as
+        //             # the same value (0xxxxxxx), so for each byte except the last one, we add 2^7,
+        //             # which has the effect of ensuring that all 1-byte sequences are less than all 2-byte
+        //             # sequences, which are less than all 3-byte sequences, etc. We add 1 here, but since
+        //             # we are going to loop back and left-shift val by 7 bits, that is the same as adding 2^7.
+        //             # Look for "offset encoding" here:
+        //             #   https://git-scm.com/docs/pack-format
+            val += 1
+        }
+    }
+    val
+}
+
+fn _read_pack_object(bytes: &Vec<u8>, offset: &mut usize) -> (u8, Vec<u8>) { 
+    let (tipo, tamanio) = decodificar_bytes_sin_borrado(bytes, offset);
+   
+    let mut objeto_descomprimido = vec![0; tamanio as usize];
+
+    let mut descompresor = Decompress::new(true);
+
+    descompresor
+        .decompress(&bytes[*offset..], &mut objeto_descomprimido, FlushDecompress::None)
+        .unwrap();
+
+    // calculo el hash
+    let objeto = obtener_objeto_con_header(tipo, tamanio, &mut objeto_descomprimido);
+
+    *offset += descompresor.total_in() as usize;
+    (tipo, objeto)
+}
+
+fn _read_ofs_delta_obj(bytes: &Vec<u8>, obj_size: u32, actual_offset: &mut usize) -> (u8, Vec<u8>){
+    // """Read an OBJ_OFS_DELTA object."""
+ 
+    // # read the base object offset
+    let offset = read_vli_be(bytes, actual_offset, true);
+    println!("offset: {}", offset);
+    let base_obj_offset = *actual_offset - offset as usize;
+    println!("base obj offset: {}", base_obj_offset);
+    println!("actual offset: {}", *actual_offset);
+    // trace( "- offset = 0x{:x} (relative=0x{:x})", base_obj_offset, offset, depth=depth )
+ 
+    // # get the base object
+    // # IMPORTANT: The base object could itself be delta'fied.
+    // trace( "Reading base object: fpos=0x{:x}", base_obj_offset, depth=depth )
+    // prev_fpos = fp.tell()
+    // fp.seek( base_obj_offset )
+    // # NOTE: We wrote _read_pack_object() earlier, to read an object from a pack file,
+    // # and we are actually running right now as part of a call to this function.
+    // # Calling it again here gives us the recursive behavior we need.
+    let (base_obj_type, mut base_obj_data) = _read_pack_object( bytes, &mut (base_obj_offset as usize));
+    // assert base_obj_type in ( "commit", "tree", "blob", "tag" )
+    // fp.seek( prev_fpos )
+    // trace( "- Read base object: type={}", base_obj_type, depth=depth, data=base_obj_data )
+ 
+    // # reconstruct the delta'fied object
+    _make_delta_obj(bytes, actual_offset, base_obj_type, &mut base_obj_data, obj_size)
+}
+// actual_offset es el offset del packfile
+// base offset es el offset del objeto base
+
+// fn _make_delta_obj( fp, base_obj_type, base_obj_data, obj_size ):
+fn _make_delta_obj(bytes: &Vec<u8>, actual_offset: &mut usize, base_obj_type: u8, base_obj_data: &mut Vec<u8>, obj_size: u32) -> (u8, Vec<u8>){
+
+    // """Reconstruct a delta'fied object."""
+ 
+    // # read the transformation data
+    // let mut objeto_descomprimido = vec![0; tamanio as usize];
+    let mut data_descomprimida = Vec::new();
+    let mut descompresor = Decompress::new(true);
+    // decompress_vec maneja el largo del vector, en este caso es necesario ya que no se sabe el largo de la data 
+    descompresor
+        .decompress_vec(&bytes[*actual_offset..], &mut data_descomprimida, FlushDecompress::None)
+        .unwrap();
+    *actual_offset += descompresor.total_in() as usize;
+    // data = decompress_stream( fp )
+    // trace( "- transformation data:", depth=depth, data=data )
+    // assert len(data) == obj_size
+    println!("len data descomprimida: {}", data_descomprimida.len());
+    println!("obj size: {}", obj_size);
+ 
+    // # set up a new input stream for the transformation data
+    // fp2 = io.BytesIO( data )
+    let base_obj_size = leer_varint_sin_consumir_bytes(bytes, actual_offset);
+    let obj_size2 = leer_varint_sin_consumir_bytes(bytes, actual_offset);
+    println!("base obj size: {}, obj size: {}", base_obj_size, obj_size2);
+    // trace( "- base_obj_size={}, obj_size={}", base_obj_size, obj_size2, depth=depth )
+
+    // Transformation commands
+    // # process the delta commands
+    let mut obj_data: Vec<u8> = Vec::new();
+
+    for _i in 0..data_descomprimida.len() {
+        // let ch = fp2.read( 1 )
+        let byt = &bytes[*actual_offset];
+        *actual_offset += 1;
+        // byt = ch[0];
+        if *byt == 0x00 {
+            continue
+        }
+        if (byt & 0x80) != 0 {
+
+            // # copy data from base object
+            let mut vals: Vec<u8> = Vec::new();
+            for i in 0..6+1 {
+                let bmask = 1 << i;
+                if (byt & bmask) != 0 { 
+                    // vals.append( fp2.read( 1 )[0] )
+                    vals.push(bytes[*actual_offset]);
+                }
+                else {
+                    // vals.append( 0 )
+                    vals.push(0);
+                }
+            }
+           
+            let start: usize = u32::from_le_bytes(vals[0..4].try_into().unwrap()) as usize;
+            let mut nbytes: usize = u16::from_le_bytes(vals[4..6].try_into().unwrap()) as usize;
+            // start = int.from_bytes( vals[0:4], byteorder="little" )
+            // nbytes = int.from_bytes( vals[4:6], byteorder="little" )
+
+            if nbytes == 0 {
+                nbytes = 0x10000
+            }
+            // trace( "- COPY FROM BASE OBJECT: start=0x{:x}, #bytes={}", start, nbytes, depth=depth )
+            // obj_data += base_obj_data[ start : start + nbytes ]
+            // obj_data.append(base_obj_data[ start..start + nbytes ]);
+            obj_data.extend(&base_obj_data[ start..start + nbytes ]);
+
+        }
+        
+        else {
+            // # add new datas
+            let nbytes = byt & 0x7f;
+            // trace( "- APPEND NEW BYTES: #bytes={}", nbytes, depth=depth )
+            // obj_data += fp2.read( nbytes )
+            obj_data.extend(&bytes[*actual_offset..*actual_offset + nbytes as usize]);
+        }
+    }
+    // trace( "- Final object data: #bytes={}", len(obj_data), depth=depth, data=obj_data )
+    // assert len(obj_data) == obj_size2
+    (base_obj_type, obj_data)
+}
+    

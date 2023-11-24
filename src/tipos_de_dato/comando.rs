@@ -6,7 +6,7 @@ use super::{
         commit::Commit, fetch::Fetch, hash_object::HashObject, init::Init, log::Log,
 
         ls_tree::LsTree, merge::Merge, pull::Pull, push::Push, remote::Remote, rm::Remove,
-        show_ref::ShowRef, status::Status, version::Version,
+        show_ref::ShowRef, status::Status, version::Version, ls_files::LsFiles,
     },
     logger::Logger,
     tag::Tag,
