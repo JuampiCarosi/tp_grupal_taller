@@ -6,7 +6,6 @@ use crate::tipos_de_dato::objetos::tree::Tree;
 use crate::utils::compresion;
 use crate::utils::{self, io};
 use flate2::{Decompress, FlushDecompress};
-use flate2::{read::ZlibDecoder, write::ZlibEncoder, Compression};
 use sha1::{Digest, Sha1};
 use std::convert::TryInto;
 use std::path::PathBuf;
@@ -233,6 +232,7 @@ impl Packfile {
 
             contador += 1;
         }
+        println!("cant bytes restantes: {:?}", bytes.len());
         bytes.drain(0..20); // el checksum
         Ok(())
     }
@@ -394,6 +394,7 @@ fn obtener_objeto_con_header(tipo: u8, tamanio: u32, contenido_descomprimido: &m
 		1 => {header = format!("{} {}\0", "commit", tamanio).as_bytes().to_vec();},
 		2 => {header = format!("{} {}\0", "tree", tamanio).as_bytes().to_vec();},
 		3 => {header = format!("{} {}\0", "blob", tamanio).as_bytes().to_vec();},
+
 		_ => {eprintln!("Tipo de objeto invalido");} 
 	}            
 	header.append(contenido_descomprimido);
@@ -437,13 +438,13 @@ pub fn leer_packfile_y_escribir(bytes: &Vec<u8>, ubicacion: String) -> Result<()
 
     while contador < largo {
         let offset_previo = offset.clone();
-        println!("Offset: {}", offset);
+        println!("Offset previo a leer todo el objeto: {}", offset);
         let (tipo, tamanio) = decodificar_bytes_sin_borrado(bytes, &mut offset);
-        println!("tipo: {}, tamanio: {}", tipo, tamanio);
+        // println!("tipo: {}, tamanio: {}", tipo, tamanio);
         if tipo == 7 {
             let hash_obj = Tree::encode_hex(&bytes[offset..offset + 20]);
             offset += 20;
-            println!("Objeto base (hash): {:?}", &hash_obj);
+            // println!("Objeto base (hash): {:?}", &hash_obj);
 
 
             let mut objeto_descomprimido = vec![0; tamanio as usize];
@@ -460,9 +461,9 @@ pub fn leer_packfile_y_escribir(bytes: &Vec<u8>, ubicacion: String) -> Result<()
             // bytes.drain(0..total_in as usize);
             let mut _offset = 0;
             let tamanio_objeto_base = leer_varint(&mut objeto_descomprimido);
-            println!("tamanio objeto base: {:?}", tamanio_objeto_base);
+            // println!("tamanio objeto base: {:?}", tamanio_objeto_base);
             let tamanio_objeto_reconstruido = leer_varint(&mut objeto_descomprimido);
-            println!("tamanio objeto reconstruido: {:?}", tamanio_objeto_reconstruido);
+            // println!("tamanio objeto reconstruido: {:?}", tamanio_objeto_reconstruido);
 
             let byte_codificado: u8 = objeto_descomprimido[0];
             objeto_descomprimido.drain(0..1);
@@ -473,10 +474,10 @@ pub fn leer_packfile_y_escribir(bytes: &Vec<u8>, ubicacion: String) -> Result<()
                 0 => {
                     // Data
                     // los 7 lsb del byte decodificado dicen el largo en bytes de la data a appendear
-                    println!("Una instruccion data");
+                    // println!("Una instruccion data");
                     let largo = byte_codificado & 0x7F;
-                    println!("el largo de la data es: {}", largo);
-                    println!("De objeto descomprimido quedan: {}", objeto_descomprimido.len());
+                    // println!("el largo de la data es: {}", largo);
+                    // println!("De objeto descomprimido quedan: {}", objeto_descomprimido.len());
                     let data = &objeto_descomprimido[0..largo as usize]; //data a appendear	
                     let ruta_base = format!("{}{}/{}", &ubicacion, &hash_obj[..2], &hash_obj[2..]);
                     if !PathBuf::from(&ruta_base).exists() {
@@ -488,7 +489,7 @@ pub fn leer_packfile_y_escribir(bytes: &Vec<u8>, ubicacion: String) -> Result<()
                         hasher.update(archivo_base.clone());
                         let _hash = hasher.finalize();
                         let hash = format!("{:x}", _hash);
-                        println!("Hash nuevo: {:?}", hash);
+                        // println!("Hash nuevo: {:?}", hash);
                         let ruta = format!("{}{}/{}", &ubicacion, &hash[..2], &hash[2..]);
                         io::escribir_bytes(ruta, archivo_base).unwrap();
                     }
@@ -538,9 +539,16 @@ pub fn leer_packfile_y_escribir(bytes: &Vec<u8>, ubicacion: String) -> Result<()
 
         }
         if tipo == 6 {
-            let (obj_type, obj_data) = _read_ofs_delta_obj( bytes, tamanio, &mut offset, offset_previo);
-            // print!("obj_type: {:?}, obj_data: {:?}", obj_type, obj_data);
+            let (obj_type, mut obj_data) = _read_ofs_delta_obj( bytes, tamanio, &mut offset, offset_previo);
+            let objeto = obtener_objeto_con_header(obj_type, obj_data.len() as u32, &mut obj_data);
+            let mut hasher = Sha1::new();
+            hasher.update(objeto.clone());
+            // hasher.update(objeto.clone());
+            let _hash = hasher.finalize();
+            let hash = format!("{:x}", _hash);
+            println!("HASH DEL DELTA: {:?}", hash);
             contador += 1;
+            // break;
             continue;
         }
         let mut objeto_descomprimido = vec![0; tamanio as usize];
@@ -580,12 +588,12 @@ pub fn leer_packfile_y_escribir(bytes: &Vec<u8>, ubicacion: String) -> Result<()
 
 // busco, si es delta ref, aniado el append de la busqueda del objeto base (recursion)
 fn buscar_en_packfile(hash: &str, packfile: &Vec<u8>, ubicacion: &str) -> Result<Vec<u8>, String> {
-	println!("Buscando el objeto: {}", &hash);
+	// println!("Buscando el objeto: {}", &hash);
 	let mut offset = 8; 
 	let largo = &packfile[offset..offset + 4];
 	let largo_packfile: [u8; 4] = largo.try_into().unwrap();
 	let largo = u32::from_be_bytes(largo_packfile);
-	println!("largo: {:?}", largo);
+	// println!("largo: {:?}", largo);
 	offset += 4;	
 	let mut contador: u32 = 0;
 
@@ -611,7 +619,7 @@ fn buscar_en_packfile(hash: &str, packfile: &Vec<u8>, ubicacion: &str) -> Result
 			println!("ENCONTRE AL OBJETO");
 		
 			let ruta_base = format!("{}{}/{}", &ubicacion, &hash_obj[..2], &hash_obj[2..]);
-			println!("El objeto esta? {}", &ruta_base);
+			// println!("El objeto esta? {}", &ruta_base);
 			if !PathBuf::from(&ruta_base).exists() {
 				let mut objeto_base_transformado = buscar_en_packfile(&hash_obj, packfile, ubicacion).unwrap();
 				// objeto_base_transformado.append(&mut objeto_descomprimido);
@@ -620,7 +628,7 @@ fn buscar_en_packfile(hash: &str, packfile: &Vec<u8>, ubicacion: &str) -> Result
 				hasher.update(objeto_base_transformado.clone());
 				let _hash = hasher.finalize();
 				let hash = format!("{:x}", _hash);
-				println!("Hash nuevo: {:?}", hash);
+				// println!("Hash nuevo: {:?}", hash);
 
 				let ruta = format!("{}{}/{}", &ubicacion, &hash[..2], &hash[2..]);
 				io::escribir_bytes(ruta, &objeto_base_transformado).unwrap();
@@ -650,7 +658,7 @@ fn buscar_en_packfile(hash: &str, packfile: &Vec<u8>, ubicacion: &str) -> Result
 		let _hash = hasher.finalize();
 		let hash_objeto = format!("{:x}", _hash);
 		if hash == hash_objeto {
-			println!("Encontre al objeto: {}", hash);
+			// println!("Encontre al objeto: {}", hash);
 			return Ok(objeto);
 		}
 		contador += 1;
@@ -687,20 +695,28 @@ fn read_vli_be(bytes: &Vec<u8>, actual_offset: &mut usize, offset: bool) -> usiz
 }
 
 fn _read_pack_object(bytes: &Vec<u8>, offset: &mut usize) -> (u8, Vec<u8>) { 
+    let offset_pre_varint = offset.clone();
     let (tipo, tamanio) = decodificar_bytes_sin_borrado(bytes, offset);
     println!("Estoy en read_pack_object, leo un objeto de tipo: {}, tamanio: {}", tipo, tamanio);
-    let mut objeto_descomprimido = vec![0; tamanio as usize];
-
-    let mut descompresor = Decompress::new(true);
-
-    descompresor
-        .decompress(&bytes[*offset..], &mut objeto_descomprimido, FlushDecompress::None)
-        .unwrap();
-
-    // calculo el hash
-    let objeto = obtener_objeto_con_header(tipo, tamanio, &mut objeto_descomprimido);
-    *offset += descompresor.total_in() as usize;
-    (tipo, objeto)
+    // let mut objeto = Vec::new();
+    if tipo == 6 { 
+        _read_ofs_delta_obj(bytes, tamanio, offset, offset_pre_varint)
+    } else {
+        let mut objeto_descomprimido = vec![0; tamanio as usize];
+        
+    
+        let mut descompresor = Decompress::new(true);
+    
+        descompresor
+            .decompress(&bytes[*offset..], &mut objeto_descomprimido, FlushDecompress::None)
+            .unwrap();
+    
+        // calculo el hash
+ 
+        // let objeto = obtener_objeto_con_header(tipo, tamanio, &mut objeto_descomprimido);
+        *offset += descompresor.total_in() as usize;
+        (tipo, objeto_descomprimido)
+    }
 }
 
 fn _read_ofs_delta_obj(bytes: &Vec<u8>, obj_size: u32, actual_offset: &mut usize, offset_pre_varint: usize) -> (u8, Vec<u8>){
@@ -854,5 +870,7 @@ fn read_varint_le(input: &Vec<u8>, offset: &mut usize) -> u32 {
         }
     }
     result
-    // Some((result, index - offset))
 }
+
+
+
