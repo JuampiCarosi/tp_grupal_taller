@@ -1,6 +1,7 @@
 use crate::tipos_de_dato::logger::Logger;
 use crate::utils;
 
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use super::init::Init;
@@ -14,10 +15,10 @@ pub struct Clone {
 }
 
 impl Clone {
-    pub fn from(args: Vec<String>, logger: Arc<Logger>) -> Result<Clone, String> {
+    pub fn from(args: &mut Vec<String>, logger: Arc<Logger>) -> Result<Clone, String> {
         Self::verificar_argumentos(&args)?;
 
-        let url = args[0];
+        let url = args.remove(0);
 
         logger.log(format!("Se creo clone con exito - url: {}", url));
 
@@ -36,12 +37,15 @@ impl Clone {
     }
 
     pub fn ejecutar(&mut self) -> Result<String, String> {
-        let (_, repositorio) = utils::strings::obtener_ip_puerto_y_repositorio(&self.url)?;
+        let (_, mut repositorio) = utils::strings::obtener_ip_puerto_y_repositorio(&self.url)?;
+        repositorio = repositorio.replace("/", "");
 
-        utils::io::crear_carpeta(repositorio)?;
+        self.verificar_si_ya_existe_repositorio(&repositorio)?;
+
+        utils::io::crear_carpeta(&repositorio)?;
         utils::io::cambiar_directorio(&repositorio)?;
 
-        let resutado = self.crear_repositorio(repositorio);
+        let resutado = self.crear_repositorio();
         utils::io::cambiar_directorio("..")?;
 
         if let Err(e) = resutado {
@@ -54,7 +58,17 @@ impl Clone {
         Ok(mensaje)
     }
 
-    fn crear_repositorio(&mut self, repositorio: String) -> Result<(), String> {
+    fn verificar_si_ya_existe_repositorio(&self, repositorio: &String) -> Result<(), String> {
+        if PathBuf::from(repositorio).exists() {
+            //me fijo si tiene contenido
+            if utils::io::leer_directorio(repositorio)?.count() > 0 {
+                return Err(format!("Error el directorio {} no esta vacio", repositorio));
+            }
+        }
+
+        Ok(())
+    }
+    fn crear_repositorio(&mut self) -> Result<(), String> {
         Init::from(Vec::new(), self.logger.clone())?.ejecutar()?;
 
         let remote_args = &mut vec!["add".to_string(), "origin".to_string(), self.url.clone()];

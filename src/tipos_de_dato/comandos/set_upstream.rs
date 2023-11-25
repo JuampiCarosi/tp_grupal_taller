@@ -75,7 +75,7 @@ impl SetUpstream {
             None => config.ramas.push(nueva_config_rama),
         }
 
-        Ok(())
+        config.guardar_config()
     }
 
     fn verificar_remoto(&self) -> Result<(), String> {

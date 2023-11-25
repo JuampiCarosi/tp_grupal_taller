@@ -249,7 +249,7 @@ pub fn crear_carpeta<P: AsRef<Path> + Clone>(carpeta: P) -> Result<(), String> {
 }
 
 pub fn cambiar_directorio<P: AsRef<Path> + Clone + Debug>(directorio: P) -> Result<(), String> {
-    env::set_current_dir(directorio)
+    env::set_current_dir(&directorio)
         .map_err(|err| format!("Fallo al cambiar de directorio {:?}:{}", directorio, err))
 }
 pub fn crear_archivo<P: AsRef<Path> + Clone>(dir_directorio: P) -> Result<(), String> {

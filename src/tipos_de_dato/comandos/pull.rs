@@ -134,6 +134,7 @@ impl Pull {
 
         Fetch::<TcpStream>::new(vec![self.remoto.clone()], self.logger.clone())?.ejecutar()?;
 
+        println!("Llego aca del pull\n");
         let commit_head_remoto = self.obtener_head_remoto()?;
 
         if io::esta_vacio(UBICACION_RAMA_MASTER.to_string()) {
@@ -147,9 +148,20 @@ impl Pull {
         Ok(mensaje)
     }
 
+    ///Busca el archivo correspondiente que contien el HEAD del remoto (el NOMBREREMOTO_HEAD)y lo obtiene. En caso de no
+    /// existir dicho archivo toma por defecto devulevor el commit de master del remoto.   
     fn obtener_head_remoto(&self) -> Result<String, String> {
-        let path_remoto = format!("./.gir/{}_HEAD", self.remoto.to_uppercase());
-        leer_a_string(path_remoto)
+        let path_remoto = PathBuf::from(format!("./.gir/{}_HEAD", self.remoto.to_uppercase()));
+
+        if path_remoto.exists() {
+            leer_a_string(path_remoto)
+        } else {
+            //Siempre tiene un commit
+            let path_master_remoto =
+                PathBuf::from(format!("./.gir/refs/remotes/{}/master", self.remoto));
+
+            leer_a_string(path_master_remoto)
+        }
     }
 
     fn fast_forward_de_cero(&self, commit_head_remoto: String) -> Result<bool, String> {

@@ -19,15 +19,17 @@ fn clonar_dialog(builder: &gtk::Builder, logger: Arc<Logger>) {
     dialog.set_position(gtk::WindowPosition::Center);
 
     confirm.connect_clicked(move |_| {
-        let mut clone = match Clone::from(logger.clone()) {
-            Ok(clone) => clone,
-            Err(err) => {
-                error_dialog::mostrar_error(&err);
-                input.set_text("");
-                dialog.hide();
-                return;
-            }
-        };
+        //cuidado harcodeada lo de clone
+        let mut clone =
+            match Clone::from(&mut vec!["127.0.0.1:9418/gir/".to_string()], logger.clone()) {
+                Ok(clone) => clone,
+                Err(err) => {
+                    error_dialog::mostrar_error(&err);
+                    input.set_text("");
+                    dialog.hide();
+                    return;
+                }
+            };
 
         match clone.ejecutar() {
             Ok(_) => {}
