@@ -155,87 +155,87 @@ impl Packfile {
         packfile
     }
 
-    pub fn obtener_paquete_y_escribir(
-        &mut self,
-        bytes: &mut Vec<u8>,
-        ubicacion: String,
-    ) -> Result<(), ErrorDeComunicacion> {
-        // a partir de aca obtengo el paquete
-        // println!("cant bytes: {:?}", bytes.len());
-        // println!("obteniendo firma");
-        let checksum = Self::verificar_checksum(bytes);
-        match checksum {
-            true => println!("Checksum correcto"),
-            false => println!("Checksum incorrecto"),
-        }
-        let _firma = &bytes[0..4];
-        // assert_eq!("PACK", str::from_utf8(&firma).unwrap());
-        bytes.drain(0..4);
-        let _version = &bytes[0..4];
-        // assert_eq!("0002", str::from_utf8(&version)?);
+    // pub fn obtener_paquete_y_escribir(
+    //     &mut self,
+    //     bytes: &mut Vec<u8>,
+    //     ubicacion: String,
+    // ) -> Result<(), ErrorDeComunicacion> {
+    //     // a partir de aca obtengo el paquete
+    //     // println!("cant bytes: {:?}", bytes.len());
+    //     // println!("obteniendo firma");
+    //     let checksum = Self::verificar_checksum(bytes);
+    //     match checksum {
+    //         true => println!("Checksum correcto"),
+    //         false => println!("Checksum incorrecto"),
+    //     }
+    //     let _firma = &bytes[0..4];
+    //     // assert_eq!("PACK", str::from_utf8(&firma).unwrap());
+    //     bytes.drain(0..4);
+    //     let _version = &bytes[0..4];
+    //     // assert_eq!("0002", str::from_utf8(&version)?);
 
-        bytes.drain(0..4);
-        // println!("obteniendo largo");
-        let largo = &bytes[0..4];
-        let largo_packfile: [u8; 4] = largo.try_into().unwrap();
-        let largo = u32::from_be_bytes(largo_packfile);
-        bytes.drain(0..4);
-        let mut contador: u32 = 0;
-        while contador < largo {
-            // println!("cant bytes: {:?}", bytes.len());
-            let (tipo, tamanio, _bytes_leidos) = decodificar_bytes(bytes);
+    //     bytes.drain(0..4);
+    //     // println!("obteniendo largo");
+    //     let largo = &bytes[0..4];
+    //     let largo_packfile: [u8; 4] = largo.try_into().unwrap();
+    //     let largo = u32::from_be_bytes(largo_packfile);
+    //     bytes.drain(0..4);
+    //     let mut contador: u32 = 0;
+    //     while contador < largo {
+    //         // println!("cant bytes: {:?}", bytes.len());
+    //         let (tipo, tamanio, _bytes_leidos) = decodificar_bytes(bytes);
 
-            if tipo == 7 {
-                let _hash_obj = &bytes[0..20];
-                bytes.drain(0..20);
-                let mut objeto_descomprimido = vec![0; tamanio as usize];
+    //         if tipo == 7 {
+    //             let _hash_obj = &bytes[0..20];
+    //             bytes.drain(0..20);
+    //             let mut objeto_descomprimido = vec![0; tamanio as usize];
 
-                let mut descompresor = Decompress::new(true);
+    //             let mut descompresor = Decompress::new(true);
 
-                descompresor
-                    .decompress(bytes, &mut objeto_descomprimido, FlushDecompress::None)
-                    .unwrap();
+    //             descompresor
+    //                 .decompress(bytes, &mut objeto_descomprimido, FlushDecompress::None)
+    //                 .unwrap();
 
-                let total_in = descompresor.total_in();
+    //             let total_in = descompresor.total_in();
 
-                bytes.drain(0..total_in as usize);
-                contador += 1;
-                continue;
-            }
-            println!("tipo: {:?}, tamanio: {}", tipo, tamanio);
-            // println!("cant bytes post decodificacion: {:?}", bytes.len());
-            // println!("tipo: {:?}", tipo);
-            // println!("tamanio: {:?}", tamanio);
-            // // -- leo el contenido comprimido --
-            let mut objeto_descomprimido = vec![0; tamanio as usize];
+    //             bytes.drain(0..total_in as usize);
+    //             contador += 1;
+    //             continue;
+    //         }
+    //         println!("tipo: {:?}, tamanio: {}", tipo, tamanio);
+    //         // println!("cant bytes post decodificacion: {:?}", bytes.len());
+    //         // println!("tipo: {:?}", tipo);
+    //         // println!("tamanio: {:?}", tamanio);
+    //         // // -- leo el contenido comprimido --
+    //         let mut objeto_descomprimido = vec![0; tamanio as usize];
 
-            let mut descompresor = Decompress::new(true);
+    //         let mut descompresor = Decompress::new(true);
 
-            descompresor
-                .decompress(bytes, &mut objeto_descomprimido, FlushDecompress::None)
-                .unwrap();
+    //         descompresor
+    //             .decompress(bytes, &mut objeto_descomprimido, FlushDecompress::None)
+    //             .unwrap();
 
-            // calculo el hash
-            let objeto = Self::obtener_y_escribir_objeto(tipo, tamanio, &mut objeto_descomprimido);
-            let mut hasher = Sha1::new();
-            hasher.update(objeto.clone());
-            let _hash = hasher.finalize();
-            let hash = format!("{:x}", _hash);
+    //         // calculo el hash
+    //         let objeto = Self::obtener_y_escribir_objeto(tipo, tamanio, &mut objeto_descomprimido);
+    //         let mut hasher = Sha1::new();
+    //         hasher.update(objeto.clone());
+    //         let _hash = hasher.finalize();
+    //         let hash = format!("{:x}", _hash);
 
-            let ruta = format!("{}{}/{}", &ubicacion, &hash[..2], &hash[2..]);
+    //         let ruta = format!("{}{}/{}", &ubicacion, &hash[..2], &hash[2..]);
 
-            let _total_out = descompresor.total_out(); // esto es lo que debe matchear el tamanio que se pasa en el header
-            let total_in = descompresor.total_in(); // esto es para calcular el offset
+    //         let _total_out = descompresor.total_out(); // esto es lo que debe matchear el tamanio que se pasa en el header
+    //         let total_in = descompresor.total_in(); // esto es para calcular el offset
 
-            bytes.drain(0..total_in as usize);
-            io::escribir_bytes(ruta, compresion::comprimir_contenido_u8(&objeto).unwrap()).unwrap();
+    //         bytes.drain(0..total_in as usize);
+    //         io::escribir_bytes(ruta, compresion::comprimir_contenido_u8(&objeto).unwrap()).unwrap();
 
-            contador += 1;
-        }
-        println!("cant bytes restantes: {:?}", bytes.len());
-        bytes.drain(0..20); // el checksum
-        Ok(())
-    }
+    //         contador += 1;
+    //     }
+    //     println!("cant bytes restantes: {:?}", bytes.len());
+    //     bytes.drain(0..20); // el checksum
+    //     Ok(())
+    // }
 
     fn obtener_y_escribir_objeto(
         tipo: u8,
@@ -390,7 +390,6 @@ fn leer_varint_sin_consumir_bytes(bytes: &Vec<u8>, offset: &mut usize) -> u32 {
 
 fn obtener_objeto_con_header(tipo: u8, tamanio: u32, contenido_descomprimido: &mut Vec<u8>) -> Vec<u8>{
 	let mut header: Vec<u8> = Vec::new();
-	println!("tipo: {:?}, tamanio: {}", tipo, tamanio);
     match tipo {
 		1 => {header = format!("{} {}\0", "commit", tamanio).as_bytes().to_vec();},
 		2 => {header = format!("{} {}\0", "tree", tamanio).as_bytes().to_vec();},

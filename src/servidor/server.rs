@@ -14,7 +14,7 @@ use std::sync::Arc;
 use std::thread;
 
 const VERSION: &str = "version 1";
-const CAPABILITIES: &str = "multi_ack thin-pack side-band side-band-64k ofs-delta shallow no-progress include-tag multi_ack_detailed no-done symref=HEAD:refs/heads/master agent=git/2.17.1";
+const CAPABILITIES: &str = "ofs-delta symref=HEAD:refs/heads/master agent=git/2.17.1";
 const DIR: &str = "/srv"; // direccion relativa
 
 pub struct Servidor {
@@ -140,19 +140,16 @@ impl Servidor {
 
     fn agregar_capacidades(referencia: String) -> String {
         let mut referencia_con_capacidades: String;
-        println!("Agregando capacidades...");
         if referencia.len() > 40 {
             referencia_con_capacidades = referencia.split_at(4).1.to_string() + "\0";
         // borro los primeros 4 caracteres que quedan del tamanio anterior
         } else {
             referencia_con_capacidades = referencia + "\0";
         }
-        println!("Agregando capacidades...");
         let capacidades: Vec<&str> = CAPABILITIES.split_whitespace().collect();
         for cap in capacidades.iter() {
             referencia_con_capacidades.push_str(&format!("{} ", cap));
         }
-        println!("ref y caps: {}", referencia_con_capacidades);
         let mut referencia_con_capacidades = referencia_con_capacidades.trim_end().to_string();
         referencia_con_capacidades.push('\n');
         gir_io::obtener_linea_con_largo_hex(&referencia_con_capacidades)
