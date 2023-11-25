@@ -390,7 +390,8 @@ fn leer_varint_sin_consumir_bytes(bytes: &Vec<u8>, offset: &mut usize) -> u32 {
 
 fn obtener_objeto_con_header(tipo: u8, tamanio: u32, contenido_descomprimido: &mut Vec<u8>) -> Vec<u8>{
 	let mut header: Vec<u8> = Vec::new();
-	match tipo {
+	println!("tipo: {:?}, tamanio: {}", tipo, tamanio);
+    match tipo {
 		1 => {header = format!("{} {}\0", "commit", tamanio).as_bytes().to_vec();},
 		2 => {header = format!("{} {}\0", "tree", tamanio).as_bytes().to_vec();},
 		3 => {header = format!("{} {}\0", "blob", tamanio).as_bytes().to_vec();},
@@ -439,8 +440,9 @@ pub fn leer_packfile_y_escribir(bytes: &Vec<u8>, ubicacion: String) -> Result<()
     while contador < largo {
         let offset_previo = offset.clone();
         println!("Offset previo a leer todo el objeto: {}", offset);
-        let (tipo, tamanio) = decodificar_bytes_sin_borrado(bytes, &mut offset);
-        // println!("tipo: {}, tamanio: {}", tipo, tamanio);
+        let (mut tipo, mut tamanio) = decodificar_bytes_sin_borrado(bytes, &mut offset);
+        let mut obj_data = vec![0; tamanio as usize];
+        println!("tipo: {}, tamanio: {}", tipo, tamanio);
         if tipo == 7 {
             let hash_obj = Tree::encode_hex(&bytes[offset..offset + 20]);
             offset += 20;
@@ -539,48 +541,42 @@ pub fn leer_packfile_y_escribir(bytes: &Vec<u8>, ubicacion: String) -> Result<()
 
         }
         if tipo == 6 {
-            let (obj_type, mut obj_data) = _read_ofs_delta_obj( bytes, tamanio, &mut offset, offset_previo);
-            let objeto = obtener_objeto_con_header(obj_type, obj_data.len() as u32, &mut obj_data);
-            let mut hasher = Sha1::new();
-            hasher.update(objeto.clone());
+            (tipo, obj_data) = _read_ofs_delta_obj( bytes, tamanio, &mut offset, offset_previo);
+            tamanio = obj_data.len() as u32;
+            // let objeto = obtener_objeto_con_header(obj_type, obj_data.len() as u32, &mut obj_data);
+            // let mut hasher = Sha1::new();
             // hasher.update(objeto.clone());
-            let _hash = hasher.finalize();
-            let hash = format!("{:x}", _hash);
-            println!("HASH DEL DELTA: {:?}", hash);
-            contador += 1;
-            // break;
-            continue;
+            // // hasher.update(objeto.clone());
+            // let _hash = hasher.finalize();
+            // let hash = format!("{:x}", _hash);
+            // contador += 1;
+            // // break;
+            // continue;
+  
         }
-        let mut objeto_descomprimido = vec![0; tamanio as usize];
-
-        let mut descompresor = Decompress::new(true);
-
-        descompresor
-            .decompress(&bytes[offset..], &mut objeto_descomprimido, FlushDecompress::None)
-            .unwrap();
-
-        // calculo el hash
-        let objeto = obtener_objeto_con_header(tipo, tamanio, &mut objeto_descomprimido);
+        else { 
+            // obj_data = vec![0; tamanio as usize];
+            let mut descompresor = Decompress::new(true);
+    
+            descompresor
+                .decompress(&bytes[offset..], &mut obj_data, FlushDecompress::None)
+                .unwrap();
+            let total_in = descompresor.total_in(); // esto es para calcular el offset
+            offset += total_in as usize;
+            // calculo el hash
+        }
+        let objeto = obtener_objeto_con_header(tipo, tamanio, &mut obj_data);
         let mut hasher = Sha1::new();
         hasher.update(objeto.clone());
         let _hash = hasher.finalize();
         let hash = format!("{:x}", _hash);
         
-        // println!("Objeto descomprimido: {:?}", String::from_utf8(objeto.clone()));
         println!("hash: {:?}", hash);
-        // let ruta = format!("{}{}/{}", &ubicacion, &hash[..2], &hash[2..]);
-        // println!("rutarda donde pongo objetos: {:?}", ruta);
+        let ruta = format!("{}{}/{}", &ubicacion, &hash[..2], &hash[2..]);
+        println!("ruta donde pongo objetos: {:?}", ruta);
 
-        // let total_out = descompresor.total_out(); // esto es lo que debe matchear el tamanio que se pasa en el header
-        let total_in = descompresor.total_in(); // esto es para calcular el offset
-        // println!("total in: {:?}, total out: {:?} ", total_in as usize, total_out as usize);
-        offset += total_in as usize;
-        // println!("Offset post descompresion: {:?}", offset);
-        // bytes.drain(0..total_in as usize);
-        // io::escribir_bytes(ruta, compresion::comprimir_contenido_u8(&objeto).unwrap()).unwrap();
-        // println!("cant bytes restantes: {:?}", bytes.len() - offset);
+        io::escribir_bytes(ruta, compresion::comprimir_contenido_u8(&objeto).unwrap()).unwrap();
         contador += 1;
-
     }
     Ok(())	
 }

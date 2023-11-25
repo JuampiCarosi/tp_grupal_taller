@@ -140,16 +140,19 @@ impl Servidor {
 
     fn agregar_capacidades(referencia: String) -> String {
         let mut referencia_con_capacidades: String;
+        println!("Agregando capacidades...");
         if referencia.len() > 40 {
             referencia_con_capacidades = referencia.split_at(4).1.to_string() + "\0";
         // borro los primeros 4 caracteres que quedan del tamanio anterior
         } else {
             referencia_con_capacidades = referencia + "\0";
         }
+        println!("Agregando capacidades...");
         let capacidades: Vec<&str> = CAPABILITIES.split_whitespace().collect();
         for cap in capacidades.iter() {
             referencia_con_capacidades.push_str(&format!("{} ", cap));
         }
+        println!("ref y caps: {}", referencia_con_capacidades);
         let mut referencia_con_capacidades = referencia_con_capacidades.trim_end().to_string();
         referencia_con_capacidades.push('\n');
         gir_io::obtener_linea_con_largo_hex(&referencia_con_capacidades)
