@@ -72,18 +72,7 @@ impl Push {
                 None => {}
             }
         }
-        println!("{:?}", self.hash_refs);
         for (key, value) in &self.hash_refs {
-            // actualizaciones.push(io::obtener_linea_con_largo_hex(&format!(
-            //     "{} {} {}",
-            //     &value.1, &value.0, &key
-            // ))); // viejo (el del sv), nuevo (cliente), ref
-                 // checkear que no existan los objetos antes de appendear
-                 // if value.1 == "0".repeat(40) {
-                 //     objetos_a_enviar
-                 //         .extend(obtener_commits_y_objetos_asociados(&key, &value.0).unwrap());
-                 //     continue;
-                 // }
             if value.1 != value.0 { 
                 actualizaciones.push(io::obtener_linea_con_largo_hex(&format!(
                     "{} {} {}",
@@ -96,11 +85,17 @@ impl Push {
                     }
                     Err(err) => {
                         //error
+                        self.comunicacion.responder(vec![]).unwrap();
+                        // el server pide que se le mande un packfile vacio 
+                        self.comunicacion
+                            .responder_con_bytes(Packfile::new().obtener_pack_con_archivos(
+                                vec![],
+                                "./.gir/objects/",
+                            ))
+                            .unwrap(); 
                         return Err(err);
                     }
                 }
-                // objetos_a_enviar
-                // .extend(obtener_commits_y_objetos_asociados(&key, &value.1).unwrap());
             }
         }
 
@@ -117,8 +112,6 @@ impl Push {
             //error
             Err("No hay actualizaciones".to_string())
         }
-
-        // println!("Refs recibidas: {:?}", refs_recibidas);
     }
 }
 
@@ -138,7 +131,7 @@ fn obtener_commits_y_objetos_asociados(
     let mut commits_a_revisar: Vec<CommitObj> = Vec::new();
 
     let ultimo_commit = CommitObj::from_hash(ultimo_commit);
-
+    
     match ultimo_commit {
         Ok(ultimo_commit) => {
             commits_a_revisar.push(ultimo_commit);
@@ -151,8 +144,12 @@ fn obtener_commits_y_objetos_asociados(
     }
 
     while let Some(commit) = commits_a_revisar.pop() {
-        if objetos_a_agregar.contains(&commit.hash) || commit.hash == *commit_limite {
+        if objetos_a_agregar.contains(&commit.hash) {
             continue;
+        }
+        if commit.hash == commit_limite.clone() {
+            objetos_a_agregar.insert(commit.hash.clone());
+            break;
         }
         objetos_a_agregar.insert(commit.hash.clone());
         let hash_tree = write_tree::conseguir_arbol_from_hash_commit(
@@ -172,10 +169,13 @@ fn obtener_commits_y_objetos_asociados(
             commits_a_revisar.push(commit_padre);
         }
     }
-
-    // let mut commits_vec = Vec::from_iter(commits.values().cloned());
-    // commits_vec.sort_by_key(|commit| commit.date.tiempo.clone());
-
+    if (commit_limite != &"0".repeat(40)) && !objetos_a_agregar.contains(&commit_limite.clone()) {
+        return Err(
+            "El servidor tiene cambios, por favor, actualice su repositorio".to_string(),
+        );
+    } else if  (commit_limite != &"0".repeat(40)) && objetos_a_agregar.contains(&commit_limite.clone()) {
+        objetos_a_agregar.remove(commit_limite);
+    }
     Ok(objetos_a_agregar)
 }
 
