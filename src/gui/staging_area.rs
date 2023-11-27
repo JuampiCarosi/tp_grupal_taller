@@ -105,37 +105,6 @@ fn escribir_archivos_index(builder: &gtk::Builder, logger: Arc<Logger>) {
     }
 }
 
-fn estilar_lista_archivos(builder: &gtk::Builder) {
-    let window: gtk::ScrolledWindow = builder.object("scrolled-window").unwrap();
-
-    let css_provider = gtk::CssProvider::new();
-    css_provider
-        .load_from_data(
-            "
-           scrolledwindow  {
-              font-size: 12px;
-              font-family: monospace;
-              background-color: #DDDDDD;
-              border-radius: 8px;
-              border: 1px solid #9A9A9A;
-              padding: 8px;
-          }
-
-      "
-            .as_bytes(),
-        )
-        .unwrap();
-
-    let context = window.style_context();
-    gtk::StyleContext::add_provider(
-        &context,
-        &css_provider,
-        gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
-    );
-
-    window.style_context().add_class("contenedor-commits");
-}
-
 fn escribir_archivos_modificados(
     builder: &gtk::Builder,
     logger: Arc<Logger>,
@@ -219,7 +188,6 @@ fn limpiar_archivos(builder: &gtk::Builder) {
 pub fn render(builder: &gtk::Builder, window: &gtk::Window, logger: Arc<Logger>) {
     logger.log("Gui: Renderizando staging area".to_string());
     limpiar_archivos(builder);
-    estilar_lista_archivos(builder);
     escribir_archivos_index(builder, logger.clone());
     escribir_archivos_modificados(builder, logger.clone(), window);
     escribir_archivos_untrackeados(builder, logger, window);
