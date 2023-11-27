@@ -404,12 +404,12 @@ impl Merge {
             return Ok(false);
         }
 
-        let merge = io::leer_a_string(".gir/MERGE_HEAD")?;
+        let merge = io::leer_a_string(".gir/")?;
 
         Ok(!merge.is_empty())
     }
 
-    pub fn obtener_commit_de_branch(branch: &String) -> Result<String, String> {
+    pub fn obtener_commit_de_branch(branch: &str) -> Result<String, String> {
         let branch_split = branch.split('/').collect::<Vec<&str>>();
         if branch_split.len() == 1 {
             let ruta = format!(".gir/refs/heads/{}", branch);
