@@ -5,6 +5,8 @@ use crate::tipos_de_dato::{
     logger::Logger,
 };
 
+use super::commit::Commit;
+
 enum ComandoRemote {
     Mostrar,
     Agregar,
@@ -197,7 +199,18 @@ impl Remote {
 
     /// Muestra el remote asociado a la rama actual.
     fn mostrar(&self) -> Result<String, String> {
-        Ok("TODO".to_string())
+        let config = Config::leer_config()?;
+
+        let branch_actual = Commit::obtener_branch_actual()?;
+        let remote_actual = config
+            .ramas
+            .iter()
+            .find(|branch| branch.nombre == branch_actual);
+
+        match remote_actual {
+            Some(remote) => Ok(remote.remote.clone()),
+            None => return Err("No hay un remote asociado a la branch actual\n".to_string()),
+        }
     }
 
     /// Ejecuta el comando.
