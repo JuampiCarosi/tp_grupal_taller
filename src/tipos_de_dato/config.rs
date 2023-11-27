@@ -11,9 +11,9 @@ pub struct RemoteInfo {
 #[derive(Debug, Clone)]
 
 pub struct RamasInfo {
-    nombre: String,
-    remote: String,
-    merge: PathBuf,
+    pub nombre: String,
+    pub remote: String,
+    pub merge: PathBuf,
 }
 
 pub struct Config {

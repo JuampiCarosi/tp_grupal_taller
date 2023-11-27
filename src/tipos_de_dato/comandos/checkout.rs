@@ -1,13 +1,17 @@
-use std::{path::PathBuf, sync::Arc};
+use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
 use crate::{
     tipos_de_dato::{
-        comandos::branch::Branch, logger::Logger, objeto::Objeto, objetos::tree::Tree,
+        comandos::branch::Branch,
+        config::{Config, RamasInfo},
+        logger::Logger,
+        objeto::Objeto,
+        objetos::tree::Tree,
     },
     utils::{self, io},
 };
 
-use super::write_tree::conseguir_arbol_from_hash_commit;
+use super::{show_ref::ShowRef, write_tree::conseguir_arbol_from_hash_commit};
 
 const PATH_HEAD: &str = "./.gir/HEAD";
 
@@ -18,6 +22,15 @@ pub struct Checkout {
     rama_a_cambiar: String,
     /// Logger para imprimir mensajes en un archivo log.
     logger: Arc<Logger>,
+}
+
+/// Tipo de rama que se puede cambiar
+
+enum TipoRama {
+    Local,
+    /// El primer string representa la ruta del remote
+    /// El segundo string representa el hash del commit al que apunta
+    Remota(String, String),
 }
 
 impl Checkout {
@@ -83,14 +96,29 @@ impl Checkout {
         Ok(output)
     }
 
+    pub fn obtener_ramas_remotas(&self) -> Result<HashMap<String, String>, String> {
+        let show_ref = ShowRef::from(vec![], self.logger.clone())?;
+        let ramas = show_ref.obtener_referencias(PathBuf::from(".gir/refs/remotes"))?;
+        Ok(ramas)
+    }
     /// Verifica si la rama a cambiar ya existe.
-    fn verificar_si_la_rama_existe(&self) -> Result<(), String> {
+    fn verificar_si_la_rama_existe(&self) -> Result<TipoRama, String> {
         let ramas = Self::obtener_ramas()?;
-        for rama in ramas {
-            if rama == self.rama_a_cambiar {
-                return Ok(());
+
+        if ramas.contains(&self.rama_a_cambiar) {
+            return Ok(TipoRama::Local);
+        }
+
+        // key: refs/remotes/<remote>/<branch>
+        // value: <commit>
+        let ramas_remotas = self.obtener_ramas_remotas()?;
+
+        for (ruta, commit) in ramas_remotas {
+            if ruta.ends_with(&self.rama_a_cambiar) {
+                return Ok(TipoRama::Remota(ruta, commit));
             }
         }
+
         Err(format!("Fallo: No existe la rama {}", self.rama_a_cambiar))
     }
 
@@ -118,11 +146,34 @@ impl Checkout {
         Ok(())
     }
 
-    /// Ejecuta el cambio de rama.
-    fn cambiar_rama(&self) -> Result<String, String> {
-        self.verificar_si_la_rama_existe()?;
-        self.cambiar_ref_en_head()?;
+    fn crear_rama_desde_remote(&self, commit: &str) -> Result<(), String> {
+        io::escribir_bytes(format!(".gir/refs/heads/{}", self.rama_a_cambiar), commit)
+    }
 
+    fn configurar_remoto_para_rama_actual(&self, ruta_remoto: &str) -> Result<(), String> {
+        let mut config = Config::leer_config()?;
+        let rama = RamasInfo {
+            nombre: self.rama_a_cambiar.clone(),
+            remote: ruta_remoto.split("/").last().unwrap().to_string(),
+            merge: PathBuf::from(format!("refs/heads/{}", self.rama_a_cambiar)),
+        };
+
+        config.ramas.push(rama);
+        config.guardar_config()?;
+
+        Ok(())
+    }
+
+    fn cambiar_rama(&self) -> Result<String, String> {
+        match self.verificar_si_la_rama_existe()? {
+            TipoRama::Remota(ruta, commit) => {
+                self.crear_rama_desde_remote(&commit)?;
+                self.configurar_remoto_para_rama_actual(&ruta)?
+            }
+            TipoRama::Local => {}
+        };
+
+        self.cambiar_ref_en_head()?;
         let msg = format!("Se cambio la rama actual a {}", self.rama_a_cambiar);
         self.logger.log(msg.clone());
 
@@ -139,7 +190,7 @@ impl Checkout {
 
     /// Verifica que el index no tenga contenido antes de cambiarse rama.
     fn comprobar_que_no_haya_contenido_index(&self) -> Result<(), String> {
-        if !utils::index::esta_vacio_el_index() {
+        if !utils::index::esta_vacio_el_index()? {
             Err("Fallo, tiene contendio sin guardar. Por favor, haga commit para no perder los cambios".to_string())
         } else {
             Ok(())
