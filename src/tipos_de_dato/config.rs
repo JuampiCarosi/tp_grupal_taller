@@ -22,6 +22,10 @@ pub struct Config {
 }
 
 impl Config {
+    /// Lee el archivo gir/config y fetchea toda la informacion de remotes y branches.
+    /// Por cada remote que lee crea su respectivo RemoteInfo.
+    /// Por cada branch que lee crea su respectivo BranchInfo.
+    /// Si el archivo no existe, devuelve un Config vacio.
     pub fn leer_config() -> Result<Config, String> {
         let contenido = io::leer_a_string(".gir/config")?;
         let contenido_spliteado = contenido.split('[').collect::<Vec<&str>>();
@@ -86,6 +90,9 @@ impl Config {
         Ok(Config { remotes, branches })
     }
 
+    /// Por cada entry de informacion que tiene el Config, lo escribe en el archivo CONFIG.
+    /// Si el archivo existe, lo sobreescribe.
+    /// Si el archivo no existe, lo crea.
     pub fn guardar_config(&self) -> Result<(), String> {
         let mut contenido = String::new();
 
