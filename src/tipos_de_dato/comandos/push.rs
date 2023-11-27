@@ -22,10 +22,10 @@ impl Push {
     pub fn new(logger: Arc<Logger>) -> Result<Self, String> {
         let mut hash_refs: HashMap<String, (String, String)> = HashMap::new();
         let refs = obtener_refs_de(PathBuf::from("./.gir/refs/"), String::from("./.gir/"));
-        let comunicacion = Arc::new(Comunicacion::<TcpStream>::new_desde_gir_config(
-            logger.clone(),
-        )?);
-
+        // let comunicacion = Arc::new(Comunicacion::<TcpStream>::new_desde_gir_config(
+        //     logger.clone(),
+        // )?);
+        let comunicacion = Arc::new(Comunicacion::<TcpStream>::new_desde_direccion_servidor("127.0.0.1:9333", logger.clone())?);
         for referencia in refs {
             hash_refs.insert(
                 referencia.split(' ').collect::<Vec<&str>>()[1].to_string(),

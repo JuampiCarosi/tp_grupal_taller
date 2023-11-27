@@ -10,28 +10,25 @@ use std::{
 
 use crate::utils::io;
 
-//que use el modulo io el logger
-//hay que mover a otro archivo
 /// Represents a log message or the end of the logger thread.
 pub enum Log {
-    /// A log message.
+    /// Un mensaje de log.
     Message(String),
-    /// The end of the logger thread.
+    /// El fin del logger.
     End,
 }
 
 #[derive(Debug)]
-/// A logger that writes messages to a file.
+/// Un logger que escribe mensajes en un archivo.
 pub struct Logger {
     tx: Sender<Log>,
     handle: Option<JoinHandle<()>>,
 }
 
 impl Logger {
-    /// Creates a new logger that writes messages to a file.
-    ///
-    /// If the current working directory cannot be obtained or the log file cannot be opened,
-    /// the logger will write messages to a file named "log.txt" in the current directory.
+    /// Crea un nuevo logger que escribe los mensajes en el archivo de log ubicado en la ruta especificada.
+    /// Si no se puede obtener el directorio actual o no se puede abrir el archivo de log,
+    /// el logger escribira los mensajes en un archivo llamado "log.txt" en el directorio actual.
     pub fn new(ubicacion_archivo: PathBuf) -> Result<Logger, String> {
         let (tx, rx) = mpsc::channel();
 
@@ -45,7 +42,7 @@ impl Logger {
         })
     }
 
-    /// Writes a log message to the file.
+    /// Escribir un mensaje en el archivo de log.
     pub fn log(&self, msg: String) {
         let log = Log::Message(msg.clone());
         if self.tx.send(log).is_err() {
@@ -53,6 +50,7 @@ impl Logger {
         };
     }
 
+    /// Crea un nuevo logger que escribe los mensajes en un archivo pasado por parametro.
     fn crear_logger_thread(
         rx: mpsc::Receiver<Log>,
         mut archivo_log: File,
@@ -74,6 +72,7 @@ impl Logger {
             .map_err(|err| format!("ERROR: No se pudo crear el logger.\n{}", err))
     }
 
+    /// Obtiene el archivo de log a partir de la ubicacion pasada por parametro.
     fn obtener_archivo_log(ubicacion_archivo: PathBuf) -> Result<File, String> {
         let dir_archivo_log = Self::obtener_dir_archivo_log(ubicacion_archivo)?;
         OpenOptions::new()
@@ -82,6 +81,7 @@ impl Logger {
             .map_err(|err| format!("{}", err))
     }
 
+    /// Obtiene el directorio del archivo de log a partir de la ubicacion pasada por parametro.
     fn obtener_dir_archivo_log(ubicacion_archivo: PathBuf) -> Result<PathBuf, String> {
         if ubicacion_archivo.is_absolute() {
             io::crear_archivo(&ubicacion_archivo)?;
@@ -97,6 +97,7 @@ impl Logger {
         Ok(dir_archivo_log)
     }
 
+    /// Obtiene el directorio actual.
     fn obtener_directorio_actual() -> Result<PathBuf, String> {
         let dir_actual = env::current_dir().map_err(|err| format!("{}", err))?;
         Ok(dir_actual)
@@ -115,6 +116,7 @@ impl Drop for Logger {
     }
 }
 
+/// Escribe el mensaje pasado por parametro en el archivo de log junto el timestamp.
 fn escribir_mensaje_en_archivo_log(
     data_archivo: &mut File,
     timestamp: chrono::format::DelayedFormat<chrono::format::StrftimeItems<'_>>,

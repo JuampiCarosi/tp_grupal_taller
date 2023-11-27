@@ -26,8 +26,11 @@ use super::blob::Blob;
 #[derive(Clone, Debug)]
 
 pub struct Tree {
+    /// Directorio del arbol.
     pub directorio: PathBuf,
+    /// Objetos que contiene el arbol.
     pub objetos: Vec<Objeto>,
+    /// Logger para imprimir mensajes en el archivo log.
     pub logger: Arc<Logger>,
 }
 
@@ -40,7 +43,7 @@ impl PartialEq for Tree {
 impl Eq for Tree {}
 
 impl Tree {
-    /// Devuelve un vector con todos los objetos de tipo Blob que se encuentran en el arbol
+    /// Devuelve un vector con todos los objetos de tipo Blob que se encuentran en el arbol.
     pub fn obtener_objetos_hoja(&self) -> Vec<Objeto> {
         let mut objetos: Vec<Objeto> = Vec::new();
         for objeto in &self.objetos {
@@ -68,16 +71,13 @@ impl Tree {
         objetos
     }
 
-    /// Escribe en el directorio actual los archivos que se encuentran en el arbol
+    /// Escribe en el directorio actual los archivos que se encuentran en el arbol.
     pub fn escribir_en_directorio(&self) -> Result<(), String> {
         let objetos = self.obtener_objetos_hoja();
         for objeto in objetos {
             match objeto {
                 Objeto::Blob(blob) => {
-                    let objeto = descomprimir_objeto(
-                        blob.hash,
-                        String::from(self.directorio.to_string_lossy() + "/.gir/objects/"),
-                    )?;
+                    let objeto = descomprimir_objeto(blob.hash, String::from(".gir/objects/"))?;
                     let contenido = objeto.split('\0').collect::<Vec<&str>>()[1];
                     io::escribir_bytes(blob.ubicacion, contenido).unwrap();
                 }
@@ -87,7 +87,7 @@ impl Tree {
         Ok(())
     }
 
-    /// Pasa un string de hexadecimal a un vector de u8
+    /// Pasa un string de hexadecimal a un vector de u8.
     pub fn decode_hex(s: &str) -> Result<Vec<u8>, String> {
         match (0..s.len())
             .step_by(2)
@@ -99,7 +99,7 @@ impl Tree {
         }
     }
 
-    /// Pasa un vector de u8 a un string de hexadecimal
+    /// Pasa un vector de u8 a un string de hexadecimal.
     pub fn encode_hex(bytes: &[u8]) -> String {
         let mut s = String::with_capacity(bytes.len() * 2);
         for &b in bytes {
@@ -108,7 +108,7 @@ impl Tree {
         s
     }
 
-    /// Devuelve el hash completo de un objeto
+    /// Devuelve el hash completo de un objeto.
     pub fn obtener_hash(&self) -> Result<String, String> {
         let contenido = Self::obtener_contenido(&self.objetos)?;
         let mut sha1 = Sha1::new();
@@ -120,7 +120,9 @@ impl Tree {
         Ok(format!("{:x}", hash))
     }
 
-    /// Devuelve el contenido de un objeto tree en u8 para poder ser comprimido
+    /// Devuelve el contenido de un objeto tree en u8 para poder ser comprimido.
+    /// El contenido del objeto tree es el header del objeto y el entry de cada uno de sus hijos.
+    /// Siguiendo los formatos de git.
     pub fn obtener_contenido(objetos: &[Objeto]) -> Result<Vec<u8>, String> {
         let objetos_ordenados = Self::ordenar_objetos_alfabeticamente(objetos);
 
@@ -147,15 +149,13 @@ impl Tree {
         Ok(contenido)
     }
 
-    /// Devuelve un objeto Tree a partir de un directorio y un vector de directorios que se quieren
+    /// Devuelve un objeto Tree a partir de un directorio y un vector de directorios que se quieren.
     pub fn from_directorio(
         directorio: PathBuf,
         hijos_especificados: Option<&Vec<PathBuf>>,
         logger: Arc<Logger>,
     ) -> Result<Tree, String> {
         let mut objetos: Vec<Objeto> = Vec::new();
-
-        // println!("directorio: {}", directorio.display());
 
         let entradas = match fs::read_dir(&directorio) {
             Ok(entradas) => entradas,
@@ -199,6 +199,7 @@ impl Tree {
         })
     }
 
+    /// Devuelve un vector con todos los paths de los hijos del arbol.
     pub fn obtener_paths_hijos(&self) -> Vec<PathBuf> {
         let mut paths: Vec<PathBuf> = Vec::new();
         for objeto in &self.objetos {
@@ -213,6 +214,8 @@ impl Tree {
         paths
     }
 
+    /// Dado el contenido del arbol, devuelve un vector con los datos de cada uno de sus hijos.
+    /// Cada dato es una tupla con el modo, el nombre y el hash del hijo.
     fn obtener_datos_de_contenido(
         contenido: String,
     ) -> Result<Vec<(String, String, String)>, String> {
@@ -250,12 +253,11 @@ impl Tree {
                 return Err("Error al parsear el contenido del tree".to_string());
             }
         }
-
         Ok(contenido_parseado)
     }
 
-    /// Lee el objeto tree de la base de datos en base a un hash pasado por parametro y
-    ///  el directorio en el que se encuentra el tree y lo devuelve como un objeto Tree
+    /// Lee el objeto tree de la base de datos en base a un hash pasado por parametro junto con
+    /// el directorio en el que se encuentra el tree y lo devuelve como un objeto Tree
     pub fn from_hash(
         hash: String,
         directorio: PathBuf,
@@ -298,6 +300,7 @@ impl Tree {
         })
     }
 
+    /// Devuelve el tamaño del contenido del tree.
     pub fn obtener_tamanio(&self) -> Result<usize, String> {
         let contenido = match Self::obtener_contenido(&self.objetos) {
             Ok(contenido) => contenido,
@@ -306,6 +309,7 @@ impl Tree {
         Ok(contenido.len())
     }
 
+    /// Devuelve si el arvol contiene un hijo con el mismo hash que el pasado por parametro.
     pub fn contiene_misma_version_hijo(&self, hash_hijo: String, ubicacion_hijo: PathBuf) -> bool {
         for objeto in &self.objetos {
             match objeto {
@@ -324,6 +328,7 @@ impl Tree {
         false
     }
 
+    /// Devuelve si el arbol contiene un hijo con el mismo nombre que el pasado por parametro.
     pub fn contiene_hijo_por_ubicacion(&self, ubicacion_hijo: PathBuf) -> bool {
         for objeto in &self.objetos {
             match objeto {
@@ -342,6 +347,7 @@ impl Tree {
         false
     }
 
+    /// Devuelve si el arbol contiene un hijo con el mismo directorio que el pasado por parametro.
     pub fn contiene_directorio(&self, directorio: &PathBuf) -> bool {
         for objeto in &self.objetos {
             match objeto {
@@ -356,66 +362,7 @@ impl Tree {
         false
     }
 
-    pub fn agregar_hijo(&mut self, objeto: Objeto) {
-        self.objetos.push(objeto);
-    }
-
-    pub fn actualizar_hijos(&mut self, objeto_a_actualizar: Objeto) {
-        for objeto in &mut self.objetos {
-            match objeto {
-                Objeto::Tree(tree) => {
-                    if tree.directorio == objeto_a_actualizar.obtener_path() {
-                        *objeto = objeto_a_actualizar.clone();
-                    } else {
-                        tree.actualizar_hijos(objeto_a_actualizar.clone());
-                    };
-                }
-                Objeto::Blob(blob) => {
-                    if blob.ubicacion == objeto_a_actualizar.obtener_path() {
-                        *objeto = objeto_a_actualizar.clone();
-                    }
-                }
-            }
-        }
-    }
-
-    pub fn eliminar_hijo_por_directorio(&mut self, directorio: &PathBuf) {
-        let mut i = 0;
-        while i < self.objetos.len() {
-            match &mut self.objetos[i] {
-                Objeto::Blob(blob) => {
-                    if blob.ubicacion == *directorio {
-                        self.objetos.remove(i);
-                    } else {
-                        i += 1;
-                    }
-                }
-                Objeto::Tree(ref mut tree) => {
-                    if tree.directorio == *directorio {
-                        self.objetos.remove(i);
-                    } else {
-                        if directorio.starts_with(tree.directorio.clone()) {
-                            tree.eliminar_hijo_por_directorio(directorio);
-                        }
-                        i += 1;
-                    }
-                }
-            }
-        }
-    }
-
-    pub fn obtener_hash_old(&self) -> Result<String, String> {
-        let contenido = Self::mostrar_contenido(&self.objetos)?;
-        let header = format!("tree {}\0", contenido.len());
-
-        let contenido_total = format!("{}{}", header, contenido);
-
-        let mut hasher = Sha1::new();
-        hasher.update(contenido_total);
-        let hash = hasher.finalize();
-        Ok(format!("{:x}", hash))
-    }
-
+    /// Ordena los objetos del arbol alfabeticamente por directorio.
     pub fn ordenar_objetos_alfabeticamente(objetos: &[Objeto]) -> Vec<Objeto> {
         let mut objetos = objetos.to_owned();
         objetos.sort_by(|a, b| {
@@ -432,13 +379,10 @@ impl Tree {
         objetos
     }
 
+    /// Escribe el arbol junto a todos sus hijos en la base de datos.
     pub fn escribir_en_base(&self) -> Result<(), String> {
         let hash = self.obtener_hash()?;
         let ruta = format!(".gir/objects/{}/{}", &hash[..2], &hash[2..]);
-
-        // if PathBuf::from(&ruta).exists() || self.es_vacio() {
-        //     return Ok(());
-        // }
 
         let contenido = Self::obtener_contenido(&self.objetos)?;
 
@@ -450,14 +394,8 @@ impl Tree {
         for objeto in &self.objetos {
             match objeto {
                 Objeto::Blob(blob) => {
-                    let logger = Arc::new(logger::Logger::new(PathBuf::from("tmp/tree"))?);
-
-                    // if PathBuf::from(&blob.ubicacion).is_file() {
-                    //     continue;
-                    // }
-
                     HashObject {
-                        logger: logger.clone(),
+                        logger: self.logger.clone(),
                         escribir: true,
                         ubicacion_archivo: blob.ubicacion.clone(),
                     }
@@ -470,6 +408,8 @@ impl Tree {
         Ok(())
     }
 
+    /// Teniendo el contenido descomprimido pasado a String
+    /// devuelve el contenido del arbol en un formato pretty print.
     pub fn rearmar_contenido_descomprimido(contenido: String) -> Result<String, String> {
         let mut contenido_pretty: Vec<String> = Vec::new();
         let mut contenido_splitteado_null = contenido.split('\0').collect::<Vec<&str>>();
@@ -487,6 +427,7 @@ impl Tree {
         Ok(contenido_pretty.concat())
     }
 
+    /// Dado un vector de objetos, devuelve el contenido del arbol en un formato pretty print.
     fn mostrar_contenido(objetos: &[Objeto]) -> Result<String, String> {
         let mut output = String::new();
 
@@ -509,6 +450,7 @@ impl Tree {
         Ok(output)
     }
 
+    /// Devuelve si el arbol esta vacio.
     pub fn es_vacio(&self) -> bool {
         if self.objetos.is_empty() {
             return true;

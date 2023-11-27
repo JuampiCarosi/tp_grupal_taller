@@ -3,7 +3,7 @@ use std::{collections::HashMap, path::PathBuf, sync::Arc};
 use crate::{
     tipos_de_dato::{
         comandos::branch::Branch,
-        config::{BranchInfo, Config},
+        config::{Config, RamasInfo},
         logger::Logger,
         objeto::Objeto,
         objetos::tree::Tree,
@@ -16,8 +16,11 @@ use super::{show_ref::ShowRef, write_tree::conseguir_arbol_from_hash_commit};
 const PATH_HEAD: &str = "./.gir/HEAD";
 
 pub struct Checkout {
+    /// Si es true, se crea una nueva rama.
     crear_rama: bool,
+    /// Nombre de la rama a cambiar.
     rama_a_cambiar: String,
+    /// Logger para imprimir mensajes en un archivo log.
     logger: Arc<Logger>,
 }
 
@@ -31,10 +34,12 @@ enum TipoRama {
 }
 
 impl Checkout {
+    /// Verifica si hay flags en los argumentos.
     fn hay_flags(args: &Vec<String>) -> bool {
         args.len() != 1
     }
 
+    /// Verifica si la cantidad de argumentos son validos para el comando checkout.
     fn verificar_argumentos(args: &Vec<String>) -> Result<(), String> {
         if args.len() > 2 {
             return Err(
@@ -44,6 +49,8 @@ impl Checkout {
         Ok(())
     }
 
+    /// Crea una instancia de Checkout setteada para crear la branch.
+    /// Si no se puede crear devuelve un error.
     fn crearse_con_flags(args: Vec<String>, logger: Arc<Logger>) -> Result<Checkout, String> {
         match (args[0].as_str(), args[1].clone()) {
             ("-b", rama) => Ok(Checkout {
@@ -55,6 +62,7 @@ impl Checkout {
         }
     }
 
+    /// Crea la instancia de checkout pertinente a los argumentos enviados.
     pub fn from(args: Vec<String>, logger: Arc<Logger>) -> Result<Checkout, String> {
         Self::verificar_argumentos(&args)?;
 
@@ -69,6 +77,7 @@ impl Checkout {
         })
     }
 
+    /// Devuelve un vector con los nombres de las ramas existentes en el repositorio.
     pub fn obtener_ramas() -> Result<Vec<String>, String> {
         let directorio = ".gir/refs/heads";
         let entradas = std::fs::read_dir(directorio)
@@ -92,7 +101,7 @@ impl Checkout {
         let ramas = show_ref.obtener_referencias(PathBuf::from(".gir/refs/remotes"))?;
         Ok(ramas)
     }
-
+    /// Verifica si la rama a cambiar ya existe.
     fn verificar_si_la_rama_existe(&self) -> Result<TipoRama, String> {
         let ramas = Self::obtener_ramas()?;
 
@@ -113,6 +122,8 @@ impl Checkout {
         Err(format!("Fallo: No existe la rama {}", self.rama_a_cambiar))
     }
 
+    /// Devuelve el nombre de la rama actual.
+    /// O sea, la rama a la que apunta el archivo HEAD.
     fn conseguir_rama_actual(&self, contenidio_head: String) -> Result<String, String> {
         let partes: Vec<&str> = contenidio_head.split('/').collect();
         let rama_actual = partes
@@ -121,6 +132,8 @@ impl Checkout {
             .trim();
         Ok(rama_actual.to_string())
     }
+
+    /// Cambia la referencia de la rama en el archivo HEAD.
     fn cambiar_ref_en_head(&self) -> Result<(), String> {
         let contenido_head = io::leer_a_string(PATH_HEAD)?;
 
@@ -139,13 +152,13 @@ impl Checkout {
 
     fn configurar_remoto_para_rama_actual(&self, ruta_remoto: &str) -> Result<(), String> {
         let mut config = Config::leer_config()?;
-        let rama = BranchInfo {
+        let rama = RamasInfo {
             nombre: self.rama_a_cambiar.clone(),
             remote: ruta_remoto.split("/").last().unwrap().to_string(),
-            merge: format!("refs/heads/{}", self.rama_a_cambiar),
+            merge: PathBuf::from(format!("refs/heads/{}", self.rama_a_cambiar)),
         };
 
-        config.branches.push(rama);
+        config.ramas.push(rama);
         config.guardar_config()?;
 
         Ok(())
@@ -167,6 +180,7 @@ impl Checkout {
         Ok(msg)
     }
 
+    /// Crea una nueva rama con el nombre especificado.
     fn crear_rama(&self) -> Result<(), String> {
         let msg_branch = Branch::from(&mut vec![self.rama_a_cambiar.clone()], self.logger.clone())?
             .ejecutar()?;
@@ -174,6 +188,7 @@ impl Checkout {
         Ok(())
     }
 
+    /// Verifica que el index no tenga contenido antes de cambiarse rama.
     fn comprobar_que_no_haya_contenido_index(&self) -> Result<(), String> {
         if !utils::index::esta_vacio_el_index()? {
             Err("Fallo, tiene contendio sin guardar. Por favor, haga commit para no perder los cambios".to_string())
@@ -181,8 +196,8 @@ impl Checkout {
             Ok(())
         }
     }
-    //si hay contenido en el index no swich
 
+    /// Devuelve el arbol del ultimo commit de la rama actual.
     fn obtener_arbol_commit_actual(&self) -> Result<Tree, String> {
         let ref_actual = io::leer_a_string(PATH_HEAD)?;
         let rama_actual = self.conseguir_rama_actual(ref_actual)?;
@@ -192,6 +207,9 @@ impl Checkout {
         Tree::from_hash(hash_tree_padre, PathBuf::from("."), self.logger.clone())
     }
 
+    /// Ejecuta el comando checkout en su totalidad.
+    /// Si se crea una nueva rama, se crea y se cambia a ella.
+    /// Si se cambia de rama, se cambia y se actualiza el contenido.
     pub fn ejecutar(&self) -> Result<String, String> {
         self.comprobar_que_no_haya_contenido_index()?;
 
@@ -214,6 +232,7 @@ impl Checkout {
         Ok(format!("Cambiado a rama {}", self.rama_a_cambiar))
     }
 
+    /// Elimina los archivos correspondientes a cada objeto que no se encuentre en el arbol futuro.
     fn eliminar_objetos(&self, objetos: &Vec<Objeto>) -> Result<(), String> {
         for objeto in objetos {
             match objeto {
@@ -228,6 +247,8 @@ impl Checkout {
         Ok(())
     }
 
+    /// Devuelve un vector con los objetos que estaban en el tree viejo pero no en el nuevo.
+    /// O sea, los objetos que se eliminaron.
     fn obtener_objetos_eliminados(&self, tree_viejo: &Tree, tree_nuevo: &Tree) -> Vec<Objeto> {
         let mut objetos_eliminados: Vec<Objeto> = Vec::new();
 

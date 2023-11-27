@@ -14,7 +14,7 @@ use std::sync::Arc;
 use std::thread;
 
 const VERSION: &str = "version 1";
-const CAPABILITIES: &str = "multi_ack thin-pack side-band side-band-64k ofs-delta shallow no-progress include-tag multi_ack_detailed no-done symref=HEAD:refs/heads/master agent=git/2.17.1";
+const CAPABILITIES: &str = "ofs-delta symref=HEAD:refs/heads/master agent=git/2.17.1";
 const DIR: &str = "/srv"; // direccion relativa
 
 pub struct Servidor {
@@ -35,7 +35,8 @@ impl Servidor {
             println!("Conectado al cliente {:?}", socket);
             let logge_clone = self.logger.clone();
             thread::spawn(move || {
-                let mut comunicacion = Comunicacion::new(stream.try_clone().unwrap(), logge_clone);
+                let mut comunicacion =
+                    Comunicacion::new_para_testing(stream.try_clone().unwrap(), logge_clone);
                 Self::manejar_cliente(
                     &mut comunicacion,
                     &(env!("CARGO_MANIFEST_DIR").to_string() + DIR),

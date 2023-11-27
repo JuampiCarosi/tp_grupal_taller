@@ -2,12 +2,14 @@ use std::path::PathBuf;
 
 use super::io;
 
+/// Devuelve el path del archivo de configuración de gir.
 pub fn obtener_gir_config_path() -> Result<String, String> {
     let home = std::env::var("HOME").map_err(|_| "Error al obtener el directorio home")?;
     let config_path = format!("{home}/.girconfig");
     Ok(config_path)
 }
 
+/// Devuelve el nombre y el mail del usuario guardados en el archivo de configuración.
 pub fn conseguir_nombre_y_mail_del_config() -> Result<(String, String), String> {
     let nombre =
         conseguir_nombre_config().ok_or("Error al extraer el nombre del config".to_string())?;
@@ -82,6 +84,7 @@ fn buscar_en_config_el_valor_de(parametro_a_buscar: &str) -> Option<String> {
     None
 }
 
+/// Devuelve si el archivo config esta vacio.
 fn archivo_config_esta_vacio() -> Result<bool, String> {
     let config_path = obtener_gir_config_path()?;
 
@@ -95,6 +98,10 @@ fn archivo_config_esta_vacio() -> Result<bool, String> {
     Ok(false)
 }
 
+/// Arma el archivo de configuración con el nombre y el mail del usuario.
+/// Si el archivo ya tiene información, no hace nada.
+/// Si el archivo no tiene información, pide al usuario que ingrese su nombre y su mail.
+/// Si no se puede leer el nombre o el mail, devuelve un error.
 pub fn armar_config_con_mail_y_nombre() -> Result<(), String> {
     if !archivo_config_esta_vacio()? {
         return Ok(());

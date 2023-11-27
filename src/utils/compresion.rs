@@ -4,6 +4,8 @@ use std::io::{Read, Write};
 
 use super::io;
 
+/// Dado un hash y una ruta, busca el archivo de ese hash en la ruta especificada
+/// y devuelve el contenido del objeto descomprimido.
 pub fn descomprimir_objeto(hash: String, ruta: String) -> Result<String, String> {
     let ruta_objeto = format!("{}{}/{}", ruta.clone(), &hash[..2], &hash[2..]);
 
@@ -13,10 +15,13 @@ pub fn descomprimir_objeto(hash: String, ruta: String) -> Result<String, String>
     Ok(contenido_decodificado)
 }
 
+/// Descomprime el objeto indicado por el hash en la ruta .gir/objects
 pub fn descomprimir_objeto_gir(hash: String) -> Result<String, String> {
     descomprimir_objeto(hash, String::from(".gir/objects/"))
 }
 
+/// Convierte un vector de u8 a un string.
+/// Si el vector no es valido, devuelve un error.
 pub fn vec_a_string(vec: Vec<u8>) -> Result<String, String> {
     match String::from_utf8(vec) {
         Ok(string) => Ok(string),
@@ -39,7 +44,7 @@ pub fn decodificar_contenido(contenido: Vec<u8>) -> Result<String, String> {
     }
 }
 
-/// separa el contenido que viene en un tree en lineas,
+/// Separa el contenido que viene en un tree en lineas,
 /// pasando de un [[hash][modo] [nombre], ...] a [[hash], [modo y nombre], ...]
 fn separar_contenido_por_linea(contenido: &[u8]) -> Result<Vec<Vec<u8>>, String> {
     let mut spliteado_por_null: Vec<Vec<u8>> = Vec::new();
@@ -77,7 +82,7 @@ fn separar_contenido_por_linea(contenido: &[u8]) -> Result<Vec<Vec<u8>>, String>
     Ok(spliteado_por_null_separado_por_linea)
 }
 
-/// toma el vector [[hash], [modo y nombre], ...] y lo convierte nuevamente en un string con el formato
+/// Toma el vector [[hash], [modo y nombre], ...] y lo convierte nuevamente en un string con el formato
 /// [header]\0[modo] [nombre]\0[hash]\0[modo] [nombre]\0[hash]\0...
 fn reconstruir_contenido_separado(header: &str, contenido: Vec<Vec<u8>>) -> Result<String, String> {
     let mut contenido_decodificado = format!("{}\0", header);
@@ -97,12 +102,15 @@ fn reconstruir_contenido_separado(header: &str, contenido: Vec<Vec<u8>>) -> Resu
     Ok(contenido_decodificado)
 }
 
+/// Decodifica el contenido u8 de un tree a String.
 fn decodificar_tree(header: &str, contenido: &[u8]) -> Result<String, String> {
     let spliteado_por_null_separado_por_linea = separar_contenido_por_linea(contenido)?;
 
     reconstruir_contenido_separado(header, spliteado_por_null_separado_por_linea)
 }
 
+/// Comprime el contenido en String de un objeto.
+/// Si el contenido no es valido, devuelve un error.
 pub fn comprimir_contenido(contenido: String) -> Result<Vec<u8>, String> {
     let mut compresor = ZlibEncoder::new(Vec::new(), Compression::default());
     if compresor.write_all(contenido.as_bytes()).is_err() {
@@ -114,6 +122,8 @@ pub fn comprimir_contenido(contenido: String) -> Result<Vec<u8>, String> {
     }
 }
 
+/// Comprime el contenido en u8 de un objeto.
+/// Si el contenido no es valido, devuelve un error.
 pub fn comprimir_contenido_u8(contenido: &Vec<u8>) -> Result<Vec<u8>, String> {
     let mut compresor = ZlibEncoder::new(Vec::new(), Compression::default());
     if compresor.write_all(contenido).is_err() {
@@ -125,6 +135,7 @@ pub fn comprimir_contenido_u8(contenido: &Vec<u8>) -> Result<Vec<u8>, String> {
     }
 }
 
+/// Descomprime el contenido en u8 de un objeto.
 pub fn descomprimir_contenido_u8(contenido: &[u8]) -> Result<Vec<u8>, String> {
     let mut descompresor = ZlibDecoder::new(contenido);
     let mut contenido_descomprimido = Vec::new();
@@ -135,6 +146,8 @@ pub fn descomprimir_contenido_u8(contenido: &[u8]) -> Result<Vec<u8>, String> {
     Ok(contenido_descomprimido)
 }
 
+/// Dado un hash y una ruta, busca el archivo de ese hash en la ruta especificada
+/// y devuelve el contenido del objeto comprimido, sin tener en cuenta la linea del header del objeto.
 pub fn obtener_contenido_comprimido_sin_header(hash: String) -> Result<Vec<u8>, String> {
     let ruta_objeto = format!(".gir/objects/{}/{}", &hash[..2], &hash[2..]);
     let contenido_leido = io::leer_bytes(ruta_objeto)?;

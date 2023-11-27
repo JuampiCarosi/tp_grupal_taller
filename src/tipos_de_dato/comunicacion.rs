@@ -46,7 +46,40 @@ impl<T: Write + Read> Comunicacion<T> {
         })
     }
 
-    pub fn new(flujo: T, logger: Arc<Logger>) -> Comunicacion<T> {
+    ///Crea una comunicacion en base a una url.
+    /// La url tiene el formato ip:puerto/repositorio/
+    pub fn new_desde_url(
+        url: &str,
+        logger: Arc<Logger>,
+    ) -> Result<Comunicacion<TcpStream>, String> {
+        let (ip_puerto, repositorio) = Self::obtener_ip_puerto_y_repositorio(url)?;
+
+        let flujo = Mutex::new(
+            TcpStream::connect(ip_puerto)
+                .map_err(|e| format!("Fallo en en la conecciion con el servido.\n{}\n", e))?,
+        );
+
+        Ok(Comunicacion {
+            flujo,
+            repositorio,
+            logger,
+        })
+    }
+
+    ///Obtiene de la url el ip puerto y el repositorio
+    ///
+    /// ## Ejemplo
+    /// - recibe: ip:puerto/repositorio/
+    /// - devuelve: (ip:puerto, /respositorio/)
+    fn obtener_ip_puerto_y_repositorio(url: &str) -> Result<(String, String), String> {
+        let (ip_puerto_str, repositorio) = url
+            .split_once("/")
+            .ok_or_else(|| format!("Fallo en obtener el ip:puerto y repo de {}", url))?;
+
+        Ok((ip_puerto_str.to_string(), "/".to_string() + repositorio))
+    }
+
+    pub fn new_para_testing(flujo: T, logger: Arc<Logger>) -> Comunicacion<T> {
         let repositorio = "/gir/".to_string();
 
         Comunicacion {
@@ -65,6 +98,7 @@ impl<T: Write + Read> Comunicacion<T> {
         };
         Self::new_desde_direccion_servidor(&direccion_servidor, logger)
     }
+
     pub fn enviar(&self, mensaje: &str) -> Result<(), String> {
         self.flujo
             .lock()
@@ -420,7 +454,7 @@ mod test {
             escritura_data: Vec::new(),
         };
 
-        Comunicacion::new(&mut mock, logger)
+        Comunicacion::new_para_testing(&mut mock, logger)
             .enviar("Hola server, soy siro. Todo bien ??")
             .unwrap();
 
@@ -449,7 +483,7 @@ mod test {
             escritura_data: Vec::new(),
         };
 
-        let lineas = Comunicacion::new(&mut mock, logger)
+        let lineas = Comunicacion::new_para_testing(&mut mock, logger)
             .obtener_lineas()
             .unwrap()
             .join("\n");
@@ -481,7 +515,7 @@ mod test {
         ];
         let capacidades = "multi_ack side-band-64k ofs-delta".to_string();
 
-        Comunicacion::new(&mut mock, logger)
+        Comunicacion::new_para_testing(&mut mock, logger)
             .enviar_pedidos_al_servidor_pkt(contenido, capacidades)
             .unwrap();
 
@@ -510,7 +544,7 @@ mod test {
             "74730d410fcb6603ace96f1dc55ea6196122532d".to_string(),
         ];
 
-        Comunicacion::new(&mut mock, logger)
+        Comunicacion::new_para_testing(&mut mock, logger)
             .enviar_lo_que_tengo_al_servidor_pkt(&contenido)
             .unwrap();
 
