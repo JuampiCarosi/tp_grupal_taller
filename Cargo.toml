@@ -21,3 +21,7 @@ path = "src/main.rs"
 [[bin]]
 name = "server"
 path = "src/servidor/servidor_gir.rs"
+
+[[bin]]
+name = "prueba_pack"
+path = "src/prueba_pack.rs"
