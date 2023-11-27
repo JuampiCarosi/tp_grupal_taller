@@ -26,7 +26,7 @@ impl Push {
         //     logger.clone(),
         // )?);
         let comunicacion = Arc::new(Comunicacion::<TcpStream>::new_desde_direccion_servidor("127.0.0.1:9418", logger.clone())?);
-        for referencia in refs {
+                for referencia in refs {
             hash_refs.insert(
                 referencia.split(' ').collect::<Vec<&str>>()[1].to_string(),
                 (
@@ -60,10 +60,11 @@ impl Push {
         let _capacidades = referencia_y_capacidades[1].to_string();
         if !referencia.contains(&"0".repeat(40)) {
             refs_recibidas.push(referencia_y_capacidades[0].to_string());
-        }
+        }   
+            
         for referencia in &refs_recibidas {
             let obj_id = referencia.split(' ').collect::<Vec<&str>>()[0];
-            let referencia = referencia.split(' ').collect::<Vec<&str>>()[1];
+            let referencia = referencia.split(' ').collect::<Vec<&str>>()[1].trim_end_matches('\n');
             match self.hash_refs.get_mut(referencia) {
                 Some(hash) => {
                     hash.1 = obj_id.to_string();
@@ -71,19 +72,23 @@ impl Push {
                 None => {}
             }
         }
-
+        println!("{:?}", self.hash_refs);
         for (key, value) in &self.hash_refs {
-            actualizaciones.push(io::obtener_linea_con_largo_hex(&format!(
-                "{} {} {}",
-                &value.1, &value.0, &key
-            ))); // viejo (el del sv), nuevo (cliente), ref
+            // actualizaciones.push(io::obtener_linea_con_largo_hex(&format!(
+            //     "{} {} {}",
+            //     &value.1, &value.0, &key
+            // ))); // viejo (el del sv), nuevo (cliente), ref
                  // checkear que no existan los objetos antes de appendear
                  // if value.1 == "0".repeat(40) {
                  //     objetos_a_enviar
                  //         .extend(obtener_commits_y_objetos_asociados(&key, &value.0).unwrap());
                  //     continue;
                  // }
-            if value.1 != value.0 {
+            if value.1 != value.0 { 
+                actualizaciones.push(io::obtener_linea_con_largo_hex(&format!(
+                    "{} {} {}",
+                    &value.1, &value.0, &key
+                )));
                 let nuevos_objetos = obtener_commits_y_objetos_asociados(key, &value.1);
                 match nuevos_objetos {
                     Ok(nuevos_objetos) => {
@@ -181,3 +186,4 @@ fn obtener_refs_de(dir: PathBuf, prefijo: String) -> Vec<String> {
     // refs[0] = self.agregar_capacidades(refs[0].clone ());
     refs
 }
+
