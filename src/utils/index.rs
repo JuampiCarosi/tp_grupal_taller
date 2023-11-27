@@ -28,10 +28,13 @@ pub fn crear_index() {
 
 //Devuelve true si el index esta vacio y false en caso contrario.
 //Si falla se presupone que es porque no existe y por lo tanto esta vacio
-pub fn esta_vacio_el_index() -> bool {
+pub fn esta_vacio_el_index() -> Result<bool, String> {
     io::esta_vacio(PATH_INDEX.to_string())
 }
 
+/// Lee el archivo index y devuelve un vector de objetos index.
+/// Por cada entrie que lee crea su respectivo objeto index.
+/// Si el archivo index no existe, devuelve un vector vacio.
 pub fn leer_index(logger: Arc<Logger>) -> Result<Vec<ObjetoIndex>, String> {
     if !PathBuf::from(PATH_INDEX).exists() {
         return Ok(Vec::new());
@@ -58,6 +61,10 @@ pub fn leer_index(logger: Arc<Logger>) -> Result<Vec<ObjetoIndex>, String> {
     }
     Ok(objetos)
 }
+
+/// Devuelve un vector de objetos raiz a partir de un vector de objetos index.
+/// Si un objeto index esta marcado como eliminado, no se agrega al vector de objetos raiz.
+/// Cabe recalcar que estos objetos index quedan ordenados por su path.
 pub fn generar_objetos_raiz(
     objetos_index: &Vec<ObjetoIndex>,
     logger: Arc<Logger>,
@@ -105,6 +112,10 @@ pub fn generar_objetos_raiz(
     Ok(objetos_raiz)
 }
 
+/// Escribe los objetos index en el archivo index.
+/// Los escribe siguiendo el siguiente formato:
+/// [simbolo eliminado] [merge] [modo] [hash] [path]
+/// Si el archivo index no existe, lo crea.
 pub fn escribir_index(
     logger: Arc<Logger>,
     objetos_index: &mut Vec<ObjetoIndex>,
@@ -138,6 +149,7 @@ pub fn escribir_index(
     Ok(())
 }
 
+/// Limpia el contenido del archivo index.
 pub fn limpiar_archivo_index() -> Result<(), String> {
     let _ = match OpenOptions::new()
         .write(true)

@@ -18,12 +18,18 @@ use crate::{
 use super::{commit::Commit, write_tree::conseguir_arbol_from_hash_commit};
 
 pub struct Status {
+    /// Logger para registrar los eventos ocurridos durante la ejecucion del comando.
     logger: Arc<Logger>,
+    /// Vector de objetos que estan presentes en el archivo index.
     index: Vec<ObjetoIndex>,
+    /// Arbol del commit al que apunta la rama actual.
     tree_commit_head: Option<Tree>,
+    /// Arbol del directorio actual.
     tree_directorio_actual: Tree,
 }
 
+/// Obtiene el arbol del commit al que apunta la rama actual.
+/// En caso de no haber un commit devuelve None.
 pub fn obtener_arbol_del_commit_head(logger: Arc<Logger>) -> Option<Tree> {
     let ruta = match Commit::obtener_ruta_branch_commit() {
         Ok(ruta) => ruta,
@@ -41,6 +47,7 @@ pub fn obtener_arbol_del_commit_head(logger: Arc<Logger>) -> Option<Tree> {
 }
 
 impl Status {
+    /// Crea un comando status a partir de los argumentos pasados por linea de comandos.
     pub fn from(logger: Arc<Logger>) -> Result<Status, String> {
         let index = leer_index(logger.clone())?;
         let tree_commit_head = obtener_arbol_del_commit_head(logger.clone());
@@ -54,6 +61,9 @@ impl Status {
         })
     }
 
+    /// Obtiene los cambios que se encuentran en el index.
+    /// Devuelve un vector con los cambios formateados segun su respectivo tipo de cambio.
+    /// Si el archivo no se encuentra en el commit anterior, se considera un nuevo archivo.
     pub fn obtener_staging(&self) -> Result<Vec<String>, String> {
         let mut staging = Vec::new();
         for objeto_index in &self.index {
@@ -88,6 +98,10 @@ impl Status {
         Ok(staging)
     }
 
+    /// Obtiene los archivos que fueron commiteados anteriormente, fueron modificados en el directorio actual y no estan en el index.
+    /// Devuelve un vector con los cambios formateados indicando que fueron modificados.
+    /// Si el archivo no se encuentra en el commit anterior, no se considera un cambio a trackear.
+    /// Si el archivo se encuentra en el index, no se considera un cambio a trackear.
     pub fn obtener_trackeados(&self) -> Result<Vec<String>, String> {
         let mut trackeados = Vec::new();
         let tree_head = match self.tree_commit_head {
@@ -106,6 +120,8 @@ impl Status {
         Ok(trackeados)
     }
 
+    /// Obtiene los archivos hijos de u tree que nunca fueron commiteados anteriormente y no estan en el index.
+    /// Devuelve un vector con las ubicaciones de los archivos.
     fn obtener_hijos_untrackeados(
         &self,
         tree: &Tree,
@@ -138,6 +154,7 @@ impl Status {
         Ok(untrackeados)
     }
 
+    /// Devuelve true si el index contiene el objeto pasado por parametro.
     fn index_contiene_objeto(&self, objeto: &Objeto) -> bool {
         let bool = self.index.iter().any(|objeto_index| match objeto {
             Objeto::Blob(ref blob) => blob.obtener_hash() == objeto_index.objeto.obtener_hash(),
@@ -150,6 +167,9 @@ impl Status {
         bool
     }
 
+    /// Obtiene los archivos que nunca fueron commiteados anteriormente y no estan en el index.
+    /// En el caso de no haber commit anterior, se considera que todos los archivos son untrackeados.
+    /// Devuelve un vector con las ubicaciones de los archivos untrackeados.
     pub fn obtener_untrackeados(&self) -> Result<Vec<String>, String> {
         let tree_head = match self.tree_commit_head {
             Some(ref tree) => tree,
@@ -175,6 +195,8 @@ impl Status {
         Ok(untrackeados)
     }
 
+    /// Ejecuta el comando status.
+    /// Devuelve un string con los cambios a ser commiteados, los cambios no en zona de preparacion y los cambios no trackeados.
     pub fn ejecutar(&mut self) -> Result<String, String> {
         let staging = self.obtener_staging()?;
         let trackeados = self.obtener_trackeados()?;

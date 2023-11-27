@@ -8,16 +8,26 @@ use crate::{
 use std::sync::Arc;
 
 pub struct CatFile {
+    /// Logger para imprimir los mensajes en el archivo log.
     pub logger: Arc<Logger>,
+    /// Opcion de visualizacion del objeto.
     pub visualizacion: Visualizaciones,
+    /// Hash del objeto a visualizar.
     pub hash_objeto: String,
 }
+
+/// Obtiene el tipo de objeto ubicado en cierto directorio a partir de su hash.
+/// En caso de no encontrar el objeto devuelve error.
+/// hash_objeto - Hash del objeto a obtener.
+/// dir - Directorio donde se encuentra el objeto.
 pub fn obtener_tipo_objeto_de(hash_objeto: &str, dir: &str) -> Result<String, String> {
     let (header, _) = obtener_contenido_objeto_de(hash_objeto.to_string(), dir)?;
     let tipo_objeto = conseguir_tipo_objeto(header)?;
     Ok(tipo_objeto)
 }
 
+/// Obtiene el contenido de un objeto ubicado en cierto directorio a partir de su hash.
+/// En caso de no encontrar el objeto devuelve error.
 fn obtener_contenido_objeto_de(hash: String, dir: &str) -> Result<(String, String), String> {
     // sacar el hardcode de esto
     let objeto = descomprimir_objeto(hash, dir.to_string())?;
@@ -27,6 +37,8 @@ fn obtener_contenido_objeto_de(hash: String, dir: &str) -> Result<(String, Strin
     }
 }
 
+/// Obtiene el contenido de un objeto ubicado en el directorio de objetos del .gir a partir de su hash.
+/// En caso de no encontrar el objeto devuelve error.
 pub fn obtener_contenido_objeto(hash: String) -> Result<(String, String), String> {
     // sacar el hardcode de esto
     let objeto = descomprimir_objeto(hash, String::from(".gir/objects/"))?;
@@ -36,6 +48,9 @@ pub fn obtener_contenido_objeto(hash: String) -> Result<(String, String), String
     }
 }
 
+/// Obtiene el tipo de objeto a partir de su header.
+/// El header tiene el siguiente formato: <tipo_objeto> <tamanio_objeto>
+/// En el caso de tener un formato invalido devuelve error.
 pub fn conseguir_tipo_objeto(header: String) -> Result<String, String> {
     let tipo_objeto = match header.split_once(' ') {
         Some((tipo, _)) => tipo,
@@ -44,6 +59,11 @@ pub fn conseguir_tipo_objeto(header: String) -> Result<String, String> {
     Ok(tipo_objeto.to_string())
 }
 
+/// Obtiene el contenido de un objeto en formato pretty print.
+/// El contenido del objeto se muestra en formato pretty print dependiendo de su tipo.
+/// En caso de ser un blob o un commit devuelve el contenido sin modificar.
+/// En caso de ser un tree devuelve el contenido formatteado a pretty print.
+/// En caso de no ser un objeto valido devuelve error.
 pub fn conseguir_contenido_pretty(header: String, contenido: String) -> Result<String, String> {
     let tipo = conseguir_tipo_objeto(header)?;
     match tipo.as_str() {
@@ -74,6 +94,9 @@ pub fn conseguir_contenido_pretty(header: String, contenido: String) -> Result<S
     }
 }
 
+/// Obtiene el tamanio de un objeto a partir de su header.
+/// El header tiene el siguiente formato: <tipo_objeto> <tamanio_objeto>
+/// En el caso de tener un formato invalido devuelve error.
 pub fn conseguir_tamanio(header: String) -> Result<String, String> {
     let size = match header.split_once(' ') {
         Some((_, size)) => size,
@@ -83,6 +106,11 @@ pub fn conseguir_tamanio(header: String) -> Result<String, String> {
 }
 
 impl CatFile {
+    /// Crea un CatFile a partir de los argumentos pasados por linea de comandos.
+    /// En caso de que no se asigne una opcion de visualizacion, se asume que se quiere visualizar el contenido del objeto.
+    /// En caso de tener argumentos invalidos devuelve error.
+    /// args - Argumentos pasados por linea de comandos.
+    /// logger - Logger para imprimir los mensajes de error.
     pub fn from(args: &mut Vec<String>, logger: Arc<Logger>) -> Result<CatFile, String> {
         let objeto = args
             .pop()
@@ -101,6 +129,9 @@ impl CatFile {
         })
     }
 
+    /// Ejecuta el comando cat-file.
+    /// En caso de no encontrar el objeto devuelve error.
+    /// En caso de no poder parsear el contenido del objeto devuelve error.
     pub fn ejecutar(&self) -> Result<String, String> {
         let (header, contenido) = obtener_contenido_objeto(self.hash_objeto.clone())?;
         let mensaje = match self.visualizacion {

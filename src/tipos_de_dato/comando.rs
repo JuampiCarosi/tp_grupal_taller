@@ -12,6 +12,7 @@ use super::{
     tag::Tag,
 };
 
+/// Enum que contiene los posibles comandos de nuestro programa.
 pub enum Comando {
     Init(Init),
     Version(Version),
@@ -70,6 +71,7 @@ impl Comando {
 
         Ok(comando)
     }
+    /// Ejecuta el comando.
 
     pub fn ejecutar(&mut self) -> Result<String, String> {
         match self {
