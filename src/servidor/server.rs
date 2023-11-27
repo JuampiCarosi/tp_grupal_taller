@@ -14,7 +14,7 @@ use std::sync::Arc;
 use std::thread;
 
 const VERSION: &str = "version 1";
-const CAPABILITIES: &str = "multi_ack thin-pack side-band side-band-64k ofs-delta shallow no-progress include-tag multi_ack_detailed no-done symref=HEAD:refs/heads/master agent=git/2.17.1";
+const CAPABILITIES: &str = "ofs-delta symref=HEAD:refs/heads/master agent=git/2.17.1";
 const DIR: &str = "/srv"; // direccion relativa
 
 pub struct Servidor {

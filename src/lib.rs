@@ -11,6 +11,7 @@ pub mod tipos_de_dato {
     pub mod logger;
     pub mod objeto;
     pub mod packfile;
+    pub mod tag;
     pub mod visualizaciones;
     pub mod objetos {
         pub mod blob;
@@ -28,6 +29,7 @@ pub mod tipos_de_dato {
         pub mod hash_object;
         pub mod init;
         pub mod log;
+        pub mod ls_files;
         pub mod ls_tree;
         pub mod merge;
         pub mod pull;
@@ -35,6 +37,7 @@ pub mod tipos_de_dato {
         pub mod remote;
         pub mod rm;
         pub mod set_upstream;
+        pub mod show_ref;
         pub mod status;
         pub mod version;
         pub mod write_tree;

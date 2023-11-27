@@ -11,11 +11,16 @@ use crate::utils::io;
 use super::commit::Commit;
 
 pub struct Log {
+    /// Rama de la cual se quiere obtener el log.
     branch: String,
+    /// Logger para registrar los eventos ocurridos durante la ejecucion del comando.
     logger: Arc<Logger>,
 }
 
 impl Log {
+    /// Crea un comando log a partir de los argumentos pasados por linea de comandos.
+    /// Si no se especifica una rama, se usa la rama actual.
+    /// En caso de tener argumentos invalidos devuelve error.
     pub fn from(args: &mut Vec<String>, logger: Arc<Logger>) -> Result<Log, String> {
         if args.len() > 2 {
             return Err("Cantidad de argumentos invalida".to_string());
@@ -35,11 +40,15 @@ impl Log {
         Ok(Log { branch, logger })
     }
 
+    /// Obtiene el hash del commit al que apunta la rama pasada por parametro.
     fn obtener_commit_branch(branch: &str) -> Result<String, String> {
         let hash_commit = io::leer_a_string(format!(".gir/refs/heads/{}", branch))?;
         Ok(hash_commit.to_string())
     }
 
+    /// Obtiene todos los commits que son padres del commit pasado por parametro.
+    /// Devuelve un vector con los commits ordenados por fecha.
+    /// En caso de haber un commit repetido, solo se utiliza uno.
     pub fn obtener_listas_de_commits(commit: CommitObj) -> Result<Vec<CommitObj>, String> {
         let mut commits: HashMap<String, CommitObj> = HashMap::new();
         let mut commits_a_revisar: Vec<CommitObj> = Vec::new();
@@ -62,6 +71,9 @@ impl Log {
         Ok(commits_vec)
     }
 
+    /// Ejecuta el comando log.
+    /// Devuelve un string con el log de los commits de la rama.
+    /// En caso de no haber commits devuelve un mensaje y corta la ejecucion.
     pub fn ejecutar(&self) -> Result<String, String> {
         self.logger.log("Ejecutando comando log".to_string());
         let hash_commit = Self::obtener_commit_branch(&self.branch)?;

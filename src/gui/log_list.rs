@@ -18,7 +18,6 @@ fn obtener_listas_de_commits(branch: &String) -> Result<Vec<String>, String> {
     }
 
     let commit_obj = CommitObj::from_hash(ultimo_commit)?;
-
     let historial = Log::obtener_listas_de_commits(commit_obj)?;
 
     Ok(historial.iter().map(|commit| commit.hash.clone()).collect())
@@ -27,24 +26,14 @@ fn obtener_listas_de_commits(branch: &String) -> Result<Vec<String>, String> {
 pub fn obtener_mensaje_commit(commit_hash: String) -> Result<String, String> {
     let commit = descomprimir_objeto_gir(commit_hash).unwrap_or("".to_string());
 
-    let mut mensaje = String::new();
-
-    for linea in commit.lines() {
-        if !linea.starts_with("commit")
-            && !linea.starts_with("parent")
-            && !linea.starts_with("author")
-            && !linea.starts_with("committer")
-            && linea.trim() != ""
-        {
-            mensaje = linea.trim().to_string();
-            break;
-        } else {
-            mensaje = "Sin mensaje".to_string();
-        }
-    }
+    let mensaje = commit
+        .splitn(2, "\n\n")
+        .last()
+        .ok_or("Error al obtener mensaje del commit")?;
 
     let primera_linea = mensaje
-        .split('\n').next()
+        .split('\n')
+        .next()
         .ok_or("Error al obtener mensaje del commit")?;
 
     if primera_linea.len() > 35 {
@@ -56,35 +45,14 @@ pub fn obtener_mensaje_commit(commit_hash: String) -> Result<String, String> {
 
 fn crear_label(string: &str) -> gtk::EventBox {
     let event_box = gtk::EventBox::new();
+
     let label = gtk::Label::new(Some(string));
-    label.set_xalign(0.0);
-    label.set_margin_bottom(4);
     event_box.add(&label);
-
-    let css_provider = gtk::CssProvider::new();
-    css_provider
-        .load_from_data(
-            "
-             .custom-label  {
-                font-size: 14px;
-                font-family: monospace;
-                border-bottom: 1px solid #ccc;
-            }
-
-        "
-            .as_bytes(),
-        )
-        .unwrap();
-
-    let context = event_box.style_context();
-
-    gtk::StyleContext::add_provider(
-        &context,
-        &css_provider,
-        gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
-    );
-
-    event_box.style_context().add_class("custom-label");
+    label.set_xalign(0.0);
+    label.set_margin_start(6);
+    label.set_margin_top(3);
+    // label.set_margin_bottom(2);
+    event_box.style_context().add_class("commit-label");
 
     event_box
 }
@@ -113,5 +81,10 @@ pub fn render(builder: &gtk::Builder, branch: String) {
             gtk::glib::Propagation::Stop
         });
         container.add(&event_box);
+    }
+    if container.children().len() > 0 {
+        let children = container.children();
+        let ultimo = children.last().unwrap();
+        ultimo.style_context().add_class("last-commit-label");
     }
 }

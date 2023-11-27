@@ -11,13 +11,16 @@ use crate::{
 use super::status::obtener_arbol_del_commit_head;
 
 pub struct Add {
+    /// Logger para imprimir los mensajes en el archivo log.
     logger: Arc<Logger>,
+    /// Ubicaciones de los archivos a agregar.
     ubicaciones: Vec<PathBuf>,
+    /// Objetos que ya estan en el index del repositorio.
     index: Vec<ObjetoIndex>,
 }
 
 impl Add {
-    // Devuelve un vector con las ubicaciones de cada archivo dentro de las ubicaciones que se le pasaron
+    /// Devuelve un vector con las ubicaciones de cada archivo dentro de las ubicaciones que se le pasaron.
     pub fn obtener_ubicaciones_hoja(ubicaciones: Vec<PathBuf>) -> Result<Vec<PathBuf>, String> {
         let mut ubicaciones_hoja: Vec<PathBuf> = Vec::new();
         for ubicacion in ubicaciones {
@@ -39,6 +42,7 @@ impl Add {
         Ok(ubicaciones_hoja)
     }
 
+    /// Crea un comando add a partir de los argumentos pasados por linea de comandos.
     pub fn from(args: Vec<String>, logger: Arc<Logger>) -> Result<Add, String> {
         crear_index();
         let index = leer_index(logger.clone())?;
@@ -60,6 +64,10 @@ impl Add {
             || path.contains(&format!("{}", log_dir.display())))
     }
 
+    /// Ejecuta el comando add.
+    /// Agrega los archivos pasados por parametro al index.
+    /// Si el archivo ya se encuentra en el index, actualiza el objeto.
+    /// Si el archivo contiene la misma version que en el commit anterior, no lo agrega.
     pub fn ejecutar(&mut self) -> Result<String, String> {
         self.logger.log("Ejecutando add".to_string());
 

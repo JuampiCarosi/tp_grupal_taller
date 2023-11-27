@@ -44,6 +44,7 @@ pub fn render(builder: &gtk::Builder, window: &gtk::Window, logger: Arc<Logger>)
 
         log_list::render(&builder_clone, active.to_string());
         log_seleccionado::render(&builder_clone, None);
+
         let checkout = Checkout::from(vec![active.to_string()], logger.clone()).unwrap();
 
         match checkout.ejecutar() {

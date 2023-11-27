@@ -1,7 +1,7 @@
+use gtk::glib::Propagation;
 use gtk::prelude::*;
 use gtk::{self};
 use std::sync::Arc;
-use std::thread::sleep;
 
 use crate::tipos_de_dato::comandos::push::Push;
 use crate::tipos_de_dato::logger::Logger;
@@ -14,27 +14,33 @@ pub fn render(builder: &gtk::Builder, _window: &gtk::Window, logger: Arc<Logger>
     let builder_clone = builder.clone();
     push_button.connect_clicked(move |_| {
         let fetching_dialog = builder_clone
-            .object::<gtk::Dialog>("fetching-dialog")
+            .object::<gtk::MessageDialog>("fetching-dialog")
             .unwrap();
 
         fetching_dialog.set_position(gtk::WindowPosition::Center);
-        fetching_dialog.show_all();
-        let mut push = match Push::new(logger.clone()) {
-            Ok(push) => push,
-            Err(err) => {
-                error_dialog::mostrar_error(&err);
-                return;
-            }
-        };
 
-        match push.ejecutar() {
-            Ok(_) => {}
-            Err(err) => {
-                error_dialog::mostrar_error(&err);
-                return;
-            }
-        };
-        sleep(std::time::Duration::from_secs(3));
-        fetching_dialog.close();
+        let logger_clone = logger.clone();
+        fetching_dialog.connect_focus_in_event(move |dialog, _| {
+            let mut push = match Push::new(logger_clone.clone()) {
+                Ok(push) => push,
+                Err(err) => {
+                    error_dialog::mostrar_error(&err);
+                    return Propagation::Stop;
+                }
+            };
+
+            match push.ejecutar() {
+                Ok(_) => {}
+                Err(err) => {
+                    error_dialog::mostrar_error(&err);
+                    return Propagation::Stop;
+                }
+            };
+            dialog.hide();
+            Propagation::Stop
+        });
+
+        fetching_dialog.run();
+        println!("runned");
     });
 }
