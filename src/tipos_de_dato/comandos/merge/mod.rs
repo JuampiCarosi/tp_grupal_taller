@@ -404,7 +404,7 @@ impl Merge {
             return Ok(false);
         }
 
-        let merge = io::leer_a_string(".gir/")?;
+        let merge = io::leer_a_string(".gir/MERGE_HEAD")?;
 
         Ok(!merge.is_empty())
     }
