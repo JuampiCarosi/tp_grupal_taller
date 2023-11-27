@@ -15,12 +15,17 @@ use std::sync::Arc;
 pub struct Push {
     hash_refs: HashMap<String, (String, String)>,
     comunicacion: Arc<Comunicacion<TcpStream>>,
+    logger: Arc<Logger>,
 }
 
 impl Push {
-    pub fn new(comunicacion: Arc<Comunicacion<TcpStream>>) -> Self {
+    pub fn new(logger: Arc<Logger>) -> Result<Self, String> {
         let mut hash_refs: HashMap<String, (String, String)> = HashMap::new();
         let refs = obtener_refs_de(PathBuf::from("./.gir/refs/"), String::from("./.gir/"));
+        // let comunicacion = Arc::new(Comunicacion::<TcpStream>::new_desde_gir_config(
+        //     logger.clone(),
+        // )?);
+        let comunicacion = Arc::new(Comunicacion::<TcpStream>::new_desde_direccion_servidor("127.0.0.1:9333", logger.clone())?);
         for referencia in refs {
             hash_refs.insert(
                 referencia.split(' ').collect::<Vec<&str>>()[1].to_string(),
@@ -30,14 +35,15 @@ impl Push {
                 ),
             );
         }
-        Push {
+        Ok(Push {
             hash_refs,
+            logger,
             comunicacion,
-        }
+        })
     }
 
     pub fn ejecutar(&mut self) -> Result<String, String> {
-        println!("Se ejecuto el comando push");
+        self.logger.log("Se ejecuto el comando push".to_string());
         let request_data = "git-receive-pack /gir/\0host=example.com\0\0version=1\0"; //en donde dice /.git/ va la dir del repo
         let request_data_con_largo_hex = io::obtener_linea_con_largo_hex(request_data);
         self.comunicacion.enviar(&request_data_con_largo_hex)?;
@@ -51,7 +57,7 @@ impl Push {
         // if first_ref.contains(&"0".repeat(40)) {
         let referencia_y_capacidades = first_ref.split('\0').collect::<Vec<&str>>();
         let referencia = referencia_y_capacidades[0].to_string();
-        let capacidades = referencia_y_capacidades[1].to_string();
+        let _capacidades = referencia_y_capacidades[1].to_string();
         if !referencia.contains(&"0".repeat(40)) {
             refs_recibidas.push(referencia_y_capacidades[0].to_string());
         }
@@ -78,7 +84,7 @@ impl Push {
                  //     continue;
                  // }
             if value.1 != value.0 {
-                let nuevos_objetos = obtener_commits_y_objetos_asociados(&key, &value.1);
+                let nuevos_objetos = obtener_commits_y_objetos_asociados(key, &value.1);
                 match nuevos_objetos {
                     Ok(nuevos_objetos) => {
                         objetos_a_enviar.extend(nuevos_objetos);
@@ -104,7 +110,7 @@ impl Push {
             Ok(String::from("Push ejecutado con exito"))
         } else {
             //error
-            return Err("No hay actualizaciones".to_string());
+            Err("No hay actualizaciones".to_string())
         }
 
         // println!("Refs recibidas: {:?}", refs_recibidas);

@@ -38,7 +38,7 @@ pub fn decodificar_contenido(contenido: Vec<u8>) -> Result<String, String> {
     let tipo_objeto = header.split_whitespace().collect::<Vec<&str>>()[0];
 
     match tipo_objeto {
-        "blob" | "commit" => Ok(vec_a_string(contenido.clone())?),
+        "blob" | "commit" => Ok(String::from_utf8_lossy(&contenido).to_string()),
         "tree" => decodificar_tree(&header, &contenido),
         _ => Err("Tipo de objeto invalido".to_string()),
     }

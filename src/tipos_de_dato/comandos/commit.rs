@@ -106,7 +106,7 @@ impl Commit {
             contenido_commit.push_str(&format!("parent {}\n", padre_mergeado));
         }
         let (nombre, mail) = conseguir_nombre_y_mail_del_config()?;
-        let linea_autor = format!("{} <{}>", nombre, mail);
+        let linea_autor = format!("{} {}", nombre, mail);
         let timestamp = armar_timestamp_commit()?;
         contenido_commit.push_str(&format!(
             "author {} {}\ncommitter {} {}\n\n{}",

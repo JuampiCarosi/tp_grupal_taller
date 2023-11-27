@@ -148,10 +148,6 @@ mod tests {
         let _ = file.write_all(b"test file modified");
     }
 
-    fn clear_index() {
-        let _ = std::fs::remove_file("./.gir/index");
-    }
-
     fn limpiar_archivo_gir() {
         io::rm_directorio(".gir").unwrap();
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/branch_init")).unwrap());
@@ -183,7 +179,7 @@ mod tests {
 
     #[test]
     fn test02_archivo_con_objeto_actualiza_el_objeto() {
-        clear_index();
+        limpiar_archivo_gir();
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/add_test02")).unwrap());
 
         create_test_file();
@@ -215,7 +211,7 @@ mod tests {
 
     #[test]
     fn test03_agregar_un_objeto_en_un_directorio() {
-        clear_index();
+        limpiar_archivo_gir();
 
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/add_test03")).unwrap());
 
@@ -233,7 +229,7 @@ mod tests {
 
     #[test]
     fn test04_archivo_con_objetos_agrega_nuevos_objetos() {
-        clear_index();
+        limpiar_archivo_gir();
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/add_test04")).unwrap());
         let ubicacion = "test_file.txt".to_string();
 
@@ -267,7 +263,7 @@ mod tests {
 
     #[test]
     fn test05_agregar_un_directorio_al_index() {
-        clear_index();
+        limpiar_archivo_gir();
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/add_test05")).unwrap());
 
         let path = "test_dir/muchos_objetos".to_string();
@@ -284,7 +280,7 @@ mod tests {
 
     #[test]
     fn test07_agregar_dos_archivos_de_una() {
-        clear_index();
+        limpiar_archivo_gir();
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/add_test07")).unwrap());
         let ubicacion = "test_file.txt".to_string();
 

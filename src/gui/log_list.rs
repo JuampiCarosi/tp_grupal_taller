@@ -44,8 +44,7 @@ pub fn obtener_mensaje_commit(commit_hash: String) -> Result<String, String> {
     }
 
     let primera_linea = mensaje
-        .split("\n")
-        .nth(0)
+        .split('\n').next()
         .ok_or("Error al obtener mensaje del commit")?;
 
     if primera_linea.len() > 35 {
