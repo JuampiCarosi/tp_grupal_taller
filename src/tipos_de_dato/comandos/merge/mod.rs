@@ -186,10 +186,9 @@ impl Merge {
             }
         }
 
-        posibles_conflictos.iter().all(|(diff, _)| match diff {
-            DiffType::Unchanged(_) => false,
-            _ => true,
-        })
+        posibles_conflictos
+            .iter()
+            .all(|(diff, _)| !matches!(diff, DiffType::Unchanged(_)))
     }
 
     /// Resuelve los conflictos con distintas estrategias basandose en la cantidad de
@@ -278,7 +277,7 @@ impl Merge {
     /// Realiza un auto-merge, realizando un merge de cada file que difiera entre los dos commits
     fn automerge(&self, commit_base: &str) -> Result<String, String> {
         let hash_tree_base =
-            write_tree::conseguir_arbol_from_hash_commit(&commit_base, ".gir/objects/")?;
+            write_tree::conseguir_arbol_from_hash_commit(commit_base, ".gir/objects/")?;
         let tree_base = Tree::from_hash(&hash_tree_base, PathBuf::from("."), self.logger.clone())?;
 
         let tree_branch_actual =

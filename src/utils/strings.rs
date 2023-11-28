@@ -14,7 +14,7 @@ pub fn eliminar_prefijos(lineas: &Vec<String>) -> Vec<String> {
 /// - devuelve: (ip:puerto, /respositorio/)
 pub fn obtener_ip_puerto_y_repositorio(url: &str) -> Result<(String, String), String> {
     let (ip_puerto_str, repositorio) = url
-        .split_once("/")
+        .split_once('/')
         .ok_or_else(|| format!("Fallo en obtener el ip:puerto y repo de {}", url))?;
 
     Ok((ip_puerto_str.to_string(), "/".to_string() + repositorio))

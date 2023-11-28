@@ -101,10 +101,7 @@ impl Config {
     pub fn obtener_remoto_rama_actual(&self) -> Option<String> {
         let rama_actual = utils::ramas::obtener_rama_actual().err()?;
 
-        match self.ramas.iter().find(|&rama| rama.nombre == rama_actual) {
-            Some(rama) => Some((*rama.remote).to_string()),
-            None => None,
-        }
+        self.ramas.iter().find(|&rama| rama.nombre == rama_actual).map(|rama| (*rama.remote).to_string())
     }
 
     ///En caso de existir un remoto y un rama_merge (osea si la rama actual esta configurada)asosiado a la rama actual, lo devuelve
@@ -112,10 +109,7 @@ impl Config {
     pub fn obtener_remoto_y_rama_merge_rama_actual(&self) -> Option<(String, PathBuf)> {
         let rama_actual = utils::ramas::obtener_rama_actual().err()?;
 
-        match self.ramas.iter().find(|&rama| rama.nombre == rama_actual) {
-            Some(rama) => Some(((*rama.remote).to_string(), (*rama.merge).to_path_buf())),
-            None => None,
-        }
+        self.ramas.iter().find(|&rama| rama.nombre == rama_actual).map(|rama| ((*rama.remote).to_string(), (*rama.merge).to_path_buf()))
     }
 
     ///Da el url asosiado al remoto

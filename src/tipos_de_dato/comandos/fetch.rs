@@ -74,7 +74,7 @@ impl<T: Write + Read> Fetch<T> {
 
     ///Le pide al config el url asosiado a la rama
     fn obtener_url(remoto: &String) -> Result<String, String> {
-        Config::leer_config()?.obtenet_url_asosiado_remoto(&remoto)
+        Config::leer_config()?.obtenet_url_asosiado_remoto(remoto)
     }
 
     ///obtiene el remoto para el comando, si argumentos lo contiene y es valido lo saca de argumentos. Si no hay argumetos lo saca
@@ -425,7 +425,7 @@ impl<T: Write + Read> Fetch<T> {
             let dir_rama_local_del_remoto =
                 utils::ramas::convertir_de_dir_rama_remota_a_dir_rama_local(
                     &self.remoto,
-                    &dir_rama_remota,
+                    dir_rama_remota,
                 )?;
 
             io::escribir_bytes(dir_rama_local_del_remoto, commit_cabeza_de_rama)?;

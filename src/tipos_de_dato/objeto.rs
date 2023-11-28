@@ -68,7 +68,7 @@ impl Objeto {
                 logger,
             })),
             "40000" => {
-                let tree = Tree::from_hash(&hash, ubicacion, logger)?;
+                let tree = Tree::from_hash(hash, ubicacion, logger)?;
                 Ok(Objeto::Tree(tree))
             }
             _ => Err("Modo no soportado".to_string()),

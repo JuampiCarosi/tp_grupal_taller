@@ -14,7 +14,7 @@ pub fn obtener_dir_rama_actual() -> Result<PathBuf, String> {
     let contenido_head = io::leer_a_string("./.gir/HEAD")?;
     let (_, dir_rama_actual) = contenido_head
         .split_once(' ')
-        .ok_or(format!("Fallo al obtener la rama actual\n"))?;
+        .ok_or("Fallo al obtener la rama actual\n".to_string())?;
     Ok(PathBuf::from(dir_rama_actual.trim()))
 }
 

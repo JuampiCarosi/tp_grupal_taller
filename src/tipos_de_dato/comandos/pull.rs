@@ -85,7 +85,7 @@ impl Pull {
         if args.len() == 2 {
             remoto = Self::verificar_remoto(&args[0])?;
             rama_merge = args.remove(1);
-        } else if args.len() == 0 && !set_upstream {
+        } else if args.is_empty() && !set_upstream {
             //si no hay argumentos ni flags, quiere decir que deberia
             //estar configurada la rama
             (remoto, rama_merge) = Self::obtener_remoto_y_rama_merge_de_rama_actual()?;
@@ -165,9 +165,9 @@ impl Pull {
     }
 
     fn fast_forward_de_cero(&self, commit_head_remoto: &str) -> Result<bool, String> {
-        io::escribir_bytes(UBICACION_RAMA_MASTER, &commit_head_remoto)?;
+        io::escribir_bytes(UBICACION_RAMA_MASTER, commit_head_remoto)?;
         let hash_tree_padre =
-            write_tree::conseguir_arbol_from_hash_commit(&commit_head_remoto, ".gir/objects/")?;
+            write_tree::conseguir_arbol_from_hash_commit(commit_head_remoto, ".gir/objects/")?;
         let tree_branch_a_mergear =
             Tree::from_hash(&hash_tree_padre, PathBuf::from("."), self.logger.clone())?;
 

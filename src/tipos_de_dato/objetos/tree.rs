@@ -11,7 +11,7 @@ use sha1::{Digest, Sha1};
 use crate::{
     tipos_de_dato::{
         comandos::hash_object::HashObject,
-        logger::{self, Logger},
+        logger::{Logger},
         objeto::Objeto,
     },
     utils::path_buf::{esta_directorio_habilitado, obtener_nombre},

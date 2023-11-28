@@ -82,7 +82,7 @@ pub fn render(builder: &gtk::Builder, branch: &str) {
         });
         container.add(&event_box);
     }
-    if container.children().len() > 0 {
+    if !container.children().is_empty() {
         let children = container.children();
         let ultimo = children.last().unwrap();
         ultimo.style_context().add_class("last-commit-label");

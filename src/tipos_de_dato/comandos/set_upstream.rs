@@ -62,7 +62,7 @@ impl SetUpstream {
         let nueva_config_rama = RamasInfo {
             nombre: self.rama_local.clone(),
             remote: self.remoto.clone(),
-            merge: merge,
+            merge,
         };
 
         let indice_resultado = config

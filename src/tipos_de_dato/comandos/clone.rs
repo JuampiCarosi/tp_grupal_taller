@@ -16,7 +16,7 @@ pub struct Clone {
 
 impl Clone {
     pub fn from(args: &mut Vec<String>, logger: Arc<Logger>) -> Result<Clone, String> {
-        Self::verificar_argumentos(&args)?;
+        Self::verificar_argumentos(args)?;
 
         let url = args.remove(0);
 
@@ -38,7 +38,7 @@ impl Clone {
 
     pub fn ejecutar(&mut self) -> Result<String, String> {
         let (_, mut repositorio) = utils::strings::obtener_ip_puerto_y_repositorio(&self.url)?;
-        repositorio = repositorio.replace("/", "");
+        repositorio = repositorio.replace('/', "");
 
         self.verificar_si_ya_existe_repositorio(&repositorio)?;
 

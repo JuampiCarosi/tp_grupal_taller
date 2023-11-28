@@ -154,7 +154,7 @@ impl Checkout {
         let mut config = Config::leer_config()?;
         let rama = RamasInfo {
             nombre: self.rama_a_cambiar.clone(),
-            remote: ruta_remoto.split("/").last().unwrap().to_string(),
+            remote: ruta_remoto.split('/').last().unwrap().to_string(),
             merge: PathBuf::from(format!("refs/heads/{}", self.rama_a_cambiar)),
         };
 

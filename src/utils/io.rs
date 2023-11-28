@@ -137,7 +137,7 @@ pub fn obtener_refs(refs_path: PathBuf, dir: &str) -> Result<Vec<String>, ErrorD
                 Ok(archivo) => {
                     let mut path = archivo.path();
                     // let mut path = archivo.path().to_string_lossy().split("./.gir/").into_iter().next().unwrap().to_string();
-                    refs.push(obtener_referencia(&mut path, &dir)?);
+                    refs.push(obtener_referencia(&mut path, dir)?);
                 }
                 Err(error) => {
                     eprintln!("Error leyendo directorio: {}", error);
@@ -211,14 +211,14 @@ pub fn obtener_ref_head(path: PathBuf) -> Result<String, ErrorDeComunicacion> {
 
 ///Lee un directorio. Devuelve su iterador. Falla si no existe o si no es un directoro
 pub fn leer_directorio<P: AsRef<Path> + Clone + Debug>(directorio: &P) -> Result<ReadDir, String> {
-    let metadada_dir = fs::metadata(&directorio)
+    let metadada_dir = fs::metadata(directorio)
         .map_err(|_| format!("Error no existe el dir {:?}", directorio))?;
 
     if !metadada_dir.is_dir() {
         return Err(format!("Error {:?} no es un dir", directorio));
     }
 
-    fs::read_dir(&directorio).map_err(|e| format!("Error al leer {:?}: {}", directorio, e))
+    fs::read_dir(directorio).map_err(|e| format!("Error al leer {:?}: {}", directorio, e))
 }
 
 ///Devuelve True si el directororio es un directorio o false en caso contrario o si no existe

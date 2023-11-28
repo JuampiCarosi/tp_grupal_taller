@@ -216,7 +216,7 @@ mod tests {
             fs::read_to_string(obtener_dir_archivo_log(ubicacion_archivo)).unwrap();
 
         for contenido in contenidos {
-            assert!(contenido_archvo_log.contains(&contenido));
+            assert!(contenido_archvo_log.contains(contenido));
         }
     }
 
