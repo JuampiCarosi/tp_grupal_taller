@@ -1,7 +1,6 @@
 mod estrategias_conflictos;
-mod region;
 
-use region::Region;
+use crate::tipos_de_dato::region::{unificar_regiones, Region};
 use std::{
     path::{self, Path, PathBuf},
     sync::Arc,
@@ -9,9 +8,7 @@ use std::{
 
 use crate::{
     tipos_de_dato::{
-        comandos::merge::{
-            estrategias_conflictos::resolver_merge_len_2, region::unificar_regiones,
-        },
+        comandos::merge::estrategias_conflictos::resolver_merge_len_2,
         conflicto::Conflicto,
         lado_conflicto::LadoConflicto,
         logger::Logger,
@@ -521,9 +518,8 @@ mod tests {
         let base = "primera linea
         segunda linea
         tercera linea
-        cuarta linea
-        "
-        .to_string();
+        cuarta linea"
+            .to_string();
 
         let version_1 = "primera linea
         segunda_linea
@@ -540,11 +536,11 @@ mod tests {
         let diff_1 = Merge::obtener_diffs_entre_dos_archivos(&base, &version_1).unwrap();
         let diff_2 = Merge::obtener_diffs_entre_dos_archivos(&base, &version_2).unwrap();
         let (contenido_final, _conflictos) = Merge::mergear_diffs(diff_1, diff_2, base);
-        println!("{}", contenido_final);
+        println!("{:?}", contenido_final);
 
         assert_eq!(
             contenido_final,
-            "primera linea\n<<<<<< HEAD\nsegunda_linea\n3ra linea\n\n======\n2da linea\ntercera linea\n>>>>>> Entrante\ncuarta linea\n"
+            "primera linea\n<<<<<< HEAD\nsegunda_linea\n3ra linea\n======\n2da linea\ntercera linea\n>>>>>> Entrante\ncuarta linea\n"
         )
     }
     #[test]

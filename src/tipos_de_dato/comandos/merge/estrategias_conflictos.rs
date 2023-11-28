@@ -1,4 +1,6 @@
-use super::{region::Region, Conflicto, LadoConflicto, TipoDiff};
+use crate::tipos_de_dato::region::Region;
+
+use super::{Conflicto, LadoConflicto, TipoDiff};
 
 /// Esta funcion contempla el conflicto donde tenemos conflicto del tipo Add-Remove vs Add-Remove,
 /// es decir, dos modificaciones en la misma linea

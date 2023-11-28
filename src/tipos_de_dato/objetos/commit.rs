@@ -6,6 +6,7 @@ use crate::{
     tipos_de_dato::{
         comandos::{add::Add, cat_file},
         logger::Logger,
+        region::{unificar_regiones, Region},
         tipo_diff::TipoDiff,
     },
     utils::io::{escribir_bytes, leer_a_string},
@@ -105,43 +106,23 @@ impl CommitObj {
         let deep_diffs = tree_padre.deep_changes(&tree_actual)?;
 
         for (archivo, diffs) in deep_diffs {
-            let lineas = leer_a_string(&archivo)?;
-            let mut lineas = lineas
-                .lines()
-                .map(|s| s.to_owned())
-                .collect::<Vec<String>>();
+            let contenido_archivo = leer_a_string(&archivo)?;
 
-            let mut hubo_conflicto = false;
-            for i in 0..lineas.len() {
-                let diffs_linea: Vec<_> =
-                    diffs.iter().filter(|(linea, _)| *linea - 1 == i).collect();
-                if diffs_linea.len() == 1 {
-                    match &diffs_linea[0].1 {
-                        TipoDiff::Added(linea) => lineas.insert(i, linea.to_string()),
-                        TipoDiff::Removed(linea) => {
-                            if lineas[i] != *linea {
-                                hubo_conflicto = true;
-                            }
-                            lineas.remove(i);
-                        }
-                        TipoDiff::Unchanged(_) => {}
-                    }
-                } else if diffs_linea.len() == 2 {
-                    if let TipoDiff::Removed(linea) = &diffs_linea[0].1 {
-                        if let TipoDiff::Added(linea2) = &diffs_linea[1].1 {
-                            if lineas[i] != *linea {
-                                hubo_conflicto = true;
-                            }
-                            lineas[i] = linea2.to_string();
-                        }
-                    }
-                }
-            }
+            let archivo_por_regiones = aplicar_diff(&contenido_archivo, diffs);
+            let hubo_conflictos = archivo_por_regiones.iter().any(|region| match region {
+                Region::Normal(_) => false,
+                Region::Conflicto(_, _) => true,
+            });
 
-            if hubo_conflicto {
+            if hubo_conflictos {
                 conflictos.push(PathBuf::from(&archivo));
             }
-            let contenido_a_escribir = lineas.join("\n");
+
+            let contenido_a_escribir = archivo_por_regiones
+                .iter()
+                .map(|region| format!("{}", region))
+                .collect::<Vec<String>>()
+                .join("\n");
             escribir_bytes(&archivo, &contenido_a_escribir)?;
             println!("Escrito: {}", contenido_a_escribir);
             let mut add = Add::from(vec![archivo], self.logger.clone())?;
@@ -227,6 +208,74 @@ impl CommitObj {
     }
 }
 
+fn aplicar_diff(texto: &str, diffs: Vec<(usize, TipoDiff)>) -> Vec<Region> {
+    let mut contenido_final = vec![];
+    let lineas = texto.lines().collect::<Vec<_>>();
+
+    let mut anterior_fue_conflicto = false;
+    for i in 0..lineas.len() {
+        let diffs_linea: Vec<_> = diffs.iter().filter(|(linea, _)| *linea - 1 == i).collect();
+
+        if anterior_fue_conflicto {
+            let diffs_a_agregar: Vec<_> = diffs_linea
+                .iter()
+                .filter(|(_, diff)| match diff {
+                    TipoDiff::Removed(_) => false,
+                    _ => true,
+                })
+                .collect();
+
+            let mut buffer = Vec::new();
+            for diff in diffs_a_agregar {
+                match &diff.1 {
+                    TipoDiff::Added(linea) => buffer.push(format!("{linea}")),
+                    TipoDiff::Unchanged(linea) => buffer.push(format!("{linea}")),
+                    _ => {}
+                }
+            }
+            contenido_final.push(Region::Conflicto(
+                format!("{}", lineas[i]),
+                buffer.join("\n"),
+            ));
+            anterior_fue_conflicto = false;
+            continue;
+        }
+        if diffs_linea.len() == 1 {
+            match &diffs_linea[0].1 {
+                TipoDiff::Added(linea) => {
+                    contenido_final.push(Region::Normal(format!("{}", lineas[i])));
+                    contenido_final.push(Region::Normal(format!("{linea}")));
+                }
+                TipoDiff::Removed(linea) => {
+                    if *lineas[i] != *linea {
+                        anterior_fue_conflicto = true;
+                        contenido_final
+                            .push(Region::Conflicto(format!("{}", lineas[i]), format!("")))
+                    }
+                }
+                TipoDiff::Unchanged(linea) => {
+                    contenido_final.push(Region::Normal(format!("{linea}")))
+                }
+            }
+        } else if diffs_linea.len() == 2 {
+            if let TipoDiff::Removed(linea) = &diffs_linea[0].1 {
+                if let TipoDiff::Added(linea2) = &diffs_linea[1].1 {
+                    if *lineas[i] != *linea {
+                        anterior_fue_conflicto = true;
+                        contenido_final.push(Region::Conflicto(
+                            format!("{}", lineas[i]),
+                            format!("{linea2}"),
+                        ));
+                        continue;
+                    }
+                    contenido_final.push(Region::Normal(format!("{linea2}")))
+                }
+            }
+        }
+    }
+    unificar_regiones(contenido_final)
+}
+
 #[cfg(test)]
 
 mod tests {
@@ -265,5 +314,93 @@ mod tests {
         let contenido_log = objeto.format_log().unwrap();
         let contenido_log_esperado = format!("{AMARILLO}commit 1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p7q8r9s0t {RESET}\nAutor: nombre_apellido <mail>\nDate: Fri Feb 13 20:31:30 2009 -0300\n\n     Mensaje del commit\n");
         assert_eq!(contenido_log, contenido_log_esperado);
+    }
+
+    #[test]
+    fn test03_aplicar_diff_agregando_linea() {
+        let texto = "primera linea\nsegunda linea\ntercera linea";
+        let diff = vec![
+            (1, TipoDiff::Added("entre 1 y 2".to_string())),
+            (2, TipoDiff::Unchanged("segunda linea".to_string())),
+            (3, TipoDiff::Unchanged("tercera linea".to_string())),
+        ];
+
+        let resultado = aplicar_diff(texto, diff);
+
+        let resultado_esperado = vec![
+            Region::Normal("primera linea".to_string()),
+            Region::Normal("entre 1 y 2".to_string()),
+            Region::Normal("segunda linea".to_string()),
+            Region::Normal("tercera linea".to_string()),
+        ];
+
+        assert_eq!(resultado, resultado_esperado);
+    }
+
+    #[test]
+    fn test04_aplicar_diff_eliminando_linea() {
+        let texto = "primera linea\nsegunda linea\ntercera linea";
+        let diff = vec![
+            (1, TipoDiff::Unchanged("primera linea".to_string())),
+            (2, TipoDiff::Removed("segunda linea".to_string())),
+            (3, TipoDiff::Unchanged("tercera linea".to_string())),
+        ];
+
+        let resultado = aplicar_diff(texto, diff);
+
+        let resultado_esperado = vec![
+            Region::Normal("primera linea".to_string()),
+            Region::Normal("tercera linea".to_string()),
+        ];
+
+        assert_eq!(resultado, resultado_esperado);
+    }
+
+    #[test]
+    fn test05_aplicar_diff_modificando_linea() {
+        let texto = "primera linea\nsegunda linea\ntercera linea";
+        let diff = vec![
+            (1, TipoDiff::Unchanged("primera linea".to_string())),
+            (2, TipoDiff::Removed("segunda linea".to_string())),
+            (2, TipoDiff::Added("segunda linea modificada".to_string())),
+            (3, TipoDiff::Unchanged("tercera linea".to_string())),
+        ];
+
+        let resultado = aplicar_diff(texto, diff);
+
+        let resultado_esperado = vec![
+            Region::Normal("primera linea".to_string()),
+            Region::Normal("segunda linea modificada".to_string()),
+            Region::Normal("tercera linea".to_string()),
+        ];
+
+        assert_eq!(resultado, resultado_esperado);
+    }
+
+    #[test]
+    fn test06_aplicar_diff_conflicto() {
+        let texto = "primera linea\nsegunda linea\ntercera linea";
+        let diff = vec![
+            (1, TipoDiff::Unchanged("primera linea".to_string())),
+            (
+                2,
+                TipoDiff::Removed("segunda linea diferente a la original".to_string()),
+            ),
+            (2, TipoDiff::Added("segunda linea modificada".to_string())),
+            (3, TipoDiff::Unchanged("tercera linea".to_string())),
+        ];
+
+        let resultado = aplicar_diff(texto, diff);
+
+        let resultado_esperado = vec![
+            Region::Normal("primera linea".to_string()),
+            Region::Conflicto(
+                "segunda linea".to_string(),
+                "segunda linea modificada".to_string(),
+            ),
+            Region::Normal("tercera linea".to_string()),
+        ];
+
+        assert_eq!(resultado, resultado_esperado);
     }
 }
