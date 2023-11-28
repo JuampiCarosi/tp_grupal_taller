@@ -1,5 +1,4 @@
 use crate::tipos_de_dato::comandos::write_tree;
-use crate::tipos_de_dato::comunicacion;
 use crate::tipos_de_dato::comunicacion::Comunicacion;
 use crate::tipos_de_dato::config::Config;
 use crate::tipos_de_dato::logger::Logger;
@@ -28,6 +27,7 @@ pub struct Push {
     rama_merge: String,
     remoto: String,
     set_upstream: bool,
+    repositorio: String,
     logger: Arc<Logger>,
 }
 
@@ -43,15 +43,15 @@ impl Push {
             Self::parsear_flags(args, &mut set_upstream)?;
         }
         let (remoto, rama_merge) = Self::parsear_argumentos(args, set_upstream)?;
-        println!("remoto: {}", remoto);
-        println!("rama_merge: {}", rama_merge);
-        
+
         let mut hash_refs: HashMap<String, (String, String)> = HashMap::new();
 
         let refs = obtener_refs_de(PathBuf::from("./.gir/refs/"), String::from("./.gir/"));
 
         let url: String = Self::obtener_url(&remoto)?;
-        println!("url: {}", url);
+        let partes: Vec<&str> = url.split('/').collect();
+        let repositorio = partes[1].to_string();
+
         let comunicacion = Arc::new(Comunicacion::<TcpStream>::new_desde_direccion_servidor(&url, logger.clone())?);
         
         for referencia in refs {
@@ -65,11 +65,12 @@ impl Push {
         }
         Ok(Push {
             hash_refs,
-            logger,
-            set_upstream,
-            remoto,
-            rama_merge,
             comunicacion,
+            rama_merge,
+            remoto,
+            set_upstream,
+            repositorio,
+            logger,
         })
     }
 
@@ -99,6 +100,7 @@ impl Push {
             remoto = Self::verificar_remoto(&args[0])?;
             rama_merge = args.remove(1);
         } else if args.len() == 0 && !set_upstream {
+            println!("Entre aca");
             //si no hay argumentos ni flags, quiere decir que deberia
             //estar configurada la rama
             (remoto, rama_merge) = Self::obtener_remoto_y_rama_merge_de_rama_actual()?;
@@ -132,13 +134,6 @@ impl Push {
         Config::leer_config()?.obtenet_url_asosiado_remoto(&remoto)
     }
 
-    fn obtener_remoto_rama_actual() -> Result<String, String> {
-        Config::leer_config()?
-            .obtener_remoto_rama_actual()
-            .ok_or(format!(
-                "La rama actual no se encuentra asosiado a ningun remoto\nUtilice:\n\ngir remote add [<nombre-remote>] [<url-remote>]\n\nDespues:\n\ngit push\n\n"
-            ))
-    }
     fn verificar_remoto(remoto: &String) -> Result<String, String> {
         if let false = Config::leer_config()?.existe_remote(remoto) {
             return  Err(format!("Remoto desconocido{}\nSi quiere añadir un nuevo remoto:\n\ngir remote add [<nombre-remote>] [<url-remote>]\n\n", remoto));
@@ -146,9 +141,11 @@ impl Push {
 
         Ok(remoto.clone())
     }
+    
     fn enviar_pedido(&mut self) -> Result<(), String> {
-        let request_data = "git-receive-pack /gir/\0host=example.com\0\0version=1\0"; //en donde dice /.git/ va la dir del repo
-        let request_data_con_largo_hex = io::obtener_linea_con_largo_hex(request_data);
+        let request_data = format!("git-receive-pack /{}/\0host=example.com\0\0version=1\0", self.repositorio); //en donde dice /.git/ va la dir del repo
+        println!("request_data: {}", request_data);
+        let request_data_con_largo_hex = io::obtener_linea_con_largo_hex(&request_data);
         self.comunicacion.enviar(&request_data_con_largo_hex)?;
         Ok(())
     }
@@ -250,7 +247,6 @@ impl Push {
         self.guardar_diferencias(refs_recibidas)?;    
  
         let (objetos_a_enviar, actualizaciones) = self.obtener_objetos_a_enviar()?;
-
         self.enviar_actualizaciones_y_objetos(actualizaciones, objetos_a_enviar)
     }
 }

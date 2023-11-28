@@ -33,11 +33,9 @@ impl<T: Write + Read> Comunicacion<T> {
         direccion_servidor: &str,
         logger: Arc<Logger>,
     ) -> Result<Comunicacion<TcpStream>, String> {
-        println!("direccion_servidor: {}", direccion_servidor);
         let partes: Vec<&str> = direccion_servidor.split("/").collect();
         let ip_puerto = partes[0];
         let repositorio = "/".to_string() + partes[1] + "/";
-        println!("Repositorio: {}", repositorio);
         let flujo = Mutex::new(
             TcpStream::connect(ip_puerto)
                 .map_err(|e| format!("Fallo en en la conecciion con el servidor.\n{}\n", e))?,

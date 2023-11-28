@@ -9,7 +9,7 @@ use crate::{
     },
 };
 
-use super::{fetch::Fetch, merge::Merge, set_upstream::SetUpstream};
+use super::{fetch::Fetch, merge::Merge};
 
 const UBICACION_RAMA_MASTER: &str = "./.gir/refs/heads/master";
 const GIR_PULL: &str = "gir pull <remoto> <rama>";
@@ -123,18 +123,11 @@ impl Pull {
 
     pub fn ejecutar(&self) -> Result<String, String> {
         if self.set_upstream {
-            SetUpstream::new(
-                self.remoto.clone(),
-                self.rama_merge.clone(),
-                utils::ramas::obtener_rama_actual()?,
-                self.logger.clone(),
-            )?
-            .ejecutar()?;
+            return Ok("Hacer acordar a Siro, que implemente esto :)".to_string());
         }
 
         Fetch::<TcpStream>::new(vec![self.remoto.clone()], self.logger.clone())?.ejecutar()?;
 
-        println!("Llego aca del pull\n");
         let commit_head_remoto = self.obtener_head_remoto()?;
 
         if io::esta_vacio(UBICACION_RAMA_MASTER.to_string()) {
@@ -148,20 +141,9 @@ impl Pull {
         Ok(mensaje)
     }
 
-    ///Busca el archivo correspondiente que contien el HEAD del remoto (el NOMBREREMOTO_HEAD)y lo obtiene. En caso de no
-    /// existir dicho archivo toma por defecto devulevor el commit de master del remoto.   
     fn obtener_head_remoto(&self) -> Result<String, String> {
-        let path_remoto = PathBuf::from(format!("./.gir/{}_HEAD", self.remoto.to_uppercase()));
-
-        if path_remoto.exists() {
-            leer_a_string(path_remoto)
-        } else {
-            //Siempre tiene un commit
-            let path_master_remoto =
-                PathBuf::from(format!("./.gir/refs/remotes/{}/master", self.remoto));
-
-            leer_a_string(path_master_remoto)
-        }
+        let path_remoto = format!("./.gir/{}_HEAD", self.remoto.to_uppercase());
+        leer_a_string(path_remoto)
     }
 
     fn fast_forward_de_cero(&self, commit_head_remoto: String) -> Result<bool, String> {
