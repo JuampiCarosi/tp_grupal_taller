@@ -395,6 +395,7 @@ pub fn escribir_referencia(referencia: &str, dir: PathBuf) {
     }
 }
 
+
 pub fn obtener_diferencias_remote(referencias: Vec<String>, dir: String) -> Vec<String> {
     let mut diferencias: Vec<String> = Vec::new();
     // si no existe devuelvo todas las refs
