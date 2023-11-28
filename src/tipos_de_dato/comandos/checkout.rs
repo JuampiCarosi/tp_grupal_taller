@@ -175,7 +175,7 @@ impl Checkout {
 
         self.cambiar_ref_en_head()?;
         let msg = format!("Se cambio la rama actual a {}", self.rama_a_cambiar);
-        self.logger.log(msg.clone());
+        self.logger.log(&msg);
 
         Ok(msg)
     }

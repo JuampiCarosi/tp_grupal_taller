@@ -101,7 +101,7 @@ fn escribir_archivos_index(builder: &gtk::Builder, logger: Arc<Logger>) {
 
         let list_box: gtk::Box = builder.object("staging").unwrap();
         list_box.add(&label);
-        logger.log("Gui: Agregando archivo a staging".to_string());
+        logger.log("Gui: Agregando archivo a staging");
     }
 }
 
@@ -129,7 +129,7 @@ fn escribir_archivos_modificados(
         let builder_callback = builder.clone();
         let window_callback = window.clone();
         label.connect_button_press_event(move |_, _| {
-            logger_callback.log("Gui: Agregando archivo a staging".to_string());
+            logger_callback.log("Gui: Agregando archivo a staging");
             let mut add =
                 Add::from(vec![nombre_callback.clone()], logger_callback.clone()).unwrap();
             add.ejecutar().unwrap();
@@ -164,7 +164,7 @@ fn escribir_archivos_untrackeados(
         let builder_callback = builder.clone();
         let window_callback = window.clone();
         label.connect_button_press_event(move |_, _| {
-            logger_callback.log("Gui: Agregando archivo a staging".to_string());
+            logger_callback.log("Gui: Agregando archivo a staging");
             let mut add =
                 Add::from(vec![nombre_callback.clone()], logger_callback.clone()).unwrap();
             add.ejecutar().unwrap();
@@ -186,7 +186,7 @@ fn limpiar_archivos(builder: &gtk::Builder) {
 }
 
 pub fn render(builder: &gtk::Builder, window: &gtk::Window, logger: Arc<Logger>) {
-    logger.log("Gui: Renderizando staging area".to_string());
+    logger.log("Gui: Renderizando staging area");
     limpiar_archivos(builder);
     escribir_archivos_index(builder, logger.clone());
     escribir_archivos_modificados(builder, logger.clone(), window);

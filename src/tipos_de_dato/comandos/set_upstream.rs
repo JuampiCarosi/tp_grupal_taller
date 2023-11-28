@@ -22,7 +22,7 @@ impl SetUpstream {
         rama_local: String,
         logger: Arc<Logger>,
     ) -> Result<SetUpstream, String> {
-        logger.log(format!(
+        logger.log(&format!(
             "Se crea set-upstream - remoto: {}, rama remota: {},rama local: {}",
             remoto, rama_remota, rama_remota
         ));
@@ -35,7 +35,7 @@ impl SetUpstream {
         })
     }
     pub fn ejecutar(&self) -> Result<(), String> {
-        self.logger.log(format!(
+        self.logger.log(&format!(
             "Se ejecuta set-upstream - remoto: {}, rama remota: {},rama local: {}",
             self.remoto, self.rama_remota, self.rama_remota
         ));
@@ -45,7 +45,7 @@ impl SetUpstream {
 
         self.set_upstream()?;
 
-        self.logger.log(format!(
+        self.logger.log(&format!(
             "Se ejecuto set-upstream con exito - remoto: {}, rama remota: {},rama local: {}",
             self.remoto, self.rama_remota, self.rama_remota
         ));

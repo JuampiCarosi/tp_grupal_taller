@@ -64,7 +64,7 @@ impl Tag {
 
         io::escribir_bytes(ubicacion, &commit)?;
 
-        self.logger.log(format!("Tag {} creado con exito", tag));
+        self.logger.log(&format!("Tag {} creado con exito", tag));
 
         Ok(())
     }

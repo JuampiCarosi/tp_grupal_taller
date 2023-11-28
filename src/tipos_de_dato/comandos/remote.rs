@@ -215,7 +215,7 @@ impl Remote {
 
     /// Ejecuta el comando.
     pub fn ejecutar(&mut self) -> Result<String, String> {
-        self.logger.log("Ejecutando comando remote".to_string());
+        self.logger.log("Ejecutando comando remote");
         match &self.comando {
             ComandoRemote::Mostrar => self.mostrar(),
             ComandoRemote::Agregar => self.agregar(),

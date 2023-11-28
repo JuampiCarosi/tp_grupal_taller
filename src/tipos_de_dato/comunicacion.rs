@@ -101,7 +101,7 @@ impl<T: Write + Read> Comunicacion<T> {
     ///
     pub fn iniciar_git_upload_pack_con_servidor(&self) -> Result<(), String> {
         self.logger
-            .log("Iniciando git upload pack con el servidor".to_string());
+            .log("Iniciando git upload pack con el servidor");
         let comando = "git-upload-pack";
         let repositorio = &self.repositorio;
         let host = "gir.com";

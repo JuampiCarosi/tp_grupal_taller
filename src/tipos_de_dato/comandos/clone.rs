@@ -20,7 +20,7 @@ impl Clone {
 
         let url = args.remove(0);
 
-        logger.log(format!("Se creo clone con exito - url: {}", url));
+        logger.log(&format!("Se creo clone con exito - url: {}", url));
 
         Ok(Clone { logger, url })
     }
@@ -54,7 +54,7 @@ impl Clone {
         }
 
         let mensaje = "Clone ejecutado con exito".to_string();
-        self.logger.log(mensaje.clone());
+        self.logger.log(&mensaje);
         Ok(mensaje)
     }
 

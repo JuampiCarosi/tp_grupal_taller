@@ -76,7 +76,7 @@ impl LsTree {
     }
 
     pub fn ejecutar(&mut self) -> Result<String, String> {
-        self.logger.log("Corriendo ls-tree".to_string());
+        self.logger.log("Corriendo ls-tree");
         let arbol = Tree::from_hash(self.arbol.clone(), PathBuf::from("."), self.logger.clone())?;
         let objetos_a_mostrar = self.obtener_objetos_a_mostrar(&arbol);
 

@@ -87,7 +87,7 @@ impl LsFiles {
     }
 
     pub fn ejecutar(&self) -> Result<String, String> {
-        self.logger.log("Ejecutando ls-files".to_string());
+        self.logger.log("Ejecutando ls-files");
         let mut texto_a_mostrar = Vec::new();
         for archivo in &self.archivos {
             texto_a_mostrar.push(format!("{}\n", archivo));
@@ -113,7 +113,7 @@ impl LsFiles {
         texto_tree_e_index.sort();
         texto_a_mostrar.extend(texto_tree_e_index);
         let string_final = texto_a_mostrar.concat();
-        self.logger.log("Finalizando ls-files".to_string());
+        self.logger.log("Finalizando ls-files");
         Ok(string_final)
     }
 }

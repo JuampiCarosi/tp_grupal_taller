@@ -120,7 +120,7 @@ impl Remove {
     /// Si cached es false, lo elimina del historial de commits y del disco.
     /// Si es recursive, elimina los archivos de los directorios recursivamente.
     pub fn ejecutar(&mut self) -> Result<String, String> {
-        self.logger.log("Ejecutando remove".to_string());
+        self.logger.log("Ejecutando remove");
 
         for ubicacion in self.ubicaciones.clone() {
             if ubicacion.is_dir() {

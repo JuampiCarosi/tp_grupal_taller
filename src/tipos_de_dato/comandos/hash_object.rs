@@ -86,7 +86,7 @@ impl HashObject {
             "Objeto gir hasheado en {}",
             self.ubicacion_archivo.to_string_lossy()
         );
-        self.logger.log(mensaje);
+        self.logger.log(&mensaje);
         Ok(hash)
     }
 }
