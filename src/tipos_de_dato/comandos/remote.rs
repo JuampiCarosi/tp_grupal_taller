@@ -5,6 +5,8 @@ use crate::tipos_de_dato::{
     logger::Logger,
 };
 
+use super::commit::Commit;
+
 enum ComandoRemote {
     Mostrar,
     Agregar,
@@ -14,15 +16,24 @@ enum ComandoRemote {
 }
 
 pub struct Remote {
+    /// Comando a ejecutar.
     comando: ComandoRemote,
+    /// Nombre del remote.
     nombre: Option<String>,
+    /// Url del remote.
     url: Option<String>,
+    /// Logger para imprimir mensajes en el archivo log.
     logger: Arc<Logger>,
 }
 
 const INPUT_ERROR: &str = "gir remote add [<nombre-remote>] [<url-remote>]\ngir remote delete [<nombre-remote>] [<url-remote>]\ngir remote set-url [<nombre-remote>] [<url-remote>]\ngir remote show-url [<nombre-remote>] [<url-remote>]";
 
 impl Remote {
+    /// Crea una instancia de Remote.
+    /// Si la cantidad de argumentos es mayor a 3 devuelve error.
+    /// Si la cantidad de argumentos es 0 devuelve una instancia de Remote con el comando Mostrar.
+    /// Si la cantidad de argumentos es 2 devuelve una instancia de Remote con el comando Eliminar o MostrarUrl.
+    /// Si la cantidad de argumentos es 3 devuelve una instancia de Remote con el comando Agregar o CambiarUrl.
     pub fn from(args: &mut Vec<String>, logger: Arc<Logger>) -> Result<Remote, String> {
         if args.len() > 3 {
             return Err(format!("Demasiados argumentos\n{}", INPUT_ERROR));
@@ -84,6 +95,7 @@ impl Remote {
         Err(INPUT_ERROR.to_string())
     }
 
+    /// Agrega un remote a la configuración.
     fn agregar(&self) -> Result<String, String> {
         let mut config = Config::leer_config()?;
 
@@ -107,6 +119,7 @@ impl Remote {
         ))
     }
 
+    /// Elimina un remote de la configuración.
     fn eliminar(&self) -> Result<String, String> {
         let mut config = Config::leer_config()?;
 
@@ -130,6 +143,7 @@ impl Remote {
         Ok(format!("Se elimino el remote {}", nombre))
     }
 
+    /// Cambia la url de un remote de la configuración.
     fn cambiar_url(&self) -> Result<String, String> {
         let mut config = Config::leer_config()?;
 
@@ -159,6 +173,7 @@ impl Remote {
         Ok(format!("Se cambio la url del remote {} a {}", nombre, url))
     }
 
+    /// Muestra la url asociada a un remote de la configuración.
     fn mostrar_url(&self) -> Result<String, String> {
         let config = Config::leer_config()?;
 
@@ -182,10 +197,23 @@ impl Remote {
         ))
     }
 
+    /// Muestra el remote asociado a la rama actual.
     fn mostrar(&self) -> Result<String, String> {
-        Ok("TODO".to_string())
+        let config = Config::leer_config()?;
+
+        let branch_actual = Commit::obtener_branch_actual()?;
+        let remote_actual = config
+            .ramas
+            .iter()
+            .find(|branch| branch.nombre == branch_actual);
+
+        match remote_actual {
+            Some(remote) => Ok(remote.remote.clone()),
+            None => return Err("No hay un remote asociado a la branch actual\n".to_string()),
+        }
     }
 
+    /// Ejecuta el comando.
     pub fn ejecutar(&mut self) -> Result<String, String> {
         self.logger.log("Ejecutando comando remote".to_string());
         match &self.comando {

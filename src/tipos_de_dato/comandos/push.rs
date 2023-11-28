@@ -6,13 +6,16 @@ use crate::tipos_de_dato::logger::Logger;
 use crate::tipos_de_dato::objetos::commit::CommitObj;
 use crate::tipos_de_dato::objetos::tree::Tree;
 use crate::tipos_de_dato::packfile::Packfile;
+use crate::utils;
 use crate::utils::io;
+use crate::utils::path_buf::obtener_nombre;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::net::TcpStream;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
+use super::set_upstream::SetUpstream;
 
 const FLAG_SET_UPSTREAM: &str = "--set-upstream";
 const FLAG_U: &str = "-u";
@@ -22,6 +25,8 @@ const GIR_PUSH: &str = "gir push <remoto> <rama>";
 pub struct Push {
     hash_refs: HashMap<String, (String, String)>,
     comunicacion: Arc<Comunicacion<TcpStream>>,
+    rama_merge: String,
+    remoto: String,
     set_upstream: bool,
     logger: Arc<Logger>,
 }
@@ -31,16 +36,20 @@ impl Push {
     // asi queda la estructura del hashmap como: Referencia: (ref_cliente, ref_servidor)
     // donde referencia puede ser por ejemplo: refs/heads/master
 
-    pub fn new(args: Vec<String>, logger: Arc<Logger>) -> Result<Self, String> {
+    pub fn new(args: &mut Vec<String>, logger: Arc<Logger>) -> Result<Self, String> {
+        let mut set_upstream = false;
+
+        if Self::hay_flags(&args) {
+            Self::parsear_flags(args, &mut set_upstream)?;
+        }
+        let (remoto, rama_merge) = Self::parsear_argumentos(args, set_upstream)?;
+        println!("remoto: {}", remoto);
+        println!("rama_merge: {}", rama_merge);
+        
         let mut hash_refs: HashMap<String, (String, String)> = HashMap::new();
+
         let refs = obtener_refs_de(PathBuf::from("./.gir/refs/"), String::from("./.gir/"));
-        // let comunicacion = Arc::new(Comunicacion::<TcpStream>::new_desde_direccion_servidor("127.0.0.1:9418", logger.clone())?);
-        // aca tengo que checkear si la branch esta trackeada, si no lo esta, no se puede hacer push
-        //  
-        let remoto = Self::obtener_remoto_rama_actual()?;
 
-
-        Self::verificar_remoto(&remoto)?;
         let url: String = Self::obtener_url(&remoto)?;
         println!("url: {}", url);
         let comunicacion = Arc::new(Comunicacion::<TcpStream>::new_desde_direccion_servidor(&url, logger.clone())?);
@@ -57,8 +66,51 @@ impl Push {
         Ok(Push {
             hash_refs,
             logger,
+            set_upstream,
+            remoto,
+            rama_merge,
             comunicacion,
         })
+    }
+
+    fn hay_flags(args: &Vec<String>) -> bool {
+        args.len() == 3
+    }
+       ///obtiene el remoto  y la rama merge asosiado a la rama remota actual. Falla si no existe
+    fn obtener_remoto_y_rama_merge_de_rama_actual() -> Result<(String, String), String> {
+        let (remoto, rama_merge) = Config::leer_config()?
+            .obtener_remoto_y_rama_merge_rama_actual()
+            .ok_or(format!(
+                "La rama actual no se encuentra asosiado a ningun remoto\nUtilice: gir push --set-upstream/-u nombre-remoto nombre-rama-local"))?;
+        //CORREGIR MENSAJE DE ERROR DEBERIA SER QUE USE SET BRANCH
+
+        Ok((remoto, obtener_nombre(&rama_merge)?))
+    }
+        ///Obtiene acorde a los argumentos recibidos, el remoto y la rama merge. En caso de no estar,
+    /// busca si esta seteada la rama actual. Si esto no es asi, hay un error
+    fn parsear_argumentos(
+        args: &mut Vec<String>,
+        set_upstream: bool,
+    ) -> Result<(String, String), String> {
+        let remoto;
+        let rama_merge;
+
+        if args.len() == 2 {
+            remoto = Self::verificar_remoto(&args[0])?;
+            rama_merge = args.remove(1);
+        } else if args.len() == 0 && !set_upstream {
+            //si no hay argumentos ni flags, quiere decir que deberia
+            //estar configurada la rama
+            (remoto, rama_merge) = Self::obtener_remoto_y_rama_merge_de_rama_actual()?;
+        } else {
+            return Err(format!(
+                "Parametros faltantes {}\n {}",
+                args.join(" "),
+                GIR_PUSH
+            ));
+        }
+
+        Ok((remoto, rama_merge))
     }
 
     fn parsear_flags(args: &mut Vec<String>, set_upstream: &mut bool) -> Result<(), String> {
@@ -71,7 +123,7 @@ impl Push {
             Err(format!(
                 "Parametros desconocidos {}\n {}",
                 args.join(" "),
-                GIR_PULL
+                GIR_PUSH
             ))
         }
     }
@@ -184,7 +236,13 @@ impl Push {
 
     pub fn ejecutar(&mut self) -> Result<String, String> {
         if self.set_upstream {
-            return Ok("Hacer acordar a Siro, que implemente esto :)".to_string());
+            SetUpstream::new(
+                self.remoto.clone(),
+                self.rama_merge.clone(),
+                utils::ramas::obtener_rama_actual()?,
+                self.logger.clone(),
+            )?
+            .ejecutar()?;
         }
         self.enviar_pedido()?;
         let (refs_recibidas, _capacidades) = self.obtener_referencias_y_capacidades()?;

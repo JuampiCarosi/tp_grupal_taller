@@ -1,4 +1,5 @@
 use std::{
+    collections::HashMap,
     path::{Path, PathBuf},
     sync::Arc,
 };
@@ -76,16 +77,16 @@ impl ShowRef {
         }
     }
 
-    fn agregar_head(&self, refs: &mut Vec<(String, String)>) -> Result<(), String> {
+    fn agregar_head(&self, refs: &mut HashMap<String, String>) -> Result<(), String> {
         let binding = io::leer_a_string(PathBuf::from(".gir/HEAD"))?;
         let head_dir = binding.split(" ").nth(1).ok_or("Error al parsear HEAD")?;
         let contenido = io::leer_a_string(PathBuf::from(format!(".gir/{}", head_dir)))?;
-        refs.insert(0, (contenido, "HEAD".to_string()));
+        refs.insert("HEAD".to_string(), contenido);
         Ok(())
     }
 
-    fn obtener_referencias(&self, path: PathBuf) -> Result<Vec<(String, String)>, String> {
-        let mut refs: Vec<(String, String)> = Vec::new();
+    pub fn obtener_referencias(&self, path: PathBuf) -> Result<HashMap<String, String>, String> {
+        let mut refs: HashMap<String, String> = HashMap::new();
 
         let entries = std::fs::read_dir(path)
             .map_err(|e| format!("Error al leer el directorio de refs: {}", e))?;
@@ -111,22 +112,21 @@ impl ShowRef {
                 return Err(format!("el ref {} esta vacio", ref_path.display()));
             }
 
-            refs.push((
-                contenido_ref,
+            refs.insert(
                 ref_path
                     .strip_prefix(".gir/")
                     .unwrap()
                     .display()
                     .to_string(),
-            ));
+                contenido_ref,
+            );
         }
 
         Ok(refs)
     }
 
     pub fn ejecutar(&self) -> Result<String, String> {
-        let mut refs: Vec<(String, String)> =
-            self.obtener_referencias(PathBuf::from(".gir/refs/"))?;
+        let mut refs = self.obtener_referencias(PathBuf::from(".gir/refs/"))?;
 
         if self.show_head {
             self.agregar_head(&mut refs)?;
@@ -134,7 +134,7 @@ impl ShowRef {
 
         let mut salida = String::new();
 
-        for (contenido, ubicacion) in refs {
+        for (ubicacion, contenido) in refs {
             salida.push_str(&format!("{} {}\n", contenido, ubicacion));
         }
 

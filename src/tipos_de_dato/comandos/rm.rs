@@ -80,6 +80,9 @@ impl Remove {
         Ok(ubicaciones_hoja)
     }
 
+    /// Crea un nuevo Remove a partir de los argumentos recibidos.
+    /// Toma como flags validos --cached y -r.
+    /// Luego toma todos los argumentos siguientes como una ubicacion a borrar.
     pub fn from(args: Vec<String>, logger: Arc<Logger>) -> Result<Remove, String> {
         crear_index();
         let index = leer_index(logger.clone())?;
@@ -112,6 +115,10 @@ impl Remove {
         })
     }
 
+    /// Ejecuta el comando remove.
+    /// Si cached es true, lo elimina del historial de commits pero lo conserva en el disco.
+    /// Si cached es false, lo elimina del historial de commits y del disco.
+    /// Si es recursive, elimina los archivos de los directorios recursivamente.
     pub fn ejecutar(&mut self) -> Result<String, String> {
         self.logger.log("Ejecutando remove".to_string());
 

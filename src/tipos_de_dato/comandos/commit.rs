@@ -16,10 +16,18 @@ use crate::{
 use super::{merge::Merge, write_tree};
 
 pub struct Commit {
+    /// Logger para imprimir mensajes en el archivo log.
     logger: Arc<Logger>,
+    /// Mensaje del commit.
     mensaje: String,
 }
 
+/// Arma el timestamp del commit en formato unix.
+/// En caso de no poder obtener la zona horaria o la fecha y hora actual devuelve un error.
+/// El formato del timestamp es: <timestamp> <offset>
+/// Donde timestamp es la cantidad de segundos desde el 1 de enero de 1970 y offset es la diferencia
+/// en horas y minutos con respecto a UTC. Se asumio que el offset es -0300.
+/// Ejemplo: 1614550000 -0300
 fn armar_timestamp_commit() -> Result<String, String> {
     let zona_horaria = match chrono::FixedOffset::west_opt(3 * 3600) {
         Some(zona_horaria) => zona_horaria,
@@ -38,6 +46,10 @@ fn armar_timestamp_commit() -> Result<String, String> {
 }
 
 impl Commit {
+    /// Crea un commit a partir de los argumentos pasados por linea de comandos.
+    /// En caso de no tener argumentos y haber un merge en curso, crea un commit de merge.
+    /// Se espera que contenga el flag -m y un mensaje.
+    /// En caso de tener argumentos invalidos devuelve error.
     pub fn from(args: &mut Vec<String>, logger: Arc<Logger>) -> Result<Commit, String> {
         if args.is_empty() && Merge::hay_merge_en_curso()? {
             if Merge::hay_archivos_sin_mergear(logger.clone())? {
@@ -61,11 +73,14 @@ impl Commit {
         Ok(Commit { mensaje, logger })
     }
 
+    /// Crea un commit a partir del mensaje en el archivo COMMIT_EDITMSG.
     pub fn from_merge(logger: Arc<Logger>) -> Result<Commit, String> {
         let mensaje = io::leer_a_string(path::Path::new(".gir/COMMIT_EDITMSG"))?;
         Ok(Commit { mensaje, logger })
     }
 
+    /// Hashea el contenido del objeto.
+    /// Devuelve un hash de 40 caracteres en formato hexadecimal.
     fn hashear_contenido_objeto(&self, contenido: &str) -> String {
         let mut hasher = Sha1::new();
         hasher.update(contenido);
@@ -73,6 +88,9 @@ impl Commit {
         format!("{:x}", hash)
     }
 
+    /// Formatea el contenido del commit.
+    /// Devuelve el contenido del commit en formato git.
+    /// Toma el nombre y mail del archivo de configuracion.
     fn formatear_contenido_commit(
         &self,
         hash_arbol: String,
@@ -97,6 +115,8 @@ impl Commit {
         Ok(contenido_commit)
     }
 
+    /// Crea el contenido del commit.
+    /// Devuelve el hash del arbol y el contenido total del commit.
     fn crear_contenido_commit(
         &self,
         hash_padre_commit: String,
@@ -115,12 +135,15 @@ impl Commit {
         Ok((hash_arbol, contenido_total))
     }
 
+    /// Escribe el objeto commit en el repositorio.
+    /// El objeto commit se escribe en .gir/objects/.
     fn escribir_objeto_commit(hash: String, contenido_comprimido: Vec<u8>) -> Result<(), String> {
         let ruta = format!(".gir/objects/{}/{}", &hash[..2], &hash[2..]);
         io::escribir_bytes(ruta, contenido_comprimido)?;
         Ok(())
     }
 
+    /// Obtiene el nombre del branch actual, la cual esta indicada en el archivo HEAD.
     pub fn obtener_branch_actual() -> Result<String, String> {
         let ruta_branch = io::leer_a_string(path::Path::new(".gir/HEAD"))?;
         let branch = ruta_branch
@@ -130,12 +153,15 @@ impl Commit {
         Ok(branch.to_string())
     }
 
+    /// Obtiene la ruta del archivo que contiene el hash del commit al que apunta el branch actual.
     pub fn obtener_ruta_branch_commit() -> Result<String, String> {
         let branch = Self::obtener_branch_actual()?;
         let ruta = format!(".gir/refs/heads/{}", branch);
         Ok(ruta)
     }
 
+    /// Obtiene el hash del commit al que apunta el branch actual.
+    /// En caso de no poder obtener el hash devuelve un string vacio. Esto puede ocurrir si es el primer commit.
     pub fn obtener_hash_del_padre_del_commit() -> Result<String, String> {
         let ruta = Self::obtener_ruta_branch_commit()?;
         let padre_commit =
@@ -143,6 +169,8 @@ impl Commit {
         Ok(padre_commit)
     }
 
+    /// Actualiza el archivo head/ref de la branch actual con el hash del commit creado.
+    /// En caso de no poder abrir o escribir en el archivo devuelve un error.
     fn updatear_ref_head(&self, hash: String) -> Result<(), String> {
         let ruta = Self::obtener_ruta_branch_commit()?;
 
@@ -159,6 +187,8 @@ impl Commit {
         Ok(())
     }
 
+    /// Ejecuta el comando commit.
+    /// Devuelve un mensaje indicando si se pudo crear el commit o no.
     fn ejecutar_wrapper(&self, contenido_total: String) -> Result<(), String> {
         let contenido_comprimido = comprimir_contenido(contenido_total.clone())?;
         let hash = self.hashear_contenido_objeto(&contenido_total);
@@ -172,6 +202,8 @@ impl Commit {
         Ok(())
     }
 
+    /// Ejecuta el comando commit en su totalidad.
+    /// Utiliza un ejecutar wrapper para que en caso de error limpiar los archivos creados.
     pub fn ejecutar(&self) -> Result<String, String> {
         armar_config_con_mail_y_nombre()?;
         let hash_padre_commit = Self::obtener_hash_del_padre_del_commit()?;

@@ -12,6 +12,7 @@ use super::{
     tag::Tag,
 };
 
+/// Enum que contiene los posibles comandos de nuestro programa.
 pub enum Comando {
     Init(Init),
     Version(Version),
@@ -54,7 +55,7 @@ impl Comando {
             "checkout" => Comando::Checkout(Checkout::from(vector_args, logger)?),
             "commit" => Comando::Commit(Commit::from(&mut vector_args, logger)?),
             "fetch" => Comando::Fetch(Fetch::<TcpStream>::new(vector_args, logger)?),
-            "clone" => Comando::Clone(Clone::from(logger)?),
+            "clone" => Comando::Clone(Clone::from(&mut vector_args, logger)?),
             "push" => Comando::Push(Push::new(logger)?),
             "pull" => Comando::Pull(Pull::from(vector_args, logger)?),
             "log" => Comando::Log(Log::from(&mut vector_args, logger)?),
@@ -70,6 +71,7 @@ impl Comando {
 
         Ok(comando)
     }
+    /// Ejecuta el comando.
 
     pub fn ejecutar(&mut self) -> Result<String, String> {
         match self {

@@ -1,7 +1,7 @@
 use crate::tipos_de_dato::comunicacion::Comunicacion;
 use crate::tipos_de_dato::config::Config;
 use crate::tipos_de_dato::logger::Logger;
-use crate::tipos_de_dato::packfile::Packfile;
+use crate::tipos_de_dato::packfile;
 use crate::utils::{self, io, objects};
 use std::io::{Read, Write};
 use std::net::TcpStream;
@@ -26,7 +26,7 @@ impl<T: Write + Read> Fetch<T> {
         let remoto = Self::obtener_remoto(args)?;
         let url = Self::obtener_url(&remoto)?;
 
-        let capacidades_local = Vec::new();
+        let capacidades_local = vec!["ofs-delta".to_string()];
         //esto lo deberia tener la comunicacion creo yo
 
         //fijarse si sigue siendo necesario el arc
@@ -135,7 +135,7 @@ impl<T: Write + Read> Fetch<T> {
         self.actualizar_ramas_locales_del_remoto(&commits_cabezas_y_dir_rama_asosiado)?;
 
         self.acutualizar_archivo_head_remoto(&commit_head_remoto)?;
-        
+
         let mensaje = "Fetch ejecutado con exito".to_string();
         self.logger.log(mensaje.clone());
         Ok(mensaje)
@@ -169,11 +169,11 @@ impl<T: Write + Read> Fetch<T> {
     fn recivir_packfile_y_guardar_objetos(&self) -> Result<(), String> {
         // aca para git daemon hay que poner un recibir linea mas porque envia un ACK repetido (No entiendo por que...)
         println!("Obteniendo paquete..");
-        let mut packfile = self.comunicacion.obtener_packfile()?;
-        Packfile::new()
-            .obtener_paquete_y_escribir(&mut packfile, String::from("./.gir/objects/"))
-            .unwrap();
-
+        let packfile = self.comunicacion.obtener_packfile()?;
+        // Packfile::new()
+        //     .obtener_paquete_y_escribir(&mut packfile, String::from("./.gir/objects/"))
+        //     .unwrap();
+        packfile::leer_packfile_y_escribir(&packfile, "./.gir/objects/".to_string()).unwrap();
         Ok(())
     }
 
@@ -195,7 +195,10 @@ impl<T: Write + Read> Fetch<T> {
             let ubicacion_archivo_head_remoto =
                 format!("./.gir/{}_HEAD", self.remoto.to_uppercase());
 
-            println!("ubicacion_archivo_head_remoto: {}", ubicacion_archivo_head_remoto);
+            println!(
+                "ubicacion_archivo_head_remoto: {}",
+                ubicacion_archivo_head_remoto
+            );
             io::escribir_bytes(ubicacion_archivo_head_remoto, hash)?;
         }
 
@@ -335,6 +338,7 @@ impl<T: Write + Read> Fetch<T> {
         String,
     > {
         let mut lineas_recibidas = self.comunicacion.obtener_lineas()?;
+        println!("Se recibio {:?}\n", lineas_recibidas);
         let _version = lineas_recibidas.remove(0); //la version del server
 
         let segunda_linea = lineas_recibidas.remove(0);

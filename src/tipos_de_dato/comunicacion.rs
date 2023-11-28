@@ -52,7 +52,7 @@ impl<T: Write + Read> Comunicacion<T> {
         url: &str,
         logger: Arc<Logger>,
     ) -> Result<Comunicacion<TcpStream>, String> {
-        let (ip_puerto, repositorio) = Self::obtener_ip_puerto_y_repositorio(url)?;
+        let (ip_puerto, repositorio) = utils::strings::obtener_ip_puerto_y_repositorio(url)?;
 
         let flujo = Mutex::new(
             TcpStream::connect(ip_puerto)
@@ -64,19 +64,6 @@ impl<T: Write + Read> Comunicacion<T> {
             repositorio,
             logger,
         })
-    }
-
-    ///Obtiene de la url el ip puerto y el repositorio
-    ///
-    /// ## Ejemplo
-    /// - recibe: ip:puerto/repositorio/
-    /// - devuelve: (ip:puerto, /respositorio/)
-    fn obtener_ip_puerto_y_repositorio(url: &str) -> Result<(String, String), String> {
-        let (ip_puerto_str, repositorio) = url
-            .split_once("/")
-            .ok_or_else(|| format!("Fallo en obtener el ip:puerto y repo de {}", url))?;
-
-        Ok((ip_puerto_str.to_string(), "/".to_string() + repositorio))
     }
 
     pub fn new_para_testing(flujo: T, logger: Arc<Logger>) -> Comunicacion<T> {
