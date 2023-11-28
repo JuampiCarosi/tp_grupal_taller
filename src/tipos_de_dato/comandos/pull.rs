@@ -137,15 +137,15 @@ impl Pull {
         println!("Llego aca del pull\n");
         let commit_head_remoto = self.obtener_head_remoto()?;
 
-        if io::esta_vacio(UBICACION_RAMA_MASTER.to_string()) {
-            self.fast_forward_de_cero(commit_head_remoto)?;
+        if io::esta_vacio(UBICACION_RAMA_MASTER) {
+            self.fast_forward_de_cero(&commit_head_remoto)?;
         } else {
             self.mergear_rama()?;
         }
 
-        let mensaje = "Pull ejecutado con exito".to_string();
-        self.logger.log(&mensaje);
-        Ok(mensaje)
+        let mensaje = "Pull ejecutado con exito";
+        self.logger.log(mensaje);
+        Ok(mensaje.to_string())
     }
 
     ///Busca el archivo correspondiente que contien el HEAD del remoto (el NOMBREREMOTO_HEAD)y lo obtiene. En caso de no
@@ -164,14 +164,12 @@ impl Pull {
         }
     }
 
-    fn fast_forward_de_cero(&self, commit_head_remoto: String) -> Result<bool, String> {
+    fn fast_forward_de_cero(&self, commit_head_remoto: &str) -> Result<bool, String> {
         io::escribir_bytes(UBICACION_RAMA_MASTER, &commit_head_remoto)?;
-        let hash_tree_padre = write_tree::conseguir_arbol_from_hash_commit(
-            &commit_head_remoto,
-            String::from(".gir/objects/"),
-        );
+        let hash_tree_padre =
+            write_tree::conseguir_arbol_from_hash_commit(&commit_head_remoto, ".gir/objects/")?;
         let tree_branch_a_mergear =
-            Tree::from_hash(hash_tree_padre, PathBuf::from("."), self.logger.clone())?;
+            Tree::from_hash(&hash_tree_padre, PathBuf::from("."), self.logger.clone())?;
 
         tree_branch_a_mergear.escribir_en_directorio()?;
 

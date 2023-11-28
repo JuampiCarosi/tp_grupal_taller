@@ -8,7 +8,7 @@ use std::{env, str};
 use super::path_buf;
 
 //la idea es dejar de usar esta funcion, ->ya hay una mejor en objects
-pub fn obtener_objetos_del_directorio(dir: String) -> Result<Vec<String>, String> {
+pub fn obtener_objetos_del_directorio(dir: &str) -> Result<Vec<String>, String> {
     let dir_abierto = leer_directorio(&dir)?;
 
     let mut objetos: Vec<String> = Vec::new();
@@ -122,7 +122,7 @@ pub fn obtener_refs_con_largo_hex(
     Ok(())
 }
 
-pub fn obtener_refs(refs_path: PathBuf, dir: String) -> Result<Vec<String>, ErrorDeComunicacion> {
+pub fn obtener_refs(refs_path: PathBuf, dir: &str) -> Result<Vec<String>, ErrorDeComunicacion> {
     let mut refs: Vec<String> = Vec::new();
     if !refs_path.exists() {
         return Ok(refs);
@@ -167,7 +167,7 @@ fn leer_archivo(path: &mut Path) -> Result<String, ErrorDeComunicacion> {
 }
 //Devuelve true si la ubicacion esta vacia y false en caso contrario.
 //Si falla se presupone que es porque no existe y por lo tanto esta vacio
-pub fn esta_vacio(ubicacion: String) -> bool {
+pub fn esta_vacio(ubicacion: &str) -> bool {
     match fs::metadata(ubicacion) {
         Ok(metadata) => metadata.len() == 0,
         Err(_) => false,
@@ -356,7 +356,7 @@ where
 // HACER MAS EFICIENTE *Hay iteraciones de mas que se pueden evitar unificando las funciones*
 pub fn obtener_archivos_faltantes(nombres_archivos: Vec<String>, dir: String) -> Vec<String> {
     // DESHARDCODEAR EL NOMBRE DEL DIRECTORIO (.gir)
-    let objetcts_contained = obtener_objetos_del_directorio(dir.clone() + "objects/").unwrap();
+    let objetcts_contained = obtener_objetos_del_directorio(&(dir + "objects/")).unwrap();
     // println!("objetcts_contained: {:?}", objetcts_contained);
     // println!("Nombres: {:?}", nombres_archivos);
     let mut archivos_faltantes: Vec<String> = Vec::new();
@@ -369,7 +369,7 @@ pub fn obtener_archivos_faltantes(nombres_archivos: Vec<String>, dir: String) ->
     archivos_faltantes
 }
 // aca depende de si esta multi_ack y esas cosas, esta es para cuando no hay multi_ack ni multi_ack_mode
-pub fn obtener_ack(nombres_archivos: Vec<String>, dir: String) -> Vec<String> {
+pub fn obtener_ack(nombres_archivos: Vec<String>, dir: &str) -> Vec<String> {
     let mut ack = Vec::new();
     for nombre in nombres_archivos {
         let dir_archivo = format!("{}{}/{}", dir.clone(), &nombre[..2], &nombre[2..]);

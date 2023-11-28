@@ -100,8 +100,7 @@ impl<T: Write + Read> Comunicacion<T> {
     /// - ''git-upload-pack 'directorio'\0host='host'\0\0verision='numero de version'\0''
     ///
     pub fn iniciar_git_upload_pack_con_servidor(&self) -> Result<(), String> {
-        self.logger
-            .log("Iniciando git upload pack con el servidor");
+        self.logger.log("Iniciando git upload pack con el servidor");
         let comando = "git-upload-pack";
         let repositorio = &self.repositorio;
         let host = "gir.com";
@@ -252,7 +251,7 @@ impl<T: Write + Read> Comunicacion<T> {
         }
         Ok(())
     }
-    pub fn enviar_linea(&mut self, linea: String) -> Result<(), ErrorDeComunicacion> {
+    pub fn enviar_linea(&mut self, linea: &str) -> Result<(), ErrorDeComunicacion> {
         self.flujo.lock().unwrap().write_all(linea.as_bytes())?;
         Ok(())
     }

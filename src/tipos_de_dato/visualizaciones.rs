@@ -6,8 +6,8 @@ pub enum Visualizaciones {
 
 impl Visualizaciones {
     /// Crea un cierto tipo de visualizacion a partir de un parametro.
-    pub fn from(parametro: String) -> Result<Visualizaciones, String> {
-        match parametro.as_str() {
+    pub fn from(parametro: &str) -> Result<Visualizaciones, String> {
+        match parametro {
             "-t" => Ok(Visualizaciones::TipoObjeto),
             "-s" => Ok(Visualizaciones::Tamanio),
             "-p" => Ok(Visualizaciones::Contenido),

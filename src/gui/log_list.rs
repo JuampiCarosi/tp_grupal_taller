@@ -9,7 +9,7 @@ use crate::{
 
 use super::{error_dialog, log_seleccionado};
 
-fn obtener_listas_de_commits(branch: &String) -> Result<Vec<String>, String> {
+fn obtener_listas_de_commits(branch: &str) -> Result<Vec<String>, String> {
     let ruta = format!(".gir/refs/heads/{}", branch);
     let ultimo_commit = io::leer_a_string(Path::new(&ruta))?;
 
@@ -23,7 +23,7 @@ fn obtener_listas_de_commits(branch: &String) -> Result<Vec<String>, String> {
     Ok(historial.iter().map(|commit| commit.hash.clone()).collect())
 }
 
-pub fn obtener_mensaje_commit(commit_hash: String) -> Result<String, String> {
+pub fn obtener_mensaje_commit(commit_hash: &str) -> Result<String, String> {
     let commit = descomprimir_objeto_gir(commit_hash).unwrap_or("".to_string());
 
     let mensaje = commit
@@ -57,13 +57,13 @@ fn crear_label(string: &str) -> gtk::EventBox {
     event_box
 }
 
-pub fn render(builder: &gtk::Builder, branch: String) {
+pub fn render(builder: &gtk::Builder, branch: &str) {
     let container: gtk::Box = builder.object("log-container").unwrap();
     container.children().iter().for_each(|child| {
         container.remove(child);
     });
 
-    let commits = match obtener_listas_de_commits(&branch) {
+    let commits = match obtener_listas_de_commits(branch) {
         Ok(commits) => commits,
         Err(err) => {
             error_dialog::mostrar_error(&err);
@@ -73,7 +73,7 @@ pub fn render(builder: &gtk::Builder, branch: String) {
 
     for commit in commits {
         let commit_clone = commit.clone();
-        let event_box = crear_label(&obtener_mensaje_commit(commit).unwrap());
+        let event_box = crear_label(&obtener_mensaje_commit(&commit).unwrap());
 
         let builder_clone = builder.clone();
         event_box.connect_button_press_event(move |_, _| {

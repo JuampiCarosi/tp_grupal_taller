@@ -4,7 +4,7 @@ use std::io::{Read, Write};
 
 // CAMBIAR GIT POR GIR
 
-pub fn descomprimir_objeto(hash: String, ruta: String) -> Result<String, String> {
+pub fn descomprimir_objeto(hash: &str, ruta: &str) -> Result<String, String> {
     let ruta_objeto = format!("{}{}/{}", ruta.clone(), &hash[..2], &hash[2..]);
     // println!("gonna decompress {} from: {}", hash,ruta_objeto);
 
@@ -78,7 +78,7 @@ pub fn decodificar_contenido(contenido: Vec<u8>) -> Result<String, String> {
     Err("Tipo de objeto invalido".to_string())
 }
 
-pub fn comprimir_contenido(contenido: String) -> Result<Vec<u8>, String> {
+pub fn comprimir_contenido(contenido: &str) -> Result<Vec<u8>, String> {
     let mut compresor = ZlibEncoder::new(Vec::new(), Compression::default());
     if compresor.write_all(contenido.as_bytes()).is_err() {
         return Err("No se pudo comprimir el contenido".to_string());

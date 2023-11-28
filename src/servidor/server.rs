@@ -71,7 +71,7 @@ impl Servidor {
         let dir_repo = dir.to_string() + args[0];
         let refs: Vec<String>;
         comunicacion
-            .enviar_linea(gir_io::obtener_linea_con_largo_hex(
+            .enviar_linea(&gir_io::obtener_linea_con_largo_hex(
                 &(VERSION.to_string() + "\n"),
             ))
             .unwrap();

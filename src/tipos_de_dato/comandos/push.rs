@@ -21,11 +21,14 @@ pub struct Push {
 impl Push {
     pub fn new(logger: Arc<Logger>) -> Result<Self, String> {
         let mut hash_refs: HashMap<String, (String, String)> = HashMap::new();
-        let refs = obtener_refs_de(PathBuf::from("./.gir/refs/"), String::from("./.gir/"));
+        let refs = obtener_refs_de(PathBuf::from("./.gir/refs/"), "./.gir/");
         // let comunicacion = Arc::new(Comunicacion::<TcpStream>::new_desde_gir_config(
         //     logger.clone(),
         // )?);
-        let comunicacion = Arc::new(Comunicacion::<TcpStream>::new_desde_direccion_servidor("127.0.0.1:9333", logger.clone())?);
+        let comunicacion = Arc::new(Comunicacion::<TcpStream>::new_desde_direccion_servidor(
+            "127.0.0.1:9333",
+            logger.clone(),
+        )?);
         for referencia in refs {
             hash_refs.insert(
                 referencia.split(' ').collect::<Vec<&str>>()[1].to_string(),
@@ -118,8 +121,8 @@ impl Push {
 }
 
 fn obtener_commits_y_objetos_asociados(
-    referencia: &String,
-    commit_limite: &String,
+    referencia: &str,
+    commit_limite: &str,
 ) -> Result<HashSet<String>, String> {
     let logger = Arc::new(Logger::new(PathBuf::from("./tmp/aa"))?);
     let ruta = format!(".gir/{}", referencia);
@@ -150,12 +153,10 @@ fn obtener_commits_y_objetos_asociados(
             continue;
         }
         objetos_a_agregar.insert(commit.hash.clone());
-        let hash_tree = write_tree::conseguir_arbol_from_hash_commit(
-            &commit.hash,
-            "./.gir/objects/".to_string(),
-        );
-        let tree = Tree::from_hash(hash_tree.clone(), PathBuf::from("."), logger.clone())?;
-        objetos_a_agregar.insert(hash_tree.clone());
+        let hash_tree =
+            write_tree::conseguir_arbol_from_hash_commit(&commit.hash, "./.gir/objects/")?;
+        let tree = Tree::from_hash(&hash_tree, PathBuf::from("."), logger.clone())?;
+        objetos_a_agregar.insert(hash_tree);
         objetos_a_agregar.extend(
             tree.obtener_objetos()
                 .iter()
@@ -174,7 +175,7 @@ fn obtener_commits_y_objetos_asociados(
     Ok(objetos_a_agregar)
 }
 
-fn obtener_refs_de(dir: PathBuf, prefijo: String) -> Vec<String> {
+fn obtener_refs_de(dir: PathBuf, prefijo: &str) -> Vec<String> {
     let mut refs: Vec<String> = Vec::new();
     refs.append(&mut io::obtener_refs(dir.join("heads/"), prefijo.clone()).unwrap());
     refs.append(&mut io::obtener_refs(dir.join("tags/"), prefijo).unwrap());

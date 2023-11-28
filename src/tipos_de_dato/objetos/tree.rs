@@ -77,7 +77,7 @@ impl Tree {
         for objeto in objetos {
             match objeto {
                 Objeto::Blob(blob) => {
-                    let objeto = descomprimir_objeto(blob.hash, String::from(".gir/objects/"))?;
+                    let objeto = descomprimir_objeto(&blob.hash, ".gir/objects/")?;
                     let contenido = objeto.split('\0').collect::<Vec<&str>>()[1];
                     io::escribir_bytes(blob.ubicacion, contenido).unwrap();
                 }
@@ -217,7 +217,7 @@ impl Tree {
     /// Dado el contenido del arbol, devuelve un vector con los datos de cada uno de sus hijos.
     /// Cada dato es una tupla con el modo, el nombre y el hash del hijo.
     fn obtener_datos_de_contenido(
-        contenido: String,
+        contenido: &str,
     ) -> Result<Vec<(String, String, String)>, String> {
         let mut contenido_parseado: Vec<(String, String, String)> = Vec::new();
         let mut lineas = contenido.split('\0').collect::<Vec<&str>>();
@@ -258,14 +258,10 @@ impl Tree {
 
     /// Lee el objeto tree de la base de datos en base a un hash pasado por parametro junto con
     /// el directorio en el que se encuentra el tree y lo devuelve como un objeto Tree
-    pub fn from_hash(
-        hash: String,
-        directorio: PathBuf,
-        logger: Arc<Logger>,
-    ) -> Result<Tree, String> {
+    pub fn from_hash(hash: &str, directorio: PathBuf, logger: Arc<Logger>) -> Result<Tree, String> {
         // let hash_completo = Self::obtener_hash_completo(hash)?;
-        let contenido = descomprimir_objeto(hash, ".gir/objects/".to_string())?;
-        let contenido_parseado = Self::obtener_datos_de_contenido(contenido)?;
+        let contenido = descomprimir_objeto(hash, ".gir/objects/")?;
+        let contenido_parseado = Self::obtener_datos_de_contenido(&contenido)?;
         let mut objetos: Vec<Objeto> = Vec::new();
 
         for (modo, nombre, hash_hijo) in contenido_parseado {
@@ -286,7 +282,7 @@ impl Tree {
                 }
                 "40000" => {
                     let tree =
-                        Self::from_hash(hash_hijo, PathBuf::from(ubicacion), logger.clone())?;
+                        Self::from_hash(&hash_hijo, PathBuf::from(ubicacion), logger.clone())?;
                     objetos.push(Objeto::Tree(tree));
                 }
                 _ => {}
@@ -310,7 +306,7 @@ impl Tree {
     }
 
     /// Devuelve si el arvol contiene un hijo con el mismo hash que el pasado por parametro.
-    pub fn contiene_misma_version_hijo(&self, hash_hijo: String, ubicacion_hijo: PathBuf) -> bool {
+    pub fn contiene_misma_version_hijo(&self, hash_hijo: &str, ubicacion_hijo: PathBuf) -> bool {
         for objeto in &self.objetos {
             match objeto {
                 Objeto::Blob(blob) => {
@@ -410,7 +406,7 @@ impl Tree {
 
     /// Teniendo el contenido descomprimido pasado a String
     /// devuelve el contenido del arbol en un formato pretty print.
-    pub fn rearmar_contenido_descomprimido(contenido: String) -> Result<String, String> {
+    pub fn rearmar_contenido_descomprimido(contenido: &str) -> Result<String, String> {
         let mut contenido_pretty: Vec<String> = Vec::new();
         let mut contenido_splitteado_null = contenido.split('\0').collect::<Vec<&str>>();
         contenido_pretty.push(contenido_splitteado_null[0].to_string() + " ");

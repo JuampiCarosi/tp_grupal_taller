@@ -6,7 +6,7 @@ use super::io;
 
 /// Dado un hash y una ruta, busca el archivo de ese hash en la ruta especificada
 /// y devuelve el contenido del objeto descomprimido.
-pub fn descomprimir_objeto(hash: String, ruta: String) -> Result<String, String> {
+pub fn descomprimir_objeto(hash: &str, ruta: &str) -> Result<String, String> {
     let ruta_objeto = format!("{}{}/{}", ruta.clone(), &hash[..2], &hash[2..]);
 
     let contenido_leido = io::leer_bytes(ruta_objeto)?;
@@ -16,8 +16,8 @@ pub fn descomprimir_objeto(hash: String, ruta: String) -> Result<String, String>
 }
 
 /// Descomprime el objeto indicado por el hash en la ruta .gir/objects
-pub fn descomprimir_objeto_gir(hash: String) -> Result<String, String> {
-    descomprimir_objeto(hash, String::from(".gir/objects/"))
+pub fn descomprimir_objeto_gir(hash: &str) -> Result<String, String> {
+    descomprimir_objeto(hash, ".gir/objects/")
 }
 
 /// Convierte un vector de u8 a un string.
@@ -111,7 +111,7 @@ fn decodificar_tree(header: &str, contenido: &[u8]) -> Result<String, String> {
 
 /// Comprime el contenido en String de un objeto.
 /// Si el contenido no es valido, devuelve un error.
-pub fn comprimir_contenido(contenido: String) -> Result<Vec<u8>, String> {
+pub fn comprimir_contenido(contenido: &str) -> Result<Vec<u8>, String> {
     let mut compresor = ZlibEncoder::new(Vec::new(), Compression::default());
     if compresor.write_all(contenido.as_bytes()).is_err() {
         return Err("No se pudo comprimir el contenido".to_string());
@@ -148,7 +148,7 @@ pub fn descomprimir_contenido_u8(contenido: &[u8]) -> Result<Vec<u8>, String> {
 
 /// Dado un hash y una ruta, busca el archivo de ese hash en la ruta especificada
 /// y devuelve el contenido del objeto comprimido, sin tener en cuenta la linea del header del objeto.
-pub fn obtener_contenido_comprimido_sin_header(hash: String) -> Result<Vec<u8>, String> {
+pub fn obtener_contenido_comprimido_sin_header(hash: &str) -> Result<Vec<u8>, String> {
     let ruta_objeto = format!(".gir/objects/{}/{}", &hash[..2], &hash[2..]);
     let contenido_leido = io::leer_bytes(ruta_objeto)?;
     let cont_descomprimido = descomprimir_contenido_u8(&contenido_leido).unwrap();
@@ -160,7 +160,7 @@ pub fn obtener_contenido_comprimido_sin_header(hash: String) -> Result<Vec<u8>, 
 }
 
 pub fn obtener_contenido_comprimido_sin_header_de(
-    hash: String,
+    hash: &str,
     dir: &str,
 ) -> Result<Vec<u8>, String> {
     let ruta_objeto = format!("{}{}/{}", dir, &hash[..2], &hash[2..]);

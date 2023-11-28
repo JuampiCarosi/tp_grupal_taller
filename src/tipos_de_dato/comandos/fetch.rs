@@ -173,7 +173,7 @@ impl<T: Write + Read> Fetch<T> {
         // Packfile::new()
         //     .obtener_paquete_y_escribir(&mut packfile, String::from("./.gir/objects/"))
         //     .unwrap();
-        packfile::leer_packfile_y_escribir(&packfile, "./.gir/objects/".to_string()).unwrap();
+        packfile::leer_packfile_y_escribir(&packfile, "./.gir/objects/").unwrap();
         Ok(())
     }
 

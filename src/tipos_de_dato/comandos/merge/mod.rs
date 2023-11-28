@@ -67,14 +67,10 @@ impl Merge {
         })
     }
 
-    pub fn obtener_arbol_commit_actual(
-        branch: String,
-        logger: Arc<Logger>,
-    ) -> Result<Tree, String> {
-        let head_commit = Self::obtener_commit_de_branch(&branch)?;
-        let hash_tree_padre =
-            conseguir_arbol_from_hash_commit(&head_commit, String::from(".gir/objects/"));
-        Tree::from_hash(hash_tree_padre, PathBuf::from("."), logger.clone())
+    pub fn obtener_arbol_commit_actual(branch: &str, logger: Arc<Logger>) -> Result<Tree, String> {
+        let head_commit = Self::obtener_commit_de_branch(branch)?;
+        let hash_tree_padre = conseguir_arbol_from_hash_commit(&head_commit, ".gir/objects/")?;
+        Tree::from_hash(&hash_tree_padre, PathBuf::from("."), logger.clone())
     }
 
     /// Devuelve el commit base mas cercano entre dos ramas
@@ -115,8 +111,8 @@ impl Merge {
 
     /// Devuelve un vector con las lineas que difieren entre dos objetos
     fn obtener_diffs_entre_dos_objetos(
-        hash_objeto1: String,
-        hash_objeto2: String,
+        hash_objeto1: &str,
+        hash_objeto2: &str,
     ) -> Result<Vec<(usize, DiffType)>, String> {
         let (_, contenido1) = cat_file::obtener_contenido_objeto(hash_objeto1)?;
         let (_, contenido2) = cat_file::obtener_contenido_objeto(hash_objeto2)?;
@@ -233,7 +229,7 @@ impl Merge {
     fn mergear_diffs(
         diff_actual: Vec<(usize, DiffType)>,
         diff_a_mergear: Vec<(usize, DiffType)>,
-        archivo_base: String,
+        archivo_base: &str,
     ) -> (String, bool) {
         let mut hubo_conflictos = false;
         let lineas_archivo_base = archivo_base.split('\n').collect::<Vec<&str>>();
@@ -280,17 +276,15 @@ impl Merge {
     }
 
     /// Realiza un auto-merge, realizando un merge de cada file que difiera entre los dos commits
-    fn automerge(&self, commit_base: String) -> Result<String, String> {
-        let hash_tree_base = write_tree::conseguir_arbol_from_hash_commit(
-            &commit_base,
-            String::from(".gir/objects/"),
-        );
-        let tree_base = Tree::from_hash(hash_tree_base, PathBuf::from("."), self.logger.clone())?;
+    fn automerge(&self, commit_base: &str) -> Result<String, String> {
+        let hash_tree_base =
+            write_tree::conseguir_arbol_from_hash_commit(&commit_base, ".gir/objects/")?;
+        let tree_base = Tree::from_hash(&hash_tree_base, PathBuf::from("."), self.logger.clone())?;
 
         let tree_branch_actual =
-            Self::obtener_arbol_commit_actual(self.branch_actual.clone(), self.logger.clone())?;
+            Self::obtener_arbol_commit_actual(&self.branch_actual, self.logger.clone())?;
         let tree_branch_a_mergear =
-            Self::obtener_arbol_commit_actual(self.branch_a_mergear.clone(), self.logger.clone())?;
+            Self::obtener_arbol_commit_actual(&self.branch_a_mergear, self.logger.clone())?;
 
         let nodos_hoja_base = tree_base.obtener_objetos_hoja();
         let nodos_hoja_branch_actual = tree_branch_actual.obtener_objetos_hoja();
@@ -329,19 +323,19 @@ impl Merge {
                 };
 
             let diff_a_mergear = Self::obtener_diffs_entre_dos_objetos(
-                objeto_base.obtener_hash(),
-                objeto_a_mergear.obtener_hash(),
+                &objeto_base.obtener_hash(),
+                &objeto_a_mergear.obtener_hash(),
             )?;
 
             let diff_actual = Self::obtener_diffs_entre_dos_objetos(
-                objeto_base.obtener_hash(),
-                objeto_actual.obtener_hash(),
+                &objeto_base.obtener_hash(),
+                &objeto_actual.obtener_hash(),
             )?;
 
-            let contenido_base = descomprimir_objeto_gir(objeto_base.obtener_hash())?;
+            let contenido_base = descomprimir_objeto_gir(&objeto_base.obtener_hash())?;
 
             let (resultado, hubo_conflictos) =
-                Self::mergear_diffs(diff_actual, diff_a_mergear, contenido_base);
+                Self::mergear_diffs(diff_actual, diff_a_mergear, &contenido_base);
 
             io::escribir_bytes(objeto_base.obtener_path(), resultado)?;
             if hubo_conflictos {
@@ -383,7 +377,7 @@ impl Merge {
         )?;
 
         let tree_branch_a_mergear =
-            Self::obtener_arbol_commit_actual(self.branch_a_mergear.clone(), self.logger.clone())?;
+            Self::obtener_arbol_commit_actual(&self.branch_a_mergear, self.logger.clone())?;
 
         tree_branch_a_mergear.escribir_en_directorio()?;
         Ok("Merge con fast-forward completado".to_string())
@@ -416,7 +410,7 @@ impl Merge {
         Ok(!merge.is_empty())
     }
 
-    pub fn obtener_commit_de_branch(branch: &String) -> Result<String, String> {
+    pub fn obtener_commit_de_branch(branch: &str) -> Result<String, String> {
         let branch_split = branch.split('/').collect::<Vec<&str>>();
         if branch_split.len() == 1 {
             let ruta = format!(".gir/refs/heads/{}", branch);
@@ -478,7 +472,7 @@ impl Merge {
             self.fast_forward()
         } else {
             self.logger.log("Realizando auto-merge");
-            self.automerge(commit_base)
+            self.automerge(&commit_base)
         }?;
 
         self.escribir_merge_head()?;
@@ -514,7 +508,7 @@ mod tests {
 
         let diff_1 = Merge::obtener_diffs_entre_dos_archivos(&base, &version_1).unwrap();
         let diff_2 = Merge::obtener_diffs_entre_dos_archivos(&base, &version_2).unwrap();
-        let (contenido_final, _conflictos) = Merge::mergear_diffs(diff_1, diff_2, base);
+        let (contenido_final, _conflictos) = Merge::mergear_diffs(diff_1, diff_2, &base);
         println!("{}", contenido_final);
 
         assert_eq!(
@@ -546,7 +540,7 @@ mod tests {
 
         let diff_1 = Merge::obtener_diffs_entre_dos_archivos(&base, &version_1).unwrap();
         let diff_2 = Merge::obtener_diffs_entre_dos_archivos(&base, &version_2).unwrap();
-        let (contenido_final, _conflictos) = Merge::mergear_diffs(diff_1, diff_2, base);
+        let (contenido_final, _conflictos) = Merge::mergear_diffs(diff_1, diff_2, &base);
         println!("{}", contenido_final);
 
         assert_eq!(
@@ -576,7 +570,7 @@ mod tests {
 
         let diff_1 = Merge::obtener_diffs_entre_dos_archivos(&base, &version_1).unwrap();
         let diff_2 = Merge::obtener_diffs_entre_dos_archivos(&base, &version_2).unwrap();
-        let (contenido_final, _conflictos) = Merge::mergear_diffs(diff_1, diff_2, base);
+        let (contenido_final, _conflictos) = Merge::mergear_diffs(diff_1, diff_2, &base);
         println!("{}", contenido_final);
 
         assert_eq!(
@@ -606,7 +600,7 @@ mod tests {
 
         let diff_1 = Merge::obtener_diffs_entre_dos_archivos(&base, &version_1).unwrap();
         let diff_2 = Merge::obtener_diffs_entre_dos_archivos(&base, &version_2).unwrap();
-        let (contenido_final, _conflictos) = Merge::mergear_diffs(diff_1, diff_2, base);
+        let (contenido_final, _conflictos) = Merge::mergear_diffs(diff_1, diff_2, &base);
 
         assert_eq!(
             contenido_final,
@@ -638,7 +632,7 @@ mod tests {
 
         let diff_1 = Merge::obtener_diffs_entre_dos_archivos(&base, &version_1).unwrap();
         let diff_2 = Merge::obtener_diffs_entre_dos_archivos(&base, &version_2).unwrap();
-        let (contenido_final, _conflictos) = Merge::mergear_diffs(diff_1, diff_2, base);
+        let (contenido_final, _conflictos) = Merge::mergear_diffs(diff_1, diff_2, &base);
 
         assert_eq!(
             contenido_final,

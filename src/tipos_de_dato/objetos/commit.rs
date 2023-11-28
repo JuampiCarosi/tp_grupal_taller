@@ -81,7 +81,7 @@ impl CommitObj {
         if hash.len() != 40 {
             return Err("Hash invalido".to_string());
         }
-        let (_header, contenido) = cat_file::obtener_contenido_objeto(hash.clone())?;
+        let (_header, contenido) = cat_file::obtener_contenido_objeto(&hash)?;
         let mut padres: Vec<String> = Vec::new();
         let mut autor_option: Option<String> = None;
         let mut mail_option: Option<String> = None;

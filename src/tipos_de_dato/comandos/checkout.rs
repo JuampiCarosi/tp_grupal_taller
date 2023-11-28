@@ -124,7 +124,7 @@ impl Checkout {
 
     /// Devuelve el nombre de la rama actual.
     /// O sea, la rama a la que apunta el archivo HEAD.
-    fn conseguir_rama_actual(&self, contenidio_head: String) -> Result<String, String> {
+    fn conseguir_rama_actual(&self, contenidio_head: &str) -> Result<String, String> {
         let partes: Vec<&str> = contenidio_head.split('/').collect();
         let rama_actual = partes
             .last()
@@ -137,7 +137,7 @@ impl Checkout {
     fn cambiar_ref_en_head(&self) -> Result<(), String> {
         let contenido_head = io::leer_a_string(PATH_HEAD)?;
 
-        let rama_actual = self.conseguir_rama_actual(contenido_head.clone())?;
+        let rama_actual = self.conseguir_rama_actual(&contenido_head)?;
 
         let nuevo_head = contenido_head.replace(&rama_actual, &self.rama_a_cambiar);
 
@@ -200,11 +200,10 @@ impl Checkout {
     /// Devuelve el arbol del ultimo commit de la rama actual.
     fn obtener_arbol_commit_actual(&self) -> Result<Tree, String> {
         let ref_actual = io::leer_a_string(PATH_HEAD)?;
-        let rama_actual = self.conseguir_rama_actual(ref_actual)?;
+        let rama_actual = self.conseguir_rama_actual(&ref_actual)?;
         let head_commit = io::leer_a_string(format!(".gir/refs/heads/{}", rama_actual))?;
-        let hash_tree_padre =
-            conseguir_arbol_from_hash_commit(&head_commit, ".gir/objects/".to_string());
-        Tree::from_hash(hash_tree_padre, PathBuf::from("."), self.logger.clone())
+        let hash_tree_padre = conseguir_arbol_from_hash_commit(&head_commit, ".gir/objects/")?;
+        Tree::from_hash(&hash_tree_padre, PathBuf::from("."), self.logger.clone())
     }
 
     /// Ejecuta el comando checkout en su totalidad.

@@ -17,9 +17,9 @@ pub fn receive_pack(
     }
     let mut packfile = comunicacion.obtener_packfile().unwrap();
     // Packfile::new().obtener_paquete_y_escribir(&mut packfile, dir.clone() + "/gir/objects/")?; // uso otra convencion (/)por como esta hecho en daemon
-                                                                                               // las refs se actualizan al final
-    packfile::leer_packfile_y_escribir(&mut packfile, dir.clone() + "/gir/objects/")?;
-   
+    // las refs se actualizan al final
+    packfile::leer_packfile_y_escribir(&mut packfile, &(dir.clone() + "/gir/objects/"))?;
+
     for actualizacion in &actualizaciones {
         let mut partes = actualizacion.splitn(2, ' ');
         let _vieja_ref = partes.next().unwrap_or("");

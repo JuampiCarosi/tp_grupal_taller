@@ -40,8 +40,9 @@ pub fn obtener_arbol_del_commit_head(logger: Arc<Logger>) -> Option<Tree> {
         None
     } else {
         let hash_arbol_commit =
-            conseguir_arbol_from_hash_commit(&padre_commit, String::from(".gir/objects/"));
-        let tree = Tree::from_hash(hash_arbol_commit, PathBuf::from("./"), logger.clone()).unwrap();
+            conseguir_arbol_from_hash_commit(&padre_commit, ".gir/objects/").ok()?;
+        let tree =
+            Tree::from_hash(&hash_arbol_commit, PathBuf::from("./"), logger.clone()).unwrap();
         Some(tree)
     }
 }
@@ -111,7 +112,7 @@ impl Status {
         for objeto in self.tree_directorio_actual.obtener_objetos_hoja() {
             if tree_head.contiene_hijo_por_ubicacion(objeto.obtener_path())
                 && !tree_head
-                    .contiene_misma_version_hijo(objeto.obtener_hash(), objeto.obtener_path())
+                    .contiene_misma_version_hijo(&objeto.obtener_hash(), objeto.obtener_path())
                 && !self.index_contiene_objeto(&objeto)
             {
                 trackeados.push(format!("modificado: {}", objeto.obtener_path().display()));
@@ -159,7 +160,7 @@ impl Status {
         let bool = self.index.iter().any(|objeto_index| match objeto {
             Objeto::Blob(ref blob) => blob.obtener_hash() == objeto_index.objeto.obtener_hash(),
             Objeto::Tree(ref tree) => tree.contiene_misma_version_hijo(
-                objeto_index.objeto.obtener_hash(),
+                &objeto_index.objeto.obtener_hash(),
                 objeto_index.objeto.obtener_path(),
             ),
         });
