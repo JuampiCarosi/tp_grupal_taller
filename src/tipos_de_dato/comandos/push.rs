@@ -19,12 +19,13 @@ pub struct Push {
 }
 
 impl Push {
+    // lo que se hace aca es obtener las referencias del cliente, y setear las del servidor en 0 (40 veces 0)
+    // asi queda la estructura del hashmap como: Referencia: (ref_cliente, ref_servidor)
+    // donde referencia puede ser por ejemplo: refs/heads/master
+
     pub fn new(logger: Arc<Logger>) -> Result<Self, String> {
         let mut hash_refs: HashMap<String, (String, String)> = HashMap::new();
         let refs = obtener_refs_de(PathBuf::from("./.gir/refs/"), String::from("./.gir/"));
-        // let comunicacion = Arc::new(Comunicacion::<TcpStream>::new_desde_gir_config(
-        //     logger.clone(),
-        // )?);
         let comunicacion = Arc::new(Comunicacion::<TcpStream>::new_desde_direccion_servidor("127.0.0.1:9418", logger.clone())?);
                 for referencia in refs {
             hash_refs.insert(
@@ -66,6 +67,7 @@ impl Push {
         Ok((refs_recibidas, capacidades))
     }
 
+    // funcion para guaradar en el hashmap las diferencias entre las refs del cliente y las del server
     fn guardar_diferencias(&mut self, refs_recibidas: Vec<String>) -> Result<(), String> {
         for referencia in &refs_recibidas {
             let obj_id = referencia.split(' ').collect::<Vec<&str>>()[0];
@@ -142,6 +144,14 @@ impl Push {
     }
 }
 
+
+
+// ------ funciones auxiliares ------
+
+
+// funcion para obtener los commits que faltan para llegar al commit limite y los objetos asociados a cada commit
+// en caso de que sea una referencia nula, se enviara todo. En caso de que el commit limite no sea una referencia nula
+// y no se encuentre al final de la cadena de commits, se enviara un error, ya que el servidor tiene cambios que el cliente no tiene
 fn obtener_commits_y_objetos_asociados(
     referencia: &String,
     commit_limite: &String,
@@ -157,7 +167,7 @@ fn obtener_commits_y_objetos_asociados(
     let mut objetos_a_agregar: HashSet<String> = HashSet::new();
     let mut commits_a_revisar: Vec<CommitObj> = Vec::new();
 
-    let ultimo_commit = CommitObj::from_hash(ultimo_commit);
+    let ultimo_commit = CommitObj::from_hash(ultimo_commit);    
     
     match ultimo_commit {
         Ok(ultimo_commit) => {
