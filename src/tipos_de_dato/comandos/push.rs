@@ -42,26 +42,31 @@ impl Push {
         })
     }
 
-    pub fn ejecutar(&mut self) -> Result<String, String> {
-        self.logger.log("Se ejecuto el comando push".to_string());
+    
+    fn enviar_pedido(&mut self) -> Result<(), String> {
         let request_data = "git-receive-pack /gir/\0host=example.com\0\0version=1\0"; //en donde dice /.git/ va la dir del repo
         let request_data_con_largo_hex = io::obtener_linea_con_largo_hex(request_data);
         self.comunicacion.enviar(&request_data_con_largo_hex)?;
+        Ok(())
+    }
+
+    // recibe las referencia junto a la version y las capacidades del servidor. 
+    fn obtener_referencias_y_capacidades(&mut self) -> Result<(Vec<String>, String), String> {
         let mut refs_recibidas = self.comunicacion.obtener_lineas()?;
-        let mut actualizaciones = Vec::new();
-        let mut objetos_a_enviar = HashSet::new();
 
         let _version = refs_recibidas.remove(0);
         let first_ref = refs_recibidas.remove(0);
-        // caso en el que el server no tiene refs
-        // if first_ref.contains(&"0".repeat(40)) {
+
         let referencia_y_capacidades = first_ref.split('\0').collect::<Vec<&str>>();
         let referencia = referencia_y_capacidades[0].to_string();
-        let _capacidades = referencia_y_capacidades[1].to_string();
+        let capacidades = referencia_y_capacidades[1].to_string();
         if !referencia.contains(&"0".repeat(40)) {
             refs_recibidas.push(referencia_y_capacidades[0].to_string());
         }   
-            
+        Ok((refs_recibidas, capacidades))
+    }
+
+    fn guardar_diferencias(&mut self, refs_recibidas: Vec<String>) -> Result<(), String> {
         for referencia in &refs_recibidas {
             let obj_id = referencia.split(' ').collect::<Vec<&str>>()[0];
             let referencia = referencia.split(' ').collect::<Vec<&str>>()[1].trim_end_matches('\n');
@@ -72,6 +77,14 @@ impl Push {
                 None => {}
             }
         }
+        Ok(())
+    }
+
+    // funcion que devuelve los objetos que hay que enviar al server y las actualizaciones que hay que hacer
+    fn obtener_objetos_a_enviar(&self) -> Result<(HashSet<String>, Vec<String>), String> {
+        let mut actualizaciones = Vec::new();
+        let mut objetos_a_enviar = HashSet::new();
+
         for (key, value) in &self.hash_refs {
             if value.1 != value.0 { 
                 actualizaciones.push(io::obtener_linea_con_largo_hex(&format!(
@@ -98,7 +111,10 @@ impl Push {
                 }
             }
         }
+        Ok((objetos_a_enviar, actualizaciones))
+    }
 
+    fn enviar_actualizaciones_y_objetos(&mut self, actualizaciones: Vec<String>, objetos_a_enviar: HashSet<String>) -> Result<String, String> {
         if !actualizaciones.is_empty() {
             self.comunicacion.responder(actualizaciones).unwrap();
             self.comunicacion
@@ -112,6 +128,17 @@ impl Push {
             //error
             Err("No hay actualizaciones".to_string())
         }
+    }
+
+    pub fn ejecutar(&mut self) -> Result<String, String> {
+        self.enviar_pedido()?;
+        let (refs_recibidas, _capacidades) = self.obtener_referencias_y_capacidades()?;
+
+        self.guardar_diferencias(refs_recibidas)?;    
+ 
+        let (objetos_a_enviar, actualizaciones) = self.obtener_objetos_a_enviar()?;
+
+        self.enviar_actualizaciones_y_objetos(actualizaciones, objetos_a_enviar)
     }
 }
 
@@ -183,7 +210,6 @@ fn obtener_refs_de(dir: PathBuf, prefijo: String) -> Vec<String> {
     let mut refs: Vec<String> = Vec::new();
     refs.append(&mut io::obtener_refs(dir.join("heads/"), prefijo.clone()).unwrap());
     refs.append(&mut io::obtener_refs(dir.join("tags/"), prefijo).unwrap());
-    // refs[0] = self.agregar_capacidades(refs[0].clone ());
     refs
 }
 
