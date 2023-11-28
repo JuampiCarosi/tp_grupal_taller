@@ -22,6 +22,7 @@ pub mod tipos_de_dato {
         pub mod add;
         pub mod branch;
         pub mod cat_file;
+        pub mod check_ignore;
         pub mod checkout;
         pub mod clone;
         pub mod commit;

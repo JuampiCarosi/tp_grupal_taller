@@ -2,10 +2,7 @@ use std::sync::Arc;
 
 use crate::utils::{io, path_buf};
 
-use super::{
-    comandos::{commit::Commit, status::obtener_arbol_del_commit_head},
-    logger::Logger,
-};
+use super::{comandos::commit::Commit, logger::Logger};
 
 pub struct Tag {
     logger: Arc<Logger>,

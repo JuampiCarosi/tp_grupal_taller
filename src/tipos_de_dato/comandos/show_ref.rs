@@ -126,6 +126,7 @@ impl ShowRef {
     }
 
     pub fn ejecutar(&self) -> Result<String, String> {
+        self.logger.log("Ejecutando comando show-ref".to_string());
         let mut refs = self.obtener_referencias(PathBuf::from(".gir/refs/"))?;
 
         if self.show_head {
@@ -137,7 +138,8 @@ impl ShowRef {
         for (ubicacion, contenido) in refs {
             salida.push_str(&format!("{} {}\n", contenido, ubicacion));
         }
-
+        self.logger
+            .log("Comando show-ref ejecutado con exito".to_string());
         Ok(salida)
     }
 }
