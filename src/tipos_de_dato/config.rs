@@ -81,8 +81,7 @@ impl Config {
                 }
                 _ => return Err("Error en el archivo de configuracion".to_string()),
             }
-        }
-
+        }   
         Ok(Config { remotos, ramas })
     }
 
@@ -94,8 +93,7 @@ impl Config {
 
     ///en caso de existir un remoto asosiado a la rama actual, lo devuelve
     pub fn obtener_remoto_rama_actual(&self) -> Option<String> {
-        let rama_actual = utils::ramas::obtener_rama_actual().err()?;
-
+        let rama_actual = utils::ramas::obtener_rama_actual().ok()?;
         match self.ramas.iter().find(|&rama| rama.nombre == rama_actual) {
             Some(rama) => Some((*rama.remote).to_string()),
             None => None,

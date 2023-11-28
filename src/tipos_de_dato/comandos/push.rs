@@ -1,5 +1,7 @@
 use crate::tipos_de_dato::comandos::write_tree;
+use crate::tipos_de_dato::comunicacion;
 use crate::tipos_de_dato::comunicacion::Comunicacion;
+use crate::tipos_de_dato::config::Config;
 use crate::tipos_de_dato::logger::Logger;
 use crate::tipos_de_dato::objetos::commit::CommitObj;
 use crate::tipos_de_dato::objetos::tree::Tree;
@@ -26,8 +28,16 @@ impl Push {
     pub fn new(logger: Arc<Logger>) -> Result<Self, String> {
         let mut hash_refs: HashMap<String, (String, String)> = HashMap::new();
         let refs = obtener_refs_de(PathBuf::from("./.gir/refs/"), String::from("./.gir/"));
-        let comunicacion = Arc::new(Comunicacion::<TcpStream>::new_desde_direccion_servidor("127.0.0.1:9418", logger.clone())?);
-                for referencia in refs {
+        // let comunicacion = Arc::new(Comunicacion::<TcpStream>::new_desde_direccion_servidor("127.0.0.1:9418", logger.clone())?);
+
+        let remoto = Self::obtener_remoto_rama_actual()?;
+        println!("pase esto");
+        Self::verificar_remoto(&remoto)?;
+        let url: String = Self::obtener_url(&remoto)?;
+        println!("url: {}", url);
+        let comunicacion = Arc::new(Comunicacion::<TcpStream>::new_desde_direccion_servidor(&url, logger.clone())?);
+        
+        for referencia in refs {
             hash_refs.insert(
                 referencia.split(' ').collect::<Vec<&str>>()[1].to_string(),
                 (
@@ -42,8 +52,25 @@ impl Push {
             comunicacion,
         })
     }
+    //Le pide al config el url asosiado a la rama
+    fn obtener_url(remoto: &String) -> Result<String, String> {
+        Config::leer_config()?.obtenet_url_asosiado_remoto(&remoto)
+    }
 
-    
+    fn obtener_remoto_rama_actual() -> Result<String, String> {
+        Config::leer_config()?
+            .obtener_remoto_rama_actual()
+            .ok_or(format!(
+                "La rama actual no se encuentra asosiado a ningun remoto\nUtilice:\n\ngir remote add [<nombre-remote>] [<url-remote>]\n\nDespues:\n\ngit push\n\n"
+            ))
+    }
+    fn verificar_remoto(remoto: &String) -> Result<String, String> {
+        if let false = Config::leer_config()?.existe_remote(remoto) {
+            return  Err(format!("Remoto desconocido{}\nSi quiere añadir un nuevo remoto:\n\ngir remote add [<nombre-remote>] [<url-remote>]\n\n", remoto));
+        };
+
+        Ok(remoto.clone())
+    }
     fn enviar_pedido(&mut self) -> Result<(), String> {
         let request_data = "git-receive-pack /gir/\0host=example.com\0\0version=1\0"; //en donde dice /.git/ va la dir del repo
         let request_data_con_largo_hex = io::obtener_linea_con_largo_hex(request_data);
