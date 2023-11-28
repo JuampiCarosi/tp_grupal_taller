@@ -257,7 +257,7 @@ mod tests {
 
     fn conseguir_hash_padre(branch: &str) -> Result<String, String> {
         let hash = io::leer_a_string(format!(".gir/refs/heads/{}", branch))?;
-        let contenido = descomprimir_objeto(&hash, "gir/objects/")?;
+        let contenido = descomprimir_objeto(&hash, ".gir/objects/")?;
         let lineas_sin_null = contenido.replace('\0', "\n");
         let lineas = lineas_sin_null.split('\n').collect::<Vec<&str>>();
         let linea_supuesto_padre = lineas[2].split(' ').collect::<Vec<&str>>();
