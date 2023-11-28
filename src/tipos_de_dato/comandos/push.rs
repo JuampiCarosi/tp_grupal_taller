@@ -13,10 +13,16 @@ use std::net::TcpStream;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
+
+const FLAG_SET_UPSTREAM: &str = "--set-upstream";
+const FLAG_U: &str = "-u";
+const GIR_PUSH: &str = "gir push <remoto> <rama>";
+
 // idea: Key -> (String, String) , primera entrada la ref que tiene el cliente, segunda la que tiene el sv.
 pub struct Push {
     hash_refs: HashMap<String, (String, String)>,
     comunicacion: Arc<Comunicacion<TcpStream>>,
+    set_upstream: bool,
     logger: Arc<Logger>,
 }
 
@@ -25,13 +31,15 @@ impl Push {
     // asi queda la estructura del hashmap como: Referencia: (ref_cliente, ref_servidor)
     // donde referencia puede ser por ejemplo: refs/heads/master
 
-    pub fn new(logger: Arc<Logger>) -> Result<Self, String> {
+    pub fn new(args: Vec<String>, logger: Arc<Logger>) -> Result<Self, String> {
         let mut hash_refs: HashMap<String, (String, String)> = HashMap::new();
         let refs = obtener_refs_de(PathBuf::from("./.gir/refs/"), String::from("./.gir/"));
         // let comunicacion = Arc::new(Comunicacion::<TcpStream>::new_desde_direccion_servidor("127.0.0.1:9418", logger.clone())?);
-
+        // aca tengo que checkear si la branch esta trackeada, si no lo esta, no se puede hacer push
+        //  
         let remoto = Self::obtener_remoto_rama_actual()?;
-        println!("pase esto");
+
+
         Self::verificar_remoto(&remoto)?;
         let url: String = Self::obtener_url(&remoto)?;
         println!("url: {}", url);
@@ -51,6 +59,21 @@ impl Push {
             logger,
             comunicacion,
         })
+    }
+
+    fn parsear_flags(args: &mut Vec<String>, set_upstream: &mut bool) -> Result<(), String> {
+        let flag = args.remove(0);
+
+        if flag == FLAG_U || flag == FLAG_SET_UPSTREAM {
+            *set_upstream = true;
+            Ok(())
+        } else {
+            Err(format!(
+                "Parametros desconocidos {}\n {}",
+                args.join(" "),
+                GIR_PULL
+            ))
+        }
     }
     //Le pide al config el url asosiado a la rama
     fn obtener_url(remoto: &String) -> Result<String, String> {
@@ -160,6 +183,9 @@ impl Push {
     }
 
     pub fn ejecutar(&mut self) -> Result<String, String> {
+        if self.set_upstream {
+            return Ok("Hacer acordar a Siro, que implemente esto :)".to_string());
+        }
         self.enviar_pedido()?;
         let (refs_recibidas, _capacidades) = self.obtener_referencias_y_capacidades()?;
 

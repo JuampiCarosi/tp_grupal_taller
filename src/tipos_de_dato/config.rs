@@ -91,6 +91,9 @@ impl Config {
         self.remotos.iter().any(|x| x.nombre == *remote)
     }
 
+    pub fn existe_rama(&self, rama: &String) -> bool {
+        self.ramas.iter().any(|x| x.nombre == *rama)
+    }
     ///en caso de existir un remoto asosiado a la rama actual, lo devuelve
     pub fn obtener_remoto_rama_actual(&self) -> Option<String> {
         let rama_actual = utils::ramas::obtener_rama_actual().ok()?;
