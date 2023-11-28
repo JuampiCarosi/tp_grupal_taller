@@ -3,7 +3,7 @@ use std::fmt::Debug;
 use std::fs::{self, File, ReadDir};
 use std::io::{self, BufRead};
 use std::path::{Path, PathBuf};
-use std::str;
+use std::{env, str};
 
 use super::path_buf;
 
@@ -228,6 +228,8 @@ pub fn es_dir<P: AsRef<Path> + Clone + Debug>(entrada: P) -> bool {
         Err(_) => false,
     }
 }
+
+///Crea un
 pub fn crear_directorio<P: AsRef<Path> + Clone>(directorio: P) -> Result<(), String> {
     let dir = fs::metadata(directorio.clone());
     if dir.is_ok() {
@@ -238,7 +240,18 @@ pub fn crear_directorio<P: AsRef<Path> + Clone>(directorio: P) -> Result<(), Str
         Err(e) => Err(format!("Error al crear el directorio: {}", e)),
     }
 }
+///Similar a `crear_directorio` pero puede fallar si la carpeta ya existe
+pub fn crear_carpeta<P: AsRef<Path> + Clone>(carpeta: P) -> Result<(), String> {
+    match fs::create_dir_all(carpeta) {
+        Ok(_) => Ok(()),
+        Err(e) => Err(format!("Error al crear la carpeta: {}", e)),
+    }
+}
 
+pub fn cambiar_directorio<P: AsRef<Path> + Clone + Debug>(directorio: P) -> Result<(), String> {
+    env::set_current_dir(&directorio)
+        .map_err(|err| format!("Fallo al cambiar de directorio {:?}:{}", directorio, err))
+}
 pub fn crear_archivo<P: AsRef<Path> + Clone>(dir_directorio: P) -> Result<(), String> {
     si_no_existe_directorio_de_archivo_crearlo(&dir_directorio)?;
     if !dir_directorio.as_ref().exists() {
@@ -286,6 +299,7 @@ where
         )),
     }
 }
+
 pub fn si_no_existe_directorio_de_archivo_crearlo<P>(dir_archivo: &P) -> Result<(), String>
 where
     P: AsRef<Path>,

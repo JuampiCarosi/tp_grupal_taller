@@ -135,7 +135,7 @@ impl<T: Write + Read> Fetch<T> {
         self.actualizar_ramas_locales_del_remoto(&commits_cabezas_y_dir_rama_asosiado)?;
 
         self.acutualizar_archivo_head_remoto(&commit_head_remoto)?;
-        
+
         let mensaje = "Fetch ejecutado con exito".to_string();
         self.logger.log(mensaje.clone());
         Ok(mensaje)
@@ -195,7 +195,10 @@ impl<T: Write + Read> Fetch<T> {
             let ubicacion_archivo_head_remoto =
                 format!("./.gir/{}_HEAD", self.remoto.to_uppercase());
 
-            println!("ubicacion_archivo_head_remoto: {}", ubicacion_archivo_head_remoto);
+            println!(
+                "ubicacion_archivo_head_remoto: {}",
+                ubicacion_archivo_head_remoto
+            );
             io::escribir_bytes(ubicacion_archivo_head_remoto, hash)?;
         }
 
@@ -335,6 +338,7 @@ impl<T: Write + Read> Fetch<T> {
         String,
     > {
         let mut lineas_recibidas = self.comunicacion.obtener_lineas()?;
+        println!("Se recibio {:?}\n", lineas_recibidas);
         let _version = lineas_recibidas.remove(0); //la version del server
 
         let segunda_linea = lineas_recibidas.remove(0);

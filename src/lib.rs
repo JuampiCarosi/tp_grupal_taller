@@ -36,6 +36,7 @@ pub mod tipos_de_dato {
         pub mod push;
         pub mod remote;
         pub mod rm;
+        pub mod set_upstream;
         pub mod show_ref;
         pub mod status;
         pub mod version;
