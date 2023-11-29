@@ -125,8 +125,8 @@ impl<T: Write + Read> Comunicacion<T> {
     ///
     pub fn iniciar_git_recive_pack_con_servidor(&self) -> Result<(), String> {
         self.logger
-            .log("Iniciando git recive pack con el servidor".to_string());
-        let comando = "git-recive-pack";
+            .log("Iniciando git receive pack con el servidor".to_string());
+        let comando = "git-receive-pack";
         let repositorio = &self.repositorio;
         let host = "gir.com";
         let numero_de_version = 1;
