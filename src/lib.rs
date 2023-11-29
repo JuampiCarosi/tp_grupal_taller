@@ -52,6 +52,7 @@ pub mod gui;
 
 pub mod utils {
     pub mod compresion;
+    pub mod fase_descubrimiento;
     pub mod gir_config;
     pub mod index;
     pub mod io;

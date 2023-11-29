@@ -86,8 +86,7 @@ impl Config {
                 }
                 _ => return Err("Error en el archivo de configuracion".to_string()),
             }
-        }
-
+        }   
         Ok(Config { remotos, ramas })
     }
 
@@ -97,10 +96,12 @@ impl Config {
         self.remotos.iter().any(|x| x.nombre == *remote)
     }
 
+    pub fn existe_rama(&self, rama: &String) -> bool {
+        self.ramas.iter().any(|x| x.nombre == *rama)
+    }
     ///en caso de existir un remoto asosiado a la rama actual, lo devuelve
     pub fn obtener_remoto_rama_actual(&self) -> Option<String> {
-        let rama_actual = utils::ramas::obtener_rama_actual().err()?;
-
+        let rama_actual = utils::ramas::obtener_rama_actual().ok()?;
         match self.ramas.iter().find(|&rama| rama.nombre == rama_actual) {
             Some(rama) => Some((*rama.remote).to_string()),
             None => None,
@@ -110,8 +111,8 @@ impl Config {
     ///En caso de existir un remoto y un rama_merge (osea si la rama actual esta configurada)asosiado a la rama actual, lo devuelve
     /// Ojo!! rama merge en formato dir como lo ve el server(Ej: refs/heads/master)
     pub fn obtener_remoto_y_rama_merge_rama_actual(&self) -> Option<(String, PathBuf)> {
-        let rama_actual = utils::ramas::obtener_rama_actual().err()?;
-
+        let rama_actual = utils::ramas::obtener_rama_actual().ok()?;
+        println!("Esto esta en cofing, la linea de arriba tenia .err en vez de .ok");
         match self.ramas.iter().find(|&rama| rama.nombre == rama_actual) {
             Some(rama) => Some(((*rama.remote).to_string(), (*rama.merge).to_path_buf())),
             None => None,

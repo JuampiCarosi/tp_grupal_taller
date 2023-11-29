@@ -12,22 +12,18 @@ pub fn receive_pack(
 ) -> Result<(), ErrorDeComunicacion> {
     println!("Se ejecuto el comando receive-pack");
     let actualizaciones = comunicacion.obtener_lineas().unwrap();
-    if actualizaciones.is_empty() {
-        return Ok(());
-    }
     let mut packfile = comunicacion.obtener_packfile().unwrap();
-    // Packfile::new().obtener_paquete_y_escribir(&mut packfile, dir.clone() + "/gir/objects/")?; // uso otra convencion (/)por como esta hecho en daemon
-    // las refs se actualizan al final
-    packfile::leer_packfile_y_escribir(&mut packfile, dir.clone() + "/gir/objects/")?;
+
+    packfile::leer_packfile_y_escribir(&mut packfile, dir.clone() + "objects/")?;
 
     for actualizacion in &actualizaciones {
-        let mut partes = actualizacion.splitn(2, ' ');
-        let _vieja_ref = partes.next().unwrap_or("");
+        let mut partes = actualizacion.split(' ');
+        let vieja_ref = partes.next().unwrap_or("");
         let nueva_ref = partes.next().unwrap_or("");
-        if nueva_ref != _vieja_ref {
-            io::escribir_referencia(nueva_ref, PathBuf::from(format!("{}/{}", dir, "gir")));
+        let referencia = partes.next().unwrap_or("");
+        if nueva_ref != vieja_ref {
+            io::escribir_bytes(dir.clone() + referencia, nueva_ref).unwrap();
         }
-        // en donde dice dir va la dir del repo
     }
     println!("Receive pack ejecutado con exito");
     Ok(())
