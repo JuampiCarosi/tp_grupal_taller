@@ -89,10 +89,14 @@ impl<T: Write + Read> Comunicacion<T> {
     }
 
     pub fn enviar(&self, mensaje: &str) -> Result<(), String> {
+        self.enviar_bytes(mensaje.as_bytes())
+    }
+
+    pub fn enviar_bytes(&self, mensaje: &[u8]) -> Result<(), String> {
         self.flujo
             .lock()
             .map_err(|e| format!("Fallo en el envio del mensaje.\n{}\n", e))?
-            .write_all(mensaje.as_bytes())
+            .write_all(mensaje)
             .map_err(|e| format!("Fallo en el envio del mensaje.\n{}\n", e))
     }
 
@@ -281,13 +285,11 @@ impl<T: Write + Read> Comunicacion<T> {
         Ok(())
     }
 
-    pub fn responder_con_bytes(&self, lineas: Vec<u8>) -> Result<(), ErrorDeComunicacion> {
-        self.flujo.lock().unwrap().write_all(&lineas)?;
+    //envia el pack file junto con el flush pkt
+    pub fn enviar_pack_file(&self, lineas: Vec<u8>) -> Result<(), String> {
+        self.enviar_bytes(&lineas)?;
         if !lineas.starts_with(b"PACK") {
-            self.flujo
-                .lock()
-                .unwrap()
-                .write_all(String::from("0000").as_bytes())?;
+            self.enviar_flush_pkt()?;
         }
         Ok(())
     }

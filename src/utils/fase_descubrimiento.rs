@@ -21,7 +21,7 @@ use super::ramas;
 ///     carpeta de la rama en el servidor(ojo!! la direccion para el servidor no para el local)
 /// - vector de tuplas con el hash del commit y el tag asosiado
 pub fn fase_de_descubrimiento<T: Write + Read>(
-    comunicacion: Comunicacion<T>,
+    comunicacion: &Comunicacion<T>,
 ) -> Result<
     (
         Vec<String>,

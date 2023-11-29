@@ -112,7 +112,7 @@ impl<T: Write + Read> Fetch<T> {
     pub fn ejecutar(&self) -> Result<String, String> {
         self.logger.log("Se ejecuto el comando fetch".to_string());
         self.comunicacion.iniciar_git_upload_pack_con_servidor()?;
-        //en caso de clone el commit head se tiene que utilizar
+
         let (
             capacidades_servidor,
             commit_head_remoto,
@@ -331,7 +331,7 @@ impl<T: Write + Read> Fetch<T> {
         ),
         String,
     > {
-        utils::fase_descubrimiento::fase_de_descubrimiento(self.comunicacion)
+        utils::fase_descubrimiento::fase_de_descubrimiento(&self.comunicacion)
     }
 
     ///actuliza a donde apuntan las cabeza del rama de las ramas locales pertenecientes al remoto
