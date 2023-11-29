@@ -1,30 +1,21 @@
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use super::{io, path_buf};
 
 ///obtiene el nombre de la rama acutal
 pub fn obtener_rama_actual() -> Result<String, String> {
-    let dir_rama_actual = obtener_ref_rama_actual()?;
+    let dir_rama_actual = obtener_dir_rama_actual()?;
     let rama = path_buf::obtener_nombre(&dir_rama_actual)?;
     Ok(rama)
 }
 
-///obtiene la ref de la rama actual
-pub fn obtener_ref_rama_actual() -> Result<PathBuf, String> {
+///obtiene la dir de la rama actual
+pub fn obtener_dir_rama_actual() -> Result<PathBuf, String> {
     let contenido_head = io::leer_a_string("./.gir/HEAD")?;
     let (_, dir_rama_actual) = contenido_head
         .split_once(' ')
         .ok_or(format!("Fallo al obtener la rama actual\n"))?;
     Ok(PathBuf::from(dir_rama_actual.trim()))
-}
-
-pub fn obtener_gir_dir_rama_actual() -> Result<PathBuf, String> {
-    let ref_rama_actual = obtener_ref_rama_actual()?;
-    print!("{}", ref_rama_actual.display());
-
-    let dir_rama = PathBuf::from("./.gir").join(ref_rama_actual);
-    // print!("{}", dir_rama.display());
-    Ok(dir_rama)
 }
 
 ///Comprueba si dir es el la ruta a una carpeta que corresponde a una rama o a una
@@ -47,7 +38,7 @@ pub fn es_la_ruta_a_una_rama(dir: &PathBuf) -> bool {
 ///
 /// # Ejemplo:
 ///
-/// recive:  ./.gir/refs/heads/master o refs/heads/master
+/// recive:  ./.gir/refs/heads/master
 /// devuelve: ./.gir/refs/remotes/{remoto}/master
 pub fn convertir_de_dir_rama_remota_a_dir_rama_local(
     remoto: &String,

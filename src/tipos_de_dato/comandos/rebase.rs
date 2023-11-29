@@ -166,7 +166,7 @@ impl Rebase {
     fn primera_vez(&self) -> Result<String, String> {
         let rama = self.rama.as_ref().ok_or("No se especifico una rama")?;
 
-        self.logger.log("Rebaseando...");
+        self.logger.log("Rebaseando...".to_string());
         let commits_a_aplicar = self.obtener_commits_a_aplicar(&rama)?;
 
         let tip_nuevo = io::leer_a_string(format!(".gir/refs/heads/{}", rama))?;
@@ -183,7 +183,7 @@ impl Rebase {
         arbol.escribir_en_directorio()?;
 
         self.rebasear_commits(commits_a_aplicar)?;
-        self.logger.log("Rebase finalizado");
+        self.logger.log("Rebase finalizado".to_string());
 
         Ok(format!(
             "Se aplicaron los commits de la rama {} a la rama {}",
@@ -247,7 +247,7 @@ impl Rebase {
 
         index::limpiar_archivo_index()?;
 
-        self.logger.log("Rebase abortado");
+        self.logger.log("Rebase abortado".to_string());
         Ok("Rebase abortado".to_string())
     }
 
