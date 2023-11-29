@@ -112,10 +112,11 @@ impl Remote {
 
         config.remotos.push(remote);
         config.guardar_config()?;
-        let msg = format!("Se agrego el remote {}", self.nombre.clone().unwrap());
 
-        self.logger.log(&msg);
-        Ok(msg)
+        Ok(format!(
+            "Se agrego el remote {}",
+            self.nombre.clone().unwrap()
+        ))
     }
 
     /// Elimina un remote de la configuración.
