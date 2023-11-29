@@ -128,6 +128,7 @@ pub fn obtener_refs(refs_path: PathBuf, dir: String) -> Result<Vec<String>, Erro
         return Ok(refs);
         // io::Error::new(io::ErrorKind::NotFound, "No existe el repositorio");
     }
+
     if refs_path.ends_with("HEAD") {
         refs.push(obtener_ref_head(refs_path.to_path_buf())?);
     } else {
