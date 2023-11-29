@@ -157,6 +157,7 @@ impl Push {
         self.logger
             .log("Fase de descubrimiento ejecuta con exito".to_string());
 
+        print!("{:?}\n", commits_cabezas_y_ref_rama_asosiado);
         let referencia_acualizar =
             self.obtener_referencia_acualizar(&commits_cabezas_y_ref_rama_asosiado)?;
         let objetos_a_enviar =
@@ -164,7 +165,7 @@ impl Push {
 
         self.enviar_actualizaciones_y_objetos(referencia_acualizar, objetos_a_enviar)?;
 
-        let mensaje = "Pull ejecutado con exito".to_string();
+        let mensaje = "Push ejecutado con exito".to_string();
         self.logger.log(mensaje.clone());
         Ok(mensaje)
     }
@@ -209,8 +210,8 @@ impl Push {
         commits_cabezas_y_ref_rama_asosiado: &Vec<(String, PathBuf)>,
     ) -> Result<(String, String, String), String> {
         let mut commit_viejo = "0".repeat(40);
-        let commit_nuevo = io::leer_a_string(utils::ramas::obtener_dir_rama_actual()?)?;
-        let ref_rama_merge = format!("ref/heads/{}", self.rama_merge);
+        let commit_nuevo = io::leer_a_string(utils::ramas::obtener_gir_dir_rama_actual()?)?;
+        let ref_rama_merge = format!("refs/heads/{}", self.rama_merge);
 
         for (commit, referencia) in commits_cabezas_y_ref_rama_asosiado {
             if *referencia.to_string_lossy() == ref_rama_merge {

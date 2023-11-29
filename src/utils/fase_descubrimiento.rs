@@ -32,12 +32,19 @@ pub fn fase_de_descubrimiento<T: Write + Read>(
     String,
 > {
     let mut lineas_recibidas = comunicacion.obtener_lineas()?;
+
     println!("Se recibio {:?}\n", lineas_recibidas);
     let _version = lineas_recibidas.remove(0); //la version del server
 
     let segunda_linea = lineas_recibidas.remove(0);
 
     let (contenido, capacidades) = separara_capacidades(&segunda_linea)?;
+
+    //caso el servidor no tiene nada
+    if contenido == "0".repeat(40) {
+        return Ok((capacidades, None, Vec::new(), Vec::new()));
+    }
+
     let commit_head_remoto = separar_commit_head_de_ser_necesario(contenido, &mut lineas_recibidas);
 
     let (commits_cabezas_y_dir_rama_asosiado, commits_y_tags_asosiados) =
