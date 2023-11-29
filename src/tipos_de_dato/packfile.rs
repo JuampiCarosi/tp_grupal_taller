@@ -572,12 +572,7 @@ pub fn leer_packfile_y_escribir(
         hasher.update(objeto.clone());
         let _hash = hasher.finalize();
         let hash = format!("{:x}", _hash);
-<<<<<<< HEAD
         println!("hash: {:?}", hash);
-=======
-
-        // println!("hash: {:?}", hash);
->>>>>>> main
         let ruta = format!("{}{}/{}", &ubicacion, &hash[..2], &hash[2..]);
         println!("ruta donde pongo objetos: {:?}", ruta);
 

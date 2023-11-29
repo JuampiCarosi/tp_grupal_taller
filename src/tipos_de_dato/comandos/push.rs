@@ -178,7 +178,7 @@ impl Push {
         viejo_commit: &String,
     ) -> Result<HashSet<String>, String> {
         let objetos_a_enviar =
-            obtener_commits_y_objetos_asociados(referencia, viejo_commit, self.logger.clone())?;
+            obtener_commits_y_objetos_asociados(referencia, viejo_commit, self.logger.clone());
 
         match objetos_a_enviar {
             Ok(objetos_a_enviar) => Ok(objetos_a_enviar),
