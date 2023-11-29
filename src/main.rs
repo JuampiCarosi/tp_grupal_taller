@@ -31,7 +31,7 @@ fn main() -> Result<(), String> {
         Ok(comando) => comando,
         Err(err) => {
             println!("ERROR: {}\n", err);
-            logger.log(err);
+            logger.log(&err);
             return Ok(());
         }
     };
@@ -39,11 +39,11 @@ fn main() -> Result<(), String> {
     match comando.ejecutar() {
         Ok(mensaje) => {
             println!("{}", mensaje.clone());
-            logger.log(mensaje);
+            logger.log(&mensaje);
         }
         Err(mensaje) => {
             println!("ERROR: {}", mensaje);
-            logger.log(mensaje);
+            logger.log(&mensaje);
         }
     }
     Ok(())

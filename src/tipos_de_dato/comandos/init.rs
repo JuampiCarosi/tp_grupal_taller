@@ -24,11 +24,11 @@ impl Init {
     /// En caso de tener argumentos invalidos devuelve error.
     /// Si no se especifica un directorio, se crea el directorio .gir en el directorio actual.
     pub fn from(args: Vec<String>, logger: Arc<Logger>) -> Result<Init, String> {
-        logger.log(format!("Se intenta crear comando init con args:{:?}", args));
+        logger.log(&format!("Se intenta crear comando init con args:{:?}", args));
 
         Self::validar_argumentos(args.clone())?;
 
-        logger.log(format!("Se creo correctamente el comando init:{:?}", args));
+        logger.log(&format!("Se creo correctamente el comando init:{:?}", args));
 
         Ok(Init {
             path: Self::obtener_path(args),
@@ -40,13 +40,13 @@ impl Init {
     /// Crea el directorio en el lugar indicado por el path, caso contrario en el directorio actual.
     /// Si el directorio ya existe devuelve un mensaje y cancela la ejecucion.
     pub fn ejecutar(&self) -> Result<String, String> {
-        self.logger.log("Se ejecuta init".to_string());
+        self.logger.log("Se ejecuta init");
 
         self.crear_directorio_gir()?;
 
         let mensaje = format!("Directorio gir creado en {}", self.path);
 
-        self.logger.log(mensaje.clone());
+        self.logger.log(&mensaje);
 
         Ok(mensaje)
     }

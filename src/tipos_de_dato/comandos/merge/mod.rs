@@ -459,7 +459,7 @@ impl Merge {
     }
 
     pub fn ejecutar(&self) -> Result<String, String> {
-        self.logger.log("Ejecutando comando merge".to_string());
+        self.logger.log("Ejecutando comando merge");
 
         if Self::hay_merge_en_curso()? {
             return Err("Ya hay un merge en curso".to_string());
@@ -474,10 +474,10 @@ impl Merge {
         }
 
         let mensaje = if commit_base == commit_actual {
-            self.logger.log("Haciendo fast-forward".to_string());
+            self.logger.log("Haciendo fast-forward");
             self.fast_forward()
         } else {
-            self.logger.log("Realizando auto-merge".to_string());
+            self.logger.log("Realizando auto-merge");
             self.automerge(commit_base)
         }?;
 

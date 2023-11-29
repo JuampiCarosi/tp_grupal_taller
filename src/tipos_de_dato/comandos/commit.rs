@@ -194,7 +194,7 @@ impl Commit {
         let hash = self.hashear_contenido_objeto(&contenido_total);
         Self::updatear_ref_head(self, hash.clone())?;
         Self::escribir_objeto_commit(hash.clone(), contenido_comprimido)?;
-        self.logger.log(format!(
+        self.logger.log(&format!(
             "commit {}\n Author: {}\n{} ",
             hash, "", self.mensaje
         ));

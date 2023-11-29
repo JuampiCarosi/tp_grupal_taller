@@ -144,7 +144,7 @@ impl Pull {
         }
 
         let mensaje = "Pull ejecutado con exito".to_string();
-        self.logger.log(mensaje.clone());
+        self.logger.log(&mensaje);
         Ok(mensaje)
     }
 

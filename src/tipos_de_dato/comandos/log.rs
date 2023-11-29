@@ -75,7 +75,7 @@ impl Log {
     /// Devuelve un string con el log de los commits de la rama.
     /// En caso de no haber commits devuelve un mensaje y corta la ejecucion.
     pub fn ejecutar(&self) -> Result<String, String> {
-        self.logger.log("Ejecutando comando log".to_string());
+        self.logger.log("Ejecutando comando log");
         let hash_commit = Self::obtener_commit_branch(&self.branch)?;
         if hash_commit.is_empty() {
             return Err(format!("La rama {} no tiene commits", self.branch));
