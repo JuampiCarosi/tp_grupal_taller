@@ -155,7 +155,7 @@ impl Push {
             _commits_y_tags_asosiados,
         ) = self.fase_de_descubrimiento()?;
         self.logger
-            .log("Fase de descubrimiento ejecuta con exito".to_string());
+            .log(&"Fase de descubrimiento ejecuta con exito".to_string());
 
         print!("{:?}\n", commits_cabezas_y_ref_rama_asosiado);
         let referencia_acualizar =
@@ -166,7 +166,7 @@ impl Push {
         self.enviar_actualizaciones_y_objetos(referencia_acualizar, objetos_a_enviar)?;
 
         let mensaje = "Push ejecutado con exito".to_string();
-        self.logger.log(mensaje.clone());
+        self.logger.log(&mensaje);
         Ok(mensaje)
     }
 
@@ -177,7 +177,8 @@ impl Push {
         referencia: &String,
         viejo_commit: &String,
     ) -> Result<HashSet<String>, String> {
-        let objetos_a_enviar = obtener_commits_y_objetos_asociados(referencia, viejo_commit);
+        let objetos_a_enviar =
+            obtener_commits_y_objetos_asociados(referencia, viejo_commit, self.logger.clone())?;
 
         match objetos_a_enviar {
             Ok(objetos_a_enviar) => Ok(objetos_a_enviar),
@@ -279,6 +280,7 @@ impl Push {
 fn obtener_commits_y_objetos_asociados(
     referencia: &String,
     commit_limite: &String,
+    logger: Arc<Logger>,
 ) -> Result<HashSet<String>, String> {
     let logger = Arc::new(Logger::new(PathBuf::from("./tmp/aa"))?);
     let ruta = format!(".gir/{}", referencia);
@@ -291,7 +293,7 @@ fn obtener_commits_y_objetos_asociados(
     let mut objetos_a_agregar: HashSet<String> = HashSet::new();
     let mut commits_a_revisar: Vec<CommitObj> = Vec::new();
 
-    let ultimo_commit = CommitObj::from_hash(ultimo_commit);
+    let ultimo_commit = CommitObj::from_hash(ultimo_commit, logger.clone());
 
     match ultimo_commit {
         Ok(ultimo_commit) => {
@@ -326,7 +328,7 @@ fn obtener_commits_y_objetos_asociados(
         );
 
         for padre in commit.padres {
-            let commit_padre = CommitObj::from_hash(padre)?;
+            let commit_padre = CommitObj::from_hash(padre, logger.clone())?;
             commits_a_revisar.push(commit_padre);
         }
     }

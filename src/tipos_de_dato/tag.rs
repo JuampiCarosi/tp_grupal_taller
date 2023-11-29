@@ -60,11 +60,11 @@ impl Tag {
         }
 
         let ubicacion = format!(".gir/refs/tags/{}", tag);
-        let commit = Commit::obtener_hash_del_padre_del_commit()?;
+        let commit = Commit::obtener_hash_commit_actual()?;
 
         io::escribir_bytes(ubicacion, &commit)?;
 
-        self.logger.log(format!("Tag {} creado con exito", tag));
+        self.logger.log(&format!("Tag {} creado con exito", tag));
 
         Ok(())
     }

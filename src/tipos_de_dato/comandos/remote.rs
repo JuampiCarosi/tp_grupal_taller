@@ -114,7 +114,7 @@ impl Remote {
         config.guardar_config()?;
         let msg = format!("Se agrego el remote {}", self.nombre.clone().unwrap());
 
-        self.logger.log(msg.clone());
+        self.logger.log(&msg);
         Ok(msg)
     }
 
@@ -214,7 +214,7 @@ impl Remote {
 
     /// Ejecuta el comando.
     pub fn ejecutar(&mut self) -> Result<String, String> {
-        self.logger.log("Ejecutando comando remote".to_string());
+        self.logger.log("Ejecutando comando remote");
         match &self.comando {
             ComandoRemote::Mostrar => self.mostrar(),
             ComandoRemote::Agregar => self.agregar(),

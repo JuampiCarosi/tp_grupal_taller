@@ -69,19 +69,19 @@ impl Add {
     /// Si el archivo ya se encuentra en el index, actualiza el objeto.
     /// Si el archivo contiene la misma version que en el commit anterior, no lo agrega.
     pub fn ejecutar(&mut self) -> Result<String, String> {
-        self.logger.log("Ejecutando add".to_string());
+        self.logger.log("Ejecutando add");
 
         for ubicacion in self.ubicaciones.clone() {
             if self.es_directorio_a_ignorar(&ubicacion)? {
                 continue;
             }
 
-            self.logger.log(format!(
+            self.logger.log(&format!(
                 "Agregando {} al index",
                 ubicacion.to_str().unwrap()
             ));
             if ubicacion.is_dir() {
-                Err("No se puede agregar un directorio".to_string())?;
+                Err("No se puede agregar un directorio")?;
             }
 
             let nuevo_objeto =

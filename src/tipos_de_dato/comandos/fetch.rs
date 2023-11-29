@@ -110,7 +110,7 @@ impl<T: Write + Read> Fetch<T> {
     // -------------------------------------------------------------
     //verificar si existe /.git
     pub fn ejecutar(&self) -> Result<String, String> {
-        self.logger.log("Se ejecuto el comando fetch".to_string());
+        self.logger.log("Se ejecuto el comando fetch");
         self.comunicacion.iniciar_git_upload_pack_con_servidor()?;
 
         let (
@@ -131,7 +131,7 @@ impl<T: Write + Read> Fetch<T> {
         self.acutualizar_archivo_head_remoto(&commit_head_remoto)?;
 
         let mensaje = "Fetch ejecutado con exito".to_string();
-        self.logger.log(mensaje.clone());
+        self.logger.log(&mensaje);
         Ok(mensaje)
     }
     // -------------------------------------------------------------

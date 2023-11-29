@@ -49,7 +49,10 @@ impl Log {
     /// Obtiene todos los commits que son padres del commit pasado por parametro.
     /// Devuelve un vector con los commits ordenados por fecha.
     /// En caso de haber un commit repetido, solo se utiliza uno.
-    pub fn obtener_listas_de_commits(commit: CommitObj) -> Result<Vec<CommitObj>, String> {
+    pub fn obtener_listas_de_commits(
+        commit: CommitObj,
+        logger: Arc<Logger>,
+    ) -> Result<Vec<CommitObj>, String> {
         let mut commits: HashMap<String, CommitObj> = HashMap::new();
         let mut commits_a_revisar: Vec<CommitObj> = Vec::new();
         commits_a_revisar.push(commit);
@@ -60,7 +63,7 @@ impl Log {
             }
             commits.insert(commit.hash.clone(), commit.clone());
             for padre in commit.padres {
-                let commit_padre = CommitObj::from_hash(padre)?;
+                let commit_padre = CommitObj::from_hash(padre, logger.clone())?;
                 commits_a_revisar.push(commit_padre);
             }
         }
@@ -75,15 +78,15 @@ impl Log {
     /// Devuelve un string con el log de los commits de la rama.
     /// En caso de no haber commits devuelve un mensaje y corta la ejecucion.
     pub fn ejecutar(&self) -> Result<String, String> {
-        self.logger.log("Ejecutando comando log".to_string());
+        self.logger.log("Ejecutando comando log");
         let hash_commit = Self::obtener_commit_branch(&self.branch)?;
         if hash_commit.is_empty() {
             return Err(format!("La rama {} no tiene commits", self.branch));
         }
 
-        let objeto_commit = CommitObj::from_hash(hash_commit)?;
+        let objeto_commit = CommitObj::from_hash(hash_commit, self.logger.clone())?;
 
-        let commits = Self::obtener_listas_de_commits(objeto_commit)?;
+        let commits = Self::obtener_listas_de_commits(objeto_commit, self.logger.clone())?;
 
         let mut log = String::new();
 

@@ -13,10 +13,9 @@ pub fn receive_pack(
     println!("Se ejecuto el comando receive-pack");
     let actualizaciones = comunicacion.obtener_lineas().unwrap();
     let mut packfile = comunicacion.obtener_packfile().unwrap();
-   
+
     packfile::leer_packfile_y_escribir(&mut packfile, dir.clone() + "objects/")?;
-   
-   
+
     for actualizacion in &actualizaciones {
         let mut partes = actualizacion.split(' ');
         let vieja_ref = partes.next().unwrap_or("");

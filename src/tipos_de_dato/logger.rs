@@ -43,8 +43,8 @@ impl Logger {
     }
 
     /// Escribir un mensaje en el archivo de log.
-    pub fn log(&self, msg: String) {
-        let log = Log::Message(msg.clone());
+    pub fn log(&self, msg: &str) {
+        let log = Log::Message(msg.to_string());
         if self.tx.send(log).is_err() {
             println!("No se pudo escribir {}", msg);
         };
@@ -148,11 +148,11 @@ mod tests {
         let ubicacion_archivo = PathBuf::from("test_dir/test02.txt");
         let logger = Logger::new(ubicacion_archivo.clone()).unwrap();
 
-        let msg_test_01 = "sipiropo fapatapalapa".to_string();
-        let msg_test_02 = "juapuanipi peperezpez".to_string();
+        let msg_test_01 = "sipiropo fapatapalapa";
+        let msg_test_02 = "juapuanipi peperezpez";
 
-        logger.log(msg_test_01.clone());
-        logger.log(msg_test_02.clone());
+        logger.log(msg_test_01);
+        logger.log(msg_test_02);
         drop(logger);
 
         assert_el_archivo_log_contiene(ubicacion_archivo.clone(), vec![msg_test_01, msg_test_02]);
@@ -161,16 +161,16 @@ mod tests {
 
     #[test]
     fn test03_si_se_crea_un_logger_no_se_pierden_los_mensajes_anterior() {
-        let msg_test_01 = "sipiropo fapatapalapa".to_string();
+        let msg_test_01 = "sipiropo fapatapalapa";
         let ubicacion_archivo = PathBuf::from("test_dir/test03.txt");
         Logger::new(ubicacion_archivo.clone())
             .unwrap()
-            .log(msg_test_01.clone());
+            .log(msg_test_01);
 
-        let msg_test_02 = "juapuanipi peperezpez".to_string();
+        let msg_test_02 = "juapuanipi peperezpez";
         Logger::new(ubicacion_archivo.clone())
             .unwrap()
-            .log(msg_test_02.clone());
+            .log(msg_test_02);
 
         assert_el_archivo_log_contiene(ubicacion_archivo.clone(), vec![msg_test_01, msg_test_02]);
         eliminar_archivo_log(ubicacion_archivo);
@@ -180,13 +180,13 @@ mod tests {
     fn test04_el_logger_puede_escribir_mensajes_de_varios_threads() {
         let ubicacion_archivo = PathBuf::from("test_dir/test04.txt");
         let logger = Arc::new(Logger::new(ubicacion_archivo.clone()).unwrap());
-        let msg_test_01 = "Thread 1 saluda".to_string();
-        let msg_test_02 = "Thread 2 saluda".to_string();
-        let msg_test_03 = "Thread 3 saluda".to_string();
+        let msg_test_01 = "Thread 1 saluda";
+        let msg_test_02 = "Thread 2 saluda";
+        let msg_test_03 = "Thread 3 saluda";
 
-        let handle_1 = crear_thread_que_mande_mensaje_al_loger(&logger, msg_test_01.clone());
-        let handle_2 = crear_thread_que_mande_mensaje_al_loger(&logger, msg_test_02.clone());
-        let handle_3 = crear_thread_que_mande_mensaje_al_loger(&logger, msg_test_03.clone());
+        let handle_1 = crear_thread_que_mande_mensaje_al_loger(&logger, msg_test_01);
+        let handle_2 = crear_thread_que_mande_mensaje_al_loger(&logger, msg_test_02);
+        let handle_3 = crear_thread_que_mande_mensaje_al_loger(&logger, msg_test_03);
 
         handle_1.join().unwrap();
         handle_2.join().unwrap();
@@ -202,16 +202,16 @@ mod tests {
 
     fn crear_thread_que_mande_mensaje_al_loger(
         logger: &Arc<Logger>,
-        msg: String,
+        msg: &str,
     ) -> thread::JoinHandle<()> {
         let logger1 = logger.clone();
-
+        let msg_clone = msg.to_string();
         thread::spawn(move || {
-            logger1.log(msg);
+            logger1.log(&msg_clone);
         })
     }
 
-    fn assert_el_archivo_log_contiene(ubicacion_archivo: PathBuf, contenidos: Vec<String>) {
+    fn assert_el_archivo_log_contiene(ubicacion_archivo: PathBuf, contenidos: Vec<&str>) {
         let contenido_archvo_log =
             fs::read_to_string(obtener_dir_archivo_log(ubicacion_archivo)).unwrap();
 
