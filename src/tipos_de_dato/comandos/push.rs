@@ -1,3 +1,4 @@
+use super::set_upstream::SetUpstream;
 use crate::tipos_de_dato::comandos::write_tree;
 use crate::tipos_de_dato::comunicacion::Comunicacion;
 use crate::tipos_de_dato::config::Config;
@@ -14,7 +15,6 @@ use std::net::TcpStream;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
-use super::set_upstream::SetUpstream;
 
 const FLAG_SET_UPSTREAM: &str = "--set-upstream";
 const FLAG_U: &str = "-u";
@@ -23,11 +23,10 @@ const GIR_PUSH: &str = "gir push <remoto> <rama>";
 // idea: Key -> (String, String) , primera entrada la ref que tiene el cliente, segunda la que tiene el sv.
 pub struct Push {
     hash_refs: HashMap<String, (String, String)>,
-    comunicacion: Arc<Comunicacion<TcpStream>>,
+    comunicacion: Comunicacion<TcpStream>,
     rama_merge: String,
     remoto: String,
     set_upstream: bool,
-    repositorio: String,
     logger: Arc<Logger>,
 }
 
@@ -37,23 +36,21 @@ impl Push {
     // donde referencia puede ser por ejemplo: refs/heads/master
 
     pub fn new(args: &mut Vec<String>, logger: Arc<Logger>) -> Result<Self, String> {
+        Self::verificar_argumentos(&args)?;
+
         let mut set_upstream = false;
 
         if Self::hay_flags(&args) {
             Self::parsear_flags(args, &mut set_upstream)?;
         }
+
         let (remoto, rama_merge) = Self::parsear_argumentos(args, set_upstream)?;
 
-        let mut hash_refs: HashMap<String, (String, String)> = HashMap::new();
+        let url: String = Self::obtener_url(&remoto)?;
+        let comunicacion = Comunicacion::<TcpStream>::new_desde_url(&url, logger.clone())?;
 
         let refs = obtener_refs_de(PathBuf::from("./.gir/refs/"), String::from("./.gir/"));
-
-        let url: String = Self::obtener_url(&remoto)?;
-        let partes: Vec<&str> = url.split('/').collect();
-        let repositorio = partes[1].to_string();
-
-        let comunicacion = Arc::new(Comunicacion::<TcpStream>::new_desde_direccion_servidor(&url, logger.clone())?);
-        
+        let mut hash_refs: HashMap<String, (String, String)> = HashMap::new();
         for referencia in refs {
             hash_refs.insert(
                 referencia.split(' ').collect::<Vec<&str>>()[1].to_string(),
@@ -63,21 +60,32 @@ impl Push {
                 ),
             );
         }
+
         Ok(Push {
             hash_refs,
             comunicacion,
             rama_merge,
             remoto,
             set_upstream,
-            repositorio,
             logger,
         })
+    }
+
+    fn verificar_argumentos(args: &Vec<String>) -> Result<(), String> {
+        if args.len() > 3 {
+            return Err(format!(
+                "Parametros desconocidos {}\n {}",
+                args.join(" "),
+                GIR_PUSH
+            ));
+        };
+        Ok(())
     }
 
     fn hay_flags(args: &Vec<String>) -> bool {
         args.len() == 3
     }
-       ///obtiene el remoto  y la rama merge asosiado a la rama remota actual. Falla si no existe
+    ///obtiene el remoto  y la rama merge asosiado a la rama remota actual. Falla si no existe
     fn obtener_remoto_y_rama_merge_de_rama_actual() -> Result<(String, String), String> {
         let (remoto, rama_merge) = Config::leer_config()?
             .obtener_remoto_y_rama_merge_rama_actual()
@@ -87,7 +95,7 @@ impl Push {
 
         Ok((remoto, obtener_nombre(&rama_merge)?))
     }
-        ///Obtiene acorde a los argumentos recibidos, el remoto y la rama merge. En caso de no estar,
+    ///Obtiene acorde a los argumentos recibidos, el remoto y la rama merge. En caso de no estar,
     /// busca si esta seteada la rama actual. Si esto no es asi, hay un error
     fn parsear_argumentos(
         args: &mut Vec<String>,
@@ -141,16 +149,8 @@ impl Push {
 
         Ok(remoto.clone())
     }
-    
-    fn enviar_pedido(&mut self) -> Result<(), String> {
-        let request_data = format!("git-receive-pack /{}/\0host=example.com\0\0version=1\0", self.repositorio); //en donde dice /.git/ va la dir del repo
-        println!("request_data: {}", request_data);
-        let request_data_con_largo_hex = io::obtener_linea_con_largo_hex(&request_data);
-        self.comunicacion.enviar(&request_data_con_largo_hex)?;
-        Ok(())
-    }
 
-    // recibe las referencia junto a la version y las capacidades del servidor. 
+    // recibe las referencia junto a la version y las capacidades del servidor.
     fn obtener_referencias_y_capacidades(&mut self) -> Result<(Vec<String>, String), String> {
         let mut refs_recibidas = self.comunicacion.obtener_lineas()?;
 
@@ -162,7 +162,7 @@ impl Push {
         let capacidades = referencia_y_capacidades[1].to_string();
         if !referencia.contains(&"0".repeat(40)) {
             refs_recibidas.push(referencia_y_capacidades[0].to_string());
-        }   
+        }
         Ok((refs_recibidas, capacidades))
     }
 
@@ -187,7 +187,7 @@ impl Push {
         let mut objetos_a_enviar = HashSet::new();
 
         for (key, value) in &self.hash_refs {
-            if value.1 != value.0 { 
+            if value.1 != value.0 {
                 actualizaciones.push(io::obtener_linea_con_largo_hex(&format!(
                     "{} {} {}",
                     &value.1, &value.0, &key
@@ -200,13 +200,13 @@ impl Push {
                     Err(err) => {
                         //error
                         self.comunicacion.responder(vec![]).unwrap();
-                        // el server pide que se le mande un packfile vacio 
+                        // el server pide que se le mande un packfile vacio
                         self.comunicacion
-                            .responder_con_bytes(Packfile::new().obtener_pack_con_archivos(
-                                vec![],
-                                "./.gir/objects/",
-                            ))
-                            .unwrap(); 
+                            .responder_con_bytes(
+                                Packfile::new()
+                                    .obtener_pack_con_archivos(vec![], "./.gir/objects/"),
+                            )
+                            .unwrap();
                         return Err(err);
                     }
                 }
@@ -215,7 +215,11 @@ impl Push {
         Ok((objetos_a_enviar, actualizaciones))
     }
 
-    fn enviar_actualizaciones_y_objetos(&mut self, actualizaciones: Vec<String>, objetos_a_enviar: HashSet<String>) -> Result<String, String> {
+    fn enviar_actualizaciones_y_objetos(
+        &mut self,
+        actualizaciones: Vec<String>,
+        objetos_a_enviar: HashSet<String>,
+    ) -> Result<String, String> {
         if !actualizaciones.is_empty() {
             self.comunicacion.responder(actualizaciones).unwrap();
             self.comunicacion
@@ -241,20 +245,18 @@ impl Push {
             )?
             .ejecutar()?;
         }
-        self.enviar_pedido()?;
+
+        self.comunicacion.iniciar_git_recive_pack_con_servidor()?;
         let (refs_recibidas, _capacidades) = self.obtener_referencias_y_capacidades()?;
 
-        self.guardar_diferencias(refs_recibidas)?;    
- 
+        self.guardar_diferencias(refs_recibidas)?;
+
         let (objetos_a_enviar, actualizaciones) = self.obtener_objetos_a_enviar()?;
         self.enviar_actualizaciones_y_objetos(actualizaciones, objetos_a_enviar)
     }
 }
 
-
-
 // ------ funciones auxiliares ------
-
 
 // funcion para obtener los commits que faltan para llegar al commit limite y los objetos asociados a cada commit
 // en caso de que sea una referencia nula, se enviara todo. En caso de que el commit limite no sea una referencia nula
@@ -274,8 +276,8 @@ fn obtener_commits_y_objetos_asociados(
     let mut objetos_a_agregar: HashSet<String> = HashSet::new();
     let mut commits_a_revisar: Vec<CommitObj> = Vec::new();
 
-    let ultimo_commit = CommitObj::from_hash(ultimo_commit);    
-    
+    let ultimo_commit = CommitObj::from_hash(ultimo_commit);
+
     match ultimo_commit {
         Ok(ultimo_commit) => {
             commits_a_revisar.push(ultimo_commit);
@@ -314,10 +316,10 @@ fn obtener_commits_y_objetos_asociados(
         }
     }
     if (commit_limite != &"0".repeat(40)) && !objetos_a_agregar.contains(&commit_limite.clone()) {
-        return Err(
-            "El servidor tiene cambios, por favor, actualice su repositorio".to_string(),
-        );
-    } else if  (commit_limite != &"0".repeat(40)) && objetos_a_agregar.contains(&commit_limite.clone()) {
+        return Err("El servidor tiene cambios, por favor, actualice su repositorio".to_string());
+    } else if (commit_limite != &"0".repeat(40))
+        && objetos_a_agregar.contains(&commit_limite.clone())
+    {
         objetos_a_agregar.remove(commit_limite);
     }
     Ok(objetos_a_agregar)
@@ -329,4 +331,3 @@ fn obtener_refs_de(dir: PathBuf, prefijo: String) -> Vec<String> {
     refs.append(&mut io::obtener_refs(dir.join("tags/"), prefijo).unwrap());
     refs
 }
-

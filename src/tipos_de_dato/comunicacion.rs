@@ -41,7 +41,11 @@ impl<T: Write + Read> Comunicacion<T> {
                 .map_err(|e| format!("Fallo en en la conecciion con el servidor.\n{}\n", e))?,
         );
         // let repositorio = "/gir/".to_string();
-        Ok(Comunicacion{flujo, repositorio, logger})
+        Ok(Comunicacion {
+            flujo,
+            repositorio,
+            logger,
+        })
     }
 
     ///Crea una comunicacion en base a una url.
@@ -109,8 +113,30 @@ impl<T: Write + Read> Comunicacion<T> {
             "{} {}\0host={}\0\0version={}\0",
             comando, repositorio, host, numero_de_version
         );
-        let payload = io::obtener_linea_con_largo_hex(&mensaje);
-        self.enviar(&payload)?;
+        let pedido = io::obtener_linea_con_largo_hex(&mensaje);
+        self.enviar(&pedido)?;
+        Ok(())
+    }
+
+    ///Inicia el comando git upload pack con el servidor, mandole al servidor el siguiente mensaje
+    /// en formato:
+    ///
+    /// - ''git-upload-pack 'directorio'\0host='host'\0\0verision='numero de version'\0''
+    ///
+    pub fn iniciar_git_recive_pack_con_servidor(&self) -> Result<(), String> {
+        self.logger
+            .log("Iniciando git recive pack con el servidor".to_string());
+        let comando = "git-recive-pack";
+        let repositorio = &self.repositorio;
+        let host = "gir.com";
+        let numero_de_version = 1;
+
+        let mensaje = format!(
+            "{} {}\0host={}\0\0version={}\0",
+            comando, repositorio, host, numero_de_version
+        );
+        let pedido = io::obtener_linea_con_largo_hex(&mensaje);
+        self.enviar(&pedido)?;
         Ok(())
     }
 
