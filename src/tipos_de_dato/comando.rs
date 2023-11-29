@@ -4,9 +4,8 @@ use super::{
     comandos::{
         add::Add, branch::Branch, cat_file::CatFile, checkout::Checkout, clone::Clone,
         commit::Commit, fetch::Fetch, hash_object::HashObject, init::Init, log::Log,
-
-        ls_tree::LsTree, merge::Merge, pull::Pull, push::Push, remote::Remote, rm::Remove,
-        show_ref::ShowRef, status::Status, version::Version, ls_files::LsFiles,
+        ls_files::LsFiles, ls_tree::LsTree, merge::Merge, pull::Pull, push::Push, remote::Remote,
+        rm::Remove, show_ref::ShowRef, status::Status, version::Version,
     },
     logger::Logger,
     tag::Tag,
@@ -86,7 +85,7 @@ impl Comando {
             Comando::Commit(ref mut commit) => commit.ejecutar(),
             Comando::Fetch(ref mut fetch) => fetch.ejecutar(),
             Comando::Clone(clone) => clone.ejecutar(),
-            Comando::Push(push) => push.ejecutar(),
+            Comando::Push(ref mut push) => push.ejecutar(),
             Comando::Log(ref mut log) => log.ejecutar(),
             Comando::Status(ref mut status) => status.ejecutar(),
             Comando::Remote(ref mut remote) => remote.ejecutar(),

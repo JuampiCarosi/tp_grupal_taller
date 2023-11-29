@@ -38,7 +38,7 @@ pub fn es_la_ruta_a_una_rama(dir: &PathBuf) -> bool {
 ///
 /// # Ejemplo:
 ///
-/// recive:  ./.gir/refs/heads/master
+/// recive:  ./.gir/refs/heads/master o refs/heads/master
 /// devuelve: ./.gir/refs/remotes/{remoto}/master
 pub fn convertir_de_dir_rama_remota_a_dir_rama_local(
     remoto: &String,

@@ -22,7 +22,6 @@ const GIR_PUSH: &str = "gir push <remoto> <rama>";
 
 // idea: Key -> (String, String) , primera entrada la ref que tiene el cliente, segunda la que tiene el sv.
 pub struct Push {
-    hash_refs: HashMap<String, (String, String)>,
     comunicacion: Comunicacion<TcpStream>,
     rama_merge: String,
     remoto: String,
@@ -49,20 +48,7 @@ impl Push {
         let url: String = Self::obtener_url(&remoto)?;
         let comunicacion = Comunicacion::<TcpStream>::new_desde_url(&url, logger.clone())?;
 
-        let refs = obtener_refs_de(PathBuf::from("./.gir/refs/"), String::from("./.gir/"));
-        let mut hash_refs: HashMap<String, (String, String)> = HashMap::new();
-        for referencia in refs {
-            hash_refs.insert(
-                referencia.split(' ').collect::<Vec<&str>>()[1].to_string(),
-                (
-                    referencia.split(' ').collect::<Vec<&str>>()[0].to_string(),
-                    "0".repeat(40),
-                ),
-            );
-        }
-
         Ok(Push {
-            hash_refs,
             comunicacion,
             rama_merge,
             remoto,
@@ -85,6 +71,7 @@ impl Push {
     fn hay_flags(args: &Vec<String>) -> bool {
         args.len() == 3
     }
+
     ///obtiene el remoto  y la rama merge asosiado a la rama remota actual. Falla si no existe
     fn obtener_remoto_y_rama_merge_de_rama_actual() -> Result<(String, String), String> {
         let (remoto, rama_merge) = Config::leer_config()?
@@ -167,11 +154,15 @@ impl Push {
     }
 
     // funcion para guaradar en el hashmap las diferencias entre las refs del cliente y las del server
-    fn guardar_diferencias(&mut self, refs_recibidas: Vec<String>) -> Result<(), String> {
+    fn guardar_diferencias(
+        &mut self,
+        refs_recibidas: Vec<String>,
+        hash_refs: &mut HashMap<String, (String, String)>,
+    ) -> Result<(), String> {
         for referencia in &refs_recibidas {
             let obj_id = referencia.split(' ').collect::<Vec<&str>>()[0];
             let referencia = referencia.split(' ').collect::<Vec<&str>>()[1].trim_end_matches('\n');
-            match self.hash_refs.get_mut(referencia) {
+            match hash_refs.get_mut(referencia) {
                 Some(hash) => {
                     hash.1 = obj_id.to_string();
                 }
@@ -182,11 +173,14 @@ impl Push {
     }
 
     // funcion que devuelve los objetos que hay que enviar al server y las actualizaciones que hay que hacer
-    fn obtener_objetos_a_enviar(&self) -> Result<(HashSet<String>, Vec<String>), String> {
+    fn obtener_objetos_a_enviar(
+        &self,
+        hash_refs: &HashMap<String, (String, String)>,
+    ) -> Result<(HashSet<String>, Vec<String>), String> {
         let mut actualizaciones = Vec::new();
         let mut objetos_a_enviar = HashSet::new();
 
-        for (key, value) in &self.hash_refs {
+        for (key, value) in hash_refs {
             if value.1 != value.0 {
                 actualizaciones.push(io::obtener_linea_con_largo_hex(&format!(
                     "{} {} {}",
@@ -235,6 +229,13 @@ impl Push {
         }
     }
 
+    fn obtener_nombre_referencia_y_commit_actulizar(&self) -> Result<(String, String), String> {
+        let commit_head_rama_actual = io::leer_a_string(utils::ramas::obtener_dir_rama_actual()?)?;
+        let ref_rama_merge = format!("ref/heads/{}", self.rama_merge);
+
+        Ok((ref_rama_merge, commit_head_rama_actual))
+    }
+
     pub fn ejecutar(&mut self) -> Result<String, String> {
         if self.set_upstream {
             SetUpstream::new(
@@ -246,12 +247,26 @@ impl Push {
             .ejecutar()?;
         }
 
+        let referencia_actualizar = self.obtener_nombre_referencia_y_commit_actulizar()?;
+
+        // let refs = obtener_refs_de(PathBuf::from("./.gir/refs/"), String::from("./.gir/"));
+        // let mut hash_refs: HashMap<String, (String, String)> = HashMap::new();
+        // for referencia in refs {
+        //     hash_refs.insert(
+        //         referencia.split(' ').collect::<Vec<&str>>()[1].to_string(),
+        //         (
+        //             referencia.split(' ').collect::<Vec<&str>>()[0].to_string(),
+        //             "0".repeat(40),
+        //         ),
+        //     );
+        // }
+
         self.comunicacion.iniciar_git_recive_pack_con_servidor()?;
         let (refs_recibidas, _capacidades) = self.obtener_referencias_y_capacidades()?;
 
-        self.guardar_diferencias(refs_recibidas)?;
+        self.guardar_diferencias(refs_recibidas, &mut hash_refs)?;
 
-        let (objetos_a_enviar, actualizaciones) = self.obtener_objetos_a_enviar()?;
+        let (objetos_a_enviar, actualizaciones) = self.obtener_objetos_a_enviar(&hash_refs)?;
         self.enviar_actualizaciones_y_objetos(actualizaciones, objetos_a_enviar)
     }
 }
