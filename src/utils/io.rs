@@ -413,3 +413,16 @@ pub fn obtener_diferencias_remote(referencias: Vec<String>, dir: String) -> Vec<
     }
     diferencias
 }
+
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_escribir_archivo_pisa_contenido() {
+        let dir = PathBuf::from("tmp/test_escribir_archivo_pisa_contenido.txt");
+        escribir_bytes(&dir, "contenido 1").unwrap();
+        escribir_bytes(&dir, "contenido 2").unwrap();
+        assert_eq!(leer_a_string(&dir).unwrap(), "contenido 2");
+        rm_directorio(dir).unwrap();
+    }
+}

@@ -1,7 +1,7 @@
 use std::{io, str::Utf8Error};
 
 #[derive(Debug)]
-pub enum   ErrorDeComunicacion {
+pub enum ErrorDeComunicacion {
     Utf8Error(Utf8Error),
     IoError(io::Error),
 }

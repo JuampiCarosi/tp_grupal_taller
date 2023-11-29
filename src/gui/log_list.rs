@@ -1,15 +1,15 @@
-use std::path::Path;
+use std::{path::Path, sync::Arc};
 
 use gtk::prelude::*;
 
 use crate::{
-    tipos_de_dato::{comandos::log::Log, objetos::commit::CommitObj},
+    tipos_de_dato::{comandos::log::Log, logger::Logger, objetos::commit::CommitObj},
     utils::{compresion::descomprimir_objeto_gir, io},
 };
 
 use super::{error_dialog, log_seleccionado};
 
-fn obtener_listas_de_commits(branch: &String) -> Result<Vec<String>, String> {
+fn obtener_listas_de_commits(branch: &String, logger: Arc<Logger>) -> Result<Vec<String>, String> {
     let ruta = format!(".gir/refs/heads/{}", branch);
     let ultimo_commit = io::leer_a_string(Path::new(&ruta))?;
 
@@ -17,8 +17,8 @@ fn obtener_listas_de_commits(branch: &String) -> Result<Vec<String>, String> {
         return Ok(Vec::new());
     }
 
-    let commit_obj = CommitObj::from_hash(ultimo_commit)?;
-    let historial = Log::obtener_listas_de_commits(commit_obj)?;
+    let commit_obj = CommitObj::from_hash(ultimo_commit, logger.clone())?;
+    let historial = Log::obtener_listas_de_commits(commit_obj, logger.clone())?;
 
     Ok(historial.iter().map(|commit| commit.hash.clone()).collect())
 }
@@ -57,13 +57,13 @@ fn crear_label(string: &str) -> gtk::EventBox {
     event_box
 }
 
-pub fn render(builder: &gtk::Builder, branch: String) {
+pub fn render(builder: &gtk::Builder, branch: String, logger: Arc<Logger>) {
     let container: gtk::Box = builder.object("log-container").unwrap();
     container.children().iter().for_each(|child| {
         container.remove(child);
     });
 
-    let commits = match obtener_listas_de_commits(&branch) {
+    let commits = match obtener_listas_de_commits(&branch, logger) {
         Ok(commits) => commits,
         Err(err) => {
             error_dialog::mostrar_error(&err);
