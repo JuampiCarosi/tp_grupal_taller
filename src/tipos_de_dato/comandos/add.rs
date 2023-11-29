@@ -107,7 +107,7 @@ impl Add {
                 if let Some(tree_head) = tree_head {
                     if tree_head.contiene_misma_version_hijo(
                         &nuevo_objeto_index.objeto.obtener_hash(),
-                        nuevo_objeto_index.objeto.obtener_path(),
+                        &nuevo_objeto_index.objeto.obtener_path(),
                     ) {
                         continue;
                     }

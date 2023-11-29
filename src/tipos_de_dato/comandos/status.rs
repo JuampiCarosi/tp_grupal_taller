@@ -112,7 +112,7 @@ impl Status {
         for objeto in self.tree_directorio_actual.obtener_objetos_hoja() {
             if tree_head.contiene_hijo_por_ubicacion(objeto.obtener_path())
                 && !tree_head
-                    .contiene_misma_version_hijo(&objeto.obtener_hash(), objeto.obtener_path())
+                    .contiene_misma_version_hijo(&objeto.obtener_hash(), &objeto.obtener_path())
                 && !self.index_contiene_objeto(&objeto)
             {
                 trackeados.push(format!("modificado: {}", objeto.obtener_path().display()));
@@ -161,7 +161,7 @@ impl Status {
             Objeto::Blob(ref blob) => blob.obtener_hash() == objeto_index.objeto.obtener_hash(),
             Objeto::Tree(ref tree) => tree.contiene_misma_version_hijo(
                 &objeto_index.objeto.obtener_hash(),
-                objeto_index.objeto.obtener_path(),
+                &objeto_index.objeto.obtener_path(),
             ),
         });
 

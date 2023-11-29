@@ -2,18 +2,14 @@ use std::{
     fmt::{Display, Write},
     fs,
     num::ParseIntError,
-    path::PathBuf,
+    path::{Path, PathBuf},
     sync::Arc,
 };
 
 use sha1::{Digest, Sha1};
 
 use crate::{
-    tipos_de_dato::{
-        comandos::hash_object::HashObject,
-        logger::{Logger},
-        objeto::Objeto,
-    },
+    tipos_de_dato::{comandos::hash_object::HashObject, logger::Logger, objeto::Objeto},
     utils::path_buf::{esta_directorio_habilitado, obtener_nombre},
     utils::{
         compresion::{comprimir_contenido_u8, descomprimir_objeto},
@@ -306,7 +302,7 @@ impl Tree {
     }
 
     /// Devuelve si el arvol contiene un hijo con el mismo hash que el pasado por parametro.
-    pub fn contiene_misma_version_hijo(&self, hash_hijo: &str, ubicacion_hijo: PathBuf) -> bool {
+    pub fn contiene_misma_version_hijo(&self, hash_hijo: &str, ubicacion_hijo: &Path) -> bool {
         for objeto in &self.objetos {
             match objeto {
                 Objeto::Blob(blob) => {

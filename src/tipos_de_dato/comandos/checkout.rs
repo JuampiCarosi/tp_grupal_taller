@@ -223,7 +223,7 @@ impl Checkout {
             self.cambiar_rama()?;
             let tree_futuro = self.obtener_arbol_commit_actual()?;
 
-            let objetos_a_eliminar = self.obtener_objetos_eliminados(&tree_viejo, &tree_futuro);
+            let objetos_a_eliminar = Self::obtener_objetos_eliminados(&tree_viejo, &tree_futuro);
             self.eliminar_objetos(&objetos_a_eliminar)?;
 
             tree_futuro.escribir_en_directorio()?;
@@ -248,18 +248,18 @@ impl Checkout {
 
     /// Devuelve un vector con los objetos que estaban en el tree viejo pero no en el nuevo.
     /// O sea, los objetos que se eliminaron.
-    fn obtener_objetos_eliminados(&self, tree_viejo: &Tree, tree_nuevo: &Tree) -> Vec<Objeto> {
+    fn obtener_objetos_eliminados(tree_viejo: &Tree, tree_nuevo: &Tree) -> Vec<Objeto> {
         let mut objetos_eliminados: Vec<Objeto> = Vec::new();
 
         for objeto_viejo in tree_viejo.objetos.iter() {
             match objeto_viejo {
                 Objeto::Blob(blob) => {
-                    if blob.ubicacion == objeto_viejo.obtener_path() {
+                    if !tree_nuevo.contiene_misma_version_hijo(&blob.hash, &blob.ubicacion) {
                         objetos_eliminados.push(objeto_viejo.clone());
                     }
                 }
                 Objeto::Tree(tree) => {
-                    let mut hijos_eliminados = self.obtener_objetos_eliminados(tree, tree_nuevo);
+                    let mut hijos_eliminados = Self::obtener_objetos_eliminados(tree, tree_nuevo);
                     objetos_eliminados.append(&mut hijos_eliminados);
                 }
             }
@@ -277,11 +277,13 @@ mod tests {
         tipos_de_dato::{
             comandos::{add::Add, branch::Branch, commit::Commit, init::Init},
             logger::Logger,
+            objeto::Objeto,
+            objetos::{blob::Blob, tree::Tree},
         },
         utils::io,
     };
 
-    use super::Checkout;
+    use super::*;
 
     fn craer_archivo_config_default() {
         let home = std::env::var("HOME").unwrap();
@@ -398,5 +400,65 @@ mod tests {
 
         assert!(!PathBuf::from("tmp/checkout_test04_test_2").exists());
         assert!(PathBuf::from("tmp/checkout_test04_test").exists());
+    }
+
+    fn tree_con_un_tree_y_un_objeto(logger: Arc<Logger>) -> Tree {
+        let objeto_nieto = Objeto::Blob(Blob {
+            hash: "hash_nieto".to_string(),
+            ubicacion: PathBuf::from("./tree_hijo/nieto"),
+            logger: logger.clone(),
+            nombre: "nieto".to_string(),
+        });
+        let objeto_hijo = Objeto::Blob(Blob {
+            hash: "hash_hijo".to_string(),
+            ubicacion: PathBuf::from("./hijo"),
+            logger: logger.clone(),
+            nombre: "hijo".to_string(),
+        });
+
+        let un_tree_hijo = Objeto::Tree(Tree {
+            directorio: PathBuf::from("./tree_hijo"),
+            objetos: vec![objeto_nieto],
+            logger: logger.clone(),
+        });
+
+        Tree {
+            directorio: PathBuf::from("."),
+            objetos: vec![un_tree_hijo, objeto_hijo],
+            logger: logger.clone(),
+        }
+    }
+
+    fn tree_con_un_objeto(logger: Arc<Logger>) -> Tree {
+        let objeto_hijo = Objeto::Blob(Blob {
+            hash: "hash_hijo".to_string(),
+            ubicacion: PathBuf::from("./hijo"),
+            logger: logger.clone(),
+            nombre: "hijo".to_string(),
+        });
+
+        Tree {
+            directorio: PathBuf::from("."),
+            objetos: vec![objeto_hijo],
+            logger: logger.clone(),
+        }
+    }
+
+    #[test]
+    fn test05_obtener_objetos_eliminados() {
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/checkout_test04")).unwrap());
+
+        let tree_viejo = tree_con_un_tree_y_un_objeto(logger.clone());
+        let tree_nuevo = tree_con_un_objeto(logger.clone());
+
+        let objetos_eliminados = Checkout::obtener_objetos_eliminados(&tree_viejo, &tree_nuevo);
+
+        assert_eq!(objetos_eliminados.len(), 1);
+
+        if let Objeto::Blob(blob) = &objetos_eliminados[0] {
+            assert_eq!(blob.nombre, "nieto".to_string());
+        } else {
+            unreachable!();
+        }
     }
 }
