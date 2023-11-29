@@ -28,7 +28,7 @@ pub fn upload_pack(
         let packfile =
             packfile::Packfile::new().obtener_pack_entero(&(dir.clone().to_string() + "objects/")); // obtengo el packfile
                                                                                                     // git_io::leer_bytes("./.git/objects/pack/pack-31897a1f902980a7e540e812b54f5702f449af8b.pack").unwrap();
-        comunicacion.responder_con_bytes(packfile).unwrap();
+        comunicacion.enviar_pack_file(packfile).unwrap();
         println!("Upload pack ejecutado con exito");
         return Ok(());
     }
@@ -43,7 +43,7 @@ pub fn upload_pack(
     // obtener un packfile de los faltantes...
     let packfile =
         packfile::Packfile::new().obtener_pack_con_archivos(faltantes, &(dir.clone() + "objects/"));
-    comunicacion.responder_con_bytes(packfile).unwrap();
+    comunicacion.enviar_pack_file(packfile).unwrap();
     println!("Upload pack ejecutado con exito");
     Ok(())
 }
