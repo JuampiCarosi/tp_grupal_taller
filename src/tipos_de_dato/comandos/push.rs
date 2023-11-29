@@ -204,7 +204,7 @@ impl Push {
                         self.comunicacion
                             .responder_con_bytes(
                                 Packfile::new()
-                                    .obtener_pack_con_archivos(vec![], "./.gir/objects/"),
+                                    .obtener_pack_con_archivos(Vec::new(), "./.gir/objects/"),
                             )
                             .unwrap();
                         return Err(err);
@@ -231,6 +231,8 @@ impl Push {
             Ok(String::from("Push ejecutado con exito"))
         } else {
             //error
+            self.comunicacion.responder(Vec::new()).unwrap();
+            self.comunicacion.responder_con_bytes(Packfile::new().obtener_pack_con_archivos(Vec::new(), "./.gir/objects/")).unwrap();
             Err("No hay actualizaciones".to_string())
         }
     }
