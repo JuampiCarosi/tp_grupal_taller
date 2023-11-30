@@ -37,7 +37,7 @@ impl CheckIgnore {
     }
 
     pub fn ejecutar(&self) -> Result<String, String> {
-        self.logger.log("Buscando archivos ignorados".to_string());
+        self.logger.log("Buscando archivos ignorados");
         let archivos_ignorados = match io::leer_a_string(".girignore") {
             Ok(archivos_ignorados) => archivos_ignorados,
             Err(_) => return Err("Porfavor cree el archivo .girignore.".to_string()),
@@ -63,7 +63,7 @@ impl CheckIgnore {
             }
         }
 
-        self.logger.log("Check ignore finalizado".to_string());
+        self.logger.log("Check ignore finalizado");
 
         Ok(archivos_encontrados.join("\n"))
     }
