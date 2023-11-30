@@ -1,6 +1,9 @@
 use std::{path::PathBuf, sync::Arc};
 
-use crate::{tipos_de_dato::logger::Logger, utils::io};
+use crate::{
+    tipos_de_dato::logger::Logger,
+    utils::{self, io},
+};
 
 pub struct CheckIgnore {
     logger: Arc<Logger>,
@@ -25,7 +28,7 @@ impl CheckIgnore {
         Ok(false)
     }
 
-    pub fn from(args: Vec<String>, logger: Arc<Logger>) -> Result<Self, String> {
+    pub fn from(args: Vec<String>, logger: Arc<Logger>) -> Result<CheckIgnore, String> {
         if args.is_empty() {
             return Err("Ingrese la ruta del archivo buscado como parametro".to_string());
         }
@@ -39,15 +42,24 @@ impl CheckIgnore {
             Ok(archivos_ignorados) => archivos_ignorados,
             Err(_) => return Err("Porfavor cree el archivo .girignore.".to_string()),
         };
-        let archivos_ignorados_separados: Vec<&str> = archivos_ignorados.split('\n').collect();
+        if archivos_ignorados.is_empty() {
+            return Ok("".to_string());
+        }
+
+        let archivos_ignorados_separados: Vec<PathBuf>;
+        archivos_ignorados_separados = archivos_ignorados
+            .split("\n")
+            .map(|x| PathBuf::from(x))
+            .collect();
 
         let mut archivos_encontrados: Vec<String> = Vec::new();
 
         for path in &self.paths {
-            for archivo_ignorado in &archivos_ignorados_separados {
-                if path.contains(archivo_ignorado) {
-                    archivos_encontrados.push(path.to_string());
-                }
+            if utils::path_buf::esta_directorio_habilitado(
+                &PathBuf::from(path),
+                &archivos_ignorados_separados,
+            ) {
+                archivos_encontrados.push(path.to_string());
             }
         }
 
@@ -145,5 +157,17 @@ mod test {
             CheckIgnore::from(vec!["tes_dir/archivo_dir.txt".to_string()], logger).unwrap();
         let resultado = check_ignore.ejecutar().unwrap();
         assert_eq!(resultado, "tes_dir/archivo_dir.txt");
+    }
+
+    #[test]
+    fn test06_si_tengo_un_archivo_y_directorio_con_nombres_parecidos_solo_ignora_al_indicado() {
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/check_ignore_test06")).unwrap());
+        io::escribir_bytes(".girignore", "test_file/").unwrap();
+        let check_ignore = CheckIgnore::from(vec!["test_file.txt".to_string()], logger).unwrap();
+        io::crear_directorio("test_file").unwrap();
+        let resultado = check_ignore.ejecutar().unwrap();
+        io::rm_directorio("test_file").unwrap();
+        settupear_girignore();
+        assert!(resultado.is_empty());
     }
 }

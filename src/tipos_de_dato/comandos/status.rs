@@ -16,8 +16,7 @@ use crate::{
 };
 
 use super::{
-    add::Add, check_ignore::CheckIgnore, commit::Commit,
-    write_tree::conseguir_arbol_from_hash_commit,
+    check_ignore::CheckIgnore, commit::Commit, write_tree::conseguir_arbol_from_hash_commit,
 };
 
 pub struct Status {
