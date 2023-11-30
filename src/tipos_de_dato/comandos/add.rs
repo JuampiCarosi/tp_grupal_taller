@@ -1,7 +1,4 @@
-use std::{
-    path::{Path, PathBuf},
-    sync::Arc,
-};
+use std::{path::PathBuf, sync::Arc};
 
 use crate::{
     tipos_de_dato::{logger::Logger, objeto::Objeto},
@@ -272,9 +269,9 @@ mod tests {
     }
 
     #[test]
-    fn test07_agregar_dos_archivos_de_una() {
+    fn test06_agregar_dos_archivos_de_una() {
         limpiar_archivo_gir();
-        let logger = Arc::new(Logger::new(PathBuf::from("tmp/add_test07")).unwrap());
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/add_test06")).unwrap());
         let ubicacion = "test_file.txt".to_string();
 
         let ubicacion2 = "test_dir/objetos/archivo.txt".to_string();

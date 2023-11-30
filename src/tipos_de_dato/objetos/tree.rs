@@ -357,7 +357,7 @@ impl Tree {
                     }
                 }
                 Objeto::Tree(tree) => {
-                    if tree.contiene_misma_version_hijo(hash_hijo.clone(), ubicacion_hijo.clone()) {
+                    if tree.contiene_misma_version_hijo(hash_hijo, ubicacion_hijo) {
                         return true;
                     }
                 }
@@ -465,29 +465,6 @@ impl Tree {
         Ok(contenido_pretty.concat())
     }
 
-    /// Dado un vector de objetos, devuelve el contenido del arbol en un formato pretty print.
-    fn mostrar_contenido(objetos: &[Objeto]) -> Result<String, String> {
-        let mut output = String::new();
-
-        let objetos_ordenados = Self::ordenar_objetos_alfabeticamente(objetos);
-
-        for objeto in objetos_ordenados {
-            let line = match objeto {
-                Objeto::Blob(blob) => format!("100644 {}    {}\n", blob.nombre, blob.hash),
-                Objeto::Tree(tree) => {
-                    let name = match tree.directorio.file_name() {
-                        Some(name) => name,
-                        None => return Err("Error al obtener el nombre del directorio".to_string()),
-                    };
-                    let hash = tree.obtener_hash()?;
-                    format!("40000 {}    {}\n", name.to_string_lossy(), hash)
-                }
-            };
-            output.push_str(&line);
-        }
-        Ok(output)
-    }
-
     /// Devuelve si el arbol esta vacio.
     pub fn es_vacio(&self) -> bool {
         if self.objetos.is_empty() {
@@ -526,6 +503,29 @@ mod tests {
     use std::path::PathBuf;
     use std::sync::Arc;
 
+    /// Dado un vector de objetos, devuelve el contenido del arbol en un formato pretty print.
+    fn mostrar_contenido(objetos: &[Objeto]) -> Result<String, String> {
+        let mut output = String::new();
+
+        let objetos_ordenados = Tree::ordenar_objetos_alfabeticamente(objetos);
+
+        for objeto in objetos_ordenados {
+            let line = match objeto {
+                Objeto::Blob(blob) => format!("100644 {}    {}\n", blob.nombre, blob.hash),
+                Objeto::Tree(tree) => {
+                    let name = match tree.directorio.file_name() {
+                        Some(name) => name,
+                        None => return Err("Error al obtener el nombre del directorio".to_string()),
+                    };
+                    let hash = tree.obtener_hash()?;
+                    format!("40000 {}    {}\n", name.to_string_lossy(), hash)
+                }
+            };
+            output.push_str(&line);
+        }
+        Ok(output)
+    }
+
     #[test]
     fn test01_test_obtener_hash() {
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/tree_test01")).unwrap());
@@ -557,7 +557,7 @@ mod tests {
             Objeto::from_directorio(PathBuf::from("test_dir/objetos"), None, logger).unwrap();
 
         if let Objeto::Tree(tree) = objeto {
-            let contenido = Tree::mostrar_contenido(&tree.objetos).unwrap();
+            let contenido = mostrar_contenido(&tree.objetos).unwrap();
             assert_eq!(
                 contenido,
                 "100644 archivo.txt    2b824e648965b94c6c6b3dd0702feb91f699ed62\n"
@@ -574,7 +574,7 @@ mod tests {
         let objeto = Objeto::from_directorio(PathBuf::from("test_dir/"), None, logger).unwrap();
 
         if let Objeto::Tree(tree) = objeto {
-            let contenido = Tree::mostrar_contenido(&tree.objetos).unwrap();
+            let contenido = mostrar_contenido(&tree.objetos).unwrap();
             assert_eq!(
                 contenido,
                 "40000 muchos_objetos    896ca4eb090e033d16d4e9b1027216572ac3eaae\n40000 objetos    1442e275fd3a2e743f6bccf3b11ab27862157179\n"

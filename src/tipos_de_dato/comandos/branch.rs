@@ -218,9 +218,9 @@ mod test {
     }
 
     #[test]
-    fn test05_mostrar_from() {
+    fn test04_mostrar_from() {
         limpiar_archivo_gir();
-        let logger = Arc::new(Logger::new(PathBuf::from("tmp/branch_test05")).unwrap());
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/branch_test04")).unwrap());
         let mut branch = Branch::from(&mut vec![], logger).unwrap();
 
         let resultado = branch.ejecutar();
@@ -229,9 +229,9 @@ mod test {
     }
 
     #[test]
-    fn test06_crear_from() {
+    fn test05_crear_from() {
         limpiar_archivo_gir();
-        let logger = Arc::new(Logger::new(PathBuf::from("tmp/branch_test06")).unwrap());
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/branch_test05")).unwrap());
         let mut branch = Branch::from(&mut vec!["nueva_rama".to_string()], logger).unwrap();
 
         let resultado = branch.ejecutar();
@@ -241,9 +241,9 @@ mod test {
 
     #[test]
     #[should_panic(expected = "Demasiados argumentos\\ngir branch [<nombre-rama-nueva>]")]
-    fn test07_muchos_argumentos() {
+    fn test06_muchos_argumentos() {
         limpiar_archivo_gir();
-        let logger = Arc::new(Logger::new(PathBuf::from("tmp/branch_test07")).unwrap());
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/branch_test06")).unwrap());
         let mut branch = Branch::from(
             &mut vec!["nueva_rama".to_string(), "otra_nueva_rama".to_string()],
             logger,
@@ -254,9 +254,9 @@ mod test {
     }
 
     #[test]
-    fn test08_la_branch_se_crea_apuntando_al_ultimo_commit() {
+    fn test07_la_branch_se_crea_apuntando_al_ultimo_commit() {
         limpiar_archivo_gir();
-        let logger = Arc::new(Logger::new(PathBuf::from("tmp/branch_test08")).unwrap());
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/branch_test07")).unwrap());
         addear_archivos_y_comittear(vec!["test_file.txt".to_string()], logger.clone());
         let mut branch = Branch {
             mostrar: false,
