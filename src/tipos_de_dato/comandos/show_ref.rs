@@ -138,7 +138,7 @@ impl ShowRef {
         for (ubicacion, contenido) in refs {
             salida.push_str(&format!("{} {}\n", contenido, ubicacion));
         }
-
+        self.logger.log("Comando show-ref ejecutado con exito");
         Ok(salida)
     }
 }

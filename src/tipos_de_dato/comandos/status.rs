@@ -15,7 +15,9 @@ use crate::{
     },
 };
 
-use super::{commit::Commit, write_tree::conseguir_arbol_from_hash_commit};
+use super::{
+    check_ignore::CheckIgnore, commit::Commit, write_tree::conseguir_arbol_from_hash_commit,
+};
 
 pub struct Status {
     /// Logger para registrar los eventos ocurridos durante la ejecucion del comando.
@@ -134,6 +136,9 @@ impl Status {
             if self.index_contiene_objeto(objeto) {
                 continue;
             }
+            if CheckIgnore::es_directorio_a_ignorar(&objeto.obtener_path(), self.logger.clone())? {
+                continue;
+            }
             match objeto {
                 Objeto::Blob(_) => {
                     if !tree_head.contiene_hijo_por_ubicacion(objeto.obtener_path()) {
@@ -178,6 +183,12 @@ impl Status {
                 let mut untrackeados = Vec::new();
                 for objeto in self.tree_directorio_actual.objetos.iter() {
                     if self.index_contiene_objeto(objeto) {
+                        continue;
+                    }
+                    if CheckIgnore::es_directorio_a_ignorar(
+                        &objeto.obtener_path(),
+                        self.logger.clone(),
+                    )? {
                         continue;
                     }
                     if let Objeto::Tree(_) = objeto {
