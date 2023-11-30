@@ -211,8 +211,8 @@ pub fn obtener_ref_head(path: PathBuf) -> Result<String, ErrorDeComunicacion> {
 
 ///Lee un directorio. Devuelve su iterador. Falla si no existe o si no es un directoro
 pub fn leer_directorio<P: AsRef<Path> + Clone + Debug>(directorio: &P) -> Result<ReadDir, String> {
-    let metadada_dir = fs::metadata(directorio)
-        .map_err(|_| format!("Error no existe el dir {:?}", directorio))?;
+    let metadada_dir =
+        fs::metadata(directorio).map_err(|_| format!("Error no existe el dir {:?}", directorio))?;
 
     if !metadada_dir.is_dir() {
         return Err(format!("Error {:?} no es un dir", directorio));

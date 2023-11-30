@@ -1,5 +1,6 @@
 mod branch_selector;
 mod clone_dialog;
+mod comando_gui;
 mod conflicts_modal;
 mod error_dialog;
 mod log_list;

@@ -43,15 +43,19 @@ pub fn obtener_mensaje_commit(commit_hash: &str) -> Result<String, String> {
     }
 }
 
-fn crear_label(string: &str) -> gtk::EventBox {
+fn crear_label(string: &str, es_primero: bool) -> gtk::EventBox {
     let event_box = gtk::EventBox::new();
 
     let label = gtk::Label::new(Some(string));
     event_box.add(&label);
     label.set_xalign(0.0);
     label.set_margin_start(6);
-    label.set_margin_top(3);
-    // label.set_margin_bottom(2);
+    label.set_margin_top(1);
+    label.set_margin_bottom(1);
+    if es_primero {
+        label.set_margin_top(4);
+    }
+
     event_box.style_context().add_class("commit-label");
 
     event_box
@@ -71,9 +75,10 @@ pub fn render(builder: &gtk::Builder, branch: &str) {
         }
     };
 
+    let mut es_primero = true;
     for commit in commits {
         let commit_clone = commit.clone();
-        let event_box = crear_label(&obtener_mensaje_commit(&commit).unwrap());
+        let event_box = crear_label(&obtener_mensaje_commit(&commit).unwrap(), es_primero);
 
         let builder_clone = builder.clone();
         event_box.connect_button_press_event(move |_, _| {
@@ -81,6 +86,7 @@ pub fn render(builder: &gtk::Builder, branch: &str) {
             gtk::glib::Propagation::Stop
         });
         container.add(&event_box);
+        es_primero = false;
     }
     if !container.children().is_empty() {
         let children = container.children();

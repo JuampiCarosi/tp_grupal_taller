@@ -37,6 +37,10 @@ pub enum Comando {
     Unknown,
 }
 
+pub trait Ejecutar {
+    fn ejecutar(&mut self) -> Result<String, String>;
+}
+
 impl Comando {
     pub fn new(input: Vec<String>, logger: Arc<Logger>) -> Result<Comando, String> {
         let (comando, args) = input.split_first().ok_or("No se ingreso ningun comando")?;
