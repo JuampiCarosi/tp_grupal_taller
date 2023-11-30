@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{path::PathBuf, sync::Arc};
 
 use crate::{tipos_de_dato::logger::Logger, utils::io};
 
@@ -8,6 +8,23 @@ pub struct CheckIgnore {
 }
 
 impl CheckIgnore {
+    pub fn es_directorio_a_ignorar(
+        ubicacion: &PathBuf,
+        logger: Arc<Logger>,
+    ) -> Result<bool, String> {
+        let path = ubicacion
+            .to_str()
+            .ok_or_else(|| "Path invalido".to_string())?;
+
+        let path_a_verificar = vec![path.to_string()];
+        let check_ignore = CheckIgnore::from(path_a_verificar, logger)?;
+        let archivos_ignorados = check_ignore.ejecutar()?;
+        if !archivos_ignorados.is_empty() {
+            return Ok(true);
+        }
+        Ok(false)
+    }
+
     pub fn from(args: Vec<String>, logger: Arc<Logger>) -> Result<Self, String> {
         if args.is_empty() {
             return Err("Ingrese la ruta del archivo buscado como parametro".to_string());
@@ -53,14 +70,14 @@ mod test {
     };
 
     fn settupear_girignore() {
-        let archivos_a_ignorar = ".log\n.gitignore\n.vscode\n.girignore\n.log.txt\ntes_dir";
+        let archivos_a_ignorar = ".log\n.gitignore\n.vscode\n.girignore\n.log.txt\ntes_dir/";
         io::crear_archivo(".girignore").unwrap();
         io::escribir_bytes(".girignore", archivos_a_ignorar).unwrap();
     }
 
     fn limpiar_archivo_gir() {
         io::rm_directorio(".gir").unwrap();
-        let logger = Arc::new(Logger::new(PathBuf::from("tmp/branch_init")).unwrap());
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/check_ignore_init")).unwrap());
         let init = Init {
             path: "./.gir".to_string(),
             logger,
@@ -84,13 +101,13 @@ mod test {
             vec![
                 ".log".to_string(),
                 ".girignore".to_string(),
-                "tes_dir".to_string(),
+                "tes_dir/".to_string(),
             ],
             logger,
         )
         .unwrap();
         let resultado = check_ignore.ejecutar().unwrap();
-        assert_eq!(resultado, ".log\n.girignore\ntes_dir");
+        assert_eq!(resultado, ".log\n.girignore\ntes_dir/");
     }
 
     #[test]
@@ -101,7 +118,7 @@ mod test {
             vec![
                 ".log".to_string(),
                 ".girignore".to_string(),
-                "tes_dir".to_string(),
+                "tes_dir/".to_string(),
             ],
             logger.clone(),
         )
@@ -118,7 +135,7 @@ mod test {
         let untrackeados = status.obtener_untrackeados().unwrap();
         assert!(!untrackeados.iter().any(|x| x == ".log"));
         assert!(!untrackeados.iter().any(|x| x == ".girignore"));
-        assert!(!untrackeados.iter().any(|x| x == "tes_dir/"));
+        assert!(!untrackeados.iter().any(|x| x == "tes_dir"));
     }
 
     #[test]

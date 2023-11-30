@@ -15,7 +15,10 @@ use crate::{
     },
 };
 
-use super::{add::Add, commit::Commit, write_tree::conseguir_arbol_from_hash_commit};
+use super::{
+    add::Add, check_ignore::CheckIgnore, commit::Commit,
+    write_tree::conseguir_arbol_from_hash_commit,
+};
 
 pub struct Status {
     /// Logger para registrar los eventos ocurridos durante la ejecucion del comando.
@@ -133,7 +136,7 @@ impl Status {
             if self.index_contiene_objeto(objeto) {
                 continue;
             }
-            if Add::es_directorio_a_ignorar(&objeto.obtener_path(), self.logger.clone())? {
+            if CheckIgnore::es_directorio_a_ignorar(&objeto.obtener_path(), self.logger.clone())? {
                 continue;
             }
             match objeto {
@@ -182,7 +185,10 @@ impl Status {
                     if self.index_contiene_objeto(objeto) {
                         continue;
                     }
-                    if Add::es_directorio_a_ignorar(&objeto.obtener_path(), self.logger.clone())? {
+                    if CheckIgnore::es_directorio_a_ignorar(
+                        &objeto.obtener_path(),
+                        self.logger.clone(),
+                    )? {
                         continue;
                     }
                     if let Objeto::Tree(_) = objeto {

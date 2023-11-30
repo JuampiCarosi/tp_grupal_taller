@@ -52,23 +52,6 @@ impl Add {
         })
     }
 
-    pub fn es_directorio_a_ignorar(
-        ubicacion: &PathBuf,
-        logger: Arc<Logger>,
-    ) -> Result<bool, String> {
-        let path = ubicacion
-            .to_str()
-            .ok_or_else(|| "Path invalido".to_string())?;
-
-        let paths_a_verificar = vec![path.to_string()];
-        let check_ignore = CheckIgnore::from(paths_a_verificar, logger)?;
-        let archivos_ignorados = check_ignore.ejecutar()?;
-        if !archivos_ignorados.is_empty() {
-            return Ok(true);
-        }
-        Ok(false)
-    }
-
     /// Ejecuta el comando add.
     /// Agrega los archivos pasados por parametro al index.
     /// Si el archivo ya se encuentra en el index, actualiza el objeto.
@@ -77,7 +60,7 @@ impl Add {
         self.logger.log("Ejecutando add".to_string());
 
         for ubicacion in self.ubicaciones.clone() {
-            if Self::es_directorio_a_ignorar(&ubicacion, self.logger.clone())? {
+            if CheckIgnore::es_directorio_a_ignorar(&ubicacion, self.logger.clone())? {
                 continue;
             }
 
