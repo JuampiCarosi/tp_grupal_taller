@@ -9,7 +9,7 @@ use std::path::PathBuf;
 pub fn receive_pack(
     dir: String,
     comunicacion: &mut Comunicacion<TcpStream>,
-) -> Result<(), ErrorDeComunicacion> {
+) -> Result<(), String> {
     println!("Se ejecuto el comando receive-pack");
     let actualizaciones = comunicacion.obtener_lineas().unwrap();
     let mut packfile = comunicacion.obtener_packfile().unwrap();

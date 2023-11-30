@@ -50,7 +50,7 @@ impl Servidor {
     pub fn manejar_cliente(
         comunicacion: &mut Comunicacion<TcpStream>,
         dir: &str,
-    ) -> Result<(), ErrorDeComunicacion> {
+    ) -> Result<(), String> {
         loop {
             let pedido = match comunicacion.aceptar_pedido()? {
                 RespuestaDePedido::Mensaje(mensaje) => mensaje,
@@ -65,7 +65,7 @@ impl Servidor {
         linea: &str,
         comunicacion: &mut Comunicacion<TcpStream>,
         dir: &str,
-    ) -> Result<(), ErrorDeComunicacion> {
+    ) -> Result<(), String> {
         let pedido: Vec<&str> = linea.split_whitespace().collect();
         let args: Vec<_> = pedido[1].split('\0').collect();
         let dir_repo = dir.to_string() + args[0];
@@ -102,10 +102,7 @@ impl Servidor {
                 }
                 receive_pack(dir_repo.to_string(), comunicacion)
             }
-            _ => Err(ErrorDeComunicacion::IoError(io::Error::new(
-                io::ErrorKind::NotFound,
-                "No existe el comando",
-            ))),
+            _ => Err("No existe el comando".to_string())
         }
     }
 

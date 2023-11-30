@@ -187,7 +187,7 @@ impl Push {
                 self.comunicacion.enviar_flush_pkt()?;
                 // el server pide que se le mande un packfile vacio
                 self.comunicacion.enviar_pack_file(
-                    Packfile::new().obtener_pack_con_archivos(vec![], "./.gir/objects/"),
+                    Packfile::new().obtener_pack_con_archivos(vec![], "./.gir/objects/")?,
                 )?;
                 return Err(msj_err);
             }
@@ -240,7 +240,7 @@ impl Push {
             .enviar_pack_file(Packfile::new().obtener_pack_con_archivos(
                 objetos_a_enviar.into_iter().collect(),
                 "./.gir/objects/",
-            ))?;
+            )?)?;
         Ok(())
     }
 
