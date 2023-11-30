@@ -1,6 +1,4 @@
 use std::net::TcpStream;
-
-use crate::err_comunicacion::ErrorDeComunicacion;
 use crate::tipos_de_dato::comunicacion::Comunicacion;
 use crate::tipos_de_dato::packfile;
 use crate::utils::io as git_io;
@@ -26,7 +24,7 @@ pub fn upload_pack(
                                                                                      // let want_obj_ids = utilidades_strings::eliminar_prefijos(&mut wants, "want");
                                                                                      // println!("want_obj_ids: {:?}", want_obj_ids);
         let packfile =
-            packfile::Packfile::new().obtener_pack_entero(&(dir.clone().to_string() + "objects/"))?; // obtengo el packfile
+            packfile::Packfile::obtener_pack_entero(&(dir.clone().to_string() + "objects/"))?; // obtengo el packfile
                                                                                                     // git_io::leer_bytes("./.git/objects/pack/pack-31897a1f902980a7e540e812b54f5702f449af8b.pack").unwrap();
         comunicacion.enviar_pack_file(packfile)?;
         println!("Upload pack ejecutado con exito");
@@ -42,7 +40,7 @@ pub fn upload_pack(
     let faltantes = git_io::obtener_archivos_faltantes(have_objs_ids, dir.clone());
     // obtener un packfile de los faltantes...
     let packfile =
-        packfile::Packfile::new().obtener_pack_con_archivos(faltantes, &(dir.clone() + "objects/"))?;
+        packfile::Packfile::obtener_pack_con_archivos(faltantes, &(dir.clone() + "objects/"))?;
     comunicacion.enviar_pack_file(packfile).unwrap();
     println!("Upload pack ejecutado con exito");
     Ok(())

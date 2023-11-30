@@ -20,7 +20,6 @@ pub fn obtener_objetos_del_directorio(dir: String) -> Result<Vec<String>, String
                     && entrada.file_name().to_string_lossy() != "info"
                     && entrada.file_name().to_string_lossy() != "pack"
                 {
-                    //que onda este if?? JUANI
                     if !entrada.path().to_string_lossy().contains("log.txt") {
                         objetos.append(&mut obtener_objetos_con_nombre_carpeta(entrada.path())?);
                     }

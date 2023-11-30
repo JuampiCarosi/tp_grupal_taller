@@ -1,10 +1,7 @@
-use crate::err_comunicacion::ErrorDeComunicacion;
-
 use crate::tipos_de_dato::comunicacion::Comunicacion;
-use crate::tipos_de_dato::packfile;
+use crate::tipos_de_dato::packfile::Packfile;
 use crate::utils::io;
 use std::net::TcpStream;
-use std::path::PathBuf;
 
 pub fn receive_pack(
     dir: String,
@@ -14,7 +11,7 @@ pub fn receive_pack(
     let actualizaciones = comunicacion.obtener_lineas().unwrap();
     let mut packfile = comunicacion.obtener_packfile().unwrap();
 
-    packfile::leer_packfile_y_escribir(&mut packfile, dir.clone() + "objects/")?;
+    Packfile::leer_packfile_y_escribir(&mut packfile, dir.clone() + "objects/")?;
 
     for actualizacion in &actualizaciones {
         let mut partes = actualizacion.split(' ');

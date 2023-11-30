@@ -38,13 +38,13 @@ impl Push {
         Self::verificar_argumentos(&args)?;
 
         let mut set_upstream = false;
-
+        
         if Self::hay_flags(&args) {
             Self::parsear_flags(args, &mut set_upstream)?;
         }
-
+        
         let (remoto, rama_merge) = Self::parsear_argumentos(args, set_upstream)?;
-
+        
         let url: String = Self::obtener_url(&remoto)?;
         let comunicacion = Comunicacion::<TcpStream>::new_desde_url(&url, logger.clone())?;
 
@@ -187,7 +187,7 @@ impl Push {
                 self.comunicacion.enviar_flush_pkt()?;
                 // el server pide que se le mande un packfile vacio
                 self.comunicacion.enviar_pack_file(
-                    Packfile::new().obtener_pack_con_archivos(vec![], "./.gir/objects/")?,
+                    Packfile::obtener_pack_con_archivos(vec![], "./.gir/objects/")?,
                 )?;
                 return Err(msj_err);
             }
@@ -237,7 +237,7 @@ impl Push {
         self.comunicacion.enviar_flush_pkt()?;
 
         self.comunicacion
-            .enviar_pack_file(Packfile::new().obtener_pack_con_archivos(
+            .enviar_pack_file(Packfile::obtener_pack_con_archivos(
                 objetos_a_enviar.into_iter().collect(),
                 "./.gir/objects/",
             )?)?;

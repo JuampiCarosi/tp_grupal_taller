@@ -58,7 +58,7 @@ impl<T: Write + Read> Comunicacion<T> {
 
         let flujo = Mutex::new(
             TcpStream::connect(ip_puerto)
-                .map_err(|e| format!("Fallo en en la conecciion con el servido.\n{}\n", e))?,
+                .map_err(|e| format!("Fallo en en la coneccion con el servidor.\n{}\n", e))?,
         );
 
         Ok(Comunicacion {
