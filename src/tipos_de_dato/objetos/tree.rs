@@ -12,14 +12,14 @@ use sha1::{Digest, Sha1};
 use crate::{
     tipos_de_dato::{
         comandos::{cat_file, hash_object::HashObject, merge::Merge},
-        logger::{self, Logger},
+        logger::Logger,
         objeto::Objeto,
         tipo_diff::TipoDiff,
     },
-    utils::path_buf::{esta_directorio_habilitado, obtener_nombre},
     utils::{
         compresion::{comprimir_contenido_u8, descomprimir_objeto},
         io,
+        path_buf::{esta_directorio_habilitado, obtener_nombre},
     },
 };
 
