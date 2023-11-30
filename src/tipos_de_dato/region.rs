@@ -3,6 +3,7 @@
 /// normal si no hay conflictos, o conflicto si hay conflictos,
 /// donde el primer elemento de la tupla es el contenido del HEAD,
 /// y el segundo elemento es el contenido entrante
+#[derive(PartialEq)]
 pub enum Region {
     Normal(String),
     Conflicto(String, String),
@@ -53,19 +54,26 @@ pub fn unificar_regiones(regiones: Vec<Region>) -> Vec<Region> {
                 }
 
                 let mut j = i;
-                let mut buffer_head = String::new();
-                let mut buffer_entrante = String::new();
+                let mut buffer_head = Vec::new();
+                let mut buffer_entrante = Vec::new();
                 while j < regiones.len() {
                     match &regiones[j] {
                         Region::Normal(_) => break,
                         Region::Conflicto(lado_head, lado_entrante) => {
-                            buffer_head.push_str(lado_head);
-                            buffer_entrante.push_str(lado_entrante);
+                            if lado_head != "" {
+                                buffer_head.push(lado_head.trim());
+                            }
+                            if lado_entrante != "" {
+                                buffer_entrante.push(lado_entrante.trim());
+                            }
                         }
                     }
                     j += 1;
                 }
-                regiones_unificadas.push(Region::Conflicto(buffer_head, buffer_entrante));
+                regiones_unificadas.push(Region::Conflicto(
+                    buffer_head.join("\n"),
+                    buffer_entrante.join("\n"),
+                ));
                 i = j;
             }
         }

@@ -87,7 +87,6 @@ impl Config {
                 _ => return Err("Error en el archivo de configuracion".to_string()),
             }
         }
-
         Ok(Config { remotos, ramas })
     }
 
@@ -97,11 +96,17 @@ impl Config {
         self.remotos.iter().any(|x| x.nombre == *remote)
     }
 
+    pub fn existe_rama(&self, rama: &String) -> bool {
+        self.ramas.iter().any(|x| x.nombre == *rama)
+    }
     ///en caso de existir un remoto asosiado a la rama actual, lo devuelve
     pub fn obtener_remoto_rama_actual(&self) -> Option<String> {
         let rama_actual = utils::ramas::obtener_rama_actual().err()?;
 
-        self.ramas.iter().find(|&rama| rama.nombre == rama_actual).map(|rama| (*rama.remote).to_string())
+        self.ramas
+            .iter()
+            .find(|&rama| rama.nombre == rama_actual)
+            .map(|rama| (*rama.remote).to_string())
     }
 
     ///En caso de existir un remoto y un rama_merge (osea si la rama actual esta configurada)asosiado a la rama actual, lo devuelve
@@ -109,7 +114,10 @@ impl Config {
     pub fn obtener_remoto_y_rama_merge_rama_actual(&self) -> Option<(String, PathBuf)> {
         let rama_actual = utils::ramas::obtener_rama_actual().err()?;
 
-        self.ramas.iter().find(|&rama| rama.nombre == rama_actual).map(|rama| ((*rama.remote).to_string(), (*rama.merge).to_path_buf()))
+        self.ramas
+            .iter()
+            .find(|&rama| rama.nombre == rama_actual)
+            .map(|rama| ((*rama.remote).to_string(), (*rama.merge).to_path_buf()))
     }
 
     ///Da el url asosiado al remoto

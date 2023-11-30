@@ -1,13 +1,15 @@
-use super::{region::Region, ConflictoAtomico, DiffType, LadoConflicto};
+use crate::tipos_de_dato::region::Region;
+
+use super::{Conflicto, LadoConflicto, TipoDiff};
 
 /// Esta funcion contempla el conflicto donde tenemos conflicto del tipo Add-Remove vs Add-Remove,
 /// es decir, dos modificaciones en la misma linea
-pub fn conflicto_len_4(conflicto: &ConflictoAtomico) -> Region {
+pub fn conflicto_len_4(conflicto: &Conflicto) -> Region {
     let mut lado_head = String::new();
     let mut lado_entrante = String::new();
 
     for (diff, lado) in conflicto {
-        if let DiffType::Added(linea) = diff {
+        if let TipoDiff::Added(linea) = diff {
             match lado {
                 LadoConflicto::Head => lado_head.push_str(&format!("{}\n", linea)),
                 LadoConflicto::Entrante => lado_entrante.push_str(&format!("{}\n", linea)),
@@ -21,19 +23,19 @@ pub fn conflicto_len_4(conflicto: &ConflictoAtomico) -> Region {
 /// Esta funcion es auxiliar de conflicto_len_3, ya que se repite el mismo codigo para ambos lados
 /// del conflicto. En el caso que la longitud es 0 se agrega la linea base ya que el lado opuesto
 /// quiso eliminar dicha linea (es porque los conflictos de longitud 3 son del tipo Add-Remove vs Remove)
-pub fn un_lado_conflicto_len_3(conflicto: Vec<&DiffType>, linea_base: &str) -> String {
+pub fn un_lado_conflicto_len_3(conflicto: Vec<&TipoDiff>, linea_base: &str) -> String {
     let mut lado = String::new();
     if conflicto.len() == 1 {
         match conflicto[0] {
-            DiffType::Added(ref linea) => lado.push_str(&format!("{linea_base}\n{linea}\n")),
-            DiffType::Unchanged(ref linea) => lado.push_str(&linea.to_string()),
+            TipoDiff::Added(ref linea) => lado.push_str(&format!("{linea_base}\n{linea}\n")),
+            TipoDiff::Unchanged(ref linea) => lado.push_str(&linea.to_string()),
             _ => {}
         };
     } else {
         for diff in conflicto {
             match diff {
-                DiffType::Added(ref linea) => lado.push_str(&format!("{linea}\n")),
-                DiffType::Unchanged(ref linea) => lado.push_str(&format!("{linea}\n")),
+                TipoDiff::Added(ref linea) => lado.push_str(&format!("{linea}\n")),
+                TipoDiff::Unchanged(ref linea) => lado.push_str(&format!("{linea}\n")),
                 _ => {}
             };
         }
@@ -44,8 +46,8 @@ pub fn un_lado_conflicto_len_3(conflicto: Vec<&DiffType>, linea_base: &str) -> S
 
 /// Esta funcion contempla el conflicto de Add-Remove vs Remove, es decir una linea modificada
 /// vs una linea eliminada
-pub fn conflicto_len_3(conflicto: &ConflictoAtomico, linea_base: &str) -> Region {
-    let head: Vec<&DiffType> = conflicto
+pub fn conflicto_len_3(conflicto: &Conflicto, linea_base: &str) -> Region {
+    let head: Vec<&TipoDiff> = conflicto
         .iter()
         .filter_map(|(diff, lado)| match lado {
             LadoConflicto::Head => Some(diff),
@@ -55,7 +57,7 @@ pub fn conflicto_len_3(conflicto: &ConflictoAtomico, linea_base: &str) -> Region
 
     let lado_head = un_lado_conflicto_len_3(head, linea_base);
 
-    let entrante: Vec<&DiffType> = conflicto
+    let entrante: Vec<&TipoDiff> = conflicto
         .iter()
         .filter_map(|(diff, lado)| match lado {
             LadoConflicto::Entrante => Some(diff),
@@ -70,39 +72,39 @@ pub fn conflicto_len_3(conflicto: &ConflictoAtomico, linea_base: &str) -> Region
 
 /// Esta funcion contempla todos los casos de longitud 2, sean conflictos no.
 pub fn resolver_merge_len_2(
-    conflicto: &ConflictoAtomico,
+    conflicto: &Conflicto,
     linea_base: &str,
     es_conflicto_obligatorio: bool,
 ) -> Region {
     match (&conflicto[0].0, &conflicto[1].0) {
-        (DiffType::Added(linea_1), DiffType::Added(linea_2)) => {
+        (TipoDiff::Added(linea_1), TipoDiff::Added(linea_2)) => {
             if linea_1 != linea_2 || es_conflicto_obligatorio {
                 Region::Conflicto(linea_1.clone(), linea_2.clone())
             } else {
                 Region::Normal(linea_1.clone())
             }
         }
-        (DiffType::Added(linea_1), DiffType::Removed(_)) => {
+        (TipoDiff::Added(linea_1), TipoDiff::Removed(_)) => {
             Region::Conflicto(format!("{linea_base}\n{linea_1}\n"), "".to_string())
         }
-        (DiffType::Added(linea_1), DiffType::Unchanged(linea_2)) => {
+        (TipoDiff::Added(linea_1), TipoDiff::Unchanged(linea_2)) => {
             if es_conflicto_obligatorio {
                 Region::Conflicto(linea_1.to_owned(), linea_2.to_owned())
             } else {
                 Region::Normal(linea_1.clone())
             }
         }
-        (DiffType::Removed(_), DiffType::Added(linea_2)) => {
+        (TipoDiff::Removed(_), TipoDiff::Added(linea_2)) => {
             Region::Conflicto("".to_string(), format!("{linea_base}\n{linea_2}\n"))
         }
-        (DiffType::Unchanged(linea_1), DiffType::Added(linea_2)) => {
+        (TipoDiff::Unchanged(linea_1), TipoDiff::Added(linea_2)) => {
             if es_conflicto_obligatorio {
                 Region::Conflicto(linea_1.to_owned(), linea_2.to_owned())
             } else {
                 Region::Normal(linea_2.clone())
             }
         }
-        (DiffType::Unchanged(linea_1), DiffType::Unchanged(linea_2)) => {
+        (TipoDiff::Unchanged(linea_1), TipoDiff::Unchanged(linea_2)) => {
             if es_conflicto_obligatorio {
                 Region::Conflicto(linea_1.to_owned(), linea_2.to_owned())
             } else {
@@ -115,7 +117,7 @@ pub fn resolver_merge_len_2(
 
 /// Esta funcion contempla todos los casos de longitud 3, donde no hay conflictos
 pub fn resolver_merge_len_3(
-    conflicto: &ConflictoAtomico,
+    conflicto: &Conflicto,
     linea_base: &str,
     es_conflicto_obligatorio: bool,
 ) -> Region {
@@ -124,7 +126,7 @@ pub fn resolver_merge_len_3(
     } else {
         let mut lineas = String::new();
         for (diff, _) in conflicto {
-            if let DiffType::Added(linea) = diff {
+            if let TipoDiff::Added(linea) = diff {
                 lineas.push_str(linea)
             }
         }

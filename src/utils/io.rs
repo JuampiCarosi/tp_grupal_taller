@@ -128,6 +128,7 @@ pub fn obtener_refs(refs_path: PathBuf, dir: &str) -> Result<Vec<String>, ErrorD
         return Ok(refs);
         // io::Error::new(io::ErrorKind::NotFound, "No existe el repositorio");
     }
+
     if refs_path.ends_with("HEAD") {
         refs.push(obtener_ref_head(refs_path.to_path_buf())?);
     } else {
@@ -412,4 +413,17 @@ pub fn obtener_diferencias_remote(referencias: Vec<String>, dir: String) -> Vec<
         }
     }
     diferencias
+}
+
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_escribir_archivo_pisa_contenido() {
+        let dir = PathBuf::from("tmp/test_escribir_archivo_pisa_contenido.txt");
+        escribir_bytes(&dir, "contenido 1").unwrap();
+        escribir_bytes(&dir, "contenido 2").unwrap();
+        assert_eq!(leer_a_string(&dir).unwrap(), "contenido 2");
+        rm_directorio(dir).unwrap();
+    }
 }

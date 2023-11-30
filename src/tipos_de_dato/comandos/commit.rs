@@ -17,9 +17,9 @@ use super::{merge::Merge, write_tree};
 
 pub struct Commit {
     /// Logger para imprimir mensajes en el archivo log.
-    logger: Arc<Logger>,
+    pub logger: Arc<Logger>,
     /// Mensaje del commit.
-    mensaje: String,
+    pub mensaje: String,
 }
 
 /// Arma el timestamp del commit en formato unix.
@@ -158,7 +158,7 @@ impl Commit {
 
     /// Obtiene el hash del commit al que apunta el branch actual.
     /// En caso de no poder obtener el hash devuelve un string vacio. Esto puede ocurrir si es el primer commit.
-    pub fn obtener_hash_del_padre_del_commit() -> Result<String, String> {
+    pub fn obtener_hash_commit_actual() -> Result<String, String> {
         let ruta = Self::obtener_ruta_branch_commit()?;
         let padre_commit =
             io::leer_a_string(path::Path::new(&ruta)).unwrap_or_else(|_| "".to_string());
@@ -202,7 +202,7 @@ impl Commit {
     /// Utiliza un ejecutar wrapper para que en caso de error limpiar los archivos creados.
     pub fn ejecutar(&self) -> Result<String, String> {
         armar_config_con_mail_y_nombre()?;
-        let hash_padre_commit = Self::obtener_hash_del_padre_del_commit()?;
+        let hash_padre_commit = Self::obtener_hash_commit_actual()?;
         let (hash_arbol, contenido_total) = self.crear_contenido_commit(&hash_padre_commit)?;
         match self.ejecutar_wrapper(&contenido_total) {
             Ok(_) => (),

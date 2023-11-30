@@ -452,7 +452,7 @@ pub fn leer_packfile_y_escribir(
         // println!("Offset previo a leer todo el objeto: {}", offset);
         let (mut tipo, mut tamanio) = decodificar_bytes_sin_borrado(bytes, &mut offset);
         let mut obj_data = vec![0; tamanio as usize];
-        // println!("tipo: {}, tamanio: {}", tipo, tamanio);
+        println!("tipo: {}, tamanio: {}", tipo, tamanio);
         if tipo == 7 {
             let hash_obj = Tree::encode_hex(&bytes[offset..offset + 20]);
             offset += 20;
@@ -572,10 +572,8 @@ pub fn leer_packfile_y_escribir(
         hasher.update(objeto.clone());
         let _hash = hasher.finalize();
         let hash = format!("{:x}", _hash);
-
-        // println!("hash: {:?}", hash);
         let ruta = format!("{}{}/{}", &ubicacion, &hash[..2], &hash[2..]);
-        // println!("ruta donde pongo objetos: {:?}", ruta);
+        println!("ruta donde pongo objetos: {:?}", ruta);
 
         io::escribir_bytes(ruta, compresion::comprimir_contenido_u8(&objeto).unwrap()).unwrap();
         contador += 1;
@@ -724,8 +722,7 @@ fn _read_ofs_delta_obj(
 
     let base_obj_offset = offset_pre_varint - offset;
 
-    let (base_obj_type, mut base_obj_data) =
-        _read_pack_object(bytes, &mut { base_obj_offset });
+    let (base_obj_type, mut base_obj_data) = _read_pack_object(bytes, &mut { base_obj_offset });
 
     _make_delta_obj(
         bytes,
@@ -758,8 +755,8 @@ fn _make_delta_obj(
     *actual_offset += descompresor.total_in() as usize;
 
     let mut data_descomprimida_offset: usize = 0;
-    let _base_obj_size = read_varint_le(&objeto_descomprimido, &mut data_descomprimida_offset);
-    let _obj_size2 = read_varint_le(&objeto_descomprimido, &mut data_descomprimida_offset);
+    let base_obj_size = read_varint_le(&objeto_descomprimido, &mut data_descomprimida_offset);
+    let obj_size2 = read_varint_le(&objeto_descomprimido, &mut data_descomprimida_offset);
 
     let mut obj_data: Vec<u8> = Vec::new();
 

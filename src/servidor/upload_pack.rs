@@ -25,9 +25,9 @@ pub fn upload_pack(
         comunicacion.responder(vec![git_io::obtener_linea_con_largo_hex("NAK\n")])?; // respondo NAK
                                                                                      // let want_obj_ids = utilidades_strings::eliminar_prefijos(&mut wants, "want");
                                                                                      // println!("want_obj_ids: {:?}", want_obj_ids);
-        let packfile = packfile::Packfile::new().obtener_pack_entero(&(dir.clone() + "objects/")); // obtengo el packfile
-                                                                                                   // git_io::leer_bytes("./.git/objects/pack/pack-31897a1f902980a7e540e812b54f5702f449af8b.pack").unwrap();
-        comunicacion.responder_con_bytes(packfile).unwrap();
+        let packfile = packfile::Packfile::new().obtener_pack_entero(&(dir + "objects/")); // obtengo el packfile
+                                                                                           // git_io::leer_bytes("./.git/objects/pack/pack-31897a1f902980a7e540e812b54f5702f449af8b.pack").unwrap();
+        comunicacion.enviar_pack_file(packfile).unwrap();
         println!("Upload pack ejecutado con exito");
         return Ok(());
     }
@@ -43,7 +43,7 @@ pub fn upload_pack(
     // obtener un packfile de los faltantes...
     let packfile =
         packfile::Packfile::new().obtener_pack_con_archivos(faltantes, &(dir + "objects/"));
-    comunicacion.responder_con_bytes(packfile).unwrap();
+    comunicacion.enviar_pack_file(packfile).unwrap();
     println!("Upload pack ejecutado con exito");
     Ok(())
 }

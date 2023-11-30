@@ -124,7 +124,7 @@ impl Checkout {
 
     /// Devuelve el nombre de la rama actual.
     /// O sea, la rama a la que apunta el archivo HEAD.
-    fn conseguir_rama_actual(&self, contenidio_head: &str) -> Result<String, String> {
+    fn conseguir_rama_actual(contenidio_head: &str) -> Result<String, String> {
         let partes: Vec<&str> = contenidio_head.split('/').collect();
         let rama_actual = partes
             .last()
@@ -137,7 +137,7 @@ impl Checkout {
     fn cambiar_ref_en_head(&self) -> Result<(), String> {
         let contenido_head = io::leer_a_string(PATH_HEAD)?;
 
-        let rama_actual = self.conseguir_rama_actual(&contenido_head)?;
+        let rama_actual = Self::conseguir_rama_actual(&contenido_head)?;
 
         let nuevo_head = contenido_head.replace(&rama_actual, &self.rama_a_cambiar);
 
@@ -198,12 +198,12 @@ impl Checkout {
     }
 
     /// Devuelve el arbol del ultimo commit de la rama actual.
-    fn obtener_arbol_commit_actual(&self) -> Result<Tree, String> {
+    pub fn obtener_arbol_commit_actual(logger: Arc<Logger>) -> Result<Tree, String> {
         let ref_actual = io::leer_a_string(PATH_HEAD)?;
-        let rama_actual = self.conseguir_rama_actual(&ref_actual)?;
+        let rama_actual = Self::conseguir_rama_actual(&ref_actual)?;
         let head_commit = io::leer_a_string(format!(".gir/refs/heads/{}", rama_actual))?;
         let hash_tree_padre = conseguir_arbol_from_hash_commit(&head_commit, ".gir/objects/")?;
-        Tree::from_hash(&hash_tree_padre, PathBuf::from("."), self.logger.clone())
+        Tree::from_hash(&hash_tree_padre, PathBuf::from("."), logger)
     }
 
     /// Ejecuta el comando checkout en su totalidad.
@@ -219,9 +219,9 @@ impl Checkout {
         };
 
         if !self.crear_rama {
-            let tree_viejo = self.obtener_arbol_commit_actual()?;
+            let tree_viejo = Self::obtener_arbol_commit_actual(self.logger.clone())?;
             self.cambiar_rama()?;
-            let tree_futuro = self.obtener_arbol_commit_actual()?;
+            let tree_futuro = Self::obtener_arbol_commit_actual(self.logger.clone())?;
 
             let objetos_a_eliminar = Self::obtener_objetos_eliminados(&tree_viejo, &tree_futuro);
             self.eliminar_objetos(&objetos_a_eliminar)?;

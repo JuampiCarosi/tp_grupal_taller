@@ -85,7 +85,7 @@ impl Servidor {
             }
             "git-receive-pack" => {
                 println!("receive-pack recibido, ejecutando");
-                let path = PathBuf::from(dir_repo);
+                let path = PathBuf::from(&dir_repo);
 
                 if !path.exists() {
                     gir_io::crear_directorio(&path.join("refs/")).unwrap();
@@ -100,7 +100,7 @@ impl Servidor {
                 } else {
                     comunicacion.responder(refs).unwrap();
                 }
-                receive_pack(dir.to_string(), comunicacion)
+                receive_pack(dir_repo.to_string(), comunicacion)
             }
             _ => Err(ErrorDeComunicacion::IoError(io::Error::new(
                 io::ErrorKind::NotFound,
