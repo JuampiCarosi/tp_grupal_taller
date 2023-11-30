@@ -12,7 +12,7 @@ pub enum Objeto {
 }
 
 /// Devuelve true si el flag es un objeto valido.
-pub fn flag_es_un_objeto_(flag: &String) -> bool {
+pub fn flag_es_un_objeto_(flag: &str) -> bool {
     flag == "blob" || flag == "tree" || flag == "commit" || flag == "tag"
 }
 
@@ -47,7 +47,7 @@ impl Objeto {
     /// Dada una linea en formato del archivo index, devuelve una instancia del objeto.
     /// Si el modo es 100644 devuelve un Blob
     /// Si el modo es 40000 devuelve un Tree
-    pub fn from_index(linea_index: String, logger: Arc<Logger>) -> Result<Objeto, String> {
+    pub fn from_index(linea_index: &str, logger: Arc<Logger>) -> Result<Objeto, String> {
         let mut line = linea_index.split_whitespace();
 
         let modo = line.next().ok_or("Error al leer el modo")?;
@@ -68,7 +68,7 @@ impl Objeto {
                 logger,
             })),
             "40000" => {
-                let tree = Tree::from_hash(hash.to_string(), ubicacion, logger)?;
+                let tree = Tree::from_hash(hash, ubicacion, logger)?;
                 Ok(Objeto::Tree(tree))
             }
             _ => Err("Modo no soportado".to_string()),
@@ -113,8 +113,7 @@ mod tests {
     #[test]
     fn test01_blob_from_index() {
         let logger = Arc::new(logger::Logger::new(PathBuf::from("tmp/objeto_test01")).unwrap());
-        let objeto =
-            Objeto::from_index("100644 1234567890 ./hola.txt".to_string(), logger.clone()).unwrap();
+        let objeto = Objeto::from_index("100644 1234567890 ./hola.txt", logger.clone()).unwrap();
         assert_eq!(
             objeto,
             Objeto::Blob(Blob {
@@ -185,7 +184,7 @@ mod tests {
         }
 
         let objeto = Objeto::from_index(
-            format!("40000 {} test_dir", &objeto_a_escibir.obtener_hash()),
+            &format!("40000 {} test_dir", objeto_a_escibir.obtener_hash()),
             logger.clone(),
         )
         .unwrap();

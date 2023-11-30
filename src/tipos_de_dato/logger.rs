@@ -63,7 +63,7 @@ impl Logger {
                     Ok(Log::Message(msg)) => {
                         let timestamp = Local::now().format("%Y-%m-%d %H:%M:%S");
 
-                        let _ = escribir_mensaje_en_archivo_log(&mut archivo_log, timestamp, msg);
+                        let _ = escribir_mensaje_en_archivo_log(&mut archivo_log, timestamp, &msg);
                     }
                     Ok(Log::End) => break,
                     Err(_) => break,
@@ -120,7 +120,7 @@ impl Drop for Logger {
 fn escribir_mensaje_en_archivo_log(
     data_archivo: &mut File,
     timestamp: chrono::format::DelayedFormat<chrono::format::StrftimeItems<'_>>,
-    msg: String,
+    msg: &str,
 ) -> Result<(), String> {
     data_archivo
         .write_all(format!("{} | {}\n", timestamp, msg).as_bytes())
@@ -216,7 +216,7 @@ mod tests {
             fs::read_to_string(obtener_dir_archivo_log(ubicacion_archivo)).unwrap();
 
         for contenido in contenidos {
-            assert!(contenido_archvo_log.contains(&contenido));
+            assert!(contenido_archvo_log.contains(contenido));
         }
     }
 

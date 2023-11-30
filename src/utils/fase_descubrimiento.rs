@@ -58,7 +58,7 @@ pub fn fase_de_descubrimiento<T: Write + Read>(
     ))
 }
 
-fn separara_capacidades(primera_linea: &String) -> Result<(String, Vec<String>), String> {
+fn separara_capacidades(primera_linea: &str) -> Result<(String, Vec<String>), String> {
     let (contenido, capacidades) = primera_linea
         .split_once('\0')
         .ok_or("Fallo al separar la linea en commit y capacidades\n".to_string())?;
@@ -114,7 +114,7 @@ fn obtener_commits_y_dir_rama_o_tag_asosiados(
 ///
 /// referencia: un string con el commit y la rama o tag asosiado. Con el formato:
 ///     "'hash del commit' 'rama_remota/tag'"
-fn obtener_commit_y_dir_asosiado(referencia: &String) -> Result<(String, PathBuf), String> {
+fn obtener_commit_y_dir_asosiado(referencia: &str) -> Result<(String, PathBuf), String> {
     let (commit_cabeza_de_rama, dir) = referencia
         .split_once(' ')
         .ok_or("Fallo al separar el conendio en actualizar referencias\n".to_string())?;

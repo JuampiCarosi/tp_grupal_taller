@@ -14,7 +14,7 @@ pub fn obtener_ref_rama_actual() -> Result<PathBuf, String> {
     let contenido_head = io::leer_a_string("./.gir/HEAD")?;
     let (_, dir_rama_actual) = contenido_head
         .split_once(' ')
-        .ok_or(format!("Fallo al obtener la rama actual\n"))?;
+        .ok_or("Fallo al obtener la rama actual\n".to_string())?;
     Ok(PathBuf::from(dir_rama_actual.trim()))
 }
 
@@ -32,7 +32,7 @@ pub fn obtener_gir_dir_rama_actual() -> Result<PathBuf, String> {
 ///
 /// Si el path contien heads entonces es una rama, devuelve true. Caso contrio es un tag,
 /// devuelve false
-pub fn es_la_ruta_a_una_rama(dir: &PathBuf) -> bool {
+pub fn es_la_ruta_a_una_rama(dir: &Path) -> bool {
     for componente in dir.iter() {
         if let Some(componente_str) = componente.to_str() {
             if componente_str == "heads" {
@@ -50,8 +50,8 @@ pub fn es_la_ruta_a_una_rama(dir: &PathBuf) -> bool {
 /// recive:  ./.gir/refs/heads/master o refs/heads/master
 /// devuelve: ./.gir/refs/remotes/{remoto}/master
 pub fn convertir_de_dir_rama_remota_a_dir_rama_local(
-    remoto: &String,
-    dir_rama_remota: &PathBuf,
+    remoto: &str,
+    dir_rama_remota: &Path,
 ) -> Result<PathBuf, String> {
     let carpeta_del_remoto = format!("./.gir/refs/remotes/{}/", remoto);
 
@@ -65,7 +65,7 @@ pub fn convertir_de_dir_rama_remota_a_dir_rama_local(
 ///
 /// ## Argumentos
 /// - rama_remota: semi path a la rama remota(Ej: origin/aaaa)
-pub fn existe_la_rama_remota(rama_remota: &String) -> bool {
+pub fn existe_la_rama_remota(rama_remota: &str) -> bool {
     let dir_rama_remota = PathBuf::from(format!("./.gir/refs/remotes/{}", rama_remota));
 
     dir_rama_remota.exists()
@@ -75,7 +75,7 @@ pub fn existe_la_rama_remota(rama_remota: &String) -> bool {
 ///
 /// ## Argumentos
 /// - rama: nombre de la rama(Ej: aaaa)
-pub fn existe_la_rama(rama: &String) -> bool {
+pub fn existe_la_rama(rama: &str) -> bool {
     let dir_rama = PathBuf::from(format!("./.gir/refs/heads/{}", rama));
 
     dir_rama.exists()

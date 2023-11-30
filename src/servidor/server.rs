@@ -71,7 +71,7 @@ impl Servidor {
         let dir_repo = dir.to_string() + args[0];
         let refs: Vec<String>;
         comunicacion
-            .enviar_linea(gir_io::obtener_linea_con_largo_hex(
+            .enviar_linea(&gir_io::obtener_linea_con_largo_hex(
                 &(VERSION.to_string() + "\n"),
             ))
             .unwrap();
@@ -111,9 +111,8 @@ impl Servidor {
     fn obtener_refs_de(dir: PathBuf) -> Vec<String> {
         let mut refs: Vec<String> = Vec::new();
         let head_ref = gir_io::obtener_ref_head(dir.join("HEAD"));
-        match head_ref {
-            Ok(head) => refs.push(head),
-            Err(_) => {}
+        if let Ok(head) = head_ref {
+            refs.push(head)
         }
         gir_io::obtener_refs_con_largo_hex(
             &mut refs,

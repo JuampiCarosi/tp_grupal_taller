@@ -35,7 +35,7 @@ impl Packfile {
     // Funcion que dado el hash de un objeto, lo aniade al packfile
     fn aniadir_objeto(objetos_packfile: &mut Vec<u8>, objeto: String, dir: &str) -> Result<(), String> {
         let (tamanio_objeto, tipo_objeto) = Self::obtener_largo_y_tipo_de_directorio(objeto.clone(), dir)?;
-        
+  
         // codifica el tamanio del archivo descomprimido y su tipo en un tipo variable de longitud
         let nbyte = match tipo_objeto.as_str() {
             "commit" => Self::codificar_bytes(COMMIT, tamanio_objeto),    //1
@@ -67,6 +67,7 @@ impl Packfile {
         // ---
         for objeto in objetos {
             Self::aniadir_objeto(&mut objetos_packfile, objeto.clone(), dir)?;
+
         }
         Ok((objetos_packfile, cant_objetos))
     }
@@ -275,6 +276,7 @@ impl Packfile {
             if offset {
                 val += 1
             }
+
         }
         val
     }
@@ -343,6 +345,7 @@ impl Packfile {
                     if (byt & mascara) != 0 {
                         vals.push(objeto_descomprimido[data_descomprimida_offset]);
                         data_descomprimida_offset += 1;
+
                     } else {
                         vals.push(0);
                     }
@@ -379,11 +382,10 @@ impl Packfile {
     
             if byte & 0x80 == 0 {
                 break;
+
             }
         }
         result
     }
 }
-
-
 
