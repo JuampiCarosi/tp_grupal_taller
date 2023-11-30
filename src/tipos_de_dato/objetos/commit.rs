@@ -211,16 +211,13 @@ fn aplicar_diff(texto: &str, diffs: Vec<(usize, TipoDiff)>) -> Vec<Region> {
     let lineas = texto.lines().collect::<Vec<_>>();
 
     let mut anterior_fue_conflicto = false;
-    for i in 0..lineas.len() {
+    for (i, linea_actual) in lineas.iter().enumerate() {
         let diffs_linea: Vec<_> = diffs.iter().filter(|(linea, _)| *linea - 1 == i).collect();
 
         if anterior_fue_conflicto {
             let diffs_a_agregar: Vec<_> = diffs_linea
                 .iter()
-                .filter(|(_, diff)| match diff {
-                    TipoDiff::Removed(_) => false,
-                    _ => true,
-                })
+                .filter(|(_, diff)| !matches!(diff, TipoDiff::Removed(_)))
                 .collect();
 
             let mut buffer = Vec::new();
@@ -232,7 +229,7 @@ fn aplicar_diff(texto: &str, diffs: Vec<(usize, TipoDiff)>) -> Vec<Region> {
                 }
             }
             contenido_final.push(Region::Conflicto(
-                lineas[i].to_string(),
+                linea_actual.to_string(),
                 buffer.join("\n"),
             ));
             anterior_fue_conflicto = false;
@@ -241,14 +238,14 @@ fn aplicar_diff(texto: &str, diffs: Vec<(usize, TipoDiff)>) -> Vec<Region> {
         if diffs_linea.len() == 1 {
             match &diffs_linea[0].1 {
                 TipoDiff::Added(linea) => {
-                    contenido_final.push(Region::Normal(lineas[i].to_string()));
+                    contenido_final.push(Region::Normal(linea_actual.to_string()));
                     contenido_final.push(Region::Normal(linea.to_string()));
                 }
                 TipoDiff::Removed(linea) => {
-                    if *lineas[i] != *linea {
+                    if linea != linea_actual {
                         anterior_fue_conflicto = true;
                         contenido_final
-                            .push(Region::Conflicto(lineas[i].to_string(), String::new()))
+                            .push(Region::Conflicto(linea_actual.to_string(), String::new()))
                     }
                 }
                 TipoDiff::Unchanged(linea) => {
@@ -258,10 +255,10 @@ fn aplicar_diff(texto: &str, diffs: Vec<(usize, TipoDiff)>) -> Vec<Region> {
         } else if diffs_linea.len() == 2 {
             if let TipoDiff::Removed(linea) = &diffs_linea[0].1 {
                 if let TipoDiff::Added(linea2) = &diffs_linea[1].1 {
-                    if *lineas[i] != *linea {
+                    if linea != linea_actual {
                         anterior_fue_conflicto = true;
                         contenido_final.push(Region::Conflicto(
-                            lineas[i].to_string(),
+                            linea_actual.to_string(),
                             linea2.to_string(),
                         ));
                         continue;

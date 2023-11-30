@@ -124,7 +124,7 @@ pub fn comprimir_contenido(contenido: &str) -> Result<Vec<u8>, String> {
 
 /// Comprime el contenido en u8 de un objeto.
 /// Si el contenido no es valido, devuelve un error.
-pub fn comprimir_contenido_u8(contenido: &Vec<u8>) -> Result<Vec<u8>, String> {
+pub fn comprimir_contenido_u8(contenido: &[u8]) -> Result<Vec<u8>, String> {
     let mut compresor = ZlibEncoder::new(Vec::new(), Compression::default());
     if compresor.write_all(contenido).is_err() {
         return Err("No se pudo comprimir el contenido".to_string());

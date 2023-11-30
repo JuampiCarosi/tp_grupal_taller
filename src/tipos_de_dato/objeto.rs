@@ -12,7 +12,7 @@ pub enum Objeto {
 }
 
 /// Devuelve true si el flag es un objeto valido.
-pub fn flag_es_un_objeto_(flag: &String) -> bool {
+pub fn flag_es_un_objeto_(flag: &str) -> bool {
     flag == "blob" || flag == "tree" || flag == "commit" || flag == "tag"
 }
 

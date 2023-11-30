@@ -175,7 +175,7 @@ pub fn esta_vacio(ubicacion: &str) -> bool {
     }
 }
 
-fn obtener_referencia(path: &mut PathBuf, prefijo: &str) -> Result<String, ErrorDeComunicacion> {
+fn obtener_referencia(path: &mut Path, prefijo: &str) -> Result<String, ErrorDeComunicacion> {
     let contenido = leer_archivo(path)?;
     // esto esta hardcodeado, hay que cambiar la forma de sacarle el prefijo
     let directorio_sin_prefijo = path.strip_prefix(prefijo).unwrap().to_path_buf();
@@ -212,8 +212,8 @@ pub fn obtener_ref_head(path: PathBuf) -> Result<String, ErrorDeComunicacion> {
 
 ///Lee un directorio. Devuelve su iterador. Falla si no existe o si no es un directoro
 pub fn leer_directorio<P: AsRef<Path> + Clone + Debug>(directorio: &P) -> Result<ReadDir, String> {
-    let metadada_dir = fs::metadata(directorio)
-        .map_err(|_| format!("Error no existe el dir {:?}", directorio))?;
+    let metadada_dir =
+        fs::metadata(directorio).map_err(|_| format!("Error no existe el dir {:?}", directorio))?;
 
     if !metadada_dir.is_dir() {
         return Err(format!("Error {:?} no es un dir", directorio));
@@ -416,7 +416,8 @@ pub fn obtener_diferencias_remote(referencias: Vec<String>, dir: String) -> Vec<
 }
 
 mod tests {
-    
+
+    use super::*;
 
     #[test]
     fn test_escribir_archivo_pisa_contenido() {

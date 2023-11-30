@@ -67,7 +67,7 @@ impl<T: Write + Read> Fetch<T> {
     }
 
     ///Le pide al config el url asosiado a la rama
-    fn obtener_url(remoto: &String) -> Result<String, String> {
+    fn obtener_url(remoto: &str) -> Result<String, String> {
         Config::leer_config()?.obtenet_url_asosiado_remoto(remoto)
     }
 
@@ -83,12 +83,12 @@ impl<T: Write + Read> Fetch<T> {
     }
 
     ///verifica si el remoto envio por el usario existe
-    fn verificar_remoto(remoto: &String) -> Result<String, String> {
+    fn verificar_remoto(remoto: &str) -> Result<String, String> {
         if let false = Config::leer_config()?.existe_remote(remoto) {
             return  Err(format!("Remoto desconocido{}\nSi quiere añadir un nuevo remoto:\n\ngir remote add [<nombre-remote>] [<url-remote>]\n\n", remoto));
         };
 
-        Ok(remoto.clone())
+        Ok(remoto.to_string())
     }
 
     ///obtiene el remo asosiado a la rama remota actual. Falla si no existe
@@ -233,7 +233,7 @@ impl<T: Write + Read> Fetch<T> {
     /// false
     fn enviar_pedidos(
         &self,
-        capacidades_servidor: &Vec<String>,
+        capacidades_servidor: &[String],
         commits_cabezas_y_dir_rama_asosiado: &Vec<(String, PathBuf)>,
     ) -> Result<bool, String> {
         let capacidades_a_usar_en_la_comunicacion =
@@ -295,7 +295,7 @@ impl<T: Write + Read> Fetch<T> {
     /// para usar en la comunicacion
     fn obtener_capacidades_en_comun_con_el_servidor(
         &self,
-        capacidades_servidor: &Vec<String>,
+        capacidades_servidor: &[String],
     ) -> String {
         let mut capacidades_a_usar_en_la_comunicacion: Vec<&str> = Vec::new();
 

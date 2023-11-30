@@ -126,6 +126,7 @@ impl ShowRef {
     }
 
     pub fn ejecutar(&self) -> Result<String, String> {
+        self.logger.log("Ejecutando comando show-ref");
         let mut refs = self.obtener_referencias(PathBuf::from(".gir/refs/"))?;
 
         if self.show_head {

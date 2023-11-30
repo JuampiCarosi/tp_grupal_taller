@@ -377,7 +377,7 @@ impl<T: Write + Read> Comunicacion<T> {
     }
 
     ///Le añade las capadcidades al primer objeto para cumplir con el protocolo
-    fn anadir_capacidades_primer_pedido(&self, pedidos: &mut Vec<String>, capacidades: String) {
+    fn anadir_capacidades_primer_pedido(&self, pedidos: &mut [String], capacidades: String) {
         pedidos[0].push_str(&(" ".to_string() + &capacidades));
     }
     ///recibi el hash de un commit y le da el formato correcto para hacer el want
@@ -422,7 +422,7 @@ impl<T: Write + Read> Comunicacion<T> {
     }
 
     ///recibi el hash de un objeto y le da el formato correcto para hacer el have
-    fn dar_formato_have(&self, hash_commit: &String) -> String {
+    fn dar_formato_have(&self, hash_commit: &str) -> String {
         io::obtener_linea_con_largo_hex(&("have ".to_string() + hash_commit + "\n"))
     }
 }

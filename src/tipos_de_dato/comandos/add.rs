@@ -1,4 +1,7 @@
-use std::{path::PathBuf, sync::Arc};
+use std::{
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 
 use crate::{
     tipos_de_dato::{logger::Logger, objeto::Objeto},
@@ -55,7 +58,7 @@ impl Add {
         })
     }
 
-    fn es_directorio_a_ignorar(&self, ubicacion: &PathBuf) -> Result<bool, String> {
+    fn es_directorio_a_ignorar(&self, ubicacion: &Path) -> Result<bool, String> {
         let path = ubicacion.to_str().unwrap();
         let log_dir = utils::gir_config::conseguir_ubicacion_log_config()?;
         Ok(path.contains(".gir")

@@ -326,7 +326,7 @@ pub fn decodificar_bytes(bytes: &mut Vec<u8>) -> (u8, u32, u32) {
 
 // -------------------------------------------------------------------------------------------------------------------------
 
-fn decodificar_bytes_sin_borrado(bytes: &Vec<u8>, offset: &mut usize) -> (u8, u32) {
+fn decodificar_bytes_sin_borrado(bytes: &[u8], offset: &mut usize) -> (u8, u32) {
     let mut numero_decodificado: u32;
     let mut corrimiento: u32 = 0;
     let mut continua = false;
@@ -371,7 +371,7 @@ fn leer_varint(bytes: &mut Vec<u8>) -> u32 {
     }
 }
 
-fn leer_varint_sin_consumir_bytes(bytes: &Vec<u8>, offset: &mut usize) -> u32 {
+fn leer_varint_sin_consumir_bytes(bytes: &[u8], offset: &mut usize) -> u32 {
     let mut val: u32 = 0;
     loop {
         let byt: u32 = bytes[*offset] as u32;
@@ -670,7 +670,7 @@ fn buscar_en_packfile(hash: &str, packfile: &Vec<u8>, ubicacion: &str) -> Result
     Err("No existe el objeto, error".to_string())
 }
 
-fn read_vli_be(bytes: &Vec<u8>, actual_offset: &mut usize, offset: bool) -> usize {
+fn read_vli_be(bytes: &[u8], actual_offset: &mut usize, offset: bool) -> usize {
     //     """Read a variable-length integer (big-endian)."""
     let mut val: usize = 0;
     loop {
@@ -734,10 +734,10 @@ fn _read_ofs_delta_obj(
 }
 
 fn _make_delta_obj(
-    bytes: &Vec<u8>,
+    bytes: &[u8],
     actual_offset: &mut usize,
     base_obj_type: u8,
-    base_obj_data: &mut Vec<u8>,
+    base_obj_data: &mut [u8],
     obj_size: u32,
 ) -> (u8, Vec<u8>) {
     let mut objeto_descomprimido = vec![0; obj_size as usize];
@@ -797,7 +797,7 @@ fn _make_delta_obj(
     (base_obj_type, obj_data)
 }
 
-fn read_varint_le(input: &Vec<u8>, offset: &mut usize) -> u32 {
+fn read_varint_le(input: &[u8], offset: &mut usize) -> u32 {
     let mut result = 0u32;
     let mut shift = 0;
 

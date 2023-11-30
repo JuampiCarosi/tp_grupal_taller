@@ -92,11 +92,11 @@ impl Config {
 
     ///busca dentro de los remote del config, si remote efectivente existe.
     /// Si existe devuelve true, caso contrario false
-    pub fn existe_remote(&self, remote: &String) -> bool {
+    pub fn existe_remote(&self, remote: &str) -> bool {
         self.remotos.iter().any(|x| x.nombre == *remote)
     }
 
-    pub fn existe_rama(&self, rama: &String) -> bool {
+    pub fn existe_rama(&self, rama: &str) -> bool {
         self.ramas.iter().any(|x| x.nombre == *rama)
     }
     ///en caso de existir un remoto asosiado a la rama actual, lo devuelve
@@ -121,7 +121,7 @@ impl Config {
     }
 
     ///Da el url asosiado al remoto
-    pub fn obtenet_url_asosiado_remoto(&self, remoto: &String) -> Result<String, String> {
+    pub fn obtenet_url_asosiado_remoto(&self, remoto: &str) -> Result<String, String> {
         match self
             .remotos
             .iter()

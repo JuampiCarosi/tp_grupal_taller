@@ -123,16 +123,16 @@ impl Push {
         }
     }
     //Le pide al config el url asosiado a la rama
-    fn obtener_url(remoto: &String) -> Result<String, String> {
+    fn obtener_url(remoto: &str) -> Result<String, String> {
         Config::leer_config()?.obtenet_url_asosiado_remoto(remoto)
     }
 
-    fn verificar_remoto(remoto: &String) -> Result<String, String> {
+    fn verificar_remoto(remoto: &str) -> Result<String, String> {
         if let false = Config::leer_config()?.existe_remote(remoto) {
             return  Err(format!("Remoto desconocido{}\nSi quiere añadir un nuevo remoto:\n\ngir remote add [<nombre-remote>] [<url-remote>]\n\n", remoto));
         };
 
-        Ok(remoto.clone())
+        Ok(remoto.to_string())
     }
 
     pub fn ejecutar(&mut self) -> Result<String, String> {
@@ -153,8 +153,7 @@ impl Push {
             commits_cabezas_y_ref_rama_asosiado,
             _commits_y_tags_asosiados,
         ) = self.fase_de_descubrimiento()?;
-        self.logger
-            .log("Fase de descubrimiento ejecuta con exito");
+        self.logger.log("Fase de descubrimiento ejecuta con exito");
 
         println!("{:?}", commits_cabezas_y_ref_rama_asosiado);
         let referencia_acualizar =
@@ -173,8 +172,8 @@ impl Push {
     //y envia un pack file vacio
     fn obtener_objetos_a_enviar(
         &self,
-        referencia: &String,
-        viejo_commit: &String,
+        referencia: &str,
+        viejo_commit: &str,
     ) -> Result<HashSet<String>, String> {
         let objetos_a_enviar =
             obtener_commits_y_objetos_asociados(referencia, viejo_commit, self.logger.clone());
@@ -309,7 +308,7 @@ fn obtener_commits_y_objetos_asociados(
         if objetos_a_agregar.contains(&commit.hash) {
             continue;
         }
-        if commit.hash == commit_limite.clone() {
+        if commit.hash == commit_limite {
             objetos_a_agregar.insert(commit.hash.clone());
             break;
         }
@@ -329,18 +328,10 @@ fn obtener_commits_y_objetos_asociados(
             commits_a_revisar.push(commit_padre);
         }
     }
-    if (commit_limite != &"0".repeat(40)) && !objetos_a_agregar.contains(commit_limite) {
+    if ("0".repeat(40) != *commit_limite) && !objetos_a_agregar.contains(commit_limite) {
         return Err("El servidor tiene cambios, por favor, actualice su repositorio".to_string());
-    } else if (commit_limite != &"0".repeat(40)) && objetos_a_agregar.contains(commit_limite) {
+    } else if ("0".repeat(40) != *commit_limite) && objetos_a_agregar.contains(commit_limite) {
         objetos_a_agregar.remove(commit_limite);
     }
     Ok(objetos_a_agregar)
-}
-
-fn obtener_refs_de(dir: PathBuf, prefijo: &str) -> Vec<String> {
-    let mut refs: Vec<String> = Vec::new();
-    refs.append(&mut io::obtener_refs(dir.join("heads/"), prefijo.clone()).unwrap());
-    refs.append(&mut io::obtener_refs(dir.join("tags/"), prefijo).unwrap());
-    // refs[0] = self.agregar_capacidades(refs[0].clone ());
-    refs
 }

@@ -352,7 +352,7 @@ impl Tree {
         for objeto in &self.objetos {
             match objeto {
                 Objeto::Blob(blob) => {
-                    if blob.hash == hash_hijo && blob.ubicacion == ubicacion_hijo.clone() {
+                    if blob.hash == hash_hijo && blob.ubicacion == ubicacion_hijo {
                         return true;
                     }
                 }
@@ -386,7 +386,7 @@ impl Tree {
     }
 
     /// Devuelve si el arbol contiene un hijo con el mismo directorio que el pasado por parametro.
-    pub fn contiene_directorio(&self, directorio: &PathBuf) -> bool {
+    pub fn contiene_directorio(&self, directorio: &Path) -> bool {
         for objeto in &self.objetos {
             match objeto {
                 Objeto::Blob(_) => {}

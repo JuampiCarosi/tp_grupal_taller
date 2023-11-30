@@ -89,8 +89,8 @@ impl Merge {
 
     /// Devuelve un vector con las lineas que difieren entre dos archivos
     fn obtener_diffs_entre_dos_archivos(
-        archivo_1: &String,
-        archivo_2: &String,
+        archivo_1: &str,
+        archivo_2: &str,
     ) -> Result<Vec<(usize, TipoDiff)>, String> {
         let archivo_1_splitteado = archivo_1.split('\n').collect::<Vec<&str>>();
         let archivo_2_splitteado = archivo_2.split('\n').collect::<Vec<&str>>();
@@ -233,7 +233,7 @@ impl Merge {
                 hubo_conflictos = true;
                 Self::resolver_conflicto(
                     posible_conflicto,
-                    lineas_archivo_base.iter().nth(i).unwrap_or(&""),
+                    lineas_archivo_base.get(i).unwrap_or(&""),
                 )
             } else if posible_conflicto.len() == 2 {
                 resolver_merge_len_2(
