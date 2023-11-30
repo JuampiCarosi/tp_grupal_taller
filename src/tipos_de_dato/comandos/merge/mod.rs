@@ -9,6 +9,7 @@ use std::{
 
 use crate::{
     tipos_de_dato::{
+        comando::Ejecutar,
         comandos::merge::{
             estrategias_conflictos::resolver_merge_len_2, region::unificar_regiones,
         },
@@ -360,7 +361,7 @@ impl Merge {
                 paths_con_conflictos
             ))
         } else {
-            let commit = Commit::from_merge(self.logger.clone())?;
+            let mut commit = Commit::from_merge(self.logger.clone())?;
             commit.ejecutar()?;
             Ok("Merge completado".to_string())
         }

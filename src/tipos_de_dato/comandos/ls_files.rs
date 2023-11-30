@@ -1,7 +1,7 @@
 use std::{path::PathBuf, sync::Arc};
 
 use crate::{
-    tipos_de_dato::{logger::Logger, objeto::Objeto, objetos::tree::Tree},
+    tipos_de_dato::{comando::Ejecutar, logger::Logger, objeto::Objeto, objetos::tree::Tree},
     utils::index::{leer_index, ObjetoIndex},
 };
 
@@ -85,8 +85,10 @@ impl LsFiles {
         }
         Ok(texto_tree)
     }
+}
 
-    pub fn ejecutar(&self) -> Result<String, String> {
+impl Ejecutar for LsFiles {
+    fn ejecutar(&mut self) -> Result<String, String> {
         self.logger.log("Ejecutando ls-files");
         let mut texto_a_mostrar = Vec::new();
         for archivo in &self.archivos {

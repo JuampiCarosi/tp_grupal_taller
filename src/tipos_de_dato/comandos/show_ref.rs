@@ -5,7 +5,7 @@ use std::{
 };
 
 use crate::{
-    tipos_de_dato::logger::Logger,
+    tipos_de_dato::{comando::Ejecutar, logger::Logger},
     utils::{io, path_buf},
 };
 
@@ -124,8 +124,11 @@ impl ShowRef {
 
         Ok(refs)
     }
+}
 
-    pub fn ejecutar(&self) -> Result<String, String> {
+impl Ejecutar for ShowRef {
+    fn ejecutar(&mut self) -> Result<String, String> {
+        self.logger.log("Ejecutando comando show-ref");
         let mut refs = self.obtener_referencias(PathBuf::from(".gir/refs/"))?;
 
         if self.show_head {
@@ -137,7 +140,7 @@ impl ShowRef {
         for (ubicacion, contenido) in refs {
             salida.push_str(&format!("{} {}\n", contenido, ubicacion));
         }
-
+        self.logger.log("Se ejecuto el comando show-ref");
         Ok(salida)
     }
 }

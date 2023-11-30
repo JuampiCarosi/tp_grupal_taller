@@ -9,7 +9,9 @@ use std::{
 use sha1::{Digest, Sha1};
 
 use crate::{
-    tipos_de_dato::{comandos::hash_object::HashObject, logger::Logger, objeto::Objeto},
+    tipos_de_dato::{
+        comando::Ejecutar, comandos::hash_object::HashObject, logger::Logger, objeto::Objeto,
+    },
     utils::path_buf::{esta_directorio_habilitado, obtener_nombre},
     utils::{
         compresion::{comprimir_contenido_u8, descomprimir_objeto},
@@ -306,12 +308,12 @@ impl Tree {
         for objeto in &self.objetos {
             match objeto {
                 Objeto::Blob(blob) => {
-                    if blob.hash == hash_hijo && blob.ubicacion == ubicacion_hijo.clone() {
+                    if blob.hash == hash_hijo && blob.ubicacion == ubicacion_hijo {
                         return true;
                     }
                 }
                 Objeto::Tree(tree) => {
-                    if tree.contiene_misma_version_hijo(hash_hijo.clone(), ubicacion_hijo.clone()) {
+                    if tree.contiene_misma_version_hijo(hash_hijo, ubicacion_hijo) {
                         return true;
                     }
                 }

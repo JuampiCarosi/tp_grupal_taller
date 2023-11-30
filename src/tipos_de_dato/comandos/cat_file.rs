@@ -1,6 +1,6 @@
 use crate::{
     tipos_de_dato::{
-        logger::Logger, objeto::flag_es_un_objeto_, objetos::tree::Tree,
+        comando::Ejecutar, logger::Logger, objeto::flag_es_un_objeto_, objetos::tree::Tree,
         visualizaciones::Visualizaciones,
     },
     utils::compresion::descomprimir_objeto,
@@ -129,11 +129,8 @@ impl CatFile {
         })
     }
 
-    /// Ejecuta el comando cat-file.
-    /// En caso de no encontrar el objeto devuelve error.
-    /// En caso de no poder parsear el contenido del objeto devuelve error.
-    pub fn ejecutar(&self) -> Result<String, String> {
-        let (header, contenido) = obtener_contenido_objeto(&self.hash_objeto)?;
+    pub fn ejecutar_de(&self, dir: &str) -> Result<String, String> {
+        let (header, contenido) = obtener_contenido_objeto_de(&self.hash_objeto, dir)?;
         let mensaje = match self.visualizacion {
             Visualizaciones::TipoObjeto => conseguir_tipo_objeto(&header)?,
             Visualizaciones::Tamanio => conseguir_tamanio(&header)?,
@@ -142,9 +139,14 @@ impl CatFile {
         self.logger.log(&mensaje);
         Ok(mensaje)
     }
+}
 
-    pub fn ejecutar_de(&self, dir: &str) -> Result<String, String> {
-        let (header, contenido) = obtener_contenido_objeto_de(&self.hash_objeto, dir)?;
+impl Ejecutar for CatFile {
+    /// Ejecuta el comando cat-file.
+    /// En caso de no encontrar el objeto devuelve error.
+    /// En caso de no poder parsear el contenido del objeto devuelve error.
+    fn ejecutar(&mut self) -> Result<String, String> {
+        let (header, contenido) = obtener_contenido_objeto(&self.hash_objeto)?;
         let mensaje = match self.visualizacion {
             Visualizaciones::TipoObjeto => conseguir_tipo_objeto(&header)?,
             Visualizaciones::Tamanio => conseguir_tamanio(&header)?,
@@ -159,6 +161,7 @@ impl CatFile {
 mod tests {
     use crate::{
         tipos_de_dato::{
+            comando::Ejecutar,
             comandos::{
                 cat_file::{
                     conseguir_contenido_pretty, conseguir_tamanio, conseguir_tipo_objeto, CatFile,
@@ -175,13 +178,13 @@ mod tests {
     #[test]
     fn test01_cat_file_blob_para_visualizar_muestra_el_contenido_correcto() {
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/cat_file_test01")).unwrap());
-        let hash_object = HashObject::from(
+        let mut hash_object = HashObject::from(
             &mut vec!["-w".to_string(), "test_dir/objetos/archivo.txt".to_string()],
             logger.clone(),
         )
         .unwrap();
         let hash = hash_object.ejecutar().unwrap();
-        let cat_file = CatFile {
+        let mut cat_file = CatFile {
             logger,
             visualizacion: Visualizaciones::Contenido,
             hash_objeto: hash.to_string(),
@@ -198,13 +201,13 @@ mod tests {
     #[test]
     fn test02_cat_file_blob_muestra_el_tamanio_correcto() {
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/cat_file_test02")).unwrap());
-        let hash_object = HashObject::from(
+        let mut hash_object = HashObject::from(
             &mut vec!["-w".to_string(), "test_dir/objetos/archivo.txt".to_string()],
             logger.clone(),
         )
         .unwrap();
         let hash = hash_object.ejecutar().unwrap();
-        let cat_file = CatFile {
+        let mut cat_file = CatFile {
             logger,
             visualizacion: Visualizaciones::Tamanio,
             hash_objeto: hash.to_string(),
@@ -221,13 +224,13 @@ mod tests {
     #[test]
     fn test03_cat_file_blob_muestra_el_tipo_de_objeto_correcto() {
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/cat_file_test03")).unwrap());
-        let hash_object = HashObject::from(
+        let mut hash_object = HashObject::from(
             &mut vec!["-w".to_string(), "test_dir/objetos/archivo.txt".to_string()],
             logger.clone(),
         )
         .unwrap();
         let hash = hash_object.ejecutar().unwrap();
-        let cat_file = CatFile {
+        let mut cat_file = CatFile {
             logger,
             visualizacion: Visualizaciones::TipoObjeto,
             hash_objeto: hash.to_string(),
@@ -261,7 +264,7 @@ mod tests {
         parent b557332b86888546cecbe81933cf22adb1f3fed1\n
         author aaaa <bbbb> 1698535611 -0300\n
         committer aaaa <bbbb> 1698535611 -0300'n";
-        let pretty_print = conseguir_contenido_pretty("commit 29", contenido.clone()).unwrap();
+        let pretty_print = conseguir_contenido_pretty("commit 29", contenido).unwrap();
         assert_eq!(pretty_print, contenido);
     }
 

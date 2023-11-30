@@ -4,7 +4,7 @@ use chrono::TimeZone;
 use sha1::{Digest, Sha1};
 
 use crate::{
-    tipos_de_dato::logger::Logger,
+    tipos_de_dato::{comando::Ejecutar, logger::Logger},
     utils::{
         compresion::comprimir_contenido,
         gir_config::{armar_config_con_mail_y_nombre, conseguir_nombre_y_mail_del_config},
@@ -197,10 +197,12 @@ impl Commit {
         limpiar_archivo_index()?;
         Ok(())
     }
+}
 
+impl Ejecutar for Commit {
     /// Ejecuta el comando commit en su totalidad.
     /// Utiliza un ejecutar wrapper para que en caso de error limpiar los archivos creados.
-    pub fn ejecutar(&self) -> Result<String, String> {
+    fn ejecutar(&mut self) -> Result<String, String> {
         armar_config_con_mail_y_nombre()?;
         let hash_padre_commit = Self::obtener_hash_del_padre_del_commit()?;
         let (hash_arbol, contenido_total) = self.crear_contenido_commit(&hash_padre_commit)?;
@@ -226,6 +228,7 @@ mod tests {
 
     use crate::{
         tipos_de_dato::{
+            comando::Ejecutar,
             comandos::{add::Add, hash_object::HashObject, init::Init},
             logger::Logger,
         },
@@ -247,7 +250,7 @@ mod tests {
     fn limpiar_archivo_gir() {
         io::rm_directorio(".gir").unwrap();
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/branch_init")).unwrap());
-        let init = Init {
+        let mut init = Init {
             path: "./.gir".to_string(),
             logger,
         };
@@ -282,7 +285,7 @@ mod tests {
     fn addear_archivos_y_comittear(args: Vec<String>, logger: Arc<Logger>) {
         let mut add = Add::from(args, logger.clone()).unwrap();
         add.ejecutar().unwrap();
-        let commit =
+        let mut commit =
             Commit::from(&mut vec!["-m".to_string(), "mensaje".to_string()], logger).unwrap();
         commit.ejecutar().unwrap();
     }
@@ -293,7 +296,7 @@ mod tests {
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/commit_test01")).unwrap());
         let mut add = Add::from(vec!["test_file.txt".to_string()], logger.clone()).unwrap();
         add.ejecutar().unwrap();
-        let commit =
+        let mut commit =
             Commit::from(&mut vec!["-m".to_string(), "mensaje".to_string()], logger).unwrap();
         commit.ejecutar().unwrap();
         let arbol_last_commit = conseguir_arbol_commit("master");

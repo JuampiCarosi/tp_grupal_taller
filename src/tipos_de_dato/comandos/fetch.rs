@@ -1,3 +1,4 @@
+use crate::tipos_de_dato::comando::Ejecutar;
 use crate::tipos_de_dato::comunicacion::Comunicacion;
 use crate::tipos_de_dato::config::Config;
 use crate::tipos_de_dato::logger::Logger;
@@ -105,49 +106,6 @@ impl<T: Write + Read> Fetch<T> {
                 "La rama actual no se encuentra asosiado a ningun remoto\nUtilice:\n\ngir remote add [<nombre-remote>] [<url-remote>]\n\nDespues:\n\n{}\n\n", GIR_FETCH
             ))
     }
-
-    // -------------------------------------------------------------
-    // -------------------------------------------------------------
-    // -------------------------------------------------------------
-    // -------------------------------------------------------------
-    // -------------------------------------------------------------
-    // -------------------------------------------------------------
-    // -------------------------------------------------------------
-    // -------------------------------------------------------------
-    //verificar si existe /.git
-    pub fn ejecutar(&self) -> Result<String, String> {
-        self.logger.log("Se ejecuto el comando fetch");
-        self.comunicacion.iniciar_git_upload_pack_con_servidor()?;
-        //en caso de clone el commit head se tiene que utilizar
-        let (
-            capacidades_servidor,
-            commit_head_remoto,
-            commits_cabezas_y_dir_rama_asosiado,
-            _commits_y_tags_asosiados,
-        ) = self.fase_de_descubrimiento()?;
-
-        if !self.fase_de_negociacion(capacidades_servidor, &commits_cabezas_y_dir_rama_asosiado)? {
-            return Ok(String::from("El cliente esta actualizado"));
-        }
-
-        self.recivir_packfile_y_guardar_objetos()?;
-
-        self.actualizar_ramas_locales_del_remoto(&commits_cabezas_y_dir_rama_asosiado)?;
-
-        self.acutualizar_archivo_head_remoto(&commit_head_remoto)?;
-
-        let mensaje = "Fetch ejecutado con exito".to_string();
-        self.logger.log(&mensaje);
-        Ok(mensaje)
-    }
-    // -------------------------------------------------------------
-    // -------------------------------------------------------------
-    // -------------------------------------------------------------
-    // -------------------------------------------------------------
-    // -------------------------------------------------------------
-    // -------------------------------------------------------------
-    // -------------------------------------------------------------
-    // -------------------------------------------------------------
 
     fn fase_de_negociacion(
         &self,
@@ -448,6 +406,51 @@ impl<T: Write + Read> Fetch<T> {
         }
         commit_head_remoto
     }
+}
+
+impl Ejecutar for Fetch<TcpStream> {
+    // -------------------------------------------------------------
+    // -------------------------------------------------------------
+    // -------------------------------------------------------------
+    // -------------------------------------------------------------
+    // -------------------------------------------------------------
+    // -------------------------------------------------------------
+    // -------------------------------------------------------------
+    // -------------------------------------------------------------
+    //verificar si existe /.git
+    fn ejecutar(&mut self) -> Result<String, String> {
+        self.logger.log("Se ejecuto el comando fetch");
+        self.comunicacion.iniciar_git_upload_pack_con_servidor()?;
+        //en caso de clone el commit head se tiene que utilizar
+        let (
+            capacidades_servidor,
+            commit_head_remoto,
+            commits_cabezas_y_dir_rama_asosiado,
+            _commits_y_tags_asosiados,
+        ) = self.fase_de_descubrimiento()?;
+
+        if !self.fase_de_negociacion(capacidades_servidor, &commits_cabezas_y_dir_rama_asosiado)? {
+            return Ok(String::from("El cliente esta actualizado"));
+        }
+
+        self.recivir_packfile_y_guardar_objetos()?;
+
+        self.actualizar_ramas_locales_del_remoto(&commits_cabezas_y_dir_rama_asosiado)?;
+
+        self.acutualizar_archivo_head_remoto(&commit_head_remoto)?;
+
+        let mensaje = "Fetch ejecutado con exito".to_string();
+        self.logger.log(&mensaje);
+        Ok(mensaje)
+    }
+    // -------------------------------------------------------------
+    // -------------------------------------------------------------
+    // -------------------------------------------------------------
+    // -------------------------------------------------------------
+    // -------------------------------------------------------------
+    // -------------------------------------------------------------
+    // -------------------------------------------------------------
+    // -------------------------------------------------------------
 }
 
 #[cfg(test)]

@@ -3,6 +3,7 @@ use gtk::prelude::*;
 use gtk::{self};
 use std::sync::Arc;
 
+use crate::tipos_de_dato::comando::Ejecutar;
 use crate::tipos_de_dato::comandos::push::Push;
 use crate::tipos_de_dato::logger::Logger;
 

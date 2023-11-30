@@ -1,3 +1,4 @@
+use crate::tipos_de_dato::comando::Ejecutar;
 use crate::tipos_de_dato::comandos::write_tree;
 use crate::tipos_de_dato::comunicacion::Comunicacion;
 use crate::tipos_de_dato::logger::Logger;
@@ -44,8 +45,73 @@ impl Push {
             comunicacion,
         })
     }
+}
 
-    pub fn ejecutar(&mut self) -> Result<String, String> {
+fn obtener_commits_y_objetos_asociados(
+    referencia: &str,
+    commit_limite: &str,
+) -> Result<HashSet<String>, String> {
+    let logger = Arc::new(Logger::new(PathBuf::from("./tmp/aa"))?);
+    let ruta = format!(".gir/{}", referencia);
+    let ultimo_commit = io::leer_a_string(Path::new(&ruta))?;
+    if ultimo_commit.is_empty() {
+        return Ok(HashSet::new());
+    }
+
+    // let mut objetos_a_agregar: HashMap<String, CommitObj> = HashMap::new();
+    let mut objetos_a_agregar: HashSet<String> = HashSet::new();
+    let mut commits_a_revisar: Vec<CommitObj> = Vec::new();
+
+    let ultimo_commit = CommitObj::from_hash(ultimo_commit);
+
+    match ultimo_commit {
+        Ok(ultimo_commit) => {
+            commits_a_revisar.push(ultimo_commit);
+        }
+        Err(_) => {
+            return Err(
+                "El servidor tiene cambios, por favor, actualice su repositorio".to_string(),
+            );
+        }
+    }
+
+    while let Some(commit) = commits_a_revisar.pop() {
+        if objetos_a_agregar.contains(&commit.hash) || commit.hash == *commit_limite {
+            continue;
+        }
+        objetos_a_agregar.insert(commit.hash.clone());
+        let hash_tree =
+            write_tree::conseguir_arbol_from_hash_commit(&commit.hash, "./.gir/objects/")?;
+        let tree = Tree::from_hash(&hash_tree, PathBuf::from("."), logger.clone())?;
+        objetos_a_agregar.insert(hash_tree);
+        objetos_a_agregar.extend(
+            tree.obtener_objetos()
+                .iter()
+                .map(|objeto| objeto.obtener_hash()),
+        );
+
+        for padre in commit.padres {
+            let commit_padre = CommitObj::from_hash(padre)?;
+            commits_a_revisar.push(commit_padre);
+        }
+    }
+
+    // let mut commits_vec = Vec::from_iter(commits.values().cloned());
+    // commits_vec.sort_by_key(|commit| commit.date.tiempo.clone());
+
+    Ok(objetos_a_agregar)
+}
+
+fn obtener_refs_de(dir: PathBuf, prefijo: &str) -> Vec<String> {
+    let mut refs: Vec<String> = Vec::new();
+    refs.append(&mut io::obtener_refs(dir.join("heads/"), prefijo).unwrap());
+    refs.append(&mut io::obtener_refs(dir.join("tags/"), prefijo).unwrap());
+    // refs[0] = self.agregar_capacidades(refs[0].clone ());
+    refs
+}
+
+impl Ejecutar for Push {
+    fn ejecutar(&mut self) -> Result<String, String> {
         self.logger.log("Se ejecuto el comando push");
         let request_data = "git-receive-pack /gir/\0host=example.com\0\0version=1\0"; //en donde dice /.git/ va la dir del repo
         let request_data_con_largo_hex = io::obtener_linea_con_largo_hex(request_data);
@@ -115,70 +181,6 @@ impl Push {
             //error
             Err("No hay actualizaciones".to_string())
         }
-
         // println!("Refs recibidas: {:?}", refs_recibidas);
     }
-}
-
-fn obtener_commits_y_objetos_asociados(
-    referencia: &str,
-    commit_limite: &str,
-) -> Result<HashSet<String>, String> {
-    let logger = Arc::new(Logger::new(PathBuf::from("./tmp/aa"))?);
-    let ruta = format!(".gir/{}", referencia);
-    let ultimo_commit = io::leer_a_string(Path::new(&ruta))?;
-    if ultimo_commit.is_empty() {
-        return Ok(HashSet::new());
-    }
-
-    // let mut objetos_a_agregar: HashMap<String, CommitObj> = HashMap::new();
-    let mut objetos_a_agregar: HashSet<String> = HashSet::new();
-    let mut commits_a_revisar: Vec<CommitObj> = Vec::new();
-
-    let ultimo_commit = CommitObj::from_hash(ultimo_commit);
-
-    match ultimo_commit {
-        Ok(ultimo_commit) => {
-            commits_a_revisar.push(ultimo_commit);
-        }
-        Err(_) => {
-            return Err(
-                "El servidor tiene cambios, por favor, actualice su repositorio".to_string(),
-            );
-        }
-    }
-
-    while let Some(commit) = commits_a_revisar.pop() {
-        if objetos_a_agregar.contains(&commit.hash) || commit.hash == *commit_limite {
-            continue;
-        }
-        objetos_a_agregar.insert(commit.hash.clone());
-        let hash_tree =
-            write_tree::conseguir_arbol_from_hash_commit(&commit.hash, "./.gir/objects/")?;
-        let tree = Tree::from_hash(&hash_tree, PathBuf::from("."), logger.clone())?;
-        objetos_a_agregar.insert(hash_tree);
-        objetos_a_agregar.extend(
-            tree.obtener_objetos()
-                .iter()
-                .map(|objeto| objeto.obtener_hash()),
-        );
-
-        for padre in commit.padres {
-            let commit_padre = CommitObj::from_hash(padre)?;
-            commits_a_revisar.push(commit_padre);
-        }
-    }
-
-    // let mut commits_vec = Vec::from_iter(commits.values().cloned());
-    // commits_vec.sort_by_key(|commit| commit.date.tiempo.clone());
-
-    Ok(objetos_a_agregar)
-}
-
-fn obtener_refs_de(dir: PathBuf, prefijo: &str) -> Vec<String> {
-    let mut refs: Vec<String> = Vec::new();
-    refs.append(&mut io::obtener_refs(dir.join("heads/"), prefijo.clone()).unwrap());
-    refs.append(&mut io::obtener_refs(dir.join("tags/"), prefijo).unwrap());
-    // refs[0] = self.agregar_capacidades(refs[0].clone ());
-    refs
 }

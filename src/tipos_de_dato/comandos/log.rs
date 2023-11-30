@@ -2,6 +2,7 @@ use std::cmp::Reverse;
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use crate::tipos_de_dato::comando::Ejecutar;
 use crate::tipos_de_dato::logger::Logger;
 
 use crate::tipos_de_dato::comandos::checkout::Checkout;
@@ -70,11 +71,13 @@ impl Log {
 
         Ok(commits_vec)
     }
+}
 
+impl Ejecutar for Log {
     /// Ejecuta el comando log.
     /// Devuelve un string con el log de los commits de la rama.
     /// En caso de no haber commits devuelve un mensaje y corta la ejecucion.
-    pub fn ejecutar(&self) -> Result<String, String> {
+    fn ejecutar(&mut self) -> Result<String, String> {
         self.logger.log("Ejecutando comando log");
         let hash_commit = Self::obtener_commit_branch(&self.branch)?;
         if hash_commit.is_empty() {
