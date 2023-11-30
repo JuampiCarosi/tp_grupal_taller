@@ -35,11 +35,11 @@ impl Push {
     // donde referencia puede ser por ejemplo: refs/heads/master
 
     pub fn new(args: &mut Vec<String>, logger: Arc<Logger>) -> Result<Self, String> {
-        Self::verificar_argumentos(&args)?;
+        Self::verificar_argumentos(args)?;
 
         let mut set_upstream = false;
 
-        if Self::hay_flags(&args) {
+        if Self::hay_flags(args) {
             Self::parsear_flags(args, &mut set_upstream)?;
         }
 
@@ -76,8 +76,7 @@ impl Push {
     fn obtener_remoto_y_rama_merge_de_rama_actual() -> Result<(String, String), String> {
         let (remoto, rama_merge) = Config::leer_config()?
             .obtener_remoto_y_rama_merge_rama_actual()
-            .ok_or(format!(
-                "La rama actual no se encuentra asosiado a ningun remoto\nUtilice: gir push --set-upstream/-u nombre-remoto nombre-rama-local"))?;
+            .ok_or("La rama actual no se encuentra asosiado a ningun remoto\nUtilice: gir push --set-upstream/-u nombre-remoto nombre-rama-local".to_string())?;
         //CORREGIR MENSAJE DE ERROR DEBERIA SER QUE USE SET BRANCH
 
         Ok((remoto, obtener_nombre(&rama_merge)?))
@@ -94,7 +93,7 @@ impl Push {
         if args.len() == 2 {
             remoto = Self::verificar_remoto(&args[0])?;
             rama_merge = args.remove(1);
-        } else if args.len() == 0 && !set_upstream {
+        } else if args.is_empty() && !set_upstream {
             //si no hay argumentos ni flags, quiere decir que deberia
             //estar configurada la rama
             (remoto, rama_merge) = Self::obtener_remoto_y_rama_merge_de_rama_actual()?;
@@ -125,7 +124,7 @@ impl Push {
     }
     //Le pide al config el url asosiado a la rama
     fn obtener_url(remoto: &String) -> Result<String, String> {
-        Config::leer_config()?.obtenet_url_asosiado_remoto(&remoto)
+        Config::leer_config()?.obtenet_url_asosiado_remoto(remoto)
     }
 
     fn verificar_remoto(remoto: &String) -> Result<String, String> {
@@ -155,9 +154,9 @@ impl Push {
             _commits_y_tags_asosiados,
         ) = self.fase_de_descubrimiento()?;
         self.logger
-            .log(&"Fase de descubrimiento ejecuta con exito".to_string());
+            .log("Fase de descubrimiento ejecuta con exito");
 
-        print!("{:?}\n", commits_cabezas_y_ref_rama_asosiado);
+        println!("{:?}", commits_cabezas_y_ref_rama_asosiado);
         let referencia_acualizar =
             self.obtener_referencia_acualizar(&commits_cabezas_y_ref_rama_asosiado)?;
         let objetos_a_enviar =
@@ -189,7 +188,7 @@ impl Push {
                 self.comunicacion.enviar_pack_file(
                     Packfile::new().obtener_pack_con_archivos(vec![], "./.gir/objects/"),
                 )?;
-                return Err(msj_err);
+                Err(msj_err)
             }
         }
     }
@@ -280,7 +279,7 @@ impl Push {
 fn obtener_commits_y_objetos_asociados(
     referencia: &str,
     commit_limite: &str,
-    logger: Arc<Logger>,
+    _logger: Arc<Logger>,
 ) -> Result<HashSet<String>, String> {
     let logger = Arc::new(Logger::new(PathBuf::from("./tmp/aa"))?);
     let ruta = format!(".gir/{}", referencia);

@@ -755,8 +755,8 @@ fn _make_delta_obj(
     *actual_offset += descompresor.total_in() as usize;
 
     let mut data_descomprimida_offset: usize = 0;
-    let base_obj_size = read_varint_le(&objeto_descomprimido, &mut data_descomprimida_offset);
-    let obj_size2 = read_varint_le(&objeto_descomprimido, &mut data_descomprimida_offset);
+    let _base_obj_size = read_varint_le(&objeto_descomprimido, &mut data_descomprimida_offset);
+    let _obj_size2 = read_varint_le(&objeto_descomprimido, &mut data_descomprimida_offset);
 
     let mut obj_data: Vec<u8> = Vec::new();
 

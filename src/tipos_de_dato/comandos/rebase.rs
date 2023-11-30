@@ -110,7 +110,7 @@ impl Rebase {
         }
 
         let ref_head = io::leer_a_string(".gir/HEAD")?;
-        io::escribir_bytes(".gir/rebase-merge/head-name", &ref_head)?;
+        io::escribir_bytes(".gir/rebase-merge/head-name", ref_head)?;
 
         let head = Commit::obtener_hash_commit_actual()?;
         io::escribir_bytes(".gir/rebase-merge/orig-head", head)?;
@@ -167,7 +167,7 @@ impl Rebase {
         let rama = self.rama.as_ref().ok_or("No se especifico una rama")?;
 
         self.logger.log("Rebaseando...");
-        let commits_a_aplicar = self.obtener_commits_a_aplicar(&rama)?;
+        let commits_a_aplicar = self.obtener_commits_a_aplicar(rama)?;
 
         let tip_nuevo = io::leer_a_string(format!(".gir/refs/heads/{}", rama))?;
         self.crear_carpeta_rebase(&commits_a_aplicar, &tip_nuevo)?;
@@ -235,7 +235,7 @@ impl Rebase {
             .last()
             .ok_or("No se pudo obtener la rama")?;
 
-        io::escribir_bytes(format!(".gir/refs/heads/{}", rama), &orig_head)?;
+        io::escribir_bytes(format!(".gir/refs/heads/{}", rama), orig_head)?;
 
         let tree = Checkout::obtener_arbol_commit_actual(self.logger.clone())?;
 
@@ -285,7 +285,7 @@ impl Rebase {
             return self.continuar();
         }
 
-        if !self.rama.is_none() {
+        if self.rama.is_some() {
             return self.primera_vez();
         }
 
