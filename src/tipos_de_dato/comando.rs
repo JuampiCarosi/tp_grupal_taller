@@ -32,9 +32,10 @@ pub enum Comando {
     Status(Status),
     Remote(Remote),
     Merge(Merge),
-    LsTree(LsTree),
     Tag(Tag),
+    LsTree(LsTree),
     LsFiles(LsFiles),
+    Rebase(Rebase),
     Unknown,
 }
 
@@ -55,8 +56,8 @@ impl Comando {
             "checkout" => Comando::Checkout(Checkout::from(vector_args, logger)?),
             "commit" => Comando::Commit(Commit::from(&mut vector_args, logger)?),
             "fetch" => Comando::Fetch(Fetch::<TcpStream>::new(vector_args, logger)?),
-            "clone" => Comando::Clone(Clone::from(logger)?),
-            "push" => Comando::Push(Push::new(logger)?),
+            "clone" => Comando::Clone(Clone::from(&mut vector_args, logger)?),
+            "push" => Comando::Push(Push::new(&mut vector_args, logger)?),
             "pull" => Comando::Pull(Pull::from(vector_args, logger)?),
             "log" => Comando::Log(Log::from(&mut vector_args, logger)?),
             "status" => Comando::Status(Status::from(logger)?),
@@ -67,6 +68,7 @@ impl Comando {
             "show-ref" => Comando::ShowRef(ShowRef::from(vector_args, logger)?),
             "ls-files" => Comando::LsFiles(LsFiles::from(logger, &mut vector_args)?),
             "check-ignore" => Comando::CheckIgnore(CheckIgnore::from(vector_args, logger)?),
+            "rebase" => Comando::Rebase(Rebase::from(vector_args, logger)?),
             _ => Comando::Unknown,
         };
 
@@ -87,7 +89,7 @@ impl Comando {
             Comando::Commit(ref mut commit) => commit.ejecutar(),
             Comando::Fetch(ref mut fetch) => fetch.ejecutar(),
             Comando::Clone(clone) => clone.ejecutar(),
-            Comando::Push(push) => push.ejecutar(),
+            Comando::Push(ref mut push) => push.ejecutar(),
             Comando::Log(ref mut log) => log.ejecutar(),
             Comando::Status(ref mut status) => status.ejecutar(),
             Comando::Remote(ref mut remote) => remote.ejecutar(),
@@ -96,6 +98,7 @@ impl Comando {
             Comando::LsTree(ref mut ls_tree) => ls_tree.ejecutar(),
             Comando::Tag(ref mut tag) => tag.ejecutar(),
             Comando::ShowRef(ref mut show_ref) => show_ref.ejecutar(),
+            Comando::Rebase(ref mut rebase) => rebase.ejecutar(),
             Comando::LsFiles(ref mut ls_files) => ls_files.ejecutar(),
             Comando::CheckIgnore(ref mut check_ignore) => check_ignore.ejecutar(),
             Comando::Unknown => Err("Comando desconocido".to_string()),

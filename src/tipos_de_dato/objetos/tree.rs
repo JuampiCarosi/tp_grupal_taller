@@ -1,4 +1,5 @@
 use std::{
+    collections::HashMap,
     fmt::{Display, Write},
     fs,
     num::ParseIntError,
@@ -7,9 +8,12 @@ use std::{
 };
 
 use sha1::{Digest, Sha1};
-
-use crate::{
-    tipos_de_dato::{comandos::hash_object::HashObject, logger::Logger, objeto::Objeto},
+    tipos_de_dato::{
+        comandos::{cat_file, hash_object::HashObject, merge::Merge},
+        logger::{self, Logger},
+        objeto::Objeto,
+        tipo_diff::TipoDiff,
+    },
     utils::path_buf::{esta_directorio_habilitado, obtener_nombre},
     utils::{
         compresion::{comprimir_contenido_u8, descomprimir_objeto},
@@ -67,7 +71,50 @@ impl Tree {
         objetos
     }
 
-    /// Escribe en el directorio actual los archivos que se encuentran en el arbol.
+    pub fn deep_changes(
+        &self,
+        arbol_a_comparar: &Tree,
+    ) -> Result<HashMap<String, Vec<(usize, TipoDiff)>>, String> {
+        let mut deep_diffs: HashMap<String, Vec<(usize, TipoDiff)>> = HashMap::new();
+
+        for objeto in &self.objetos {
+            for objeto_a_comparar in arbol_a_comparar.obtener_objetos() {
+                if objeto.obtener_path() == objeto_a_comparar.obtener_path() {
+                    if objeto.obtener_hash() == objeto_a_comparar.obtener_hash() {
+                        break;
+                    }
+                    match objeto_a_comparar {
+                        Objeto::Tree(ref tree_a_comparar) => {
+                            if let Objeto::Tree(tree) = objeto {
+                                let diff_hijos = tree.deep_changes(tree_a_comparar)?;
+                                deep_diffs.extend(diff_hijos);
+                            }
+                        }
+                        Objeto::Blob(blob_a_comparar) => {
+                            if let Objeto::Blob(blob) = objeto {
+                                let contenido_1 =
+                                    cat_file::obtener_contenido_objeto(blob.hash.clone())?.1;
+                                let contenido_2 = cat_file::obtener_contenido_objeto(
+                                    blob_a_comparar.hash.clone(),
+                                )?
+                                .1;
+                                let diff = Merge::obtener_diff(
+                                    contenido_1.lines().collect(),
+                                    contenido_2.lines().collect(),
+                                );
+                                deep_diffs
+                                    .insert(blob.ubicacion.to_string_lossy().to_string(), diff);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(deep_diffs)
+    }
+
+    /// Escribe en el directorio actual los archivos que se encuentran en el arbol
     pub fn escribir_en_directorio(&self) -> Result<(), String> {
         let objetos = self.obtener_objetos_hoja();
         for objeto in objetos {

@@ -139,7 +139,7 @@ impl CatFile {
             Visualizaciones::Tamanio => conseguir_tamanio(header)?,
             Visualizaciones::Contenido => conseguir_contenido_pretty(header, contenido)?,
         };
-        self.logger.log(mensaje.clone());
+        self.logger.log(&mensaje);
         Ok(mensaje)
     }
 
@@ -150,7 +150,7 @@ impl CatFile {
             Visualizaciones::Tamanio => conseguir_tamanio(header)?,
             Visualizaciones::Contenido => conseguir_contenido_pretty(header, contenido)?,
         };
-        self.logger.log(mensaje.clone());
+        self.logger.log(&mensaje);
         Ok(mensaje)
     }
 }

@@ -14,7 +14,7 @@ const GIR_FETCH: &str = "gir fetch <remoto>";
 
 pub struct Fetch<T: Write + Read> {
     remoto: String,
-    comunicacion: Arc<Comunicacion<T>>,
+    comunicacion: Comunicacion<T>,
     capacidades_local: Vec<String>,
     logger: Arc<Logger>,
 }
@@ -30,10 +30,7 @@ impl<T: Write + Read> Fetch<T> {
         //esto lo deberia tener la comunicacion creo yo
 
         //fijarse si sigue siendo necesario el arc
-        let comunicacion = Arc::new(Comunicacion::<TcpStream>::new_desde_url(
-            &url,
-            logger.clone(),
-        )?);
+        let comunicacion = Comunicacion::<TcpStream>::new_desde_url(&url, logger.clone())?;
 
         Ok(Fetch {
             remoto,
@@ -45,10 +42,7 @@ impl<T: Write + Read> Fetch<T> {
 
     #[cfg(test)]
     //pòr ahoar para testing, para mi asi deberia ser recibiendo el comunicacion
-    fn new_testing(
-        logger: Arc<Logger>,
-        comunicacion: Arc<Comunicacion<T>>,
-    ) -> Result<Fetch<T>, String> {
+    fn new_testing(logger: Arc<Logger>, comunicacion: Comunicacion<T>) -> Result<Fetch<T>, String> {
         let remoto = "origin".to_string();
 
         let capacidades_local = Vec::new();
@@ -116,9 +110,9 @@ impl<T: Write + Read> Fetch<T> {
     // -------------------------------------------------------------
     //verificar si existe /.git
     pub fn ejecutar(&self) -> Result<String, String> {
-        self.logger.log("Se ejecuto el comando fetch".to_string());
+        self.logger.log("Se ejecuto el comando fetch");
         self.comunicacion.iniciar_git_upload_pack_con_servidor()?;
-        //en caso de clone el commit head se tiene que utilizar
+
         let (
             capacidades_servidor,
             commit_head_remoto,
@@ -135,9 +129,9 @@ impl<T: Write + Read> Fetch<T> {
         self.actualizar_ramas_locales_del_remoto(&commits_cabezas_y_dir_rama_asosiado)?;
 
         self.acutualizar_archivo_head_remoto(&commit_head_remoto)?;
-        
+
         let mensaje = "Fetch ejecutado con exito".to_string();
-        self.logger.log(mensaje.clone());
+        self.logger.log(&mensaje);
         Ok(mensaje)
     }
     // -------------------------------------------------------------
@@ -195,7 +189,10 @@ impl<T: Write + Read> Fetch<T> {
             let ubicacion_archivo_head_remoto =
                 format!("./.gir/{}_HEAD", self.remoto.to_uppercase());
 
-            println!("ubicacion_archivo_head_remoto: {}", ubicacion_archivo_head_remoto);
+            println!(
+                "ubicacion_archivo_head_remoto: {}",
+                ubicacion_archivo_head_remoto
+            );
             io::escribir_bytes(ubicacion_archivo_head_remoto, hash)?;
         }
 
@@ -334,82 +331,7 @@ impl<T: Write + Read> Fetch<T> {
         ),
         String,
     > {
-        let mut lineas_recibidas = self.comunicacion.obtener_lineas()?;
-        let _version = lineas_recibidas.remove(0); //la version del server
-
-        let segunda_linea = lineas_recibidas.remove(0);
-
-        let (contenido, capacidades) = self.separara_capacidades(&segunda_linea)?;
-        let commit_head_remoto =
-            self.separar_commit_head_de_ser_necesario(contenido, &mut lineas_recibidas);
-
-        let (commits_cabezas_y_dir_rama_asosiado, commits_y_tags_asosiados) =
-            self.obtener_commits_y_dir_rama_o_tag_asosiados(&lineas_recibidas)?;
-
-        Ok((
-            capacidades,
-            commit_head_remoto,
-            commits_cabezas_y_dir_rama_asosiado,
-            commits_y_tags_asosiados,
-        ))
-    }
-
-    fn obtener_commits_y_dir_rama_o_tag_asosiados(
-        &self,
-        lineas_recibidas: &Vec<String>,
-    ) -> Result<(Vec<(String, PathBuf)>, Vec<(String, PathBuf)>), String> {
-        let mut commits_cabezas_y_dir_rama_asosiados: Vec<(String, PathBuf)> = Vec::new();
-
-        let mut commits_y_tags_asosiados: Vec<(String, PathBuf)> = Vec::new();
-
-        for linea in lineas_recibidas {
-            let (commit, dir) = self.obtener_commit_y_dir_asosiado(linea)?;
-
-            if utils::ramas::es_la_ruta_a_una_rama(&dir) {
-                commits_cabezas_y_dir_rama_asosiados.push((commit, dir));
-            } else {
-                commits_y_tags_asosiados.push((commit, dir));
-            }
-        }
-
-        Ok((
-            commits_cabezas_y_dir_rama_asosiados,
-            commits_y_tags_asosiados,
-        ))
-    }
-
-    fn separara_capacidades(
-        &self,
-        primera_linea: &String,
-    ) -> Result<(String, Vec<String>), String> {
-        let (contenido, capacidades) = primera_linea
-            .split_once('\0')
-            .ok_or("Fallo al separar la linea en commit y capacidades\n".to_string())?;
-
-        let capacidades_vector: Vec<String> = capacidades
-            .split_whitespace()
-            .map(|s| s.to_string())
-            .collect();
-
-        Ok((contenido.to_string(), capacidades_vector))
-    }
-
-    ///Separa el commit del dir asosiado
-    ///
-    /// # argumento
-    ///
-    /// referencia: un string con el commit y la rama o tag asosiado. Con el formato:
-    ///     "'hash del commit' 'rama_remota/tag'"
-    fn obtener_commit_y_dir_asosiado(
-        &self,
-        referencia: &String,
-    ) -> Result<(String, PathBuf), String> {
-        let (commit_cabeza_de_rama, dir) = referencia
-            .split_once(' ')
-            .ok_or("Fallo al separar el conendio en actualizar referencias\n".to_string())?;
-
-        let dir_path = PathBuf::from(dir.trim());
-        Ok((commit_cabeza_de_rama.to_string(), dir_path))
+        utils::fase_descubrimiento::fase_de_descubrimiento(&self.comunicacion)
     }
 
     ///actuliza a donde apuntan las cabeza del rama de las ramas locales pertenecientes al remoto
@@ -428,21 +350,6 @@ impl<T: Write + Read> Fetch<T> {
         }
 
         Ok(())
-    }
-
-    fn separar_commit_head_de_ser_necesario(
-        &self,
-        contenido: String,
-        lineas_recibidas: &mut Vec<String>,
-    ) -> Option<String> {
-        let mut commit_head_remoto = Option::None;
-
-        if contenido.contains("HEAD") {
-            commit_head_remoto = Option::Some(contenido.replace("HEAD", "").trim().to_string());
-        } else {
-            lineas_recibidas.insert(0, contenido);
-        }
-        commit_head_remoto
     }
 }
 

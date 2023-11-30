@@ -227,7 +227,7 @@ impl Status {
         for cambio in untrackeados {
             mensaje.push_str(&format!("         {}{}{}\n", ROJO, cambio, RESET));
         }
-        self.logger.log("Status terminado".to_string());
+        self.logger.log("Status terminado");
         Ok(mensaje)
     }
 }

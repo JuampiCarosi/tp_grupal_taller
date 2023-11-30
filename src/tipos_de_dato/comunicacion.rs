@@ -33,12 +33,14 @@ impl<T: Write + Read> Comunicacion<T> {
         direccion_servidor: &str,
         logger: Arc<Logger>,
     ) -> Result<Comunicacion<TcpStream>, String> {
+        let partes: Vec<&str> = direccion_servidor.split("/").collect();
+        let ip_puerto = partes[0];
+        let repositorio = "/".to_string() + partes[1] + "/";
         let flujo = Mutex::new(
-            TcpStream::connect(direccion_servidor)
-                .map_err(|e| format!("Fallo en en la conecciion con el servido.\n{}\n", e))?,
+            TcpStream::connect(ip_puerto)
+                .map_err(|e| format!("Fallo en en la conecciion con el servidor.\n{}\n", e))?,
         );
-        let repositorio = "/gir/".to_string();
-
+        // let repositorio = "/gir/".to_string();
         Ok(Comunicacion {
             flujo,
             repositorio,
@@ -52,7 +54,7 @@ impl<T: Write + Read> Comunicacion<T> {
         url: &str,
         logger: Arc<Logger>,
     ) -> Result<Comunicacion<TcpStream>, String> {
-        let (ip_puerto, repositorio) = Self::obtener_ip_puerto_y_repositorio(url)?;
+        let (ip_puerto, repositorio) = utils::strings::obtener_ip_puerto_y_repositorio(url)?;
 
         let flujo = Mutex::new(
             TcpStream::connect(ip_puerto)
@@ -64,19 +66,6 @@ impl<T: Write + Read> Comunicacion<T> {
             repositorio,
             logger,
         })
-    }
-
-    ///Obtiene de la url el ip puerto y el repositorio
-    ///
-    /// ## Ejemplo
-    /// - recibe: ip:puerto/repositorio/
-    /// - devuelve: (ip:puerto, /respositorio/)
-    fn obtener_ip_puerto_y_repositorio(url: &str) -> Result<(String, String), String> {
-        let (ip_puerto_str, repositorio) = url
-            .split_once("/")
-            .ok_or_else(|| format!("Fallo en obtener el ip:puerto y repo de {}", url))?;
-
-        Ok((ip_puerto_str.to_string(), "/".to_string() + repositorio))
     }
 
     pub fn new_para_testing(flujo: T, logger: Arc<Logger>) -> Comunicacion<T> {
@@ -100,10 +89,14 @@ impl<T: Write + Read> Comunicacion<T> {
     }
 
     pub fn enviar(&self, mensaje: &str) -> Result<(), String> {
+        self.enviar_bytes(mensaje.as_bytes())
+    }
+
+    pub fn enviar_bytes(&self, mensaje: &[u8]) -> Result<(), String> {
         self.flujo
             .lock()
             .map_err(|e| format!("Fallo en el envio del mensaje.\n{}\n", e))?
-            .write_all(mensaje.as_bytes())
+            .write_all(mensaje)
             .map_err(|e| format!("Fallo en el envio del mensaje.\n{}\n", e))
     }
 
@@ -113,8 +106,7 @@ impl<T: Write + Read> Comunicacion<T> {
     /// - ''git-upload-pack 'directorio'\0host='host'\0\0verision='numero de version'\0''
     ///
     pub fn iniciar_git_upload_pack_con_servidor(&self) -> Result<(), String> {
-        self.logger
-            .log("Iniciando git upload pack con el servidor".to_string());
+        self.logger.log("Iniciando git upload pack con el servidor");
         let comando = "git-upload-pack";
         let repositorio = &self.repositorio;
         let host = "gir.com";
@@ -124,8 +116,30 @@ impl<T: Write + Read> Comunicacion<T> {
             "{} {}\0host={}\0\0version={}\0",
             comando, repositorio, host, numero_de_version
         );
-        let payload = io::obtener_linea_con_largo_hex(&mensaje);
-        self.enviar(&payload)?;
+        let pedido = io::obtener_linea_con_largo_hex(&mensaje);
+        self.enviar(&pedido)?;
+        Ok(())
+    }
+
+    ///Inicia el comando git upload pack con el servidor, mandole al servidor el siguiente mensaje
+    /// en formato:
+    ///
+    /// - ''git-upload-pack 'directorio'\0host='host'\0\0verision='numero de version'\0''
+    ///
+    pub fn iniciar_git_recive_pack_con_servidor(&self) -> Result<(), String> {
+        self.logger
+            .log(&"Iniciando git receive pack con el servidor");
+        let comando = "git-receive-pack";
+        let repositorio = &self.repositorio;
+        let host = "gir.com";
+        let numero_de_version = 1;
+
+        let mensaje = format!(
+            "{} {}\0host={}\0\0version={}\0",
+            comando, repositorio, host, numero_de_version
+        );
+        let pedido = io::obtener_linea_con_largo_hex(&mensaje);
+        self.enviar(&pedido)?;
         Ok(())
     }
 
@@ -270,13 +284,11 @@ impl<T: Write + Read> Comunicacion<T> {
         Ok(())
     }
 
-    pub fn responder_con_bytes(&self, lineas: Vec<u8>) -> Result<(), ErrorDeComunicacion> {
-        self.flujo.lock().unwrap().write_all(&lineas)?;
+    //envia el pack file junto con el flush pkt
+    pub fn enviar_pack_file(&self, lineas: Vec<u8>) -> Result<(), String> {
+        self.enviar_bytes(&lineas)?;
         if !lineas.starts_with(b"PACK") {
-            self.flujo
-                .lock()
-                .unwrap()
-                .write_all(String::from("0000").as_bytes())?;
+            self.enviar_flush_pkt()?;
         }
         Ok(())
     }
