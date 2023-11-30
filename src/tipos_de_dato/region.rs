@@ -60,10 +60,10 @@ pub fn unificar_regiones(regiones: Vec<Region>) -> Vec<Region> {
                     match &regiones[j] {
                         Region::Normal(_) => break,
                         Region::Conflicto(lado_head, lado_entrante) => {
-                            if lado_head != "" {
+                            if !lado_head.is_empty() {
                                 buffer_head.push(lado_head.trim());
                             }
-                            if lado_entrante != "" {
+                            if !lado_entrante.is_empty() {
                                 buffer_entrante.push(lado_entrante.trim());
                             }
                         }

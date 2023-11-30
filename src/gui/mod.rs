@@ -23,21 +23,21 @@ fn hidratar_componentes(
     builder: &gtk::Builder,
     window: &gtk::Window,
     logger: Arc<Logger>,
-    branch_actual: String,
+    branch_actual: &str,
 ) {
     let screen = gdk::Screen::default().unwrap();
     estilos(screen);
     new_branch_dialog::render(builder, window, logger.clone());
     branch_selector::render(builder, window, logger.clone());
-    log_list::render(builder, branch_actual.clone(), logger.clone());
+    log_list::render(builder, branch_actual, logger.clone());
     log_seleccionado::render(builder, None);
     staging_area::render(builder, window, logger.clone());
     new_commit_dialog::render(builder, window, logger.clone());
     push_button::render(builder, window, logger.clone());
     error_dialog::setup(builder);
-    pull_button::render(builder, window, logger.clone(), branch_actual.clone());
+    pull_button::render(builder, window, logger.clone(), branch_actual.to_string());
     conflicts_modal::render(builder, logger.clone());
-    refresh::render(builder, window, logger.clone(), branch_actual.clone());
+    refresh::render(builder, window, logger.clone(), branch_actual.to_string());
 }
 
 pub fn estilos(screen: gdk::Screen) {
@@ -73,7 +73,7 @@ pub fn ejecutar(logger: Arc<Logger>) {
 
     let branch_actual = Commit::obtener_branch_actual().unwrap();
 
-    hidratar_componentes(&builder, &window, logger.clone(), branch_actual);
+    hidratar_componentes(&builder, &window, logger.clone(), &branch_actual);
 
     window.show_all();
 

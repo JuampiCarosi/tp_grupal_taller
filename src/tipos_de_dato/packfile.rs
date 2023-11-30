@@ -1,7 +1,7 @@
 use crate::err_comunicacion::ErrorDeComunicacion;
 use crate::tipos_de_dato::comandos::cat_file;
 use crate::tipos_de_dato::logger::Logger;
-use crate::tipos_de_dato::objeto;
+
 use crate::tipos_de_dato::objetos::tree::Tree;
 use crate::utils::compresion;
 use crate::utils::{self, io};
@@ -27,7 +27,7 @@ impl Packfile {
         }
     }
 
-    fn aniadir_objeto(&mut self, objeto: String, dir: &str) -> Result<(), String> {
+    fn aniadir_objeto(&mut self, objeto: &str, dir: &str) -> Result<(), String> {
         // let logger = Rc::new(Logger::new(PathBuf::from("log.txt"))?);
         // println!("Aniadiendo objeto: {}", objeto);
         // println!("la dir que llega: {}", dir);
@@ -38,7 +38,7 @@ impl Packfile {
         let log = Arc::new(Logger::new(PathBuf::from("log.txt")).unwrap());
         // en este catfile hay cosas hardcodeadas que hay que cambiar :{
         let tamanio_objeto_str = match {
-            cat_file::CatFile::from(&mut vec!["-s".to_string(), objeto.clone()], log.clone())
+            cat_file::CatFile::from(&mut vec!["-s".to_string(), objeto.to_string()], log.clone())
                 .unwrap()
                 .ejecutar_de(dir)
         } {
@@ -52,7 +52,7 @@ impl Packfile {
 
         let tamanio_objeto = tamanio_objeto_str.trim().parse::<u32>().unwrap_or(0);
 
-        let tipo_objeto = cat_file::obtener_tipo_objeto_de(&objeto, dir)?;
+        let tipo_objeto = cat_file::obtener_tipo_objeto_de(objeto, dir)?;
         // codifica el tamanio del archivo descomprimido y su tipo en un tipo variable de longitud
         let nbyte = match tipo_objeto.as_str() {
             "commit" => codificar_bytes(1, tamanio_objeto),    //1
@@ -79,11 +79,11 @@ impl Packfile {
     // funcion que recorrer el directorio y aniade los objetos al packfile junto a su indice correspondiente
     fn obtener_objetos_del_dir(&mut self, dir: &str) -> Result<(), ErrorDeComunicacion> {
         // esto porque es un clone, deberia pasarle los objetos que quiero
-        let objetos = io::obtener_objetos_del_directorio(dir.to_string()).unwrap();
+        let objetos = io::obtener_objetos_del_directorio(dir).unwrap();
         // ---
         for objeto in objetos {
             let inicio = self.objetos.len() as u32; // obtengo el len previo a aniadir el objeto
-            self.aniadir_objeto(objeto.clone(), dir).unwrap();
+            self.aniadir_objeto(&objeto, dir).unwrap();
 
             let offset = self.objetos.len() as u32 - inicio;
             self.indice.extend(&offset.to_be_bytes());
@@ -136,7 +136,7 @@ impl Packfile {
     }
 
     pub fn obtener_pack_con_archivos(&mut self, objetos: Vec<String>, dir: &str) -> Vec<u8> {
-        for objeto in objetos {
+        for objeto in &objetos {
             self.aniadir_objeto(objeto, dir).unwrap();
         }
         let mut packfile: Vec<u8> = Vec::new();
@@ -326,7 +326,7 @@ pub fn decodificar_bytes(bytes: &mut Vec<u8>) -> (u8, u32, u32) {
 
 // -------------------------------------------------------------------------------------------------------------------------
 
-fn decodificar_bytes_sin_borrado(bytes: &Vec<u8>, offset: &mut usize) -> (u8, u32) {
+fn decodificar_bytes_sin_borrado(bytes: &[u8], offset: &mut usize) -> (u8, u32) {
     let mut numero_decodificado: u32;
     let mut corrimiento: u32 = 0;
     let mut continua = false;
@@ -371,7 +371,7 @@ fn leer_varint(bytes: &mut Vec<u8>) -> u32 {
     }
 }
 
-fn leer_varint_sin_consumir_bytes(bytes: &Vec<u8>, offset: &mut usize) -> u32 {
+fn leer_varint_sin_consumir_bytes(bytes: &[u8], offset: &mut usize) -> u32 {
     let mut val: u32 = 0;
     loop {
         let byt: u32 = bytes[*offset] as u32;
@@ -424,7 +424,7 @@ pub fn verificar_checksum(packfile: &[u8]) -> bool {
 
 pub fn leer_packfile_y_escribir(
     bytes: &Vec<u8>,
-    ubicacion: String,
+    ubicacion: &str,
 ) -> Result<(), ErrorDeComunicacion> {
     let checksum = verificar_checksum(bytes);
     match checksum {
@@ -432,11 +432,11 @@ pub fn leer_packfile_y_escribir(
         false => println!("Checksum incorrecto"),
     }
     let mut offset = 0;
-    let firma = &bytes[offset..offset + 4];
+    let _firma = &bytes[offset..offset + 4];
     // println!("firma: {:?}", str::from_utf8(&firma));
     offset += 4;
     // assert_eq!("PACK", str::from_utf8(&firma).unwrap());
-    let version = &bytes[offset..offset + 4];
+    let _version = &bytes[offset..offset + 4];
     offset += 4;
     // println!("version: {:?}", str::from_utf8(&version)?);
     let largo = &bytes[offset..offset + 4];
@@ -448,7 +448,7 @@ pub fn leer_packfile_y_escribir(
     let mut contador: u32 = 0;
 
     while contador < largo {
-        let offset_previo = offset.clone();
+        let offset_previo = offset;
         // println!("Offset previo a leer todo el objeto: {}", offset);
         let (mut tipo, mut tamanio) = decodificar_bytes_sin_borrado(bytes, &mut offset);
         let mut obj_data = vec![0; tamanio as usize];
@@ -475,9 +475,9 @@ pub fn leer_packfile_y_escribir(
 
             // bytes.drain(0..total_in as usize);
             let mut _offset = 0;
-            let tamanio_objeto_base = leer_varint(&mut objeto_descomprimido);
+            let _tamanio_objeto_base = leer_varint(&mut objeto_descomprimido);
             // println!("tamanio objeto base: {:?}", tamanio_objeto_base);
-            let tamanio_objeto_reconstruido = leer_varint(&mut objeto_descomprimido);
+            let _tamanio_objeto_reconstruido = leer_varint(&mut objeto_descomprimido);
             // println!("tamanio objeto reconstruido: {:?}", tamanio_objeto_reconstruido);
 
             let byte_codificado: u8 = objeto_descomprimido[0];
@@ -496,7 +496,7 @@ pub fn leer_packfile_y_escribir(
                     let data = &objeto_descomprimido[0..largo as usize]; //data a appendear
                     let ruta_base = format!("{}{}/{}", &ubicacion, &hash_obj[..2], &hash_obj[2..]);
                     if !PathBuf::from(&ruta_base).exists() {
-                        buscar_en_packfile(&hash_obj, bytes, &ubicacion).unwrap();
+                        buscar_en_packfile(&hash_obj, bytes, ubicacion).unwrap();
                     } else {
                         let mut archivo_base = io::leer_bytes(PathBuf::from(&ruta_base)).unwrap();
                         archivo_base.append(&mut data.to_vec());
@@ -572,7 +572,6 @@ pub fn leer_packfile_y_escribir(
         hasher.update(objeto.clone());
         let _hash = hasher.finalize();
         let hash = format!("{:x}", _hash);
-        println!("hash: {:?}", hash);
         let ruta = format!("{}{}/{}", &ubicacion, &hash[..2], &hash[2..]);
         println!("ruta donde pongo objetos: {:?}", ruta);
 
@@ -621,7 +620,7 @@ fn buscar_en_packfile(hash: &str, packfile: &Vec<u8>, ubicacion: &str) -> Result
             let ruta_base = format!("{}{}/{}", &ubicacion, &hash_obj[..2], &hash_obj[2..]);
             // println!("El objeto esta? {}", &ruta_base);
             if !PathBuf::from(&ruta_base).exists() {
-                let mut objeto_base_transformado =
+                let objeto_base_transformado =
                     buscar_en_packfile(&hash_obj, packfile, ubicacion).unwrap();
                 // objeto_base_transformado.append(&mut objeto_descomprimido);
 
@@ -636,7 +635,7 @@ fn buscar_en_packfile(hash: &str, packfile: &Vec<u8>, ubicacion: &str) -> Result
                 return Ok(objeto_base_transformado);
             } else {
                 // println!("Si, esta");
-                let mut objeto_base = io::leer_bytes(PathBuf::from(&ruta_base)).unwrap();
+                let objeto_base = io::leer_bytes(PathBuf::from(&ruta_base)).unwrap();
                 // objeto_base.append(&mut objeto_descomprimido);
                 return Ok(objeto_base);
             }
@@ -671,7 +670,7 @@ fn buscar_en_packfile(hash: &str, packfile: &Vec<u8>, ubicacion: &str) -> Result
     Err("No existe el objeto, error".to_string())
 }
 
-fn read_vli_be(bytes: &Vec<u8>, actual_offset: &mut usize, offset: bool) -> usize {
+fn read_vli_be(bytes: &[u8], actual_offset: &mut usize, offset: bool) -> usize {
     //     """Read a variable-length integer (big-endian)."""
     let mut val: usize = 0;
     loop {
@@ -691,7 +690,7 @@ fn read_vli_be(bytes: &Vec<u8>, actual_offset: &mut usize, offset: bool) -> usiz
 }
 
 fn _read_pack_object(bytes: &Vec<u8>, offset: &mut usize) -> (u8, Vec<u8>) {
-    let offset_pre_varint = offset.clone();
+    let offset_pre_varint = *offset;
     let (tipo, tamanio) = decodificar_bytes_sin_borrado(bytes, offset);
     if tipo == 6 {
         _read_ofs_delta_obj(bytes, tamanio, offset, offset_pre_varint)
@@ -723,8 +722,7 @@ fn _read_ofs_delta_obj(
 
     let base_obj_offset = offset_pre_varint - offset;
 
-    let (base_obj_type, mut base_obj_data) =
-        _read_pack_object(bytes, &mut (base_obj_offset as usize));
+    let (base_obj_type, mut base_obj_data) = _read_pack_object(bytes, &mut { base_obj_offset });
 
     _make_delta_obj(
         bytes,
@@ -736,10 +734,10 @@ fn _read_ofs_delta_obj(
 }
 
 fn _make_delta_obj(
-    bytes: &Vec<u8>,
+    bytes: &[u8],
     actual_offset: &mut usize,
     base_obj_type: u8,
-    base_obj_data: &mut Vec<u8>,
+    base_obj_data: &mut [u8],
     obj_size: u32,
 ) -> (u8, Vec<u8>) {
     let mut objeto_descomprimido = vec![0; obj_size as usize];
@@ -757,8 +755,8 @@ fn _make_delta_obj(
     *actual_offset += descompresor.total_in() as usize;
 
     let mut data_descomprimida_offset: usize = 0;
-    let base_obj_size = read_varint_le(&objeto_descomprimido, &mut data_descomprimida_offset);
-    let obj_size2 = read_varint_le(&objeto_descomprimido, &mut data_descomprimida_offset);
+    let _base_obj_size = read_varint_le(&objeto_descomprimido, &mut data_descomprimida_offset);
+    let _obj_size2 = read_varint_le(&objeto_descomprimido, &mut data_descomprimida_offset);
 
     let mut obj_data: Vec<u8> = Vec::new();
 
@@ -799,7 +797,7 @@ fn _make_delta_obj(
     (base_obj_type, obj_data)
 }
 
-fn read_varint_le(input: &Vec<u8>, offset: &mut usize) -> u32 {
+fn read_varint_le(input: &[u8], offset: &mut usize) -> u32 {
     let mut result = 0u32;
     let mut shift = 0;
 

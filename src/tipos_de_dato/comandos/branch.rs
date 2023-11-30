@@ -143,15 +143,15 @@ mod test {
         craer_archivo_config_default();
     }
 
-    fn conseguir_arbol_commit(branch: String) -> String {
-        let hash_hijo = std::fs::read_to_string(format!(".gir/refs/heads/{}", branch)).unwrap();
-        let contenido_hijo = utils::compresion::descomprimir_objeto_gir(hash_hijo.clone()).unwrap();
+    fn conseguir_arbol_commit(branch: &str) -> Result<String, String> {
+        let hash_hijo = io::leer_a_string(format!(".gir/refs/heads/{}", branch))?;
+        let contenido_hijo = utils::compresion::descomprimir_objeto_gir(&hash_hijo)?;
         let lineas_sin_null = contenido_hijo.replace('\0', "\n");
         let lineas = lineas_sin_null.split('\n').collect::<Vec<&str>>();
         let arbol_commit = lineas[1];
         let lineas = arbol_commit.split(' ').collect::<Vec<&str>>();
         let arbol_commit = lineas[1];
-        arbol_commit.to_string()
+        Ok(arbol_commit.to_string())
     }
 
     fn addear_archivos_y_comittear(args: Vec<String>, logger: Arc<Logger>) {
@@ -265,9 +265,9 @@ mod test {
         };
         branch.ejecutar().unwrap();
 
-        let hash_arbol = conseguir_arbol_commit("nueva_rama".to_string());
-        let hash_arbol_git = "ce0ef9a25817847d31d12df1295248d24d07b309";
+        let hash_arbol = conseguir_arbol_commit("nueva_rama");
+        let hash_arbol_git = "ce0ef9a25817847d31d12df1295248d24d07b309".to_string();
 
-        assert_eq!(hash_arbol, hash_arbol_git);
+        assert_eq!(hash_arbol, Ok(hash_arbol_git));
     }
 }

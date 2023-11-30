@@ -33,7 +33,7 @@ impl<T: Write + Read> Comunicacion<T> {
         direccion_servidor: &str,
         logger: Arc<Logger>,
     ) -> Result<Comunicacion<TcpStream>, String> {
-        let partes: Vec<&str> = direccion_servidor.split("/").collect();
+        let partes: Vec<&str> = direccion_servidor.split('/').collect();
         let ip_puerto = partes[0];
         let repositorio = "/".to_string() + partes[1] + "/";
         let flujo = Mutex::new(
@@ -128,7 +128,7 @@ impl<T: Write + Read> Comunicacion<T> {
     ///
     pub fn iniciar_git_recive_pack_con_servidor(&self) -> Result<(), String> {
         self.logger
-            .log(&"Iniciando git receive pack con el servidor");
+            .log("Iniciando git receive pack con el servidor");
         let comando = "git-receive-pack";
         let repositorio = &self.repositorio;
         let host = "gir.com";
@@ -279,7 +279,7 @@ impl<T: Write + Read> Comunicacion<T> {
         }
         Ok(())
     }
-    pub fn enviar_linea(&mut self, linea: String) -> Result<(), ErrorDeComunicacion> {
+    pub fn enviar_linea(&mut self, linea: &str) -> Result<(), ErrorDeComunicacion> {
         self.flujo.lock().unwrap().write_all(linea.as_bytes())?;
         Ok(())
     }
@@ -377,7 +377,7 @@ impl<T: Write + Read> Comunicacion<T> {
     }
 
     ///Le añade las capadcidades al primer objeto para cumplir con el protocolo
-    fn anadir_capacidades_primer_pedido(&self, pedidos: &mut Vec<String>, capacidades: String) {
+    fn anadir_capacidades_primer_pedido(&self, pedidos: &mut [String], capacidades: String) {
         pedidos[0].push_str(&(" ".to_string() + &capacidades));
     }
     ///recibi el hash de un commit y le da el formato correcto para hacer el want
@@ -422,7 +422,7 @@ impl<T: Write + Read> Comunicacion<T> {
     }
 
     ///recibi el hash de un objeto y le da el formato correcto para hacer el have
-    fn dar_formato_have(&self, hash_commit: &String) -> String {
+    fn dar_formato_have(&self, hash_commit: &str) -> String {
         io::obtener_linea_con_largo_hex(&("have ".to_string() + hash_commit + "\n"))
     }
 }

@@ -9,7 +9,7 @@ use crate::{
 
 use super::{error_dialog, log_seleccionado};
 
-fn obtener_listas_de_commits(branch: &String, logger: Arc<Logger>) -> Result<Vec<String>, String> {
+fn obtener_listas_de_commits(branch: &str, logger: Arc<Logger>) -> Result<Vec<String>, String> {
     let ruta = format!(".gir/refs/heads/{}", branch);
     let ultimo_commit = io::leer_a_string(Path::new(&ruta))?;
 
@@ -23,7 +23,7 @@ fn obtener_listas_de_commits(branch: &String, logger: Arc<Logger>) -> Result<Vec
     Ok(historial.iter().map(|commit| commit.hash.clone()).collect())
 }
 
-pub fn obtener_mensaje_commit(commit_hash: String) -> Result<String, String> {
+pub fn obtener_mensaje_commit(commit_hash: &str) -> Result<String, String> {
     let commit = descomprimir_objeto_gir(commit_hash).unwrap_or("".to_string());
 
     let mensaje = commit
@@ -57,13 +57,13 @@ fn crear_label(string: &str) -> gtk::EventBox {
     event_box
 }
 
-pub fn render(builder: &gtk::Builder, branch: String, logger: Arc<Logger>) {
+pub fn render(builder: &gtk::Builder, branch: &str, logger: Arc<Logger>) {
     let container: gtk::Box = builder.object("log-container").unwrap();
     container.children().iter().for_each(|child| {
         container.remove(child);
     });
 
-    let commits = match obtener_listas_de_commits(&branch, logger) {
+    let commits = match obtener_listas_de_commits(branch, logger) {
         Ok(commits) => commits,
         Err(err) => {
             error_dialog::mostrar_error(&err);
@@ -73,7 +73,7 @@ pub fn render(builder: &gtk::Builder, branch: String, logger: Arc<Logger>) {
 
     for commit in commits {
         let commit_clone = commit.clone();
-        let event_box = crear_label(&obtener_mensaje_commit(commit).unwrap());
+        let event_box = crear_label(&obtener_mensaje_commit(&commit).unwrap());
 
         let builder_clone = builder.clone();
         event_box.connect_button_press_event(move |_, _| {
@@ -82,7 +82,7 @@ pub fn render(builder: &gtk::Builder, branch: String, logger: Arc<Logger>) {
         });
         container.add(&event_box);
     }
-    if container.children().len() > 0 {
+    if !container.children().is_empty() {
         let children = container.children();
         let ultimo = children.last().unwrap();
         ultimo.style_context().add_class("last-commit-label");

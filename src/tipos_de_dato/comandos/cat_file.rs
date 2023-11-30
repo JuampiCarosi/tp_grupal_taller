@@ -21,16 +21,16 @@ pub struct CatFile {
 /// hash_objeto - Hash del objeto a obtener.
 /// dir - Directorio donde se encuentra el objeto.
 pub fn obtener_tipo_objeto_de(hash_objeto: &str, dir: &str) -> Result<String, String> {
-    let (header, _) = obtener_contenido_objeto_de(hash_objeto.to_string(), dir)?;
-    let tipo_objeto = conseguir_tipo_objeto(header)?;
+    let (header, _) = obtener_contenido_objeto_de(hash_objeto, dir)?;
+    let tipo_objeto = conseguir_tipo_objeto(&header)?;
     Ok(tipo_objeto)
 }
 
 /// Obtiene el contenido de un objeto ubicado en cierto directorio a partir de su hash.
 /// En caso de no encontrar el objeto devuelve error.
-fn obtener_contenido_objeto_de(hash: String, dir: &str) -> Result<(String, String), String> {
+fn obtener_contenido_objeto_de(hash: &str, dir: &str) -> Result<(String, String), String> {
     // sacar el hardcode de esto
-    let objeto = descomprimir_objeto(hash, dir.to_string())?;
+    let objeto = descomprimir_objeto(hash, dir)?;
     match objeto.split_once('\0') {
         Some((header, contenido)) => Ok((header.to_string(), contenido.to_string())),
         None => Err("Objeto invalido".to_string()),
@@ -39,9 +39,9 @@ fn obtener_contenido_objeto_de(hash: String, dir: &str) -> Result<(String, Strin
 
 /// Obtiene el contenido de un objeto ubicado en el directorio de objetos del .gir a partir de su hash.
 /// En caso de no encontrar el objeto devuelve error.
-pub fn obtener_contenido_objeto(hash: String) -> Result<(String, String), String> {
+pub fn obtener_contenido_objeto(hash: &str) -> Result<(String, String), String> {
     // sacar el hardcode de esto
-    let objeto = descomprimir_objeto(hash, String::from(".gir/objects/"))?;
+    let objeto = descomprimir_objeto(hash, ".gir/objects/")?;
     match objeto.split_once('\0') {
         Some((header, contenido)) => Ok((header.to_string(), contenido.to_string())),
         None => Err("Objeto invalido".to_string()),
@@ -51,7 +51,7 @@ pub fn obtener_contenido_objeto(hash: String) -> Result<(String, String), String
 /// Obtiene el tipo de objeto a partir de su header.
 /// El header tiene el siguiente formato: <tipo_objeto> <tamanio_objeto>
 /// En el caso de tener un formato invalido devuelve error.
-pub fn conseguir_tipo_objeto(header: String) -> Result<String, String> {
+pub fn conseguir_tipo_objeto(header: &str) -> Result<String, String> {
     let tipo_objeto = match header.split_once(' ') {
         Some((tipo, _)) => tipo,
         None => return Err("Objeto invalido".to_string()),
@@ -64,10 +64,10 @@ pub fn conseguir_tipo_objeto(header: String) -> Result<String, String> {
 /// En caso de ser un blob o un commit devuelve el contenido sin modificar.
 /// En caso de ser un tree devuelve el contenido formatteado a pretty print.
 /// En caso de no ser un objeto valido devuelve error.
-pub fn conseguir_contenido_pretty(header: String, contenido: String) -> Result<String, String> {
+pub fn conseguir_contenido_pretty(header: &str, contenido: &str) -> Result<String, String> {
     let tipo = conseguir_tipo_objeto(header)?;
     match tipo.as_str() {
-        "blob" | "commit" => Ok(contenido),
+        "blob" | "commit" => Ok(contenido.to_string()),
         "tree" => {
             let mut pretty_print = String::new();
             let contenido_parseado = Tree::rearmar_contenido_descomprimido(contenido)?;
@@ -97,7 +97,7 @@ pub fn conseguir_contenido_pretty(header: String, contenido: String) -> Result<S
 /// Obtiene el tamanio de un objeto a partir de su header.
 /// El header tiene el siguiente formato: <tipo_objeto> <tamanio_objeto>
 /// En el caso de tener un formato invalido devuelve error.
-pub fn conseguir_tamanio(header: String) -> Result<String, String> {
+pub fn conseguir_tamanio(header: &str) -> Result<String, String> {
     let size = match header.split_once(' ') {
         Some((_, size)) => size,
         None => return Err("Objeto invalido".to_string()),
@@ -119,8 +119,8 @@ impl CatFile {
             "No se especifico una opcion de visualizacion (-t | -s | -p)".to_string()
         })?;
         let visualizacion = match flag_es_un_objeto_(&segundo_argumento) {
-            true => Visualizaciones::from("-p".to_string())?,
-            false => Visualizaciones::from(segundo_argumento)?,
+            true => Visualizaciones::from("-p")?,
+            false => Visualizaciones::from(&segundo_argumento)?,
         };
         Ok(CatFile {
             logger,
@@ -133,22 +133,22 @@ impl CatFile {
     /// En caso de no encontrar el objeto devuelve error.
     /// En caso de no poder parsear el contenido del objeto devuelve error.
     pub fn ejecutar(&self) -> Result<String, String> {
-        let (header, contenido) = obtener_contenido_objeto(self.hash_objeto.clone())?;
+        let (header, contenido) = obtener_contenido_objeto(&self.hash_objeto)?;
         let mensaje = match self.visualizacion {
-            Visualizaciones::TipoObjeto => conseguir_tipo_objeto(header)?,
-            Visualizaciones::Tamanio => conseguir_tamanio(header)?,
-            Visualizaciones::Contenido => conseguir_contenido_pretty(header, contenido)?,
+            Visualizaciones::TipoObjeto => conseguir_tipo_objeto(&header)?,
+            Visualizaciones::Tamanio => conseguir_tamanio(&header)?,
+            Visualizaciones::Contenido => conseguir_contenido_pretty(&header, &contenido)?,
         };
         self.logger.log(&mensaje);
         Ok(mensaje)
     }
 
     pub fn ejecutar_de(&self, dir: &str) -> Result<String, String> {
-        let (header, contenido) = obtener_contenido_objeto_de(self.hash_objeto.clone(), dir)?;
+        let (header, contenido) = obtener_contenido_objeto_de(&self.hash_objeto, dir)?;
         let mensaje = match self.visualizacion {
-            Visualizaciones::TipoObjeto => conseguir_tipo_objeto(header)?,
-            Visualizaciones::Tamanio => conseguir_tamanio(header)?,
-            Visualizaciones::Contenido => conseguir_contenido_pretty(header, contenido)?,
+            Visualizaciones::TipoObjeto => conseguir_tipo_objeto(&header)?,
+            Visualizaciones::Tamanio => conseguir_tamanio(&header)?,
+            Visualizaciones::Contenido => conseguir_contenido_pretty(&header, &contenido)?,
         };
         self.logger.log(&mensaje);
         Ok(mensaje)
@@ -239,19 +239,19 @@ mod tests {
     #[test]
     fn test03_pretty_print_tree_muestra_el_contenido_correcto() {
         let contenido = "40000 test_dir\0d1bd5884df89a9734e3b0a4e7721a4802d85cce8100644 test_file.txt\0678e12dc5c03a7cf6e9f64e688868962ab5d8b65".to_string();
-        let pretty_print = conseguir_contenido_pretty("tree 109".to_string(), contenido).unwrap();
+        let pretty_print = conseguir_contenido_pretty("tree 109", &contenido).unwrap();
         assert_eq!(pretty_print, "040000 tree d1bd5884df89a9734e3b0a4e7721a4802d85cce8   test_dir\n100644 blob 678e12dc5c03a7cf6e9f64e688868962ab5d8b65   test_file.txt\n");
     }
 
     #[test]
     fn test04_conseguir_tipo_tree_muestra_el_tipo_de_objeto_correcto() {
-        let tipo_objeto = conseguir_tipo_objeto("tree 109".to_string()).unwrap();
+        let tipo_objeto = conseguir_tipo_objeto("tree 109").unwrap();
         assert_eq!(tipo_objeto, "tree");
     }
 
     #[test]
     fn test05_conseguir_tamanio_tree_muestra_el_tamanio_correcto() {
-        let tamanio = conseguir_tamanio("tree 109".to_string()).unwrap();
+        let tamanio = conseguir_tamanio("tree 109").unwrap();
         assert_eq!(tamanio, "109");
     }
 
@@ -260,22 +260,20 @@ mod tests {
         let contenido = "tree c475b36be7b222b7ff1469b44b15cdc0f754ef44\n
         parent b557332b86888546cecbe81933cf22adb1f3fed1\n
         author aaaa <bbbb> 1698535611 -0300\n
-        committer aaaa <bbbb> 1698535611 -0300'n"
-            .to_string();
-        let pretty_print =
-            conseguir_contenido_pretty("commit 29".to_string(), contenido.clone()).unwrap();
+        committer aaaa <bbbb> 1698535611 -0300'n";
+        let pretty_print = conseguir_contenido_pretty("commit 29", contenido.clone()).unwrap();
         assert_eq!(pretty_print, contenido);
     }
 
     #[test]
     fn test07_conseguir_tipo_commit_muestra_el_tipo_de_objeto_correcto() {
-        let tipo_objeto = conseguir_tipo_objeto("commit 109".to_string()).unwrap();
+        let tipo_objeto = conseguir_tipo_objeto("commit 109").unwrap();
         assert_eq!(tipo_objeto, "commit");
     }
 
     #[test]
     fn test08_conseguir_tamanio_commit_muestra_el_tamanio_correcto() {
-        let tamanio = conseguir_tamanio("commit 29".to_string()).unwrap();
+        let tamanio = conseguir_tamanio("commit 29").unwrap();
         assert_eq!(tamanio, "29");
     }
 }

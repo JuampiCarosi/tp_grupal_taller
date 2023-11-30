@@ -1,4 +1,7 @@
-use std::{path::PathBuf, sync::Arc};
+use std::{
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 
 use crate::{
     tipos_de_dato::{logger::Logger, objeto::Objeto},
@@ -96,8 +99,8 @@ impl Add {
                 let tree_head = obtener_arbol_del_commit_head(self.logger.clone());
                 if let Some(tree_head) = tree_head {
                     if tree_head.contiene_misma_version_hijo(
-                        nuevo_objeto_index.objeto.obtener_hash(),
-                        nuevo_objeto_index.objeto.obtener_path(),
+                        &nuevo_objeto_index.objeto.obtener_hash(),
+                        &nuevo_objeto_index.objeto.obtener_path(),
                     ) {
                         continue;
                     }

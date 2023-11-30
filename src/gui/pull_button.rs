@@ -37,7 +37,7 @@ pub fn render(
             &builder_clone,
             &window_clone,
             logger.clone(),
-            branch_actual.clone(),
+            &branch_actual,
         );
 
         sleep(std::time::Duration::from_secs(3));

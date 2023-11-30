@@ -208,7 +208,7 @@ impl Remote {
 
         match remote_actual {
             Some(remote) => Ok(remote.remote.clone()),
-            None => return Err("No hay un remote asociado a la branch actual\n".to_string()),
+            None => Err("No hay un remote asociado a la branch actual\n".to_string()),
         }
     }
 

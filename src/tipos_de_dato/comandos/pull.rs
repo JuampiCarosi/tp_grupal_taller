@@ -85,7 +85,7 @@ impl Pull {
         if args.len() == 2 {
             remoto = Self::verificar_remoto(&args[0])?;
             rama_merge = args.remove(1);
-        } else if args.len() == 0 && !set_upstream {
+        } else if args.is_empty() && !set_upstream {
             //si no hay argumentos ni flags, quiere decir que deberia
             //estar configurada la rama
             (remoto, rama_merge) = Self::obtener_remoto_y_rama_merge_de_rama_actual()?;
@@ -101,12 +101,12 @@ impl Pull {
     }
 
     ///verifica si el remoto envio por el usario existe
-    fn verificar_remoto(remoto: &String) -> Result<String, String> {
+    fn verificar_remoto(remoto: &str) -> Result<String, String> {
         if let false = Config::leer_config()?.existe_remote(remoto) {
             return  Err(format!("Remoto desconocido{}\nSi quiere añadir un nuevo remoto:\n\ngir remote add [<nombre-remote>] [<url-remote>]\n\n", remoto));
         };
 
-        Ok(remoto.clone())
+        Ok(remoto.to_string())
     }
 
     ///obtiene el remoto  y la rama merge asosiado a la rama remota actual. Falla si no existe
@@ -137,15 +137,15 @@ impl Pull {
         println!("Llego aca del pull\n");
         let commit_head_remoto = self.obtener_head_remoto()?;
 
-        if io::esta_vacio(UBICACION_RAMA_MASTER.to_string()) {
-            self.fast_forward_de_cero(commit_head_remoto)?;
+        if io::esta_vacio(UBICACION_RAMA_MASTER) {
+            self.fast_forward_de_cero(&commit_head_remoto)?;
         } else {
             self.mergear_rama()?;
         }
 
-        let mensaje = "Pull ejecutado con exito".to_string();
-        self.logger.log(&mensaje);
-        Ok(mensaje)
+        let mensaje = "Pull ejecutado con exito";
+        self.logger.log(mensaje);
+        Ok(mensaje.to_string())
     }
 
     ///Busca el archivo correspondiente que contien el HEAD del remoto (el NOMBREREMOTO_HEAD)y lo obtiene. En caso de no
@@ -164,14 +164,12 @@ impl Pull {
         }
     }
 
-    fn fast_forward_de_cero(&self, commit_head_remoto: String) -> Result<bool, String> {
-        io::escribir_bytes(UBICACION_RAMA_MASTER, &commit_head_remoto)?;
-        let hash_tree_padre = write_tree::conseguir_arbol_from_hash_commit(
-            &commit_head_remoto,
-            String::from(".gir/objects/"),
-        );
+    fn fast_forward_de_cero(&self, commit_head_remoto: &str) -> Result<bool, String> {
+        io::escribir_bytes(UBICACION_RAMA_MASTER, commit_head_remoto)?;
+        let hash_tree_padre =
+            write_tree::conseguir_arbol_from_hash_commit(commit_head_remoto, ".gir/objects/")?;
         let tree_branch_a_mergear =
-            Tree::from_hash(hash_tree_padre, PathBuf::from("."), self.logger.clone())?;
+            Tree::from_hash(&hash_tree_padre, PathBuf::from("."), self.logger.clone())?;
 
         tree_branch_a_mergear.escribir_en_directorio()?;
 
@@ -187,7 +185,7 @@ impl Pull {
         Ok(())
     }
 
-    fn verificar_rama_mergear(&self, rama_a_mergar: &String) -> Result<(), String> {
+    fn verificar_rama_mergear(&self, rama_a_mergar: &str) -> Result<(), String> {
         if !utils::ramas::existe_la_rama_remota(rama_a_mergar) {
             return Err(format!(
                 "Fallo en la operacion de merge, no exise la rama remota {}",

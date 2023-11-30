@@ -124,7 +124,7 @@ impl Checkout {
 
     /// Devuelve el nombre de la rama actual.
     /// O sea, la rama a la que apunta el archivo HEAD.
-    fn conseguir_rama_actual(contenidio_head: String) -> Result<String, String> {
+    fn conseguir_rama_actual(contenidio_head: &str) -> Result<String, String> {
         let partes: Vec<&str> = contenidio_head.split('/').collect();
         let rama_actual = partes
             .last()
@@ -137,7 +137,7 @@ impl Checkout {
     fn cambiar_ref_en_head(&self) -> Result<(), String> {
         let contenido_head = io::leer_a_string(PATH_HEAD)?;
 
-        let rama_actual = Self::conseguir_rama_actual(contenido_head.clone())?;
+        let rama_actual = Self::conseguir_rama_actual(&contenido_head)?;
 
         let nuevo_head = contenido_head.replace(&rama_actual, &self.rama_a_cambiar);
 
@@ -154,7 +154,7 @@ impl Checkout {
         let mut config = Config::leer_config()?;
         let rama = RamasInfo {
             nombre: self.rama_a_cambiar.clone(),
-            remote: ruta_remoto.split("/").last().unwrap().to_string(),
+            remote: ruta_remoto.split('/').last().unwrap().to_string(),
             merge: PathBuf::from(format!("refs/heads/{}", self.rama_a_cambiar)),
         };
 
@@ -200,11 +200,10 @@ impl Checkout {
     /// Devuelve el arbol del ultimo commit de la rama actual.
     pub fn obtener_arbol_commit_actual(logger: Arc<Logger>) -> Result<Tree, String> {
         let ref_actual = io::leer_a_string(PATH_HEAD)?;
-        let rama_actual = Self::conseguir_rama_actual(ref_actual)?;
+        let rama_actual = Self::conseguir_rama_actual(&ref_actual)?;
         let head_commit = io::leer_a_string(format!(".gir/refs/heads/{}", rama_actual))?;
-        let hash_tree_padre =
-            conseguir_arbol_from_hash_commit(&head_commit, ".gir/objects/".to_string());
-        Tree::from_hash(hash_tree_padre, PathBuf::from("."), logger)
+        let hash_tree_padre = conseguir_arbol_from_hash_commit(&head_commit, ".gir/objects/")?;
+        Tree::from_hash(&hash_tree_padre, PathBuf::from("."), logger)
     }
 
     /// Ejecuta el comando checkout en su totalidad.
@@ -224,7 +223,7 @@ impl Checkout {
             self.cambiar_rama()?;
             let tree_futuro = Self::obtener_arbol_commit_actual(self.logger.clone())?;
 
-            let objetos_a_eliminar = self.obtener_objetos_eliminados(&tree_viejo, &tree_futuro);
+            let objetos_a_eliminar = Self::obtener_objetos_eliminados(&tree_viejo, &tree_futuro);
             self.eliminar_objetos(&objetos_a_eliminar)?;
 
             tree_futuro.escribir_en_directorio()?;
@@ -249,18 +248,18 @@ impl Checkout {
 
     /// Devuelve un vector con los objetos que estaban en el tree viejo pero no en el nuevo.
     /// O sea, los objetos que se eliminaron.
-    fn obtener_objetos_eliminados(&self, tree_viejo: &Tree, tree_nuevo: &Tree) -> Vec<Objeto> {
+    fn obtener_objetos_eliminados(tree_viejo: &Tree, tree_nuevo: &Tree) -> Vec<Objeto> {
         let mut objetos_eliminados: Vec<Objeto> = Vec::new();
 
         for objeto_viejo in tree_viejo.objetos.iter() {
             match objeto_viejo {
                 Objeto::Blob(blob) => {
-                    if blob.ubicacion == objeto_viejo.obtener_path() {
+                    if !tree_nuevo.contiene_misma_version_hijo(&blob.hash, &blob.ubicacion) {
                         objetos_eliminados.push(objeto_viejo.clone());
                     }
                 }
                 Objeto::Tree(tree) => {
-                    let mut hijos_eliminados = self.obtener_objetos_eliminados(tree, tree_nuevo);
+                    let mut hijos_eliminados = Self::obtener_objetos_eliminados(tree, tree_nuevo);
                     objetos_eliminados.append(&mut hijos_eliminados);
                 }
             }
@@ -278,11 +277,13 @@ mod tests {
         tipos_de_dato::{
             comandos::{add::Add, branch::Branch, commit::Commit, init::Init},
             logger::Logger,
+            objeto::Objeto,
+            objetos::{blob::Blob, tree::Tree},
         },
         utils::io,
     };
 
-    use super::Checkout;
+    use super::*;
 
     fn craer_archivo_config_default() {
         let home = std::env::var("HOME").unwrap();
@@ -399,5 +400,65 @@ mod tests {
 
         assert!(!PathBuf::from("tmp/checkout_test04_test_2").exists());
         assert!(PathBuf::from("tmp/checkout_test04_test").exists());
+    }
+
+    fn tree_con_un_tree_y_un_objeto(logger: Arc<Logger>) -> Tree {
+        let objeto_nieto = Objeto::Blob(Blob {
+            hash: "hash_nieto".to_string(),
+            ubicacion: PathBuf::from("./tree_hijo/nieto"),
+            logger: logger.clone(),
+            nombre: "nieto".to_string(),
+        });
+        let objeto_hijo = Objeto::Blob(Blob {
+            hash: "hash_hijo".to_string(),
+            ubicacion: PathBuf::from("./hijo"),
+            logger: logger.clone(),
+            nombre: "hijo".to_string(),
+        });
+
+        let un_tree_hijo = Objeto::Tree(Tree {
+            directorio: PathBuf::from("./tree_hijo"),
+            objetos: vec![objeto_nieto],
+            logger: logger.clone(),
+        });
+
+        Tree {
+            directorio: PathBuf::from("."),
+            objetos: vec![un_tree_hijo, objeto_hijo],
+            logger: logger.clone(),
+        }
+    }
+
+    fn tree_con_un_objeto(logger: Arc<Logger>) -> Tree {
+        let objeto_hijo = Objeto::Blob(Blob {
+            hash: "hash_hijo".to_string(),
+            ubicacion: PathBuf::from("./hijo"),
+            logger: logger.clone(),
+            nombre: "hijo".to_string(),
+        });
+
+        Tree {
+            directorio: PathBuf::from("."),
+            objetos: vec![objeto_hijo],
+            logger: logger.clone(),
+        }
+    }
+
+    #[test]
+    fn test05_obtener_objetos_eliminados() {
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/checkout_test04")).unwrap());
+
+        let tree_viejo = tree_con_un_tree_y_un_objeto(logger.clone());
+        let tree_nuevo = tree_con_un_objeto(logger.clone());
+
+        let objetos_eliminados = Checkout::obtener_objetos_eliminados(&tree_viejo, &tree_nuevo);
+
+        assert_eq!(objetos_eliminados.len(), 1);
+
+        if let Objeto::Blob(blob) = &objetos_eliminados[0] {
+            assert_eq!(blob.nombre, "nieto".to_string());
+        } else {
+            unreachable!();
+        }
     }
 }

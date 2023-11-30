@@ -17,6 +17,6 @@ pub fn render(
     let builder = builder.clone();
     let window = window.clone();
     icon.connect_clicked(move |_| {
-        hidratar_componentes(&builder, &window, logger.clone(), branch_actual.clone());
+        hidratar_componentes(&builder, &window, logger.clone(), &branch_actual);
     });
 }
