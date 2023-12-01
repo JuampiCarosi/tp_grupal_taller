@@ -58,7 +58,7 @@ impl<T: Write + Read> Comunicacion<T> {
 
         let flujo = Mutex::new(
             TcpStream::connect(ip_puerto)
-                .map_err(|e| format!("Fallo en en la conecciion con el servido.\n{}\n", e))?,
+                .map_err(|e| format!("Fallo en en la coneccion con el servidor.\n{}\n", e))?,
         );
 
         Ok(Comunicacion {
@@ -143,26 +143,26 @@ impl<T: Write + Read> Comunicacion<T> {
         Ok(())
     }
 
-    pub fn aceptar_pedido(&self) -> Result<RespuestaDePedido, ErrorDeComunicacion> {
+    pub fn aceptar_pedido(&self) -> Result<RespuestaDePedido, String> {
         // lee primera parte, 4 bytes en hexadecimal indican el largo del stream
 
         let mut tamanio_bytes = [0; 4];
-        self.flujo.lock().unwrap().read(&mut tamanio_bytes)?;
+        self.flujo.lock().unwrap().read(&mut tamanio_bytes).map_err(|e| e.to_string())?;
         // largo de bytes a str
         if tamanio_bytes == [0, 0, 0, 0] {
             return Ok(RespuestaDePedido::Terminate);
         }
 
-        let tamanio_str = str::from_utf8(&tamanio_bytes)?;
+        let tamanio_str = str::from_utf8(&tamanio_bytes).map_err(|e| e.to_string())?;
         // transforma str a u32
-        let tamanio = u32::from_str_radix(tamanio_str, 16).unwrap();
+        let tamanio = u32::from_str_radix(tamanio_str, 16).map_err(|e| e.to_string())?;
         if tamanio == 0 {
             return Ok(RespuestaDePedido::Mensaje('\0'.to_string()));
         }
         // lee el resto del flujo
         let mut data = vec![0; (tamanio - 4) as usize];
-        self.flujo.lock().unwrap().read_exact(&mut data)?;
-        let linea = str::from_utf8(&data)?;
+        self.flujo.lock().unwrap().read_exact(&mut data).map_err(|e| e.to_string())?;
+        let linea = str::from_utf8(&data).map_err(|e| e.to_string())?;
         // if linea.contains("done") {
         // self.aceptar_pedido()?;
         // }

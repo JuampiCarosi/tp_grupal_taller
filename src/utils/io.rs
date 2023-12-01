@@ -10,7 +10,6 @@ use super::path_buf;
 //la idea es dejar de usar esta funcion, ->ya hay una mejor en objects
 pub fn obtener_objetos_del_directorio(dir: &str) -> Result<Vec<String>, String> {
     let dir_abierto = leer_directorio(&dir)?;
-
     let mut objetos: Vec<String> = Vec::new();
 
     for entrada in dir_abierto {
@@ -20,7 +19,6 @@ pub fn obtener_objetos_del_directorio(dir: &str) -> Result<Vec<String>, String> 
                     && entrada.file_name().to_string_lossy() != "info"
                     && entrada.file_name().to_string_lossy() != "pack"
                 {
-                    //que onda este if?? JUANI
                     if !entrada.path().to_string_lossy().contains("log.txt") {
                         objetos.append(&mut obtener_objetos_con_nombre_carpeta(entrada.path())?);
                     }
