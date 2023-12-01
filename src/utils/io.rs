@@ -10,7 +10,6 @@ use super::path_buf;
 //la idea es dejar de usar esta funcion, ->ya hay una mejor en objects
 pub fn obtener_objetos_del_directorio(dir: String) -> Result<Vec<String>, String> {
     let dir_abierto = leer_directorio(&dir)?;
-
     let mut objetos: Vec<String> = Vec::new();
 
     for entrada in dir_abierto {

@@ -385,5 +385,84 @@ impl Packfile {
     }
 }
 
+#[cfg(test)]
+mod test {
+    use super::*;
+    #[test]
+    fn test01_codificar_bytes_de_un_byte() {
+        let tipo = 1;
+        let largo = 10;
+        let resultado = super::Packfile::codificar_bytes(tipo, largo);
+        assert_eq!(resultado, vec![0x1a]);
+    }
+
+    #[test]
+    fn test02_codificar_bytes_de_mas_de_un_byte() {
+        let tipo = 2;
+        let largo = 100;
+        let resultado = super::Packfile::codificar_bytes(tipo, largo);
+        assert_eq!(resultado, vec![0xa4, 0x06]);
+    }
+
+    #[test] 
+    fn test03_header_se_escribe_bien(){ 
+        let packfile = Packfile::obtener_pack_con_archivos(Vec::new(), "").unwrap();
+        let header = Packfile::leer_header_packfile(&packfile).unwrap();
+        assert_eq!(header.0, "PACK".as_bytes());
+        assert_eq!(header.1, 2u32.to_be_bytes());
+        assert_eq!(header.2, 0);
+    }
+
+    #[test]
+    fn test04_obtener_pack_entero() {
+        let dir = env!("CARGO_MANIFEST_DIR").to_string() + "/packfile_test_dir/"; // replace with a valid directory path
+        let result = Packfile::obtener_pack_entero(&dir);
+        
+        assert!(result.is_ok());
+        let packfile = result.unwrap();
+        let mut offset: usize = 12;
+        // 1er objeto
+
+        let mut objeto   = Packfile::leer_objeto_del_packfile(&packfile, &mut offset).unwrap();
+        assert_eq!(objeto.0, 3); // es de tipo 3
+        let obj_con_header = Packfile::obtener_objeto_con_header(objeto.0, objeto.1.len() as u32, 
+        &mut objeto.1).unwrap();
+        let obj_leido = utils::compresion::descomprimir_contenido_u8(&io::leer_bytes(env!("CARGO_MANIFEST_DIR").to_string() + "/packfile_test_dir/51/22b1de1b7a07e36b01cd62bd622a0715f92478").unwrap()).unwrap();
+        assert_eq!(obj_leido, obj_con_header);
+        // 2do objeto
+
+        let mut objeto   = Packfile::leer_objeto_del_packfile(&packfile, &mut offset).unwrap();
+        assert_eq!(objeto.0, 3); // es de tipo 3
+        let obj_con_header = Packfile::obtener_objeto_con_header(objeto.0, objeto.1.len() as u32, 
+        &mut objeto.1).unwrap();
+        let obj_leido = utils::compresion::descomprimir_contenido_u8(&io::leer_bytes(env!("CARGO_MANIFEST_DIR").to_string() + "/packfile_test_dir/87/7e9f62c1031de82130f279f009469cc9e09ab0").unwrap()).unwrap();
+        assert_eq!(obj_leido, obj_con_header);
+        assert_eq!(Packfile::verificar_checksum(packfile.as_slice()), true);
+    }
+
+    #[test]
+    fn test05_obtener_pack_con_archivos() {
+        let directorio = env!("CARGO_MANIFEST_DIR").to_string() +  "/packfile_test_dir/";
+        let dir_objeto = "51/22b1de1b7a07e36b01cd62bd622a0715f92478";
+        let hash_objeto = "5122b1de1b7a07e36b01cd62bd622a0715f92478";
+        let objetos = vec![hash_objeto.to_string()];
+        let result = Packfile::obtener_pack_con_archivos(objetos, &directorio);
+        assert!(result.is_ok());
+        let packfile = result.unwrap();
+        let mut offset = 12; 
+        let mut objeto   = Packfile::leer_objeto_del_packfile(&packfile, &mut offset).unwrap();
+        assert_eq!(objeto.0, 3); // es de tipo 3
+        let obj_con_header = Packfile::obtener_objeto_con_header(objeto.0, objeto.1.len() as u32, 
+        &mut objeto.1).unwrap();
+        let obj_leido = utils::compresion::descomprimir_contenido_u8(&io::leer_bytes(directorio + dir_objeto).unwrap()).unwrap();
+        assert_eq!(obj_leido, obj_con_header);
+        assert_eq!(offset, packfile.len() - 20); // para asertar que solo queda el checksum
+        assert_eq!(Packfile::verificar_checksum(packfile.as_slice()), true);
+    }
+
+
+
+    
+}   
 
 
