@@ -434,7 +434,7 @@ mod test {
     }
 
     #[test] 
-    fn test03_header_se_escribe_bien(){ 
+    fn test05_header_se_escribe_bien(){ 
         let packfile = Packfile::obtener_pack_con_archivos(Vec::new(), "").unwrap();
         let header = Packfile::leer_header_packfile(&packfile).unwrap();
         assert_eq!(header.0, "PACK".as_bytes());
@@ -443,7 +443,7 @@ mod test {
     }
 
     #[test]
-    fn test04_obtener_pack_entero() {
+    fn test06_obtener_pack_entero() {
         let dir = env!("CARGO_MANIFEST_DIR").to_string() + "/packfile_test_dir/"; // replace with a valid directory path
         let result = Packfile::obtener_pack_entero(&dir);
         
@@ -466,7 +466,7 @@ mod test {
     }
 
     #[test]
-    fn test05_obtener_pack_con_archivos() {
+    fn test07_obtener_pack_con_archivos() {
         let directorio = env!("CARGO_MANIFEST_DIR").to_string() +  "/packfile_test_dir/";
         let dir_objeto = "51/22b1de1b7a07e36b01cd62bd622a0715f92478";
         let hash_objeto = "5122b1de1b7a07e36b01cd62bd622a0715f92478";
@@ -482,7 +482,7 @@ mod test {
         assert_eq!(Packfile::verificar_checksum(packfile.as_slice()), true);
     }
     #[test]
-    fn test06_leer_objeto_packfile() {  
+    fn test08_leer_objeto_packfile() {  
         let directorio = env!("CARGO_MANIFEST_DIR").to_string() +  "/packfile_test_dir/";
         let dir_objeto = "51/22b1de1b7a07e36b01cd62bd622a0715f92478";
         let hash_objeto = "5122b1de1b7a07e36b01cd62bd622a0715f92478";
