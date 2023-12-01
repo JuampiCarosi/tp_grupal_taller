@@ -4,7 +4,6 @@ use crate::tipos_de_dato::comunicacion::Comunicacion;
 use crate::tipos_de_dato::packfile;
 use crate::utils::io;
 use std::net::TcpStream;
-use std::path::PathBuf;
 
 pub fn receive_pack(
     dir: String,

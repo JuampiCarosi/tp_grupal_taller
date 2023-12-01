@@ -1,11 +1,8 @@
 use std::sync::Arc;
 
-use crate::utils::{io, path_buf};
+use crate::utils::{self, io};
 
-use super::{
-    comandos::{commit::Commit, status::obtener_arbol_del_commit_head},
-    logger::Logger,
-};
+use super::{comandos::commit::Commit, logger::Logger};
 
 pub struct Tag {
     logger: Arc<Logger>,
@@ -34,28 +31,11 @@ impl Tag {
     }
 
     fn obtener_tags(&self) -> Result<Vec<String>, String> {
-        let ubicacion = "./.gir/refs/tags";
-        let mut tags: Vec<String> = Vec::new();
-
-        let tags_entries = std::fs::read_dir(ubicacion)
-            .map_err(|e| format!("Error al leer el directorio de tags: {}", e))?;
-
-        for tag_entry in tags_entries {
-            let tag_dir = tag_entry
-                .map_err(|e| format!("Error al leer el directorio de tags: {}", e))?
-                .path();
-            let tag = path_buf::obtener_nombre(&tag_dir)?;
-
-            tags.push(tag);
-        }
-
-        Ok(tags)
+        utils::tags::obtener_tags()
     }
 
     fn crear_tag(&self, tag: &str) -> Result<(), String> {
-        let tags = self.obtener_tags()?;
-
-        if tags.contains(&tag.to_string()) {
+        if utils::tags::existe_tag(&tag.to_string()) {
             return Err(format!("El tag {} ya existe", tag));
         }
 

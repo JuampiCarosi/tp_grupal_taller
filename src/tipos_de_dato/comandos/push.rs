@@ -18,12 +18,78 @@ use std::sync::Arc;
 
 const FLAG_SET_UPSTREAM: &str = "--set-upstream";
 const FLAG_U: &str = "-u";
-const GIR_PUSH: &str = "gir push <remoto> <rama>";
+const GIR_PUSH: &str = "gir push <remoto> <rama-local>\ngir push <remoto> <rama-local>:<rama-remota>\ngir push -u <remoto> <rama>\ngir push -u <remoto> <rama-local>:<rama-remota>\n";
+const GIR_PUSH_U: &str = "gir push --set-upstream/-u <nombre-remoto> <nombre-rama-local>";
+enum Referencia {
+    //1- Es la referencia a mandar 2- La referencia a ser enviada
+    RamaMerge(String, String),
+    //1- Es la referencia a mandar 2- La referencia a ser enviada
+    Tag(String, String),
+}
 
+impl Referencia {
+    pub fn from(referencia: String) -> Option<Referencia> {
+        let (ref_local, ref_remota) = Self::divir_referencia(referencia);
+
+        if utils::tags::existe_tag(&ref_local) {
+            Some(Referencia::Tag(ref_local, ref_remota))
+        } else if utils::ramas::existe_la_rama(&ref_local) {
+            Some(Referencia::RamaMerge(ref_local, ref_remota))
+        } else {
+            None
+        }
+    }
+
+    fn divir_referencia(referencia: String) -> (String, String) {
+        match referencia.split_once(":") {
+            Some((ref_local, ref_remota)) => (ref_local.to_string(), ref_remota.to_string()),
+            None => (referencia.clone(), referencia),
+        }
+    }
+
+    pub fn es_tag(&self) -> bool {
+        match self {
+            Referencia::Tag(_, _) => true,
+            _ => false,
+        }
+    }
+
+    pub fn dar_nombre_local(&self) -> String {
+        match self {
+            Referencia::Tag(ref_local, _) => ref_local.clone(),
+            Referencia::RamaMerge(ref_local, _) => ref_local.clone(),
+        }
+    }
+
+    pub fn dar_nombre_remoto(&self) -> String {
+        match self {
+            Referencia::Tag(_, ref_remota) => ref_remota.clone(),
+            Referencia::RamaMerge(_, ref_remota) => ref_remota.clone(),
+        }
+    }
+
+    pub fn dar_ref_local(&self) -> PathBuf {
+        match self {
+            Referencia::Tag(ref_local, _) => PathBuf::from(format!("refs/tags/{}", ref_local)),
+            Referencia::RamaMerge(ref_local, _) => {
+                PathBuf::from(format!("refs/heads/{}", ref_local))
+            }
+        }
+    }
+
+    pub fn dar_ref_remota(&self) -> PathBuf {
+        match self {
+            Referencia::Tag(_, ref_remota) => PathBuf::from(format!("refs/tags/{}", ref_remota)),
+            Referencia::RamaMerge(_, ref_remota) => {
+                PathBuf::from(format!("refs/heads/{}", ref_remota))
+            }
+        }
+    }
+}
 // idea: Key -> (String, String) , primera entrada la ref que tiene el cliente, segunda la que tiene el sv.
 pub struct Push {
     comunicacion: Comunicacion<TcpStream>,
-    rama_merge: String,
+    referencia: Referencia,
     remoto: String,
     set_upstream: bool,
     logger: Arc<Logger>,
@@ -43,14 +109,14 @@ impl Push {
             Self::parsear_flags(args, &mut set_upstream)?;
         }
 
-        let (remoto, rama_merge) = Self::parsear_argumentos(args, set_upstream)?;
+        let (remoto, referencia) = Self::parsear_argumentos(args, set_upstream)?;
 
         let url: String = Self::obtener_url(&remoto)?;
         let comunicacion = Comunicacion::<TcpStream>::new_desde_url(&url, logger.clone())?;
 
         Ok(Push {
             comunicacion,
-            rama_merge,
+            referencia,
             remoto,
             set_upstream,
             logger,
@@ -73,31 +139,40 @@ impl Push {
     }
 
     ///obtiene el remoto  y la rama merge asosiado a la rama remota actual. Falla si no existe
-    fn obtener_remoto_y_rama_merge_de_rama_actual() -> Result<(String, String), String> {
+    fn obtener_remoto_y_rama_merge_de_rama_actual() -> Result<(String, Referencia), String> {
         let (remoto, rama_merge) = Config::leer_config()?
             .obtener_remoto_y_rama_merge_rama_actual()
             .ok_or(format!(
-                "La rama actual no se encuentra asosiado a ningun remoto\nUtilice: gir push --set-upstream/-u nombre-remoto nombre-rama-local"))?;
-        //CORREGIR MENSAJE DE ERROR DEBERIA SER QUE USE SET BRANCH
+                "La rama actual no se encuentra asosiado a ningun remoto\nUtilice: {}",
+                GIR_PUSH_U
+            ))?;
 
-        Ok((remoto, obtener_nombre(&rama_merge)?))
+        let referencia = Self::obtener_y_verificar_referencia(obtener_nombre(&rama_merge)?)?;
+        Ok((remoto, referencia))
     }
     ///Obtiene acorde a los argumentos recibidos, el remoto y la rama merge. En caso de no estar,
     /// busca si esta seteada la rama actual. Si esto no es asi, hay un error
     fn parsear_argumentos(
         args: &mut Vec<String>,
         set_upstream: bool,
-    ) -> Result<(String, String), String> {
+    ) -> Result<(String, Referencia), String> {
         let remoto;
-        let rama_merge;
+        let referencia;
 
+        // CAMBIAR POR UN MATCH
         if args.len() == 2 {
             remoto = Self::verificar_remoto(&args[0])?;
-            rama_merge = args.remove(1);
+            referencia = Self::obtener_y_verificar_referencia(args.remove(1))?;
+        } else if args.len() == 1 {
+            //si solo esta el remoto entonces se presupone que se quiere enviar la
+            //rama actual
+            remoto = Self::verificar_remoto(&args[0])?;
+            referencia =
+                Self::obtener_y_verificar_referencia(utils::ramas::obtener_rama_actual()?)?;
         } else if args.len() == 0 && !set_upstream {
             //si no hay argumentos ni flags, quiere decir que deberia
             //estar configurada la rama
-            (remoto, rama_merge) = Self::obtener_remoto_y_rama_merge_de_rama_actual()?;
+            (remoto, referencia) = Self::obtener_remoto_y_rama_merge_de_rama_actual()?;
         } else {
             return Err(format!(
                 "Parametros faltantes {}\n {}",
@@ -106,21 +181,33 @@ impl Push {
             ));
         }
 
-        Ok((remoto, rama_merge))
+        Ok((remoto, referencia))
+    }
+
+    fn obtener_y_verificar_referencia(referencia: String) -> Result<Referencia, String> {
+        Referencia::from(referencia.clone()).ok_or(format!(
+            "Referencia desconidida: {}\n{}",
+            referencia, GIR_PUSH
+        ))
     }
 
     fn parsear_flags(args: &mut Vec<String>, set_upstream: &mut bool) -> Result<(), String> {
-        let flag = args.remove(0);
+        //busca en los argumentos si hay flag y devuelve el indice
+        if let Some(index_flag) = args.iter().position(|s| s.starts_with("-")) {
+            let flag = args.remove(index_flag);
 
-        if flag == FLAG_U || flag == FLAG_SET_UPSTREAM {
-            *set_upstream = true;
-            Ok(())
+            if flag == FLAG_U || flag == FLAG_SET_UPSTREAM {
+                *set_upstream = true;
+                Ok(())
+            } else {
+                Err(format!(
+                    "Parametros desconocidos {}\n {}",
+                    args.join(" "),
+                    GIR_PUSH
+                ))
+            }
         } else {
-            Err(format!(
-                "Parametros desconocidos {}\n {}",
-                args.join(" "),
-                GIR_PUSH
-            ))
+            Ok(())
         }
     }
     //Le pide al config el url asosiado a la rama
@@ -137,33 +224,26 @@ impl Push {
     }
 
     pub fn ejecutar(&mut self) -> Result<String, String> {
-        if self.set_upstream {
+        self.comunicacion.iniciar_git_recive_pack_con_servidor()?;
+
+        let commits_y_refs_asosiado = self.fase_de_descubrimiento()?;
+
+        let referencia_acualizar = self.obtener_referencia_acualizar(&commits_y_refs_asosiado)?;
+
+        let objetos_a_enviar = self
+            .obtener_objetos_a_enviar(&self.referencia.dar_ref_local(), &referencia_acualizar.0)?;
+
+        self.enviar_actualizaciones_y_objetos(referencia_acualizar, objetos_a_enviar)?;
+
+        if self.set_upstream && !self.referencia.es_tag() {
             SetUpstream::new(
                 self.remoto.clone(),
-                self.rama_merge.clone(),
-                utils::ramas::obtener_rama_actual()?,
+                self.referencia.dar_nombre_remoto(),
+                self.referencia.dar_nombre_local(),
                 self.logger.clone(),
             )?
             .ejecutar()?;
         }
-
-        self.comunicacion.iniciar_git_recive_pack_con_servidor()?;
-        let (
-            _capacidades_servidor,
-            _commit_head_remoto,
-            commits_cabezas_y_ref_rama_asosiado,
-            _commits_y_tags_asosiados,
-        ) = self.fase_de_descubrimiento()?;
-        self.logger
-            .log(&"Fase de descubrimiento ejecuta con exito".to_string());
-
-        print!("{:?}\n", commits_cabezas_y_ref_rama_asosiado);
-        let referencia_acualizar =
-            self.obtener_referencia_acualizar(&commits_cabezas_y_ref_rama_asosiado)?;
-        let objetos_a_enviar =
-            self.obtener_objetos_a_enviar(&referencia_acualizar.2, &referencia_acualizar.0)?;
-
-        self.enviar_actualizaciones_y_objetos(referencia_acualizar, objetos_a_enviar)?;
 
         let mensaje = "Push ejecutado con exito".to_string();
         self.logger.log(&mensaje);
@@ -174,7 +254,7 @@ impl Push {
     //y envia un pack file vacio
     fn obtener_objetos_a_enviar(
         &self,
-        referencia: &String,
+        referencia: &PathBuf,
         viejo_commit: &String,
     ) -> Result<HashSet<String>, String> {
         let objetos_a_enviar =
@@ -194,28 +274,29 @@ impl Push {
         }
     }
 
-    ///Obtiene la referecia que hay que actulizar del servidor y todos sus componentes(viejo commit, nuevo commit y ref rama).
+    ///Obtiene la referecia que hay que actulizar del servidor y todos sus componentes(viejo commit, nuevo commit y ref).
     /// Para obtener el viejo commit compara el nombre de la ref con los ref ramas recibidos del servidor y lo busca.
     /// Si no existe viejo commit se completa con ceros (00..00).
     ///
     /// ## Argumentos
-    /// -   commits_cabezas_y_ref_rama_asosiado: vector de tuplas de commit y su rama ref asosiado
+    /// -   commits_y_refs_asosiados: vector de tuplas de commit y su ref asosiado
     ///
     /// ## Resultado
     /// - Tupla con:
     ///     - el commit viejo
     ///     - el commit nuevo
-    ///     - la ref de la rama
+    ///     - la ref
     fn obtener_referencia_acualizar(
         &self,
-        commits_cabezas_y_ref_rama_asosiado: &Vec<(String, PathBuf)>,
-    ) -> Result<(String, String, String), String> {
+        commits_y_refs_asosiado: &Vec<(String, PathBuf)>,
+    ) -> Result<(String, String, PathBuf), String> {
         let mut commit_viejo = "0".repeat(40);
-        let commit_nuevo = io::leer_a_string(utils::ramas::obtener_gir_dir_rama_actual()?)?;
-        let ref_rama_merge = format!("refs/heads/{}", self.rama_merge);
+        let ref_rama_merge = self.referencia.dar_ref_remota();
+        let commit_nuevo =
+            io::leer_a_string(PathBuf::from("./.gir").join(self.referencia.dar_ref_local()))?;
 
-        for (commit, referencia) in commits_cabezas_y_ref_rama_asosiado {
-            if *referencia.to_string_lossy() == ref_rama_merge {
+        for (commit, referencia) in commits_y_refs_asosiado {
+            if *referencia == ref_rama_merge {
                 commit_viejo = commit.to_string();
             }
         }
@@ -225,13 +306,15 @@ impl Push {
 
     fn enviar_actualizaciones_y_objetos(
         &mut self,
-        referencia_actualizar: (String, String, String),
+        referencia_actualizar: (String, String, PathBuf),
         objetos_a_enviar: HashSet<String>,
     ) -> Result<(), String> {
         self.comunicacion
             .enviar(&utils::io::obtener_linea_con_largo_hex(&format!(
                 "{} {} {}",
-                referencia_actualizar.0, referencia_actualizar.1, referencia_actualizar.2
+                referencia_actualizar.0,
+                referencia_actualizar.1,
+                referencia_actualizar.2.to_string_lossy()
             )))?;
 
         self.comunicacion.enviar_flush_pkt()?;
@@ -257,18 +340,22 @@ impl Push {
     /// - vector de tuplas con los hash del commit cabeza de rama y la ref de la
     ///     de la rama en el servidor(ojo!! la direccion para el servidor no para el local)
     /// - vector de tuplas con el hash del commit y el tag asosiado
-    fn fase_de_descubrimiento(
-        &self,
-    ) -> Result<
-        (
-            Vec<String>,
-            Option<String>,
-            Vec<(String, PathBuf)>,
-            Vec<(String, PathBuf)>,
-        ),
-        String,
-    > {
-        utils::fase_descubrimiento::fase_de_descubrimiento(&self.comunicacion)
+    fn fase_de_descubrimiento(&self) -> Result<Vec<(String, PathBuf)>, String> {
+        let (
+            _capacidades_servidor,
+            _commit_head_remoto,
+            commits_cabezas_y_ref_rama_asosiado,
+            commits_y_tags_asosiados,
+        ) = utils::fase_descubrimiento::fase_de_descubrimiento(&self.comunicacion)?;
+
+        self.logger
+            .log(&"Fase de descubrimiento ejecuta con exito".to_string());
+
+        Ok([
+            &commits_cabezas_y_ref_rama_asosiado[..],
+            &commits_y_tags_asosiados[..],
+        ]
+        .concat())
     }
 }
 
@@ -278,12 +365,12 @@ impl Push {
 // en caso de que sea una referencia nula, se enviara todo. En caso de que el commit limite no sea una referencia nula
 // y no se encuentre al final de la cadena de commits, se enviara un error, ya que el servidor tiene cambios que el cliente no tiene
 fn obtener_commits_y_objetos_asociados(
-    referencia: &String,
+    referencia: &PathBuf,
     commit_limite: &String,
     logger: Arc<Logger>,
 ) -> Result<HashSet<String>, String> {
-    let logger = Arc::new(Logger::new(PathBuf::from("./tmp/aa"))?);
-    let ruta = format!(".gir/{}", referencia);
+    //let ruta = format!(".gir/{}", referencia);
+    let ruta = format!(".gir/{}", referencia.to_string_lossy());
     let ultimo_commit = io::leer_a_string(Path::new(&ruta))?;
     if ultimo_commit.is_empty() {
         return Ok(HashSet::new());
