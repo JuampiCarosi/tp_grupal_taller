@@ -117,7 +117,7 @@ impl<T: Write + Read> Fetch<T> {
             capacidades_servidor,
             commit_head_remoto,
             commits_cabezas_y_dir_rama_asosiado,
-            _commits_y_tags_asosiados,
+            commits_y_tags_asosiados,
         ) = self.fase_de_descubrimiento()?;
 
         if !self.fase_de_negociacion(capacidades_servidor, &commits_cabezas_y_dir_rama_asosiado)? {
@@ -127,6 +127,8 @@ impl<T: Write + Read> Fetch<T> {
         self.recivir_packfile_y_guardar_objetos()?;
 
         self.actualizar_ramas_locales_del_remoto(&commits_cabezas_y_dir_rama_asosiado)?;
+
+        self.guardar_los_tags(&commits_y_tags_asosiados)?;
 
         self.acutualizar_archivo_head_remoto(&commit_head_remoto)?;
 
@@ -142,6 +144,19 @@ impl<T: Write + Read> Fetch<T> {
     // -------------------------------------------------------------
     // -------------------------------------------------------------
     // -------------------------------------------------------------
+
+    fn guardar_los_tags(
+        &self,
+        commits_y_tags_asosiados: &Vec<(String, PathBuf)>,
+    ) -> Result<(), String> {
+        for (commit, ref_tag) in commits_y_tags_asosiados {
+            let dir_tag = PathBuf::from("./.gir/").join(ref_tag);
+            utils::io::escribir_bytes(dir_tag, commit)?
+        }
+
+        self.logger.log("Escritura de tags en fetch exitosa");
+        Ok(())
+    }
 
     fn fase_de_negociacion(
         &self,
@@ -168,6 +183,8 @@ impl<T: Write + Read> Fetch<T> {
         //     .obtener_paquete_y_escribir(&mut packfile, String::from("./.gir/objects/"))
         //     .unwrap();
         packfile::leer_packfile_y_escribir(&packfile, "./.gir/objects/".to_string()).unwrap();
+
+        self.logger.log("Recepcion del pack file en fetch exitoso");
         Ok(())
     }
 
@@ -349,6 +366,8 @@ impl<T: Write + Read> Fetch<T> {
             io::escribir_bytes(dir_rama_local_del_remoto, commit_cabeza_de_rama)?;
         }
 
+        self.logger
+            .log("Actualizacion de ramas remotas en fetch exitosa");
         Ok(())
     }
 }

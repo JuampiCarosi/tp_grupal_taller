@@ -13,6 +13,7 @@ pub mod tipos_de_dato {
     pub mod logger;
     pub mod objeto;
     pub mod packfile;
+    pub mod referencia;
     pub mod region;
     pub mod tag;
     pub mod tipo_diff;
