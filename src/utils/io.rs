@@ -371,7 +371,7 @@ pub fn obtener_archivos_faltantes(nombres_archivos: Vec<String>, dir: String) ->
 pub fn obtener_ack(nombres_archivos: Vec<String>, dir: &str) -> Vec<String> {
     let mut ack = Vec::new();
     for nombre in nombres_archivos {
-        let dir_archivo = format!("{}{}/{}", dir.clone(), &nombre[..2], &nombre[2..]);
+        let dir_archivo = format!("{}{}/{}", dir, &nombre[..2], &nombre[2..]);
         if PathBuf::from(dir_archivo.clone()).exists() {
             ack.push(obtener_linea_con_largo_hex(
                 ("ACK".to_string() + &nombre + "\n").as_str(),
@@ -413,9 +413,11 @@ pub fn obtener_diferencias_remote(referencias: Vec<String>, dir: String) -> Vec<
     diferencias
 }
 
+#[cfg(test)]
 mod tests {
+    use std::path::PathBuf;
 
-    use super::*;
+    use crate::utils::io::{escribir_bytes, leer_a_string, rm_directorio};
 
     #[test]
     fn test_escribir_archivo_pisa_contenido() {

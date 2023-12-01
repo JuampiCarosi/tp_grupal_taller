@@ -7,7 +7,7 @@ use super::io;
 /// Dado un hash y una ruta, busca el archivo de ese hash en la ruta especificada
 /// y devuelve el contenido del objeto descomprimido.
 pub fn descomprimir_objeto(hash: &str, ruta: &str) -> Result<String, String> {
-    let ruta_objeto = format!("{}{}/{}", ruta.clone(), &hash[..2], &hash[2..]);
+    let ruta_objeto = format!("{}{}/{}", ruta, &hash[..2], &hash[2..]);
 
     let contenido_leido = io::leer_bytes(ruta_objeto)?;
     let contenido_descomprimido = descomprimir_contenido_u8(&contenido_leido)?;
