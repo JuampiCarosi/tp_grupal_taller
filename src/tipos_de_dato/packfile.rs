@@ -35,7 +35,7 @@ impl Packfile {
     // Funcion que dado el hash de un objeto, lo aniade al packfile
     fn aniadir_objeto(objetos_packfile: &mut Vec<u8>, objeto: String, dir: &str) -> Result<(), String> {
         let (tamanio_objeto, tipo_objeto) = Self::obtener_largo_y_tipo_de_directorio(objeto.clone(), dir)?;
-        
+  
         // codifica el tamanio del archivo descomprimido y su tipo en un tipo variable de longitud
         let nbyte = match tipo_objeto.as_str() {
             "commit" => Self::codificar_bytes(COMMIT, tamanio_objeto),    //1
@@ -50,7 +50,7 @@ impl Packfile {
         };
         // El objeto manda comprimido pero sin header
         let obj =
-            utils::compresion::obtener_contenido_comprimido_sin_header_de(objeto.clone(), dir)?;
+            utils::compresion::obtener_contenido_comprimido_sin_header_de(&objeto, dir)?;
         objetos_packfile.extend(nbyte);
         objetos_packfile.extend(obj);
 
@@ -62,11 +62,12 @@ impl Packfile {
     fn obtener_objetos_del_dir(dir: &str) -> Result<(Vec<u8>, u32), String> {
         // esto porque es un clone, deberia pasarle los objetos que quiero
         let mut objetos_packfile: Vec<u8> = Vec::new();
-        let objetos = io::obtener_objetos_del_directorio(dir.to_string())?;
+        let objetos = io::obtener_objetos_del_directorio(dir)?;
         let cant_objetos = objetos.len() as u32;
         // ---
         for objeto in objetos {
             Self::aniadir_objeto(&mut objetos_packfile, objeto.clone(), dir)?;
+
         }
         Ok((objetos_packfile, cant_objetos))
     }
@@ -275,6 +276,7 @@ impl Packfile {
             if offset {
                 val += 1
             }
+
         }
         val
     }
@@ -343,6 +345,7 @@ impl Packfile {
                     if (byt & mascara) != 0 {
                         vals.push(objeto_descomprimido[data_descomprimida_offset]);
                         data_descomprimida_offset += 1;
+
                     } else {
                         vals.push(0);
                     }
@@ -379,6 +382,7 @@ impl Packfile {
     
             if byte & 0x80 == 0 {
                 break;
+
             }
         }
         result

@@ -37,8 +37,8 @@ impl Blob {
     /// Devuelve el tamanio del blob.
     /// Para obtener el tamanio del blob, se descomprime el objeto y se lee el header.
     pub fn obtener_tamanio(&self) -> Result<usize, String> {
-        let contenido_blob = descomprimir_objeto(self.hash.clone(), ".gir/objects/".to_string())?;
-        let tamanio_blob = conseguir_tamanio(contenido_blob)?;
+        let contenido_blob = descomprimir_objeto(&self.hash, ".gir/objects/")?;
+        let tamanio_blob = conseguir_tamanio(&contenido_blob)?;
         match tamanio_blob.parse::<usize>() {
             Ok(tamanio) => Ok(tamanio),
             Err(_) => Err("No se pudo parsear el tamanio del blob".to_string()),

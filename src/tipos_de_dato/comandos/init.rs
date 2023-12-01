@@ -24,7 +24,10 @@ impl Init {
     /// En caso de tener argumentos invalidos devuelve error.
     /// Si no se especifica un directorio, se crea el directorio .gir en el directorio actual.
     pub fn from(args: Vec<String>, logger: Arc<Logger>) -> Result<Init, String> {
-        logger.log(&format!("Se intenta crear comando init con args:{:?}", args));
+        logger.log(&format!(
+            "Se intenta crear comando init con args:{:?}",
+            args
+        ));
 
         Self::validar_argumentos(args.clone())?;
 

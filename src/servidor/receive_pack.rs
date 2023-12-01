@@ -13,6 +13,7 @@ pub fn receive_pack(
 
     Packfile::leer_packfile_y_escribir(&mut packfile, dir.clone() + "objects/")?;
 
+
     for actualizacion in &actualizaciones {
         let mut partes = actualizacion.split(' ');
         let vieja_ref = partes.next().unwrap_or("");

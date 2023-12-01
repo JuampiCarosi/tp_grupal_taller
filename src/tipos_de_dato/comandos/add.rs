@@ -1,14 +1,14 @@
-use std::{path::PathBuf, sync::Arc};
+use std::{
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 
 use crate::{
     tipos_de_dato::{logger::Logger, objeto::Objeto},
-    utils::{
-        self,
-        index::{crear_index, escribir_index, leer_index, ObjetoIndex},
-    },
+    utils::index::{crear_index, escribir_index, leer_index, ObjetoIndex},
 };
 
-use super::status::obtener_arbol_del_commit_head;
+use super::{check_ignore::CheckIgnore, status::obtener_arbol_del_commit_head};
 
 pub struct Add {
     /// Logger para imprimir los mensajes en el archivo log.
@@ -55,15 +55,6 @@ impl Add {
         })
     }
 
-    fn es_directorio_a_ignorar(&self, ubicacion: &PathBuf) -> Result<bool, String> {
-        let path = ubicacion.to_str().unwrap();
-        let log_dir = utils::gir_config::conseguir_ubicacion_log_config()?;
-        Ok(path.contains(".gir")
-            || path.contains(".git")
-            || path.contains(".log")
-            || path.contains(&format!("{}", log_dir.display())))
-    }
-
     /// Ejecuta el comando add.
     /// Agrega los archivos pasados por parametro al index.
     /// Si el archivo ya se encuentra en el index, actualiza el objeto.
@@ -72,13 +63,15 @@ impl Add {
         self.logger.log("Ejecutando add");
 
         for ubicacion in self.ubicaciones.clone() {
-            if self.es_directorio_a_ignorar(&ubicacion)? {
+            if CheckIgnore::es_directorio_a_ignorar(&ubicacion, self.logger.clone())? {
                 continue;
             }
 
             self.logger.log(&format!(
                 "Agregando {} al index",
-                ubicacion.to_str().unwrap()
+                ubicacion
+                    .to_str()
+                    .ok_or_else(|| "Path invalido".to_string())?,
             ));
             if ubicacion.is_dir() {
                 Err("No se puede agregar un directorio")?;
@@ -106,8 +99,8 @@ impl Add {
                 let tree_head = obtener_arbol_del_commit_head(self.logger.clone());
                 if let Some(tree_head) = tree_head {
                     if tree_head.contiene_misma_version_hijo(
-                        nuevo_objeto_index.objeto.obtener_hash(),
-                        nuevo_objeto_index.objeto.obtener_path(),
+                        &nuevo_objeto_index.objeto.obtener_hash(),
+                        &nuevo_objeto_index.objeto.obtener_path(),
                     ) {
                         continue;
                     }
