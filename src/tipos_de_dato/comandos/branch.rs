@@ -55,6 +55,7 @@ impl Branch {
             let nombre = obtener_nombre(&entrada.path())?;
             ramas.push(nombre);
         }
+        ramas.sort();
         Ok(ramas)
     }
 
