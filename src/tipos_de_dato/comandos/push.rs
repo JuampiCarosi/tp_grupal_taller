@@ -230,10 +230,16 @@ impl Push {
 
         let referencia_acualizar = self.obtener_referencia_acualizar(&commits_y_refs_asosiado)?;
 
-        let objetos_a_enviar = self
-            .obtener_objetos_a_enviar(&self.referencia.dar_ref_local(), &referencia_acualizar.0)?;
+        if self.es_necesario_actualizar(&referencia_acualizar) {
+            let objetos_a_enviar = self.obtener_objetos_a_enviar(
+                &self.referencia.dar_ref_local(),
+                &referencia_acualizar.0,
+            )?;
 
-        self.enviar_actualizaciones_y_objetos(referencia_acualizar, objetos_a_enviar)?;
+            self.enviar_actualizaciones_y_objetos(referencia_acualizar, objetos_a_enviar)?;
+        } else {
+            self.terminar_y_mandar_pack_file_vacio()?;
+        }
 
         if self.set_upstream && !self.referencia.es_tag() {
             SetUpstream::new(
@@ -250,6 +256,17 @@ impl Push {
         Ok(mensaje)
     }
 
+    fn terminar_y_mandar_pack_file_vacio(&self) -> Result<(), String> {
+        self.comunicacion.enviar_flush_pkt()?;
+        // el server pide que se le mande un packfile vacio
+        self.comunicacion
+            .enviar_pack_file(Packfile::new().obtener_pack_con_archivos(vec![], "./.gir/objects/"))
+    }
+
+    fn es_necesario_actualizar(&self, referencia_actualizar: &(String, String, PathBuf)) -> bool {
+        referencia_actualizar.0 == referencia_actualizar.1
+    }
+
     //obtiene todo los objetos de una referencia hasta el viejo commit. Si no esta el viejo commit entonces termina la comunicacion
     //y envia un pack file vacio
     fn obtener_objetos_a_enviar(
@@ -264,11 +281,7 @@ impl Push {
             Ok(objetos_a_enviar) => Ok(objetos_a_enviar),
             Err(msj_err) => {
                 //error
-                self.comunicacion.enviar_flush_pkt()?;
-                // el server pide que se le mande un packfile vacio
-                self.comunicacion.enviar_pack_file(
-                    Packfile::new().obtener_pack_con_archivos(vec![], "./.gir/objects/"),
-                )?;
+                self.terminar_y_mandar_pack_file_vacio()?;
                 return Err(msj_err);
             }
         }
