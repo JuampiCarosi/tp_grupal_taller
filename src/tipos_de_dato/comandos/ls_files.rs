@@ -2,7 +2,10 @@ use std::{path::PathBuf, sync::Arc};
 
 use crate::{
     tipos_de_dato::{logger::Logger, objeto::Objeto, objetos::tree::Tree},
-    utils::index::{leer_index, ObjetoIndex},
+    utils::{
+        index::{leer_index, ObjetoIndex},
+        path_buf::esta_directorio_habilitado,
+    },
 };
 
 use super::status::obtener_arbol_del_commit_head;
@@ -24,9 +27,6 @@ impl LsFiles {
 
         for arg in args {
             let path = PathBuf::from(arg.to_string());
-            if !path.exists() {
-                return Err(format!("No existe el archivo o directorio: {}", arg));
-            }
             if path.is_dir() {
                 trees_directorios.push(arg.to_string());
             } else {
@@ -50,20 +50,23 @@ impl LsFiles {
         arbol: Tree,
     ) -> Result<Tree, String> {
         let path_hijo = PathBuf::from(direccion_hijo);
-        println!("objetos arbol: {:?}", arbol.objetos);
         for objeto in arbol.objetos {
             match objeto {
                 Objeto::Tree(tree) => {
                     if tree.directorio == path_hijo {
                         return Ok(tree);
+                    } else if esta_directorio_habilitado(&path_hijo, &vec![tree.directorio.clone()])
+                    {
+                        let tree_buscado =
+                            Self::recorrer_arbol_hasta_hijo_buscado(direccion_hijo, tree)?;
+                        return Ok(tree_buscado);
                     }
-                    Self::recorrer_arbol_hasta_hijo_buscado(direccion_hijo, tree.clone())?;
                 }
                 _ => continue,
             }
         }
         Err(format!(
-            "No se encontro el directorio {} en el arbol",
+            "No se encontro el directorio {} dentro de los directorios trackeados",
             direccion_hijo
         ))
     }
@@ -88,16 +91,18 @@ impl LsFiles {
         Ok(texto_tree)
     }
 
-    pub fn ejecutar(&self) -> Result<String, String> {
-        self.logger.log("Ejecutando ls-files");
+    fn agregar_archivos_pedidos_por_param(&self) -> Vec<String> {
         let mut texto_a_mostrar = Vec::new();
         for archivo in &self.archivos {
-            texto_a_mostrar.push(format!("{}\n", archivo));
+            let path = PathBuf::from(archivo.to_string());
+            if path.exists() {
+                texto_a_mostrar.push(format!("{}\n", archivo));
+            }
         }
-        if self.trees_directorios.is_empty() && !self.archivos.is_empty() {
-            let string_final = texto_a_mostrar.concat();
-            return Ok(string_final);
-        }
+        texto_a_mostrar
+    }
+
+    fn agregar_archivos_trackeados_e_index(&self) -> Result<Vec<String>, String> {
         let mut texto_tree_e_index = Vec::new();
         match &self.arbol_commit {
             Some(arbol) => {
@@ -113,7 +118,22 @@ impl LsFiles {
             ));
         }
         texto_tree_e_index.sort();
+        Ok(texto_tree_e_index)
+    }
+
+    pub fn ejecutar(&self) -> Result<String, String> {
+        self.logger.log("Ejecutando ls-files");
+        let mut texto_a_mostrar = Vec::new();
+        texto_a_mostrar.extend(self.agregar_archivos_pedidos_por_param());
+
+        if self.trees_directorios.is_empty() && !self.archivos.is_empty() {
+            let string_final = texto_a_mostrar.concat();
+            return Ok(string_final);
+        }
+
+        let texto_tree_e_index = self.agregar_archivos_trackeados_e_index()?;
         texto_a_mostrar.extend(texto_tree_e_index);
+
         let string_final = texto_a_mostrar.concat();
         self.logger.log("Finalizando ls-files");
         Ok(string_final)
@@ -173,15 +193,24 @@ mod test {
         assert_eq!(resultado, "test_dir/muchos_objetos/archivo.txt\ntest_dir/muchos_objetos/archivo_copy.txt\ntest_dir/objetos/archivo.txt\n");
     }
 
-    // #[test]
-    // fn test03_ls_files_muestra_los_archivos_trackeados_y_los_de_staging() {
-    //     let logger = Arc::new(Logger::new(PathBuf::from("tmp/ls_files_test03")).unwrap());
-    //     let mut args = vec!["test_dir/muchos_objetos".to_string()];
-    //     let ls_files = LsFiles::from(logger.clone(), &mut args).unwrap();
-    //     let resultado = ls_files.ejecutar().unwrap();
-    //     assert_eq!(
-    //         resultado,
-    //         "test_dir/muchos_objetos/archivo.txt\ntest_dir/muchos_objetos/archivo_copy.txt\n"
-    //     );
-    // }
+    #[test]
+    fn test03_ls_files_muestra_subdirectorios_pedidos() {
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/ls_files_test03")).unwrap());
+        let mut args = vec!["test_dir/muchos_objetos".to_string()];
+        let ls_files = LsFiles::from(logger.clone(), &mut args).unwrap();
+        let resultado = ls_files.ejecutar().unwrap();
+        assert_eq!(
+            resultado,
+            "test_dir/muchos_objetos/archivo.txt\ntest_dir/muchos_objetos/archivo_copy.txt\n"
+        );
+    }
+
+    #[test]
+    fn test04_ls_files_con_archivo_inexistente_devuelve_string_vacio() {
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/ls_files_test03")).unwrap());
+        let mut args = vec!["archivo_inexistente".to_string()];
+        let ls_files = LsFiles::from(logger.clone(), &mut args).unwrap();
+        let resultado = ls_files.ejecutar().unwrap();
+        assert_eq!(resultado, "");
+    }
 }
