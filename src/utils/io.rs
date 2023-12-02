@@ -413,6 +413,8 @@ pub fn obtener_diferencias_remote(referencias: Vec<String>, dir: String) -> Vec<
     diferencias
 }
 
+
+    
 #[cfg(test)]
 mod tests {
     use std::path::PathBuf;

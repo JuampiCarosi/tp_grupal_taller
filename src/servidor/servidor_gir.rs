@@ -12,7 +12,7 @@ fn main() -> Result<(), String> {
 
     let logger = Arc::new(Logger::new(PathBuf::from("server_logger.txt"))?);
     let address = "127.0.0.1:".to_owned() + &argv[1];
-    let servidor = Servidor::new(&address, logger).unwrap();
+    let mut servidor = Servidor::new(&address, logger).unwrap();
     servidor.iniciar_servidor().unwrap();
 
     // let mut sv = Servidor::new(&address).unwrap();
