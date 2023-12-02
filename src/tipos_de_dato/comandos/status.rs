@@ -66,7 +66,7 @@ impl Status {
     /// Devuelve un vector con los cambios formateados segun su respectivo tipo de cambio.
     /// Si el archivo no se encuentra en el commit anterior, se considera un nuevo archivo.
     pub fn obtener_staging(&self) -> Result<Vec<String>, String> {
-        let mut staging = Vec::new();
+        let mut staging: Vec<String> = Vec::new();
         for objeto_index in &self.index {
             match self.tree_commit_head {
                 Some(ref tree) => {
@@ -97,6 +97,22 @@ impl Status {
             }
         }
         Ok(staging)
+    }
+
+    /// Obtiene los archivos que quedaron con conflictos luego de realizar un merge.
+    /// Devuelve un vector con los mismos formateados indicando que quedaron con conflictos.
+    fn obtener_archivos_unmergeados(&self) -> Result<Vec<String>, String> {
+        let mut unmergeados = Vec::new();
+        for objeto_index in &self.index {
+            if objeto_index.merge {
+                let linea_formateada = format!(
+                    "unmergeado: {}",
+                    objeto_index.objeto.obtener_path().display()
+                );
+                unmergeados.push(linea_formateada);
+            }
+        }
+        Ok(unmergeados)
     }
 
     /// Obtiene los archivos que fueron commiteados anteriormente, fueron modificados en el directorio actual y no estan en el index.
@@ -167,7 +183,6 @@ impl Status {
                 &objeto_index.objeto.obtener_path(),
             ),
         });
-
         bool
     }
 
@@ -209,6 +224,7 @@ impl Status {
     /// Devuelve un string con los cambios a ser commiteados, los cambios no en zona de preparacion y los cambios no trackeados.
     pub fn ejecutar(&mut self) -> Result<String, String> {
         let staging = self.obtener_staging()?;
+        let unmergeados = self.obtener_archivos_unmergeados()?;
         let trackeados = self.obtener_trackeados()?;
         let untrackeados = self.obtener_untrackeados()?;
 
@@ -216,6 +232,10 @@ impl Status {
         mensaje.push_str("Cambios a ser commiteados:\n");
         for cambio in staging {
             mensaje.push_str(&format!("         {}{}{}\n", VERDE, cambio, RESET));
+        }
+        mensaje.push_str("\nArchivos unmergeados:\n");
+        for cambio in unmergeados {
+            mensaje.push_str(&format!("         {}{}{}\n", ROJO, cambio, RESET));
         }
         mensaje.push_str("\nCambios no en zona de preparacion:\n");
         for cambio in trackeados {

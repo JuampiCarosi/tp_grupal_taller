@@ -68,9 +68,7 @@ impl Merge {
     /// Devuelve el commit base mas cercano entre dos ramas
     /// Por ejemplo en el arbol a-b-c vs d-b-e, el commit base es b
     fn obtener_commit_base_entre_dos_branches(&self) -> Result<String, String> {
-        // ab5f798d5ab
         let hash_commit_actual = ramas::obtener_hash_commit_asociado_rama_actual()?;
-        // ab5f798d5ab
         let hash_commit_a_mergear = Self::obtener_commit_de_branch(&self.branch_a_mergear)?;
 
         let commit_obj_actual = CommitObj::from_hash(hash_commit_actual, self.logger.clone())?;
@@ -85,7 +83,6 @@ impl Merge {
         for commit_actual in commits_branch_actual {
             for commit_branch_merge in commits_branch_a_mergear.clone() {
                 if commit_actual.hash == commit_branch_merge.hash {
-                    // ab5f798d5ab
                     return Ok(commit_actual.hash);
                 }
             }
@@ -476,7 +473,6 @@ impl Merge {
 
 #[cfg(test)]
 mod tests {
-
     use super::*;
 
     #[test]
@@ -503,7 +499,6 @@ mod tests {
         let diff_1 = Merge::obtener_diffs_entre_dos_archivos(&base, &version_1).unwrap();
         let diff_2 = Merge::obtener_diffs_entre_dos_archivos(&base, &version_2).unwrap();
         let (contenido_final, _conflictos) = Merge::mergear_diffs(diff_1, diff_2, &base);
-        println!("{}", contenido_final);
 
         assert_eq!(
             contenido_final,
@@ -534,7 +529,6 @@ mod tests {
         let diff_1 = Merge::obtener_diffs_entre_dos_archivos(&base, &version_1).unwrap();
         let diff_2 = Merge::obtener_diffs_entre_dos_archivos(&base, &version_2).unwrap();
         let (contenido_final, _conflictos) = Merge::mergear_diffs(diff_1, diff_2, &base);
-
         assert_eq!(
             contenido_final,
             "primera linea\n<<<<<< HEAD\nsegunda_linea\n3ra linea\n======\n2da linea\ntercera linea\n>>>>>> Entrante\ncuarta linea\n"
