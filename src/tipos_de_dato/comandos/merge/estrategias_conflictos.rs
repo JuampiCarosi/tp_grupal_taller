@@ -1,6 +1,6 @@
-use crate::tipos_de_dato::region::Region;
-
-use super::{Conflicto, LadoConflicto, TipoDiff};
+use crate::tipos_de_dato::{
+    conflicto::Conflicto, lado_conflicto::LadoConflicto, region::Region, tipo_diff::TipoDiff,
+};
 
 /// Esta funcion contempla el conflicto donde tenemos conflicto del tipo Add-Remove vs Add-Remove,
 /// es decir, dos modificaciones en la misma linea
@@ -127,7 +127,7 @@ pub fn resolver_merge_len_3(
         let mut lineas = String::new();
         for (diff, _) in conflicto {
             if let TipoDiff::Added(linea) = diff {
-                lineas.push_str(linea)
+                lineas.push_str(&linea)
             }
         }
         Region::Normal(lineas)

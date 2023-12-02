@@ -1,7 +1,7 @@
 use std::{path::PathBuf, sync::Arc};
 
 use crate::{
-    tipos_de_dato::logger::Logger,
+    tipos_de_dato::{comando::Ejecutar, logger::Logger},
     utils::{io, path_buf::obtener_nombre},
 };
 
@@ -103,8 +103,10 @@ impl Branch {
         io::escribir_bytes(direccion_rama_nueva, ultimo_commit)?;
         Ok(format!("Se creó la rama {}", rama_nueva))
     }
+}
 
-    pub fn ejecutar(&mut self) -> Result<String, String> {
+impl Ejecutar for Branch {
+    fn ejecutar(&mut self) -> Result<String, String> {
         if self.mostrar {
             return Self::mostrar_ramas();
         }
@@ -115,6 +117,7 @@ impl Branch {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::tipos_de_dato::comando::Ejecutar;
     use crate::tipos_de_dato::comandos::add::Add;
     use crate::tipos_de_dato::comandos::commit::Commit;
     use crate::tipos_de_dato::comandos::init::Init;
@@ -136,7 +139,7 @@ mod test {
         }
 
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/branch_init")).unwrap());
-        let init = Init {
+        let mut init = Init {
             path: "./.gir".to_string(),
             logger,
         };
@@ -158,7 +161,7 @@ mod test {
     fn addear_archivos_y_comittear(args: Vec<String>, logger: Arc<Logger>) {
         let mut add = Add::from(args, logger.clone()).unwrap();
         add.ejecutar().unwrap();
-        let commit =
+        let mut commit =
             Commit::from(&mut vec!["-m".to_string(), "mensaje".to_string()], logger).unwrap();
         commit.ejecutar().unwrap();
     }

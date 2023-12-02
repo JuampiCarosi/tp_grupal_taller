@@ -1,7 +1,8 @@
 use std::{path::PathBuf, sync::Arc};
 
 use crate::tipos_de_dato::{
-    logger::Logger, objeto::Objeto, objetos::tree::Tree, visualizaciones::Visualizaciones,
+    comando::Ejecutar, logger::Logger, objeto::Objeto, objetos::tree::Tree,
+    visualizaciones::Visualizaciones,
 };
 
 use super::cat_file::CatFile;
@@ -74,8 +75,10 @@ impl LsTree {
         }
         Tree::ordenar_objetos_alfabeticamente(&objetos_a_mostrar)
     }
+}
 
-    pub fn ejecutar(&mut self) -> Result<String, String> {
+impl Ejecutar for LsTree {
+    fn ejecutar(&mut self) -> Result<String, String> {
         self.logger.log("Corriendo ls-tree");
         let arbol = Tree::from_hash(&self.arbol, PathBuf::from("."), self.logger.clone())?;
         let objetos_a_mostrar = self.obtener_objetos_a_mostrar(&arbol);

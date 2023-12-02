@@ -1,7 +1,10 @@
 use std::{net::TcpStream, path::PathBuf, sync::Arc};
 
 use crate::{
-    tipos_de_dato::{comandos::write_tree, config::Config, logger::Logger, objetos::tree::Tree},
+    tipos_de_dato::{
+        comando::Ejecutar, comandos::write_tree, config::Config, logger::Logger,
+        objetos::tree::Tree,
+    },
     utils::{
         self,
         io::{self, leer_a_string},
@@ -121,33 +124,6 @@ impl Pull {
         Ok((remoto, obtener_nombre(&rama_merge)?))
     }
 
-    pub fn ejecutar(&self) -> Result<String, String> {
-        if self.set_upstream {
-            SetUpstream::new(
-                self.remoto.clone(),
-                self.rama_merge.clone(),
-                utils::ramas::obtener_rama_actual()?,
-                self.logger.clone(),
-            )?
-            .ejecutar()?;
-        }
-
-        Fetch::<TcpStream>::new(vec![self.remoto.clone()], self.logger.clone())?.ejecutar()?;
-
-        println!("Llego aca del pull\n");
-        let commit_head_remoto = self.obtener_head_remoto()?;
-
-        if io::esta_vacio(UBICACION_RAMA_MASTER) {
-            self.fast_forward_de_cero(&commit_head_remoto)?;
-        } else {
-            self.mergear_rama()?;
-        }
-
-        let mensaje = "Pull ejecutado con exito";
-        self.logger.log(mensaje);
-        Ok(mensaje.to_string())
-    }
-
     ///Busca el archivo correspondiente que contien el HEAD del remoto (el NOMBREREMOTO_HEAD)y lo obtiene. En caso de no
     /// existir dicho archivo toma por defecto devulevor el commit de master del remoto.   
     fn obtener_head_remoto(&self) -> Result<String, String> {
@@ -194,5 +170,34 @@ impl Pull {
         }
 
         Ok(())
+    }
+}
+
+impl Ejecutar for Pull {
+    fn ejecutar(&mut self) -> Result<String, String> {
+        if self.set_upstream {
+            SetUpstream::new(
+                self.remoto.clone(),
+                self.rama_merge.clone(),
+                utils::ramas::obtener_rama_actual()?,
+                self.logger.clone(),
+            )?
+            .ejecutar()?;
+        }
+
+        Fetch::<TcpStream>::new(vec![self.remoto.clone()], self.logger.clone())?.ejecutar()?;
+
+        println!("Llego aca del pull\n");
+        let commit_head_remoto = self.obtener_head_remoto()?;
+
+        if io::esta_vacio(UBICACION_RAMA_MASTER) {
+            self.fast_forward_de_cero(&commit_head_remoto)?;
+        } else {
+            self.mergear_rama()?;
+        }
+
+        let mensaje = "Pull ejecutado con exito";
+        self.logger.log(mensaje);
+        Ok(mensaje.to_string())
     }
 }

@@ -1,6 +1,10 @@
 mod estrategias_conflictos;
 
-use crate::tipos_de_dato::region::{unificar_regiones, Region};
+use crate::tipos_de_dato::{
+    conflicto::Conflicto,
+    lado_conflicto::LadoConflicto,
+    region::{unificar_regiones, Region},
+};
 use std::{
     path::{self, Path, PathBuf},
     sync::Arc,
@@ -8,9 +12,8 @@ use std::{
 
 use crate::{
     tipos_de_dato::{
+        comando::Ejecutar,
         comandos::merge::estrategias_conflictos::resolver_merge_len_2,
-        conflicto::Conflicto,
-        lado_conflicto::LadoConflicto,
         logger::Logger,
         objetos::{commit::CommitObj, tree::Tree},
         tipo_diff::TipoDiff,
@@ -350,7 +353,7 @@ impl Merge {
                 paths_con_conflictos
             ))
         } else {
-            let commit = Commit::from_merge(self.logger.clone())?;
+            let mut commit = Commit::from_merge(self.logger.clone())?;
             commit.ejecutar()?;
             Ok("Merge completado".to_string())
         }
@@ -440,14 +443,16 @@ impl Merge {
         }
         Ok(())
     }
+}
 
-    pub fn ejecutar(&self) -> Result<String, String> {
+impl Ejecutar for Merge {
+    fn ejecutar(&mut self) -> Result<String, String> {
         self.logger.log("Ejecutando comando merge");
 
         if Self::hay_merge_en_curso()? {
             return Err("Ya hay un merge en curso".to_string());
         }
-        //
+
         let commit_actual = Commit::obtener_hash_commit_actual()?;
         let commit_a_mergear = Self::obtener_commit_de_branch(&self.branch_a_mergear)?;
         let commit_base = self.obtener_commit_base_entre_dos_branches()?;

@@ -2,7 +2,7 @@ use std::{path::PathBuf, sync::Arc};
 
 use gtk::prelude::*;
 
-use crate::tipos_de_dato::{comandos::branch::Branch, logger::Logger};
+use crate::tipos_de_dato::{comando::Ejecutar, comandos::branch::Branch, logger::Logger};
 
 use super::{branch_selector, error_dialog};
 

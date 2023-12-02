@@ -2,6 +2,7 @@ use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
 use crate::{
     tipos_de_dato::{
+        comando::Ejecutar,
         comandos::branch::Branch,
         config::{Config, RamasInfo},
         logger::Logger,
@@ -206,31 +207,6 @@ impl Checkout {
         Tree::from_hash(&hash_tree_padre, PathBuf::from("."), logger)
     }
 
-    /// Ejecuta el comando checkout en su totalidad.
-    /// Si se crea una nueva rama, se crea y se cambia a ella.
-    /// Si se cambia de rama, se cambia y se actualiza el contenido.
-    pub fn ejecutar(&self) -> Result<String, String> {
-        self.comprobar_que_no_haya_contenido_index()?;
-
-        if self.crear_rama {
-            self.crear_rama()?;
-            self.cambiar_rama()?;
-            return Ok(format!("Cambiado a nueva rama {}", self.rama_a_cambiar));
-        };
-
-        if !self.crear_rama {
-            let tree_viejo = Self::obtener_arbol_commit_actual(self.logger.clone())?;
-            self.cambiar_rama()?;
-            let tree_futuro = Self::obtener_arbol_commit_actual(self.logger.clone())?;
-
-            let objetos_a_eliminar = Self::obtener_objetos_eliminados(&tree_viejo, &tree_futuro);
-            self.eliminar_objetos(&objetos_a_eliminar)?;
-
-            tree_futuro.escribir_en_directorio()?;
-        };
-        Ok(format!("Cambiado a rama {}", self.rama_a_cambiar))
-    }
-
     /// Elimina los archivos correspondientes a cada objeto que no se encuentre en el arbol futuro.
     fn eliminar_objetos(&self, objetos: &Vec<Objeto>) -> Result<(), String> {
         for objeto in objetos {
@@ -269,12 +245,40 @@ impl Checkout {
     }
 }
 
+impl Ejecutar for Checkout {
+    /// Ejecuta el comando checkout en su totalidad.
+    /// Si se crea una nueva rama, se crea y se cambia a ella.
+    /// Si se cambia de rama, se cambia y se actualiza el contenido.
+    fn ejecutar(&mut self) -> Result<String, String> {
+        self.comprobar_que_no_haya_contenido_index()?;
+
+        if self.crear_rama {
+            self.crear_rama()?;
+            self.cambiar_rama()?;
+            return Ok(format!("Cambiado a nueva rama {}", self.rama_a_cambiar));
+        };
+
+        if !self.crear_rama {
+            let tree_viejo = Self::obtener_arbol_commit_actual(self.logger.clone())?;
+            self.cambiar_rama()?;
+            let tree_futuro = Self::obtener_arbol_commit_actual(self.logger.clone())?;
+
+            let objetos_a_eliminar = Self::obtener_objetos_eliminados(&tree_viejo, &tree_futuro);
+            self.eliminar_objetos(&objetos_a_eliminar)?;
+
+            tree_futuro.escribir_en_directorio()?;
+        };
+        Ok(format!("Cambiado a rama {}", self.rama_a_cambiar))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::{path::PathBuf, sync::Arc};
 
     use crate::{
         tipos_de_dato::{
+            comando::Ejecutar,
             comandos::{add::Add, branch::Branch, commit::Commit, init::Init},
             logger::Logger,
             objeto::Objeto,
@@ -295,7 +299,7 @@ mod tests {
     fn limpiar_archivo_gir() {
         io::rm_directorio(".gir").unwrap();
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/branch_init")).unwrap());
-        let init = Init {
+        let mut init = Init {
             path: "./.gir".to_string(),
             logger,
         };
@@ -306,7 +310,7 @@ mod tests {
     fn addear_archivos_y_comittear(args: Vec<String>, logger: Arc<Logger>) {
         let mut add = Add::from(args, logger.clone()).unwrap();
         add.ejecutar().unwrap();
-        let commit =
+        let mut commit =
             Commit::from(&mut vec!["-m".to_string(), "mensaje".to_string()], logger).unwrap();
         commit.ejecutar().unwrap();
     }
@@ -323,7 +327,7 @@ mod tests {
             .ejecutar()
             .unwrap();
 
-        let checkout = Checkout::from(vec!["una_rama".to_string()], logger.clone()).unwrap();
+        let mut checkout = Checkout::from(vec!["una_rama".to_string()], logger.clone()).unwrap();
         checkout.ejecutar().unwrap();
 
         let contenido_head = std::fs::read_to_string(".gir/HEAD").unwrap();
@@ -338,7 +342,7 @@ mod tests {
         let args = vec!["test_dir/objetos/archivo.txt".to_string()];
         addear_archivos_y_comittear(args, logger.clone());
 
-        let checkout = Checkout::from(
+        let mut checkout = Checkout::from(
             vec!["-b".to_string(), "una_rama".to_string()],
             logger.clone(),
         )
@@ -357,7 +361,7 @@ mod tests {
         let args = vec!["tmp/checkout_test03_test".to_string()];
         addear_archivos_y_comittear(args, logger.clone());
 
-        let checkout = Checkout::from(
+        let mut checkout = Checkout::from(
             vec!["-b".to_string(), "una_rama".to_string()],
             logger.clone(),
         )
@@ -368,7 +372,7 @@ mod tests {
         let args = vec!["tmp/checkout_test03_test".to_string()];
         addear_archivos_y_comittear(args, logger.clone());
 
-        let checkout = Checkout::from(vec!["master".to_string()], logger.clone()).unwrap();
+        let mut checkout = Checkout::from(vec!["master".to_string()], logger.clone()).unwrap();
         checkout.ejecutar().unwrap();
 
         let contenido_archivo = io::leer_a_string("tmp/checkout_test03_test").unwrap();
@@ -384,7 +388,7 @@ mod tests {
         let args = vec!["tmp/checkout_test04_test".to_string()];
         addear_archivos_y_comittear(args, logger.clone());
 
-        let checkout = Checkout::from(
+        let mut checkout = Checkout::from(
             vec!["-b".to_string(), "una_rama".to_string()],
             logger.clone(),
         )
@@ -395,7 +399,7 @@ mod tests {
         let args = vec!["tmp/checkout_test04_test_2".to_string()];
         addear_archivos_y_comittear(args, logger.clone());
 
-        let checkout = Checkout::from(vec!["master".to_string()], logger.clone()).unwrap();
+        let mut checkout = Checkout::from(vec!["master".to_string()], logger.clone()).unwrap();
         checkout.ejecutar().unwrap();
 
         assert!(!PathBuf::from("tmp/checkout_test04_test_2").exists());

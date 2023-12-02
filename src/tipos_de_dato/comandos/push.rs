@@ -1,4 +1,5 @@
 use super::set_upstream::SetUpstream;
+use crate::tipos_de_dato::comando::Ejecutar;
 use crate::tipos_de_dato::comandos::write_tree;
 use crate::tipos_de_dato::comunicacion::Comunicacion;
 use crate::tipos_de_dato::config::Config;
@@ -38,14 +39,13 @@ impl Push {
         Self::verificar_argumentos(args)?;
 
         let mut set_upstream = false;
-        
-        if Self::hay_flags(&args) {
 
+        if Self::hay_flags(&args) {
             Self::parsear_flags(args, &mut set_upstream)?;
         }
-        
+
         let (remoto, rama_merge) = Self::parsear_argumentos(args, set_upstream)?;
-        
+
         let url: String = Self::obtener_url(&remoto)?;
         let comunicacion = Comunicacion::<TcpStream>::new_desde_url(&url, logger.clone())?;
 
@@ -136,39 +136,6 @@ impl Push {
         Ok(remoto.to_string())
     }
 
-    pub fn ejecutar(&mut self) -> Result<String, String> {
-        if self.set_upstream {
-            SetUpstream::new(
-                self.remoto.clone(),
-                self.rama_merge.clone(),
-                utils::ramas::obtener_rama_actual()?,
-                self.logger.clone(),
-            )?
-            .ejecutar()?;
-        }
-
-        self.comunicacion.iniciar_git_recive_pack_con_servidor()?;
-        let (
-            _capacidades_servidor,
-            _commit_head_remoto,
-            commits_cabezas_y_ref_rama_asosiado,
-            _commits_y_tags_asosiados,
-        ) = self.fase_de_descubrimiento()?;
-        self.logger.log("Fase de descubrimiento ejecuta con exito");
-
-        println!("{:?}", commits_cabezas_y_ref_rama_asosiado);
-        let referencia_acualizar =
-            self.obtener_referencia_acualizar(&commits_cabezas_y_ref_rama_asosiado)?;
-        let objetos_a_enviar =
-            self.obtener_objetos_a_enviar(&referencia_acualizar.2, &referencia_acualizar.0)?;
-
-        self.enviar_actualizaciones_y_objetos(referencia_acualizar, objetos_a_enviar)?;
-
-        let mensaje = "Push ejecutado con exito".to_string();
-        self.logger.log(&mensaje);
-        Ok(mensaje)
-    }
-
     //obtiene todo los objetos de una referencia hasta el viejo commit. Si no esta el viejo commit entonces termina la comunicacion
     //y envia un pack file vacio
     fn obtener_objetos_a_enviar(
@@ -176,8 +143,11 @@ impl Push {
         referencia: &str,
         viejo_commit: &str,
     ) -> Result<HashSet<String>, String> {
-        let objetos_a_enviar =
-            obtener_commits_y_objetos_asociados(referencia, viejo_commit, self.logger.clone());
+        let objetos_a_enviar = Self::obtener_commits_y_objetos_asociados(
+            referencia,
+            viejo_commit,
+            self.logger.clone(),
+        );
 
         match objetos_a_enviar {
             Ok(objetos_a_enviar) => Ok(objetos_a_enviar),
@@ -185,9 +155,11 @@ impl Push {
                 //error
                 self.comunicacion.enviar_flush_pkt()?;
                 // el server pide que se le mande un packfile vacio
-                self.comunicacion.enviar_pack_file(
-                    Packfile::obtener_pack_con_archivos(vec![], "./.gir/objects/")?,
-                )?;
+                self.comunicacion
+                    .enviar_pack_file(Packfile::obtener_pack_con_archivos(
+                        vec![],
+                        "./.gir/objects/",
+                    )?)?;
                 Err(msj_err)
             }
         }
@@ -269,70 +241,107 @@ impl Push {
     > {
         utils::fase_descubrimiento::fase_de_descubrimiento(&self.comunicacion)
     }
-}
 
-// ------ funciones auxiliares ------
+    // ------ funciones auxiliares ------
 
-// funcion para obtener los commits que faltan para llegar al commit limite y los objetos asociados a cada commit
-// en caso de que sea una referencia nula, se enviara todo. En caso de que el commit limite no sea una referencia nula
-// y no se encuentre al final de la cadena de commits, se enviara un error, ya que el servidor tiene cambios que el cliente no tiene
-fn obtener_commits_y_objetos_asociados(
-    referencia: &str,
-    commit_limite: &str,
-    _logger: Arc<Logger>,
-) -> Result<HashSet<String>, String> {
-    let logger = Arc::new(Logger::new(PathBuf::from("./tmp/aa"))?);
-    let ruta = format!(".gir/{}", referencia);
-    let ultimo_commit = io::leer_a_string(Path::new(&ruta))?;
-    if ultimo_commit.is_empty() {
-        return Ok(HashSet::new());
-    }
-
-    // let mut objetos_a_agregar: HashMap<String, CommitObj> = HashMap::new();
-    let mut objetos_a_agregar: HashSet<String> = HashSet::new();
-    let mut commits_a_revisar: Vec<CommitObj> = Vec::new();
-
-    let ultimo_commit = CommitObj::from_hash(ultimo_commit, logger.clone());
-
-    match ultimo_commit {
-        Ok(ultimo_commit) => {
-            commits_a_revisar.push(ultimo_commit);
+    // funcion para obtener los commits que faltan para llegar al commit limite y los objetos asociados a cada commit
+    // en caso de que sea una referencia nula, se enviara todo. En caso de que el commit limite no sea una referencia nula
+    // y no se encuentre al final de la cadena de commits, se enviara un error, ya que el servidor tiene cambios que el cliente no tiene
+    fn obtener_commits_y_objetos_asociados(
+        referencia: &str,
+        commit_limite: &str,
+        _logger: Arc<Logger>,
+    ) -> Result<HashSet<String>, String> {
+        let logger = Arc::new(Logger::new(PathBuf::from("./tmp/aa"))?);
+        let ruta = format!(".gir/{}", referencia);
+        let ultimo_commit = io::leer_a_string(Path::new(&ruta))?;
+        if ultimo_commit.is_empty() {
+            return Ok(HashSet::new());
         }
-        Err(_) => {
+
+        // let mut objetos_a_agregar: HashMap<String, CommitObj> = HashMap::new();
+        let mut objetos_a_agregar: HashSet<String> = HashSet::new();
+        let mut commits_a_revisar: Vec<CommitObj> = Vec::new();
+
+        let ultimo_commit = CommitObj::from_hash(ultimo_commit, logger.clone());
+
+        match ultimo_commit {
+            Ok(ultimo_commit) => {
+                commits_a_revisar.push(ultimo_commit);
+            }
+            Err(_) => {
+                return Err(
+                    "El servidor tiene cambios, por favor, actualice su repositorio".to_string(),
+                );
+            }
+        }
+
+        while let Some(commit) = commits_a_revisar.pop() {
+            if objetos_a_agregar.contains(&commit.hash) {
+                continue;
+            }
+            if commit.hash == commit_limite {
+                objetos_a_agregar.insert(commit.hash.clone());
+                break;
+            }
+            objetos_a_agregar.insert(commit.hash.clone());
+            let hash_tree =
+                write_tree::conseguir_arbol_from_hash_commit(&commit.hash, "./.gir/objects/")?;
+            let tree = Tree::from_hash(&hash_tree, PathBuf::from("."), logger.clone())?;
+            objetos_a_agregar.insert(hash_tree);
+            objetos_a_agregar.extend(
+                tree.obtener_objetos()
+                    .iter()
+                    .map(|objeto| objeto.obtener_hash()),
+            );
+
+            for padre in commit.padres {
+                let commit_padre = CommitObj::from_hash(padre, logger.clone())?;
+                commits_a_revisar.push(commit_padre);
+            }
+        }
+        if ("0".repeat(40) != *commit_limite) && !objetos_a_agregar.contains(commit_limite) {
             return Err(
                 "El servidor tiene cambios, por favor, actualice su repositorio".to_string(),
             );
+        } else if ("0".repeat(40) != *commit_limite) && objetos_a_agregar.contains(commit_limite) {
+            objetos_a_agregar.remove(commit_limite);
         }
+        Ok(objetos_a_agregar)
     }
+}
 
-    while let Some(commit) = commits_a_revisar.pop() {
-        if objetos_a_agregar.contains(&commit.hash) {
-            continue;
+impl Ejecutar for Push {
+    fn ejecutar(&mut self) -> Result<String, String> {
+        if self.set_upstream {
+            SetUpstream::new(
+                self.remoto.clone(),
+                self.rama_merge.clone(),
+                utils::ramas::obtener_rama_actual()?,
+                self.logger.clone(),
+            )?
+            .ejecutar()?;
         }
-        if commit.hash == commit_limite {
-            objetos_a_agregar.insert(commit.hash.clone());
-            break;
-        }
-        objetos_a_agregar.insert(commit.hash.clone());
-        let hash_tree =
-            write_tree::conseguir_arbol_from_hash_commit(&commit.hash, "./.gir/objects/")?;
-        let tree = Tree::from_hash(&hash_tree, PathBuf::from("."), logger.clone())?;
-        objetos_a_agregar.insert(hash_tree);
-        objetos_a_agregar.extend(
-            tree.obtener_objetos()
-                .iter()
-                .map(|objeto| objeto.obtener_hash()),
-        );
 
-        for padre in commit.padres {
-            let commit_padre = CommitObj::from_hash(padre, logger.clone())?;
-            commits_a_revisar.push(commit_padre);
-        }
+        self.comunicacion.iniciar_git_recive_pack_con_servidor()?;
+        let (
+            _capacidades_servidor,
+            _commit_head_remoto,
+            commits_cabezas_y_ref_rama_asosiado,
+            _commits_y_tags_asosiados,
+        ) = self.fase_de_descubrimiento()?;
+        self.logger.log("Fase de descubrimiento ejecuta con exito");
+
+        println!("{:?}", commits_cabezas_y_ref_rama_asosiado);
+        let referencia_acualizar =
+            self.obtener_referencia_acualizar(&commits_cabezas_y_ref_rama_asosiado)?;
+        let objetos_a_enviar =
+            self.obtener_objetos_a_enviar(&referencia_acualizar.2, &referencia_acualizar.0)?;
+
+        self.enviar_actualizaciones_y_objetos(referencia_acualizar, objetos_a_enviar)?;
+
+        let mensaje = "Push ejecutado con exito".to_string();
+        self.logger.log(&mensaje);
+        Ok(mensaje)
     }
-    if ("0".repeat(40) != *commit_limite) && !objetos_a_agregar.contains(commit_limite) {
-        return Err("El servidor tiene cambios, por favor, actualice su repositorio".to_string());
-    } else if ("0".repeat(40) != *commit_limite) && objetos_a_agregar.contains(commit_limite) {
-        objetos_a_agregar.remove(commit_limite);
-    }
-    Ok(objetos_a_agregar)
 }

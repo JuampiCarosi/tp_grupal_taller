@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use gtk::prelude::*;
 
-use crate::tipos_de_dato::{comandos::commit::Commit, logger::Logger};
+use crate::tipos_de_dato::{comando::Ejecutar, comandos::commit::Commit, logger::Logger};
 
 use super::{error_dialog, log_list, staging_area};
 
@@ -35,7 +35,7 @@ fn boton_confimar_dialog(builder: &gtk::Builder, window: &gtk::Window, logger: A
     let builder_clone = builder.clone();
     let window_clone = window.clone();
     confirm.connect_clicked(move |_| {
-        let commit = match Commit::from(
+        let mut commit = match Commit::from(
             &mut vec!["-m".to_string(), input.text().to_string()],
             logger.clone(),
         ) {

@@ -75,6 +75,7 @@ mod test {
 
     use crate::{
         tipos_de_dato::{
+            comando::Ejecutar,
             comandos::{add::Add, check_ignore::CheckIgnore, init::Init, status::Status},
             logger::Logger,
         },
@@ -90,7 +91,7 @@ mod test {
     fn limpiar_archivo_gir() {
         io::rm_directorio(".gir").unwrap();
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/check_ignore_init")).unwrap());
-        let init = Init {
+        let mut init = Init {
             path: "./.gir".to_string(),
             logger,
         };

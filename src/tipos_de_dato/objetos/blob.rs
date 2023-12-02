@@ -1,5 +1,6 @@
 use crate::{
     tipos_de_dato::{
+        comando::Ejecutar,
         comandos::{cat_file::conseguir_tamanio, hash_object::HashObject},
         logger::Logger,
     },

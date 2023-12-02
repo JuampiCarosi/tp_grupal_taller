@@ -4,6 +4,7 @@ use gtk::{prelude::*, Button};
 
 use crate::{
     tipos_de_dato::{
+        comando::Ejecutar,
         comandos::{add::Add, merge::Merge},
         logger::Logger,
         objeto::Objeto,
