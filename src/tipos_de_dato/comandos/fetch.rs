@@ -488,7 +488,6 @@ mod test {
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/fetch_02.txt")).unwrap());
 
         let comunicacion = Comunicacion::new_para_testing(mock, logger.clone());
-        let logger = Arc::new(Logger::new(PathBuf::from(".log.txt")).unwrap());
         let (capacidades, commit_head, commits_y_ramas, commits_y_tags) =
             Fetch::new_testing(logger, comunicacion.into())
                 .unwrap()
@@ -530,6 +529,31 @@ mod test {
         assert_eq!(commits_y_tags_esperados, commits_y_tags)
     }
 
+    #[test]
+    fn test_03_los_tags_se_gurdan_correctamtene() {
+        let commits_y_tags = vec![
+            (
+                "b88d2441cac0977faf98efc80305012112238d9d".to_string(),
+                PathBuf::from("refs/tags/v0.9"),
+            ),
+            (
+                "525128480b96c89e6418b1e40909bf6c5b2d580f".to_string(),
+                PathBuf::from("refs/tags/v1.0"),
+            ),
+        ];
+
+        let mock = MockTcpStream {
+            lectura_data: Vec::new(),
+            escritura_data: Vec::new(),
+        };
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/fetch_02.txt")).unwrap());
+
+        let comunicacion = Comunicacion::new_para_testing(mock, logger.clone());
+        Fetch::new_testing(logger, comunicacion.into())
+            .unwrap()
+            .guardar_los_tags(&commits_y_tags)
+            .unwrap();
+    }
     // #[test]
     // fn test03_la_fase_de_negociacion_funciona(){
     //     let nuevo_dir = "test03_fetch";
