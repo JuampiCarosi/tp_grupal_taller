@@ -37,10 +37,10 @@ impl Clone {
         Ok(())
     }
 
-    fn verificar_si_ya_existe_repositorio(&self, repositorio: &String) -> Result<(), String> {
+    fn verificar_si_ya_existe_repositorio(&self, repositorio: &str) -> Result<(), String> {
         if PathBuf::from(repositorio).exists() {
             //me fijo si tiene contenido
-            if utils::io::leer_directorio(repositorio)?.count() > 0 {
+            if utils::io::leer_directorio(&repositorio)?.count() > 0 {
                 return Err(format!("Error el directorio {} no esta vacio", repositorio));
             }
         }

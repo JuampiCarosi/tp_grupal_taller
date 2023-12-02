@@ -7,7 +7,7 @@ use super::io;
 /// Dado un hash y una ruta, busca el archivo de ese hash en la ruta especificada
 /// y devuelve el contenido del objeto descomprimido.
 pub fn descomprimir_objeto(hash: &str, ruta: &str) -> Result<String, String> {
-    let ruta_objeto = format!("{}{}/{}", ruta.clone(), &hash[..2], &hash[2..]);
+    let ruta_objeto = format!("{}{}/{}", ruta, &hash[..2], &hash[2..]);
 
     let contenido_leido = io::leer_bytes(ruta_objeto)?;
     let contenido_descomprimido = descomprimir_contenido_u8(&contenido_leido)?;
@@ -124,7 +124,7 @@ pub fn comprimir_contenido(contenido: &str) -> Result<Vec<u8>, String> {
 
 /// Comprime el contenido en u8 de un objeto.
 /// Si el contenido no es valido, devuelve un error.
-pub fn comprimir_contenido_u8(contenido: &Vec<u8>) -> Result<Vec<u8>, String> {
+pub fn comprimir_contenido_u8(contenido: &[u8]) -> Result<Vec<u8>, String> {
     let mut compresor = ZlibEncoder::new(Vec::new(), Compression::default());
     if compresor.write_all(contenido).is_err() {
         return Err("No se pudo comprimir el contenido".to_string());

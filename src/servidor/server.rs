@@ -50,7 +50,7 @@ impl Servidor {
     pub fn manejar_cliente(
         comunicacion: &mut Comunicacion<TcpStream>,
         dir: &str,
-    ) -> Result<(), ErrorDeComunicacion> {
+    ) -> Result<(), String> {
         loop {
             let pedido = match comunicacion.aceptar_pedido()? {
                 RespuestaDePedido::Mensaje(mensaje) => mensaje,
@@ -65,7 +65,7 @@ impl Servidor {
         linea: &str,
         comunicacion: &mut Comunicacion<TcpStream>,
         dir: &str,
-    ) -> Result<(), ErrorDeComunicacion> {
+    ) -> Result<(), String> {
         let pedido: Vec<&str> = linea.split_whitespace().collect();
         let args: Vec<_> = pedido[1].split('\0').collect();
         let dir_repo = dir.to_string() + args[0];
@@ -85,7 +85,7 @@ impl Servidor {
             }
             "git-receive-pack" => {
                 println!("receive-pack recibido, ejecutando");
-                let path = PathBuf::from(dir_repo);
+                let path = PathBuf::from(&dir_repo);
 
                 if !path.exists() {
                     gir_io::crear_directorio(&path.join("refs/")).unwrap();
@@ -100,12 +100,9 @@ impl Servidor {
                 } else {
                     comunicacion.responder(refs).unwrap();
                 }
-                receive_pack(dir.to_string(), comunicacion)
+                receive_pack(dir_repo.to_string(), comunicacion)
             }
-            _ => Err(ErrorDeComunicacion::IoError(io::Error::new(
-                io::ErrorKind::NotFound,
-                "No existe el comando",
-            ))),
+            _ => Err("No existe el comando".to_string())
         }
     }
 
@@ -114,9 +111,8 @@ impl Servidor {
     fn obtener_refs_de(dir: PathBuf) -> Vec<String> {
         let mut refs: Vec<String> = Vec::new();
         let head_ref = gir_io::obtener_ref_head(dir.join("HEAD"));
-        match head_ref {
-            Ok(head) => refs.push(head),
-            Err(_) => {}
+        if let Ok(head) = head_ref {
+            refs.push(head)
         }
         gir_io::obtener_refs_con_largo_hex(
             &mut refs,

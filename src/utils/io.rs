@@ -10,7 +10,6 @@ use super::path_buf;
 //la idea es dejar de usar esta funcion, ->ya hay una mejor en objects
 pub fn obtener_objetos_del_directorio(dir: &str) -> Result<Vec<String>, String> {
     let dir_abierto = leer_directorio(&dir)?;
-
     let mut objetos: Vec<String> = Vec::new();
 
     for entrada in dir_abierto {
@@ -20,7 +19,6 @@ pub fn obtener_objetos_del_directorio(dir: &str) -> Result<Vec<String>, String> 
                     && entrada.file_name().to_string_lossy() != "info"
                     && entrada.file_name().to_string_lossy() != "pack"
                 {
-                    //que onda este if?? JUANI
                     if !entrada.path().to_string_lossy().contains("log.txt") {
                         objetos.append(&mut obtener_objetos_con_nombre_carpeta(entrada.path())?);
                     }
@@ -128,6 +126,7 @@ pub fn obtener_refs(refs_path: PathBuf, dir: &str) -> Result<Vec<String>, ErrorD
         return Ok(refs);
         // io::Error::new(io::ErrorKind::NotFound, "No existe el repositorio");
     }
+
     if refs_path.ends_with("HEAD") {
         refs.push(obtener_ref_head(refs_path.to_path_buf())?);
     } else {
@@ -174,7 +173,7 @@ pub fn esta_vacio(ubicacion: &str) -> bool {
     }
 }
 
-fn obtener_referencia(path: &mut PathBuf, prefijo: &str) -> Result<String, ErrorDeComunicacion> {
+fn obtener_referencia(path: &mut Path, prefijo: &str) -> Result<String, ErrorDeComunicacion> {
     let contenido = leer_archivo(path)?;
     // esto esta hardcodeado, hay que cambiar la forma de sacarle el prefijo
     let directorio_sin_prefijo = path.strip_prefix(prefijo).unwrap().to_path_buf();
@@ -372,7 +371,7 @@ pub fn obtener_archivos_faltantes(nombres_archivos: Vec<String>, dir: String) ->
 pub fn obtener_ack(nombres_archivos: Vec<String>, dir: &str) -> Vec<String> {
     let mut ack = Vec::new();
     for nombre in nombres_archivos {
-        let dir_archivo = format!("{}{}/{}", dir.clone(), &nombre[..2], &nombre[2..]);
+        let dir_archivo = format!("{}{}/{}", dir, &nombre[..2], &nombre[2..]);
         if PathBuf::from(dir_archivo.clone()).exists() {
             ack.push(obtener_linea_con_largo_hex(
                 ("ACK".to_string() + &nombre + "\n").as_str(),
@@ -412,4 +411,20 @@ pub fn obtener_diferencias_remote(referencias: Vec<String>, dir: String) -> Vec<
         }
     }
     diferencias
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::PathBuf;
+
+    use crate::utils::io::{escribir_bytes, leer_a_string, rm_directorio};
+
+    #[test]
+    fn test_escribir_archivo_pisa_contenido() {
+        let dir = PathBuf::from("tmp/test_escribir_archivo_pisa_contenido.txt");
+        escribir_bytes(&dir, "contenido 1").unwrap();
+        escribir_bytes(&dir, "contenido 2").unwrap();
+        assert_eq!(leer_a_string(&dir).unwrap(), "contenido 2");
+        rm_directorio(dir).unwrap();
+    }
 }

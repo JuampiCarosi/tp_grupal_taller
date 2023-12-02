@@ -240,26 +240,26 @@ mod tests {
     }
 
     #[test]
-    fn test03_pretty_print_tree_muestra_el_contenido_correcto() {
+    fn test04_pretty_print_tree_muestra_el_contenido_correcto() {
         let contenido = "40000 test_dir\0d1bd5884df89a9734e3b0a4e7721a4802d85cce8100644 test_file.txt\0678e12dc5c03a7cf6e9f64e688868962ab5d8b65".to_string();
         let pretty_print = conseguir_contenido_pretty("tree 109", &contenido).unwrap();
         assert_eq!(pretty_print, "040000 tree d1bd5884df89a9734e3b0a4e7721a4802d85cce8   test_dir\n100644 blob 678e12dc5c03a7cf6e9f64e688868962ab5d8b65   test_file.txt\n");
     }
 
     #[test]
-    fn test04_conseguir_tipo_tree_muestra_el_tipo_de_objeto_correcto() {
+    fn test05_conseguir_tipo_tree_muestra_el_tipo_de_objeto_correcto() {
         let tipo_objeto = conseguir_tipo_objeto("tree 109").unwrap();
         assert_eq!(tipo_objeto, "tree");
     }
 
     #[test]
-    fn test05_conseguir_tamanio_tree_muestra_el_tamanio_correcto() {
+    fn test06_conseguir_tamanio_tree_muestra_el_tamanio_correcto() {
         let tamanio = conseguir_tamanio("tree 109").unwrap();
         assert_eq!(tamanio, "109");
     }
 
     #[test]
-    fn test06_pretty_print_commit_muestra_el_contenido_correcto() {
+    fn test07_pretty_print_commit_muestra_el_contenido_correcto() {
         let contenido = "tree c475b36be7b222b7ff1469b44b15cdc0f754ef44\n
         parent b557332b86888546cecbe81933cf22adb1f3fed1\n
         author aaaa <bbbb> 1698535611 -0300\n
@@ -269,13 +269,13 @@ mod tests {
     }
 
     #[test]
-    fn test07_conseguir_tipo_commit_muestra_el_tipo_de_objeto_correcto() {
+    fn test08_conseguir_tipo_commit_muestra_el_tipo_de_objeto_correcto() {
         let tipo_objeto = conseguir_tipo_objeto("commit 109").unwrap();
         assert_eq!(tipo_objeto, "commit");
     }
 
     #[test]
-    fn test08_conseguir_tamanio_commit_muestra_el_tamanio_correcto() {
+    fn test09_conseguir_tamanio_commit_muestra_el_tamanio_correcto() {
         let tamanio = conseguir_tamanio("commit 29").unwrap();
         assert_eq!(tamanio, "29");
     }

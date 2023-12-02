@@ -22,7 +22,7 @@ pub fn render(builder: &gtk::Builder, _window: &gtk::Window, logger: Arc<Logger>
 
         let logger_clone = logger.clone();
         fetching_dialog.connect_focus_in_event(move |dialog, _| {
-            let mut push = match Push::new(logger_clone.clone()) {
+            let mut push = match Push::new(&mut Vec::new(), logger_clone.clone()) {
                 Ok(push) => push,
                 Err(err) => {
                     error_dialog::mostrar_error(&err);

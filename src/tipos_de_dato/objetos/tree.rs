@@ -1,4 +1,5 @@
 use std::{
+    collections::HashMap,
     fmt::{Display, Write},
     fs,
     num::ParseIntError,
@@ -10,7 +11,11 @@ use sha1::{Digest, Sha1};
 
 use crate::{
     tipos_de_dato::{
-        comando::Ejecutar, comandos::hash_object::HashObject, logger::Logger, objeto::Objeto,
+        comando::Ejecutar,
+        comandos::{cat_file, hash_object::HashObject, merge::Merge},
+        logger::Logger,
+        objeto::Objeto,
+        tipo_diff::TipoDiff,
     },
     utils::path_buf::{esta_directorio_habilitado, obtener_nombre},
     utils::{
@@ -69,7 +74,47 @@ impl Tree {
         objetos
     }
 
-    /// Escribe en el directorio actual los archivos que se encuentran en el arbol.
+    pub fn deep_changes(
+        &self,
+        arbol_a_comparar: &Tree,
+    ) -> Result<HashMap<String, Vec<(usize, TipoDiff)>>, String> {
+        let mut deep_diffs: HashMap<String, Vec<(usize, TipoDiff)>> = HashMap::new();
+
+        for objeto in &self.objetos {
+            for objeto_a_comparar in arbol_a_comparar.obtener_objetos() {
+                if objeto.obtener_path() == objeto_a_comparar.obtener_path() {
+                    if objeto.obtener_hash() == objeto_a_comparar.obtener_hash() {
+                        break;
+                    }
+                    match objeto_a_comparar {
+                        Objeto::Tree(ref tree_a_comparar) => {
+                            if let Objeto::Tree(tree) = objeto {
+                                let diff_hijos = tree.deep_changes(tree_a_comparar)?;
+                                deep_diffs.extend(diff_hijos);
+                            }
+                        }
+                        Objeto::Blob(blob_a_comparar) => {
+                            if let Objeto::Blob(blob) = objeto {
+                                let contenido_1 = cat_file::obtener_contenido_objeto(&blob.hash)?.1;
+                                let contenido_2 =
+                                    cat_file::obtener_contenido_objeto(&blob_a_comparar.hash)?.1;
+                                let diff = Merge::obtener_diff(
+                                    contenido_1.lines().collect(),
+                                    contenido_2.lines().collect(),
+                                );
+                                deep_diffs
+                                    .insert(blob.ubicacion.to_string_lossy().to_string(), diff);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(deep_diffs)
+    }
+
+    /// Escribe en el directorio actual los archivos que se encuentran en el arbol
     pub fn escribir_en_directorio(&self) -> Result<(), String> {
         let objetos = self.obtener_objetos_hoja();
         for objeto in objetos {
@@ -342,7 +387,7 @@ impl Tree {
     }
 
     /// Devuelve si el arbol contiene un hijo con el mismo directorio que el pasado por parametro.
-    pub fn contiene_directorio(&self, directorio: &PathBuf) -> bool {
+    pub fn contiene_directorio(&self, directorio: &Path) -> bool {
         for objeto in &self.objetos {
             match objeto {
                 Objeto::Blob(_) => {}
@@ -421,29 +466,6 @@ impl Tree {
         Ok(contenido_pretty.concat())
     }
 
-    /// Dado un vector de objetos, devuelve el contenido del arbol en un formato pretty print.
-    fn mostrar_contenido(objetos: &[Objeto]) -> Result<String, String> {
-        let mut output = String::new();
-
-        let objetos_ordenados = Self::ordenar_objetos_alfabeticamente(objetos);
-
-        for objeto in objetos_ordenados {
-            let line = match objeto {
-                Objeto::Blob(blob) => format!("100644 {}    {}\n", blob.nombre, blob.hash),
-                Objeto::Tree(tree) => {
-                    let name = match tree.directorio.file_name() {
-                        Some(name) => name,
-                        None => return Err("Error al obtener el nombre del directorio".to_string()),
-                    };
-                    let hash = tree.obtener_hash()?;
-                    format!("40000 {}    {}\n", name.to_string_lossy(), hash)
-                }
-            };
-            output.push_str(&line);
-        }
-        Ok(output)
-    }
-
     /// Devuelve si el arbol esta vacio.
     pub fn es_vacio(&self) -> bool {
         if self.objetos.is_empty() {
@@ -482,6 +504,29 @@ mod tests {
     use std::path::PathBuf;
     use std::sync::Arc;
 
+    /// Dado un vector de objetos, devuelve el contenido del arbol en un formato pretty print.
+    fn mostrar_contenido(objetos: &[Objeto]) -> Result<String, String> {
+        let mut output = String::new();
+
+        let objetos_ordenados = Tree::ordenar_objetos_alfabeticamente(objetos);
+
+        for objeto in objetos_ordenados {
+            let line = match objeto {
+                Objeto::Blob(blob) => format!("100644 {}    {}\n", blob.nombre, blob.hash),
+                Objeto::Tree(tree) => {
+                    let name = match tree.directorio.file_name() {
+                        Some(name) => name,
+                        None => return Err("Error al obtener el nombre del directorio".to_string()),
+                    };
+                    let hash = tree.obtener_hash()?;
+                    format!("40000 {}    {}\n", name.to_string_lossy(), hash)
+                }
+            };
+            output.push_str(&line);
+        }
+        Ok(output)
+    }
+
     #[test]
     fn test01_test_obtener_hash() {
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/tree_test01")).unwrap());
@@ -513,7 +558,7 @@ mod tests {
             Objeto::from_directorio(PathBuf::from("test_dir/objetos"), None, logger).unwrap();
 
         if let Objeto::Tree(tree) = objeto {
-            let contenido = Tree::mostrar_contenido(&tree.objetos).unwrap();
+            let contenido = mostrar_contenido(&tree.objetos).unwrap();
             assert_eq!(
                 contenido,
                 "100644 archivo.txt    2b824e648965b94c6c6b3dd0702feb91f699ed62\n"
@@ -530,7 +575,7 @@ mod tests {
         let objeto = Objeto::from_directorio(PathBuf::from("test_dir/"), None, logger).unwrap();
 
         if let Objeto::Tree(tree) = objeto {
-            let contenido = Tree::mostrar_contenido(&tree.objetos).unwrap();
+            let contenido = mostrar_contenido(&tree.objetos).unwrap();
             assert_eq!(
                 contenido,
                 "40000 muchos_objetos    896ca4eb090e033d16d4e9b1027216572ac3eaae\n40000 objetos    1442e275fd3a2e743f6bccf3b11ab27862157179\n"

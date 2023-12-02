@@ -104,12 +104,12 @@ impl Pull {
     }
 
     ///verifica si el remoto envio por el usario existe
-    fn verificar_remoto(remoto: &String) -> Result<String, String> {
+    fn verificar_remoto(remoto: &str) -> Result<String, String> {
         if let false = Config::leer_config()?.existe_remote(remoto) {
             return  Err(format!("Remoto desconocido{}\nSi quiere añadir un nuevo remoto:\n\ngir remote add [<nombre-remote>] [<url-remote>]\n\n", remoto));
         };
 
-        Ok(remoto.clone())
+        Ok(remoto.to_string())
     }
 
     ///obtiene el remoto  y la rama merge asosiado a la rama remota actual. Falla si no existe
@@ -161,7 +161,7 @@ impl Pull {
         Ok(())
     }
 
-    fn verificar_rama_mergear(&self, rama_a_mergar: &String) -> Result<(), String> {
+    fn verificar_rama_mergear(&self, rama_a_mergar: &str) -> Result<(), String> {
         if !utils::ramas::existe_la_rama_remota(rama_a_mergar) {
             return Err(format!(
                 "Fallo en la operacion de merge, no exise la rama remota {}",

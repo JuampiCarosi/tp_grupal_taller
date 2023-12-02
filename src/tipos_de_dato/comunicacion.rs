@@ -33,12 +33,14 @@ impl<T: Write + Read> Comunicacion<T> {
         direccion_servidor: &str,
         logger: Arc<Logger>,
     ) -> Result<Comunicacion<TcpStream>, String> {
+        let partes: Vec<&str> = direccion_servidor.split('/').collect();
+        let ip_puerto = partes[0];
+        let repositorio = "/".to_string() + partes[1] + "/";
         let flujo = Mutex::new(
-            TcpStream::connect(direccion_servidor)
-                .map_err(|e| format!("Fallo en en la conecciion con el servido.\n{}\n", e))?,
+            TcpStream::connect(ip_puerto)
+                .map_err(|e| format!("Fallo en en la conecciion con el servidor.\n{}\n", e))?,
         );
-        let repositorio = "/gir/".to_string();
-
+        // let repositorio = "/gir/".to_string();
         Ok(Comunicacion {
             flujo,
             repositorio,
@@ -56,7 +58,7 @@ impl<T: Write + Read> Comunicacion<T> {
 
         let flujo = Mutex::new(
             TcpStream::connect(ip_puerto)
-                .map_err(|e| format!("Fallo en en la conecciion con el servido.\n{}\n", e))?,
+                .map_err(|e| format!("Fallo en en la coneccion con el servidor.\n{}\n", e))?,
         );
 
         Ok(Comunicacion {
@@ -87,10 +89,14 @@ impl<T: Write + Read> Comunicacion<T> {
     }
 
     pub fn enviar(&self, mensaje: &str) -> Result<(), String> {
+        self.enviar_bytes(mensaje.as_bytes())
+    }
+
+    pub fn enviar_bytes(&self, mensaje: &[u8]) -> Result<(), String> {
         self.flujo
             .lock()
             .map_err(|e| format!("Fallo en el envio del mensaje.\n{}\n", e))?
-            .write_all(mensaje.as_bytes())
+            .write_all(mensaje)
             .map_err(|e| format!("Fallo en el envio del mensaje.\n{}\n", e))
     }
 
@@ -110,31 +116,53 @@ impl<T: Write + Read> Comunicacion<T> {
             "{} {}\0host={}\0\0version={}\0",
             comando, repositorio, host, numero_de_version
         );
-        let payload = io::obtener_linea_con_largo_hex(&mensaje);
-        self.enviar(&payload)?;
+        let pedido = io::obtener_linea_con_largo_hex(&mensaje);
+        self.enviar(&pedido)?;
         Ok(())
     }
 
-    pub fn aceptar_pedido(&self) -> Result<RespuestaDePedido, ErrorDeComunicacion> {
+    ///Inicia el comando git upload pack con el servidor, mandole al servidor el siguiente mensaje
+    /// en formato:
+    ///
+    /// - ''git-upload-pack 'directorio'\0host='host'\0\0verision='numero de version'\0''
+    ///
+    pub fn iniciar_git_recive_pack_con_servidor(&self) -> Result<(), String> {
+        self.logger
+            .log("Iniciando git receive pack con el servidor");
+        let comando = "git-receive-pack";
+        let repositorio = &self.repositorio;
+        let host = "gir.com";
+        let numero_de_version = 1;
+
+        let mensaje = format!(
+            "{} {}\0host={}\0\0version={}\0",
+            comando, repositorio, host, numero_de_version
+        );
+        let pedido = io::obtener_linea_con_largo_hex(&mensaje);
+        self.enviar(&pedido)?;
+        Ok(())
+    }
+
+    pub fn aceptar_pedido(&self) -> Result<RespuestaDePedido, String> {
         // lee primera parte, 4 bytes en hexadecimal indican el largo del stream
 
         let mut tamanio_bytes = [0; 4];
-        self.flujo.lock().unwrap().read(&mut tamanio_bytes)?;
+        self.flujo.lock().unwrap().read(&mut tamanio_bytes).map_err(|e| e.to_string())?;
         // largo de bytes a str
         if tamanio_bytes == [0, 0, 0, 0] {
             return Ok(RespuestaDePedido::Terminate);
         }
 
-        let tamanio_str = str::from_utf8(&tamanio_bytes)?;
+        let tamanio_str = str::from_utf8(&tamanio_bytes).map_err(|e| e.to_string())?;
         // transforma str a u32
-        let tamanio = u32::from_str_radix(tamanio_str, 16).unwrap();
+        let tamanio = u32::from_str_radix(tamanio_str, 16).map_err(|e| e.to_string())?;
         if tamanio == 0 {
             return Ok(RespuestaDePedido::Mensaje('\0'.to_string()));
         }
         // lee el resto del flujo
         let mut data = vec![0; (tamanio - 4) as usize];
-        self.flujo.lock().unwrap().read_exact(&mut data)?;
-        let linea = str::from_utf8(&data)?;
+        self.flujo.lock().unwrap().read_exact(&mut data).map_err(|e| e.to_string())?;
+        let linea = str::from_utf8(&data).map_err(|e| e.to_string())?;
         // if linea.contains("done") {
         // self.aceptar_pedido()?;
         // }
@@ -256,13 +284,11 @@ impl<T: Write + Read> Comunicacion<T> {
         Ok(())
     }
 
-    pub fn responder_con_bytes(&self, lineas: Vec<u8>) -> Result<(), ErrorDeComunicacion> {
-        self.flujo.lock().unwrap().write_all(&lineas)?;
+    //envia el pack file junto con el flush pkt
+    pub fn enviar_pack_file(&self, lineas: Vec<u8>) -> Result<(), String> {
+        self.enviar_bytes(&lineas)?;
         if !lineas.starts_with(b"PACK") {
-            self.flujo
-                .lock()
-                .unwrap()
-                .write_all(String::from("0000").as_bytes())?;
+            self.enviar_flush_pkt()?;
         }
         Ok(())
     }
@@ -351,7 +377,7 @@ impl<T: Write + Read> Comunicacion<T> {
     }
 
     ///Le añade las capadcidades al primer objeto para cumplir con el protocolo
-    fn anadir_capacidades_primer_pedido(&self, pedidos: &mut Vec<String>, capacidades: String) {
+    fn anadir_capacidades_primer_pedido(&self, pedidos: &mut [String], capacidades: String) {
         pedidos[0].push_str(&(" ".to_string() + &capacidades));
     }
     ///recibi el hash de un commit y le da el formato correcto para hacer el want
@@ -396,7 +422,7 @@ impl<T: Write + Read> Comunicacion<T> {
     }
 
     ///recibi el hash de un objeto y le da el formato correcto para hacer el have
-    fn dar_formato_have(&self, hash_commit: &String) -> String {
+    fn dar_formato_have(&self, hash_commit: &str) -> String {
         io::obtener_linea_con_largo_hex(&("have ".to_string() + hash_commit + "\n"))
     }
 }
