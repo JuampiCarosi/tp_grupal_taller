@@ -13,6 +13,7 @@ use super::{fetch::Fetch, merge::Merge, set_upstream::SetUpstream};
 
 const UBICACION_RAMA_MASTER: &str = "./.gir/refs/heads/master";
 const GIR_PULL: &str = "gir pull <remoto> <rama>";
+const GIR_PULL_U: &str = "gir pull -u <remoto> <rama-remota>";
 const FLAG_SET_UPSTREAM: &str = "--set-upstream";
 const FLAG_U: &str = "-u";
 
@@ -122,6 +123,16 @@ impl Pull {
     }
 
     pub fn ejecutar(&self) -> Result<String, String> {
+        Fetch::<TcpStream>::new(vec![self.remoto.clone()], self.logger.clone())?.ejecutar()?;
+
+        let commit_head_remoto = self.obtener_head_remoto()?;
+
+        if io::esta_vacio(UBICACION_RAMA_MASTER.to_string()) {
+            self.fast_forward_de_cero(commit_head_remoto)?;
+        } else {
+            self.mergear_rama()?;
+        }
+
         if self.set_upstream {
             SetUpstream::new(
                 self.remoto.clone(),
@@ -131,18 +142,6 @@ impl Pull {
             )?
             .ejecutar()?;
         }
-
-        Fetch::<TcpStream>::new(vec![self.remoto.clone()], self.logger.clone())?.ejecutar()?;
-
-        println!("Llego aca del pull\n");
-        let commit_head_remoto = self.obtener_head_remoto()?;
-
-        if io::esta_vacio(UBICACION_RAMA_MASTER.to_string()) {
-            self.fast_forward_de_cero(commit_head_remoto)?;
-        } else {
-            self.mergear_rama()?;
-        }
-
         let mensaje = "Pull ejecutado con exito".to_string();
         self.logger.log(&mensaje);
         Ok(mensaje)

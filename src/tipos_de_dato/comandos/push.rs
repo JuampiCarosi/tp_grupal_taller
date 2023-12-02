@@ -94,7 +94,6 @@ impl Push {
         let remoto;
         let referencia;
 
-        // CAMBIAR POR UN MATCH
         if args.len() == 2 {
             remoto = Self::verificar_remoto(&args[0])?;
             referencia = Self::obtener_y_verificar_referencia(args.remove(1))?;

@@ -65,7 +65,7 @@ pub fn convertir_de_dir_rama_remota_a_dir_rama_local(
 ///
 /// ## Argumentos
 /// - rama_remota: semi path a la rama remota(Ej: origin/aaaa)
-pub fn existe_la_rama_remota(rama_remota: &String) -> bool {
+pub fn existe_la_rama_remota(rama_remota: &str) -> bool {
     let dir_rama_remota = PathBuf::from(format!("./.gir/refs/remotes/{}", rama_remota));
 
     dir_rama_remota.exists()
