@@ -28,8 +28,9 @@ impl Servidor {
             let logge_clone = self.logger.clone();
 
             let handle = thread::spawn(move || -> Result<(), String>{
+                let stream_clonado = stream.try_clone().map_err(|e| e.to_string())?;
                 let mut comunicacion =
-                    Comunicacion::new_para_testing(stream.try_clone().unwrap(), logge_clone);
+                    Comunicacion::new_para_testing(stream_clonado, logge_clone);
                 Self::manejar_cliente(
                     &mut comunicacion,
                     &(env!("CARGO_MANIFEST_DIR").to_string() + DIR),
@@ -64,8 +65,7 @@ impl Servidor {
         comunicacion
             .enviar_linea(&gir_io::obtener_linea_con_largo_hex(
                 &(VERSION.to_string() + "\n"),
-            ))
-            .unwrap();
+            ))?;
         let pedido = &pedido[0];
         Ok((pedido.to_owned(), dir_repo))
     }
@@ -82,8 +82,8 @@ impl Servidor {
         match pedido.as_str() {
             "git-upload-pack" => {
                 println!("upload-pack recibido, ejecutando");
-                refs = server_utils::obtener_refs_de(PathBuf::from(&dir_repo));
-                comunicacion.responder(refs).unwrap();
+                refs = server_utils::obtener_refs_de(PathBuf::from(&dir_repo))?;
+                comunicacion.responder(refs)?;
                 upload_pack(dir_repo, comunicacion)
             }
             "git-receive-pack" => {
@@ -91,68 +91,52 @@ impl Servidor {
                 let path = PathBuf::from(&dir_repo);
 
                 if !path.exists() {
-                    gir_io::crear_directorio(&path.join("refs/")).unwrap();
-                    gir_io::crear_directorio(&path.join("refs/heads/")).unwrap();
-                    gir_io::crear_directorio(&path.join("refs/tags/")).unwrap();
+                    gir_io::crear_directorio(&path.join("refs/"))?;
+                    gir_io::crear_directorio(&path.join("refs/heads/"))?;
+                    gir_io::crear_directorio(&path.join("refs/tags/"))?;
                 }
-                refs = server_utils::obtener_refs_de(path);
+                refs = server_utils::obtener_refs_de(path)?;
                 if refs.is_empty() {
                     comunicacion
-                        .responder(vec![server_utils::agregar_capacidades("0".repeat(40))])
-                        .unwrap();
+                        .responder(vec![server_utils::agregar_capacidades("0".repeat(40))])?;
                 } else {
-                    comunicacion.responder(refs).unwrap();
+                    comunicacion.responder(refs)?;
                 }
                 receive_pack(dir_repo.to_string(), comunicacion)
             }
             _ => Err("No existe el comando".to_string())
         }
     }
-
     
 }
 
 
-impl Drop for Servidor {
-    fn drop(&mut self) {
-        for thread in self.threads.drain(..) {
-            if let Some(thread) = thread {
-                if let Err(e) = thread.join() {
-                    println!("Error en el thread: {:?}", e);
-                }
-            }
-        }
-        println!("Servidor cerrado");
-    }
-}
-
 // -------------- utils del server -------------- 
 mod server_utils { 
     use super::*;
-    pub fn obtener_refs_de(dir: PathBuf) -> Vec<String> {
+    pub fn obtener_refs_de(dir: PathBuf) -> Result<Vec<String>, String>{
         let mut refs: Vec<String> = Vec::new();
         let head_ref = gir_io::obtener_ref_head(dir.join("HEAD"));
         if let Ok(head) = head_ref {
             refs.push(head)
         }
+        let dir_str = dir.to_str().ok_or("No se pudo convertir el path a string")?;
         gir_io::obtener_refs_con_largo_hex(
             &mut refs,
             dir.join("refs/heads/"),
-            dir.to_str().unwrap(),
-        )
-        .unwrap();
+            dir_str,
+        )?;
         gir_io::obtener_refs_con_largo_hex(
             &mut refs,
             dir.join("refs/tags/"),
-            dir.to_str().unwrap(),
-        )
-        .unwrap();
+            dir_str,
+        )?;
         if !refs.is_empty() {
             let ref_con_cap = agregar_capacidades(refs[0].clone());
             refs.remove(0);
             refs.insert(0, ref_con_cap);
         }
-        refs
+        Ok(refs)
     }
 
 
@@ -172,6 +156,19 @@ mod server_utils {
         let mut referencia_con_capacidades = referencia_con_capacidades.trim_end().to_string();
         referencia_con_capacidades.push('\n');
         gir_io::obtener_linea_con_largo_hex(&referencia_con_capacidades)
+    }
+}
+
+impl Drop for Servidor {
+    fn drop(&mut self) {
+        for thread in self.threads.drain(..) {
+            if let Some(thread) = thread {
+                if let Err(e) = thread.join() {
+                    println!("Error en el thread: {:?}", e);
+                }
+            }
+        }
+        println!("Servidor cerrado");
     }
 }
 
