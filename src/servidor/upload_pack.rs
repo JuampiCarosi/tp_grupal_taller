@@ -18,9 +18,8 @@ pub fn upload_pack(
     // ------- CLONE --------
     // a partir de aca se asume que va a ser un clone porque es el caso mas sencillo, despues cambiar
     let lineas_siguientes = comunicacion.obtener_lineas()?;
-    // println!("Lineas siguientes: {:?}", lineas_siguientes);
     if lineas_siguientes[0].clone().contains("done") {
-        comunicacion.responder(vec![git_io::obtener_linea_con_largo_hex("NAK\n")]).unwrap(); // respondo NAK
+        comunicacion.responder(vec![git_io::obtener_linea_con_largo_hex("NAK\n")])?; // respondo NAK
                                                                                      // let want_obj_ids = utilidades_strings::eliminar_prefijos(&mut wants, "want");
                                                                                      // println!("want_obj_ids: {:?}", want_obj_ids);
         let packfile =
@@ -37,14 +36,14 @@ pub fn upload_pack(
     // let have_obj_ids = utilidades_strings::eliminar_prefijos(&mut lineas_siguientes, "have");
     let respuesta_acks_nak =
         git_io::obtener_ack(have_objs_ids.clone(), &(dir.clone() + "objects/"));
-    comunicacion.responder(respuesta_acks_nak).unwrap();
-    let _ultimo_done = comunicacion.obtener_lineas().unwrap();
+    comunicacion.responder(respuesta_acks_nak)?;
+    let _ultimo_done = comunicacion.obtener_lineas()?;
     let faltantes = git_io::obtener_archivos_faltantes(have_objs_ids, dir.clone());
     // obtener un packfile de los faltantes...
     let packfile =
         packfile::Packfile::obtener_pack_con_archivos(faltantes, &(dir.clone() + "objects/"))?;
 
-    comunicacion.enviar_pack_file(packfile).unwrap();
+    comunicacion.enviar_pack_file(packfile)?;
     println!("Upload pack ejecutado con exito");
     Ok(())
 }

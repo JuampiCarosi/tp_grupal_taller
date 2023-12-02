@@ -8,8 +8,8 @@ pub fn receive_pack(
     comunicacion: &mut Comunicacion<TcpStream>,
 ) -> Result<(), String> {
     println!("Se ejecuto el comando receive-pack");
-    let actualizaciones = comunicacion.obtener_lineas().unwrap();
-    let mut packfile = comunicacion.obtener_packfile().unwrap();
+    let actualizaciones = comunicacion.obtener_lineas()?;
+    let mut packfile = comunicacion.obtener_packfile()?;
 
     Packfile::leer_packfile_y_escribir(&mut packfile, dir.clone() + "objects/")?;
 
@@ -20,7 +20,7 @@ pub fn receive_pack(
         let nueva_ref = partes.next().unwrap_or("");
         let referencia = partes.next().unwrap_or("");
         if nueva_ref != vieja_ref {
-            io::escribir_bytes(dir.clone() + referencia, nueva_ref).unwrap();
+            io::escribir_bytes(dir.clone() + referencia, nueva_ref)?;
         }
     }
     println!("Receive pack ejecutado con exito");
