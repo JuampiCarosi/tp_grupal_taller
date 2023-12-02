@@ -35,10 +35,12 @@ fn boton_confimar_dialog(builder: &gtk::Builder, window: &gtk::Window, logger: A
     let builder_clone = builder.clone();
     let window_clone = window.clone();
     confirm.connect_clicked(move |_| {
-        let mut commit = match Commit::from(
-            &mut vec!["-m".to_string(), input.text().to_string()],
-            logger.clone(),
-        ) {
+        let mut args = match input.text().as_str() {
+            "" => vec![],
+            input_str => vec!["-m".to_string(), input_str.to_string()],
+        };
+
+        let mut commit = match Commit::from(&mut args, logger.clone()) {
             Ok(commit) => commit,
             Err(err) => {
                 error_dialog::mostrar_error(&err);

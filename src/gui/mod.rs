@@ -6,10 +6,12 @@ mod conflicts_modal;
 mod error_dialog;
 mod log_list;
 mod log_seleccionado;
+mod merge_button;
 mod new_branch_dialog;
 mod new_commit_dialog;
 mod pull_button;
 mod push_button;
+mod rebase_button;
 mod refresh;
 mod staging_area;
 
@@ -39,7 +41,9 @@ fn hidratar_componentes(
     error_dialog::setup(builder);
     pull_button::render(builder, window, logger.clone(), branch_actual.to_string());
     conflicts_modal::render(builder, logger.clone());
-    refresh::render(builder, window, logger.clone(), branch_actual.to_string());
+    refresh::render(builder, window, logger.clone());
+    merge_button::render(builder, logger.clone());
+    rebase_button::render(builder, logger.clone());
 }
 
 pub fn estilos(screen: gdk::Screen) {

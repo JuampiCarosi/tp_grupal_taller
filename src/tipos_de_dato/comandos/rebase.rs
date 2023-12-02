@@ -276,8 +276,10 @@ impl Rebase {
         self.rebasear_commits(commits_restantes)?;
         Ok("Rebase terminado con extito".to_string())
     }
+}
 
-    pub fn ejecutar(&self) -> Result<String, String> {
+impl Ejecutar for Rebase {
+    fn ejecutar(&mut self) -> Result<String, String> {
         if self.abort {
             return self.abortar();
         }
