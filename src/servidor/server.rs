@@ -95,12 +95,12 @@ impl Servidor {
                     gir_io::crear_directorio(&path.join("refs/tags/"))?;
                 }
                 refs = server_utils::obtener_refs_de(path)?;
-                if refs.is_empty() {
-                    comunicacion
-                        .responder(vec![server_utils::agregar_capacidades("0".repeat(40))])?;
-                } else {
-                    comunicacion.responder(refs)?;
-                }
+                // if refs.is_empty() {
+                //     comunicacion
+                //         .responder(vec![server_utils::agregar_capacidades("0".repeat(40))])?;
+                // } else {
+                comunicacion.responder(refs)?;
+                // }
                 receive_pack(dir_repo.to_string(), comunicacion)
             }
             _ => Err("No existe el comando".to_string())
@@ -137,6 +137,8 @@ mod server_utils {
             let ref_con_cap = agregar_capacidades(refs[0].clone());
             refs.remove(0);
             refs.insert(0, ref_con_cap);
+        } else {
+            refs.push(agregar_capacidades("0".repeat(40)));
         }
         Ok(refs)
     }
@@ -174,12 +176,33 @@ impl Drop for Servidor {
 }
 
 
-// #[cfg(test)]
-// mod tests { 
-//     use super::*;
-    
-//     #[test]
-//     fn test01() { 
+#[cfg(test)]
+mod tests { 
+    use super::*;
 
-//     }
-// }
+    #[test]
+    fn test01_agregar_capacidades() { 
+        let referencia = "0".repeat(40);
+        let referencia_con_capacidades = server_utils::agregar_capacidades(referencia);
+        println!("{}", referencia_con_capacidades);
+        assert_eq!(referencia_con_capacidades, gir_io::obtener_linea_con_largo_hex(&("0".repeat(40).to_string() + "\0" + CAPABILITIES + "\n"))); 
+    }
+
+        
+    #[test]
+    fn test02_obtener_refs_con_ref_vacia_devuelve_ref_nula() { 
+        let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR").to_string() + "/server_test_dir/test02/.gir/");
+        let refs = server_utils::obtener_refs_de(dir).unwrap();
+        println!("{:?}", refs);
+        assert_eq!(refs[0], gir_io::obtener_linea_con_largo_hex(&("0".repeat(40).to_string() + "\0" + CAPABILITIES + "\n")));
+    }
+
+    #[test]
+    fn test03_obtener_refs_con_ref_head_devuelve_ref_head() { 
+        let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR").to_string() + "/server_test_dir/test03/.gir/");
+        let refs = server_utils::obtener_refs_de(dir).unwrap();
+        println!("{:?}", refs);
+        assert_eq!(refs[0], gir_io::obtener_linea_con_largo_hex(&("4163eb28ec61fd1d0c17cf9b77f4c17e1e338b0b".to_string()+ " HEAD\0" + CAPABILITIES + "\n")));
+
+    }
+}
