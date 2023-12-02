@@ -1,3 +1,4 @@
+pub mod branch_dialog;
 mod branch_selector;
 mod clone_dialog;
 mod comando_gui;

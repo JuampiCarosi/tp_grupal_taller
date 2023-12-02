@@ -451,14 +451,16 @@ impl Merge {
         }
         Ok(())
     }
+}
 
-    pub fn ejecutar(&self) -> Result<String, String> {
+impl Ejecutar for Merge {
+    fn ejecutar(&mut self) -> Result<String, String> {
         self.logger.log("Ejecutando comando merge");
 
         if Self::hay_merge_en_curso()? {
             return Err("Ya hay un merge en curso".to_string());
         }
-        //
+
         let commit_actual = Commit::obtener_hash_del_padre_del_commit()?;
         let commit_a_mergear = Self::obtener_commit_de_branch(&self.branch_a_mergear)?;
         let commit_base = self.obtener_commit_base_entre_dos_branches()?;
