@@ -20,6 +20,8 @@ pub fn obtener_tags() -> Result<Vec<String>, String> {
     Ok(tags)
 }
 
-pub fn existe_tag(tag: &String) -> bool {
-    obtener_tags().unwrap_or_default().contains(tag)
+pub fn existe_tag(tag: &str) -> bool {
+    obtener_tags()
+        .unwrap_or_default()
+        .contains(&tag.to_string())
 }

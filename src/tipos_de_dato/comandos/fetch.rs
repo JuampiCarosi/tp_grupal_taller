@@ -381,7 +381,10 @@ mod test {
         sync::Arc,
     };
 
-    use crate::tipos_de_dato::{comunicacion::Comunicacion, logger::Logger};
+    use crate::{
+        tipos_de_dato::{comunicacion::Comunicacion, logger::Logger},
+        utils,
+    };
 
     use super::Fetch;
 
@@ -531,14 +534,19 @@ mod test {
 
     #[test]
     fn test_03_los_tags_se_gurdan_correctamtene() {
+        let tag_1 = "v0.9".to_string();
+        let tag_1_contenido = "b88d2441cac0977faf98efc80305012112238d9d".to_string();
+        let tag_2 = "v1.0".to_string();
+        let tag_2_contenido = "525128480b96c89e6418b1e40909bf6c5b2d580f".to_string();
+
         let commits_y_tags = vec![
             (
-                "b88d2441cac0977faf98efc80305012112238d9d".to_string(),
-                PathBuf::from("refs/tags/v0.9"),
+                tag_1_contenido.clone(),
+                PathBuf::from(format!("refs/tags/{}", tag_1)),
             ),
             (
-                "525128480b96c89e6418b1e40909bf6c5b2d580f".to_string(),
-                PathBuf::from("refs/tags/v1.0"),
+                tag_2_contenido.clone(),
+                PathBuf::from(format!("refs/tags/{}", tag_2)),
             ),
         ];
 
@@ -546,13 +554,23 @@ mod test {
             lectura_data: Vec::new(),
             escritura_data: Vec::new(),
         };
-        let logger = Arc::new(Logger::new(PathBuf::from("tmp/fetch_02.txt")).unwrap());
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/fetch_03.txt")).unwrap());
 
         let comunicacion = Comunicacion::new_para_testing(mock, logger.clone());
         Fetch::new_testing(logger, comunicacion.into())
             .unwrap()
             .guardar_los_tags(&commits_y_tags)
             .unwrap();
+
+        assert!(utils::tags::existe_tag(&tag_1));
+        let tag_1_contenido_obtenido =
+            utils::io::leer_a_string(format!("./.gir/refs/tags/{}", tag_1)).unwrap();
+        assert_eq!(tag_1_contenido_obtenido, tag_1_contenido);
+
+        assert!(utils::tags::existe_tag(&tag_2));
+        let tag_2_contenido_obtenido =
+            utils::io::leer_a_string(format!("./.gir/refs/tags/{}", tag_2)).unwrap();
+        assert_eq!(tag_2_contenido_obtenido, tag_2_contenido);
     }
     // #[test]
     // fn test03_la_fase_de_negociacion_funciona(){
