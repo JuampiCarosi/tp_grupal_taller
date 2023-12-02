@@ -2,7 +2,7 @@ use std::{path::PathBuf, sync::Arc};
 
 use crate::{
     tipos_de_dato::logger::Logger,
-    utils::{self, io},
+    utils::{self, io, path_buf::esta_directorio_habilitado},
 };
 
 pub struct CheckIgnore {
@@ -15,6 +15,10 @@ impl CheckIgnore {
         ubicacion: &PathBuf,
         logger: Arc<Logger>,
     ) -> Result<bool, String> {
+        if esta_directorio_habilitado(&ubicacion, &vec![PathBuf::from(".gir")]) {
+            return Ok(true);
+        }
+
         let path = ubicacion
             .to_str()
             .ok_or_else(|| "Path invalido".to_string())?;
