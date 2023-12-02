@@ -280,7 +280,7 @@
                 <property name="margin-bottom">6</property>
                 <property name="spacing">2</property>
                 <child>
-                  <object class="GtkButton">
+                  <object class="GtkButton" id="marcar-resuelto">
                     <property name="label" translatable="yes">Marcar como resuelto</property>
                     <property name="visible">True</property>
                     <property name="can-focus">True</property>
@@ -753,7 +753,6 @@
               </packing>
             </child>
             <style>
-              <class name="GtkHeaderBar"/>
               <class name="header"/>
             </style>
           </object>
@@ -768,6 +767,7 @@
             <property name="visible">True</property>
             <property name="can-focus">False</property>
             <property name="margin-top">16</property>
+            <property name="spacing">10</property>
             <child>
               <object class="GtkBox">
                 <property name="visible">True</property>
@@ -798,7 +798,6 @@
                     <property name="visible">True</property>
                     <property name="can-focus">False</property>
                     <property name="orientation">vertical</property>
-                    <property name="spacing">4</property>
                     <child>
                       <placeholder/>
                     </child>
