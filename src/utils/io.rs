@@ -364,7 +364,7 @@ pub fn obtener_ack(nombres_archivos: Vec<String>, dir: &str) -> Vec<String> {
         let dir_archivo = format!("{}{}/{}", dir, &nombre[..2], &nombre[2..]);
         if PathBuf::from(dir_archivo.clone()).exists() {
             ack.push(obtener_linea_con_largo_hex(
-                ("ACK".to_string() + &nombre + "\n").as_str(),
+                ("ACK ".to_string() + &nombre + "\n").as_str(),
             ));
             break;
         }

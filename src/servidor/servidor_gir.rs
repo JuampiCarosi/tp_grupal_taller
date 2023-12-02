@@ -15,7 +15,5 @@ fn main() -> Result<(), String> {
     let mut servidor = Servidor::new(&address, logger).map_err(|e| e.to_string())?;
     servidor.iniciar_servidor()?;
 
-    // let mut sv = Servidor::new(&address).unwrap();
-    // sv.server_run().unwrap();
     Ok(())
 }
