@@ -6,9 +6,7 @@ use crate::tipos_de_dato::logger::Logger;
 
 use crate::tipos_de_dato::comandos::checkout::Checkout;
 use crate::tipos_de_dato::objetos::commit::CommitObj;
-use crate::utils::io;
-
-use super::commit::Commit;
+use crate::utils::{io, ramas};
 
 pub struct Log {
     /// Rama de la cual se quiere obtener el log.
@@ -34,7 +32,7 @@ impl Log {
                     return Err(format!("La rama {} no existe", branch));
                 }
             }
-            None => Commit::obtener_branch_actual()
+            None => ramas::obtener_rama_actual()
                 .map_err(|e| format!("No se pudo obtener la rama actual\n{}", e))?,
         };
         Ok(Log { branch, logger })

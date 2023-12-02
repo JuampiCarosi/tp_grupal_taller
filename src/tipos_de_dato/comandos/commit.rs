@@ -1,7 +1,6 @@
 use std::{path, sync::Arc};
 
 use chrono::TimeZone;
-use sha1::{Digest, Sha1};
 
 use crate::{
     tipos_de_dato::logger::Logger,
@@ -9,11 +8,11 @@ use crate::{
         compresion::comprimir_contenido,
         gir_config::{armar_config_con_mail_y_nombre, conseguir_nombre_y_mail_del_config},
         index::limpiar_archivo_index,
-        io,
+        io, ramas,
     },
 };
 
-use super::{merge::Merge, write_tree};
+use super::{hash_object::HashObject, merge::Merge, write_tree};
 
 pub struct Commit {
     /// Logger para imprimir mensajes en el archivo log.
@@ -79,15 +78,6 @@ impl Commit {
         Ok(Commit { mensaje, logger })
     }
 
-    /// Hashea el contenido del objeto.
-    /// Devuelve un hash de 40 caracteres en formato hexadecimal.
-    fn hashear_contenido_objeto(&self, contenido: &str) -> String {
-        let mut hasher = Sha1::new();
-        hasher.update(contenido);
-        let hash = hasher.finalize();
-        format!("{:x}", hash)
-    }
-
     /// Formatea el contenido del commit.
     /// Devuelve el contenido del commit en formato git.
     /// Toma el nombre y mail del archivo de configuracion.
@@ -139,36 +129,10 @@ impl Commit {
         Ok(())
     }
 
-    /// Obtiene el nombre del branch actual, la cual esta indicada en el archivo HEAD.
-    pub fn obtener_branch_actual() -> Result<String, String> {
-        let ruta_branch = io::leer_a_string(path::Path::new(".gir/HEAD"))?;
-        let branch = ruta_branch
-            .split('/')
-            .last()
-            .ok_or_else(|| "No se pudo obtener el nombre del branch".to_string())?;
-        Ok(branch.to_string())
-    }
-
-    /// Obtiene la ruta del archivo que contiene el hash del commit al que apunta el branch actual.
-    pub fn obtener_ruta_branch_commit() -> Result<String, String> {
-        let branch = Self::obtener_branch_actual()?;
-        let ruta = format!(".gir/refs/heads/{}", branch);
-        Ok(ruta)
-    }
-
-    /// Obtiene el hash del commit al que apunta el branch actual.
-    /// En caso de no poder obtener el hash devuelve un string vacio. Esto puede ocurrir si es el primer commit.
-    pub fn obtener_hash_commit_actual() -> Result<String, String> {
-        let ruta = Self::obtener_ruta_branch_commit()?;
-        let padre_commit =
-            io::leer_a_string(path::Path::new(&ruta)).unwrap_or_else(|_| "".to_string());
-        Ok(padre_commit)
-    }
-
     /// Actualiza el archivo head/ref de la branch actual con el hash del commit creado.
     /// En caso de no poder abrir o escribir en el archivo devuelve un error.
     fn updatear_ref_head(&self, hash: &str) -> Result<(), String> {
-        let ruta = Self::obtener_ruta_branch_commit()?;
+        let ruta = format!("{}", ramas::obtener_gir_dir_rama_actual()?.display());
         io::escribir_bytes(ruta, hash)?;
         Ok(())
     }
@@ -177,7 +141,7 @@ impl Commit {
     /// Devuelve un mensaje indicando si se pudo crear el commit o no.
     fn ejecutar_wrapper(&self, contenido_total: &str) -> Result<(), String> {
         let contenido_comprimido = comprimir_contenido(contenido_total)?;
-        let hash = self.hashear_contenido_objeto(contenido_total);
+        let hash = HashObject::hashear_contenido_objeto(&contenido_total.as_bytes().to_vec());
         Self::updatear_ref_head(self, &hash)?;
         Self::escribir_objeto_commit(&hash, contenido_comprimido)?;
         self.logger.log(&format!(
@@ -192,7 +156,7 @@ impl Commit {
     /// Utiliza un ejecutar wrapper para que en caso de error limpiar los archivos creados.
     pub fn ejecutar(&self) -> Result<String, String> {
         armar_config_con_mail_y_nombre()?;
-        let hash_padre_commit = Self::obtener_hash_commit_actual()?;
+        let hash_padre_commit = ramas::obtener_hash_commit_asociado_rama_actual()?;
         let (hash_arbol, contenido_total) = self.crear_contenido_commit(&hash_padre_commit)?;
         match self.ejecutar_wrapper(&contenido_total) {
             Ok(_) => (),

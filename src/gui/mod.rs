@@ -14,8 +14,8 @@ mod staging_area;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use crate::tipos_de_dato::comandos::commit::Commit;
 use crate::tipos_de_dato::logger::Logger;
+use crate::utils::ramas;
 use gtk::{self, StyleContext};
 use gtk::{gdk, prelude::*};
 
@@ -71,7 +71,7 @@ pub fn ejecutar(logger: Arc<Logger>) {
         return;
     }
 
-    let branch_actual = Commit::obtener_branch_actual().unwrap();
+    let branch_actual = ramas::obtener_rama_actual().unwrap();
 
     hidratar_componentes(&builder, &window, logger.clone(), &branch_actual);
 

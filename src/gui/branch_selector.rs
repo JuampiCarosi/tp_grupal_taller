@@ -2,16 +2,19 @@ use std::sync::Arc;
 
 use gtk::prelude::*;
 
-use crate::tipos_de_dato::{
-    comandos::{branch::Branch, checkout::Checkout, commit::Commit},
-    logger::Logger,
+use crate::{
+    tipos_de_dato::{
+        comandos::{branch::Branch, checkout::Checkout},
+        logger::Logger,
+    },
+    utils::ramas,
 };
 
 use super::{error_dialog, log_list, log_seleccionado};
 
 pub fn render(builder: &gtk::Builder, window: &gtk::Window, logger: Arc<Logger>) {
     let select: gtk::ComboBoxText = builder.object("select-branch").unwrap();
-    let branch_actual = Commit::obtener_branch_actual().unwrap();
+    let branch_actual = ramas::obtener_rama_actual().unwrap();
     select.remove_all();
 
     let branches = match Branch::obtener_ramas() {

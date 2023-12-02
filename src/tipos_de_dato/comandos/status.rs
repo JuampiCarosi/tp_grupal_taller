@@ -11,13 +11,11 @@ use crate::{
     tipos_de_dato::{logger::Logger, objeto::Objeto, objetos::tree::Tree},
     utils::{
         index::{leer_index, ObjetoIndex},
-        io,
+        io, ramas,
     },
 };
 
-use super::{
-    check_ignore::CheckIgnore, commit::Commit, write_tree::conseguir_arbol_from_hash_commit,
-};
+use super::{check_ignore::CheckIgnore, write_tree::conseguir_arbol_from_hash_commit};
 
 pub struct Status {
     /// Logger para registrar los eventos ocurridos durante la ejecucion del comando.
@@ -33,8 +31,8 @@ pub struct Status {
 /// Obtiene el arbol del commit al que apunta la rama actual.
 /// En caso de no haber un commit devuelve None.
 pub fn obtener_arbol_del_commit_head(logger: Arc<Logger>) -> Option<Tree> {
-    let ruta = match Commit::obtener_ruta_branch_commit() {
-        Ok(ruta) => ruta,
+    let ruta = match ramas::obtener_gir_dir_rama_actual() {
+        Ok(ruta) => format!("{}", ruta.display()),
         Err(_) => return None,
     };
     let padre_commit = io::leer_a_string(path::Path::new(&ruta)).unwrap_or_else(|_| "".to_string());

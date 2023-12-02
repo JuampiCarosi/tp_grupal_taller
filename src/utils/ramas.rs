@@ -1,4 +1,4 @@
-use std::path::{Path, PathBuf};
+use std::path::{self, Path, PathBuf};
 
 use super::{io, path_buf};
 
@@ -25,6 +25,14 @@ pub fn obtener_gir_dir_rama_actual() -> Result<PathBuf, String> {
     let dir_rama = PathBuf::from("./.gir").join(ref_rama_actual);
     // print!("{}", dir_rama.display());
     Ok(dir_rama)
+}
+
+/// Obtiene el hash del commit al que apunta el branch actual.
+/// En caso de no poder obtener el hash devuelve un string vacio. Esto puede ocurrir si no se hicieron commits.
+pub fn obtener_hash_commit_asociado_rama_actual() -> Result<String, String> {
+    let ruta = format!("{}", obtener_gir_dir_rama_actual()?.display());
+    let hash_commit = io::leer_a_string(path::Path::new(&ruta)).unwrap_or_else(|_| "".to_string());
+    Ok(hash_commit)
 }
 
 ///Comprueba si dir es el la ruta a una carpeta que corresponde a una rama o a una

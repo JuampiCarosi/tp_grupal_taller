@@ -1,6 +1,9 @@
 mod estrategias_conflictos;
 
-use crate::tipos_de_dato::region::{unificar_regiones, Region};
+use crate::{
+    tipos_de_dato::region::{unificar_regiones, Region},
+    utils::ramas,
+};
 use std::{
     path::{self, Path, PathBuf},
     sync::Arc,
@@ -45,7 +48,10 @@ impl Merge {
             return Err("Cantidad de argumentos invalida".to_string());
         }
         let branch_a_mergear = args.pop().unwrap();
-        let branch_actual = Commit::obtener_branch_actual()?;
+        if !ramas::existe_la_rama(&branch_a_mergear) {
+            return Err("La rama a mergear no existe".to_string());
+        }
+        let branch_actual = ramas::obtener_rama_actual()?;
         Ok(Merge {
             logger,
             branch_actual,
@@ -63,7 +69,7 @@ impl Merge {
     /// Por ejemplo en el arbol a-b-c vs d-b-e, el commit base es b
     fn obtener_commit_base_entre_dos_branches(&self) -> Result<String, String> {
         // ab5f798d5ab
-        let hash_commit_actual = Commit::obtener_hash_commit_actual()?;
+        let hash_commit_actual = ramas::obtener_hash_commit_asociado_rama_actual()?;
         // ab5f798d5ab
         let hash_commit_a_mergear = Self::obtener_commit_de_branch(&self.branch_a_mergear)?;
 
@@ -447,8 +453,7 @@ impl Merge {
         if Self::hay_merge_en_curso()? {
             return Err("Ya hay un merge en curso".to_string());
         }
-        //
-        let commit_actual = Commit::obtener_hash_commit_actual()?;
+        let commit_actual = ramas::obtener_hash_commit_asociado_rama_actual()?;
         let commit_a_mergear = Self::obtener_commit_de_branch(&self.branch_a_mergear)?;
         let commit_base = self.obtener_commit_base_entre_dos_branches()?;
 

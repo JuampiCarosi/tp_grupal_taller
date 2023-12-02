@@ -2,6 +2,7 @@ use std::io::prelude::*;
 use std::{fs::OpenOptions, path::PathBuf, sync::Arc};
 
 use crate::utils::index::{self, escribir_index};
+use crate::utils::ramas;
 use crate::{
     tipos_de_dato::{
         comandos::write_tree::conseguir_arbol_from_hash_commit,
@@ -51,7 +52,7 @@ impl Rebase {
     }
 
     fn obtener_commit_base_entre_dos_branches(&self, rama: &str) -> Result<String, String> {
-        let hash_commit_actual = Commit::obtener_hash_commit_actual()?;
+        let hash_commit_actual = ramas::obtener_hash_commit_asociado_rama_actual()?;
         let hash_commit_a_rebasear = Merge::obtener_commit_de_branch(rama)?;
 
         let commit_obj_actual = CommitObj::from_hash(hash_commit_actual, self.logger.clone())?;
@@ -74,7 +75,7 @@ impl Rebase {
     }
 
     fn obtener_commits_a_aplicar(&self, rama: &str) -> Result<Vec<CommitObj>, String> {
-        let hash_ultimo_commit = Commit::obtener_hash_commit_actual()?;
+        let hash_ultimo_commit = ramas::obtener_hash_commit_asociado_rama_actual()?;
         let ultimo_commit = CommitObj::from_hash(hash_ultimo_commit, self.logger.clone())?;
         let commits = Log::obtener_listas_de_commits(ultimo_commit, self.logger.clone())?;
         let hash_commit_base = self.obtener_commit_base_entre_dos_branches(rama)?;
@@ -112,7 +113,7 @@ impl Rebase {
         let ref_head = io::leer_a_string(".gir/HEAD")?;
         io::escribir_bytes(".gir/rebase-merge/head-name", ref_head)?;
 
-        let head = Commit::obtener_hash_commit_actual()?;
+        let head = ramas::obtener_hash_commit_asociado_rama_actual()?;
         io::escribir_bytes(".gir/rebase-merge/orig-head", head)?;
         io::escribir_bytes(".gir/rebase-merge/msgnum", 0.to_string())?;
         io::escribir_bytes(".gir/rebase-merge/onto", tip_nuevo)?;
@@ -155,7 +156,7 @@ impl Rebase {
             .open(".gir/rebase-merge/rewritten-list")
             .map_err(|_| "No se pudo abrir el archivo .gir/rebase-merge/rewritten-list")?;
 
-        let tip = Commit::obtener_hash_commit_actual()?;
+        let tip = ramas::obtener_hash_commit_asociado_rama_actual()?;
 
         writeln!(archivo, "{} {}", tip, commit_sha)
             .map_err(|_| "No se pudo escribir en el archivo .gir/rebase-merge/rewritten-list")?;
@@ -172,7 +173,7 @@ impl Rebase {
         let tip_nuevo = io::leer_a_string(format!(".gir/refs/heads/{}", rama))?;
         self.crear_carpeta_rebase(&commits_a_aplicar, &tip_nuevo)?;
 
-        let branch_actual = Commit::obtener_branch_actual()?;
+        let branch_actual = ramas::obtener_rama_actual()?;
         io::escribir_bytes(format!(".gir/refs/heads/{branch_actual}"), &tip_nuevo)?;
 
         let hash_arbol_commit = conseguir_arbol_from_hash_commit(&tip_nuevo, ".gir/objects/")?;
@@ -186,7 +187,7 @@ impl Rebase {
         Ok(format!(
             "Se aplicaron los commits de la rama {} a la rama {}",
             rama,
-            Commit::obtener_branch_actual()?
+            ramas::obtener_rama_actual()?
         ))
     }
 

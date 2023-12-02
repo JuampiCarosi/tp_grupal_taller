@@ -2,7 +2,10 @@ use std::sync::Arc;
 
 use gtk::prelude::*;
 
-use crate::tipos_de_dato::{comandos::commit::Commit, logger::Logger};
+use crate::{
+    tipos_de_dato::{comandos::commit::Commit, logger::Logger},
+    utils::ramas,
+};
 
 use super::{error_dialog, log_list, staging_area};
 
@@ -56,7 +59,7 @@ fn boton_confimar_dialog(builder: &gtk::Builder, window: &gtk::Window, logger: A
             }
         };
 
-        let branch_actual = Commit::obtener_branch_actual().unwrap();
+        let branch_actual = ramas::obtener_rama_actual().unwrap();
 
         log_list::render(&builder_clone, &branch_actual, logger.clone());
         staging_area::render(&builder_clone, &window_clone, logger.clone());

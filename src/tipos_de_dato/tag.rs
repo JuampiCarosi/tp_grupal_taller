@@ -1,11 +1,8 @@
 use std::sync::Arc;
 
-use crate::utils::{io, path_buf};
+use crate::utils::{io, path_buf, ramas};
 
-use super::{
-    comandos::{commit::Commit},
-    logger::Logger,
-};
+use super::logger::Logger;
 
 pub struct Tag {
     logger: Arc<Logger>,
@@ -60,7 +57,7 @@ impl Tag {
         }
 
         let ubicacion = format!(".gir/refs/tags/{}", tag);
-        let commit = Commit::obtener_hash_commit_actual()?;
+        let commit = ramas::obtener_hash_commit_asociado_rama_actual()?;
 
         io::escribir_bytes(ubicacion, commit)?;
 

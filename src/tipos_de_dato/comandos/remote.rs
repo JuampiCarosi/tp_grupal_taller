@@ -1,11 +1,12 @@
 use std::sync::Arc;
 
-use crate::tipos_de_dato::{
-    config::{Config, RemoteInfo},
-    logger::Logger,
+use crate::{
+    tipos_de_dato::{
+        config::{Config, RemoteInfo},
+        logger::Logger,
+    },
+    utils::ramas,
 };
-
-use super::commit::Commit;
 
 enum ComandoRemote {
     Mostrar,
@@ -200,7 +201,7 @@ impl Remote {
     fn mostrar(&self) -> Result<String, String> {
         let config = Config::leer_config()?;
 
-        let branch_actual = Commit::obtener_branch_actual()?;
+        let branch_actual = ramas::obtener_rama_actual()?;
         let remote_actual = config
             .ramas
             .iter()

@@ -2,10 +2,8 @@ use std::{path::PathBuf, sync::Arc};
 
 use crate::{
     tipos_de_dato::logger::Logger,
-    utils::{io, path_buf::obtener_nombre},
+    utils::{io, path_buf::obtener_nombre, ramas},
 };
-
-use super::commit::Commit;
 
 const VERDE: &str = "\x1B[32m";
 const RESET: &str = "\x1B[0m";
@@ -62,7 +60,7 @@ impl Branch {
     ///  Devuelve un string con la lista de ramas en el repo,
     /// marcando con un * y verde la rama actual
     pub fn mostrar_ramas() -> Result<String, String> {
-        let rama_actual = Commit::obtener_branch_actual()?;
+        let rama_actual = ramas::obtener_rama_actual()?;
 
         let mut output = String::new();
 
