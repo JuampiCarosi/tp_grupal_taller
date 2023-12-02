@@ -58,7 +58,6 @@ fn obtener_commits_con_branches(rama: &str) -> Result<Vec<(CommitObj, String)>, 
                 encontrados.push((commit.clone(), rama.to_owned()));
             }
         }
-        println!("{:?}", commit.mensaje);
         let commit_rama_actual = encontrados.iter().find(|(_, r)| rama == *r);
         if let Some(commit_rama_actual) = commit_rama_actual {
             commits_y_ramas.push(commit_rama_actual.clone());

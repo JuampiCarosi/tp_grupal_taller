@@ -57,7 +57,7 @@ impl Log {
 
         while let Some(commit) = commits_a_revisar.pop() {
             if commits.contains_key(&commit.hash) {
-                break;
+                continue;
             }
             commits.insert(commit.hash.clone(), commit.clone());
             for padre in commit.padres {
