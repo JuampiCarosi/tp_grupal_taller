@@ -250,22 +250,22 @@ impl<T: Write + Read> Comunicacion<T> {
         }
         Ok(lineas)
     }
-    pub fn responder(&self, lineas: Vec<String>) -> Result<(), ErrorDeComunicacion> {
+    pub fn responder(&self, lineas: Vec<String>) -> Result<(), String> {
         if lineas.is_empty() {
             self.flujo
                 .lock()
                 .unwrap()
-                .write_all(String::from("0000").as_bytes())?;
+                .write_all(String::from("0000").as_bytes()).map_err(|e| e.to_string())?;
             return Ok(());
         }
         for linea in &lineas {
-            self.flujo.lock().unwrap().write_all(linea.as_bytes())?;
+            self.flujo.lock().unwrap().write_all(linea.as_bytes()).map_err(|e| e.to_string())?;
         }
         if lineas[0].contains("ref") {
             self.flujo
                 .lock()
                 .unwrap()
-                .write_all(String::from("0000").as_bytes())?;
+                .write_all(String::from("0000").as_bytes()).map_err(|e| e.to_string())?;
             return Ok(());
         }
         if !lineas[0].contains(&"NAK".to_string())
@@ -275,12 +275,13 @@ impl<T: Write + Read> Comunicacion<T> {
             self.flujo
                 .lock()
                 .unwrap()
-                .write_all(String::from("0000").as_bytes())?;
+                .write_all(String::from("0000").as_bytes()).map_err(|e| e.to_string())?;
         }
         Ok(())
     }
-    pub fn enviar_linea(&mut self, linea: &str) -> Result<(), ErrorDeComunicacion> {
-        self.flujo.lock().unwrap().write_all(linea.as_bytes())?;
+    
+    pub fn enviar_linea(&mut self, linea: &str) -> Result<(), String> {
+        self.flujo.lock().unwrap().write_all(linea.as_bytes()).map_err(|e| e.to_string())?;
         Ok(())
     }
 

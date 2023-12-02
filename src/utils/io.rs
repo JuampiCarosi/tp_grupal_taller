@@ -94,7 +94,7 @@ pub fn obtener_refs_con_largo_hex(
     refs: &mut Vec<String>,
     refs_path: PathBuf,
     dir: &str,
-) -> Result<(), ErrorDeComunicacion> {
+) -> Result<(), String> {
     // let mut refs: Vec<String> = Vec::new();
     if !refs_path.exists() {
         return Ok(());
@@ -102,7 +102,7 @@ pub fn obtener_refs_con_largo_hex(
     // if !refs_path.exists() {
     //     io::Error::new(io::ErrorKind::NotFound, "No existe el repositorio");
     // }
-    let head_dir = fs::read_dir(&refs_path)?;
+    let head_dir = fs::read_dir(&refs_path).map_err(|e| e.to_string())?;
     for archivo in head_dir {
         match archivo {
             Ok(archivo) => {
@@ -120,7 +120,7 @@ pub fn obtener_refs_con_largo_hex(
     Ok(())
 }
 
-pub fn obtener_refs(refs_path: PathBuf, dir: &str) -> Result<Vec<String>, ErrorDeComunicacion> {
+pub fn obtener_refs(refs_path: PathBuf, dir: &str) -> Result<Vec<String>, String> {
     let mut refs: Vec<String> = Vec::new();
     if !refs_path.exists() {
         return Ok(refs);
@@ -130,7 +130,7 @@ pub fn obtener_refs(refs_path: PathBuf, dir: &str) -> Result<Vec<String>, ErrorD
     if refs_path.ends_with("HEAD") {
         refs.push(obtener_ref_head(refs_path.to_path_buf())?);
     } else {
-        let head_dir = fs::read_dir(&refs_path)?;
+        let head_dir = fs::read_dir(&refs_path).map_err(|e| e.to_string())?;
         for archivo in head_dir {
             match archivo {
                 Ok(archivo) => {
@@ -158,10 +158,10 @@ pub fn obtener_linea_con_largo_hex(line: &str) -> String {
     format!("{}{}", largo_hex, line)
 }
 
-fn leer_archivo(path: &mut Path) -> Result<String, ErrorDeComunicacion> {
-    let archivo = fs::File::open(path)?;
+fn leer_archivo(path: &mut Path) -> Result<String, String> {
+    let archivo = fs::File::open(path).map_err(|e| e.to_string())?;
     let mut contenido = String::new();
-    std::io::BufReader::new(archivo).read_line(&mut contenido)?;
+    std::io::BufReader::new(archivo).read_line(&mut contenido).map_err(|e| e.to_string())?;
     Ok(contenido.trim().to_string())
 }
 //Devuelve true si la ubicacion esta vacia y false en caso contrario.
@@ -173,27 +173,20 @@ pub fn esta_vacio(ubicacion: &str) -> bool {
     }
 }
 
-fn obtener_referencia(path: &mut Path, prefijo: &str) -> Result<String, ErrorDeComunicacion> {
+fn obtener_referencia(path: &mut Path, prefijo: &str) -> Result<String, String> {
     let contenido = leer_archivo(path)?;
     // esto esta hardcodeado, hay que cambiar la forma de sacarle el prefijo
     let directorio_sin_prefijo = path.strip_prefix(prefijo).unwrap().to_path_buf();
     let referencia = format!(
         "{} {}",
         contenido.trim(),
-        directorio_sin_prefijo.to_str().ok_or(std::io::Error::new(
-            std::io::ErrorKind::NotFound,
-            "No existe HEAD"
-        ))?
-    );
+        directorio_sin_prefijo.to_str().ok_or("No existe HEAD")?);
     Ok(referencia)
 }
 
-pub fn obtener_ref_head(path: PathBuf) -> Result<String, ErrorDeComunicacion> {
+pub fn obtener_ref_head(path: PathBuf) -> Result<String, String> {
     if !path.exists() {
-        return Err(ErrorDeComunicacion::IoError(io::Error::new(
-            io::ErrorKind::NotFound,
-            "No existe HEAD",
-        )));
+        return Err("No existe HEAD".to_string());
     }
     let contenido = leer_archivo(&mut path.clone())?;
     let head_ref = contenido.split_whitespace().collect::<Vec<&str>>()[1];
@@ -201,10 +194,7 @@ pub fn obtener_ref_head(path: PathBuf) -> Result<String, ErrorDeComunicacion> {
         let cont = leer_archivo(&mut ruta.join(head_ref))? + " HEAD";
         Ok(obtener_linea_con_largo_hex(&cont))
     } else {
-        Err(ErrorDeComunicacion::IoError(io::Error::new(
-            io::ErrorKind::NotFound,
-            "No existe HEAD",
-        )))
+        Err("Error al leer HEAD, verifique la ruta".to_string())
     }
 }
 
@@ -413,6 +403,8 @@ pub fn obtener_diferencias_remote(referencias: Vec<String>, dir: String) -> Vec<
     diferencias
 }
 
+
+    
 #[cfg(test)]
 mod tests {
     use std::path::PathBuf;
