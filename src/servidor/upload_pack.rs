@@ -10,7 +10,6 @@ pub fn upload_pack<T>(
 ) -> Result<(), String>
  where T: Read + Write, {
     let wants = comunicacion.obtener_lineas()?; // obtengo los wants del cliente
-    println!("Wants: {:?}", wants); 
     if wants.is_empty() {
         println!("Se termino la conexion");
         return Ok(()); // el cliente esta actualizado
@@ -59,7 +58,6 @@ mod test {
 
     impl Read for MockTcpStream {
         fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
-            // println!("Lectura: {:?}", String::from_utf8(self.lectura_data.clone()));
             let bytes_to_read = std::cmp::min(buf.len(), self.lectura_data.len());
             buf[0..bytes_to_read].copy_from_slice(&self.lectura_data[..bytes_to_read]);
             self.lectura_data.drain(..bytes_to_read);

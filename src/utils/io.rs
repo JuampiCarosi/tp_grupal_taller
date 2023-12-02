@@ -269,7 +269,7 @@ where
     C: AsRef<[u8]>,
 {
     si_no_existe_directorio_de_archivo_crearlo(&dir_archivo)?;
-
+    println!("Voy a escribir en: {:?}", dir_archivo.as_ref());
     match fs::write(dir_archivo, contenido) {
         Ok(_) => Ok(()),
         Err(e) => Err(format!("Error al escribir el archivo: {}", e)),
