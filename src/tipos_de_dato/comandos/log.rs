@@ -108,7 +108,7 @@ mod tests {
     #[test]
     fn test01_creacion_de_log_sin_branch() {
         let mut args = vec![];
-        let logger = Arc::new(Logger::new(PathBuf::from("tmp/log")).unwrap());
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/log_test01")).unwrap());
         let log = Log::from(&mut args, logger).unwrap();
         assert_eq!(log.branch, "master");
     }
@@ -117,17 +117,24 @@ mod tests {
     fn test02_creacion_de_log_indicando_branch() {
         io::escribir_bytes(".gir/refs/heads/rama", "hash".as_bytes()).unwrap();
         let mut args = vec!["rama".to_string()];
-        let logger = Arc::new(Logger::new(PathBuf::from("tmp/log")).unwrap());
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/log_test02")).unwrap());
         let log = Log::from(&mut args, logger).unwrap();
         assert_eq!(log.branch, "rama");
+    }
+
+    #[test]
+    fn test03_obtener_commit_branch() {
+        io::escribir_bytes(".gir/refs/heads/rama", "hash".as_bytes()).unwrap();
+        let hash = Log::obtener_commit_branch("rama").unwrap();
+        assert_eq!(hash, "hash");
         std::fs::remove_file(".gir/refs/heads/rama").unwrap();
     }
 
     #[test]
     #[should_panic(expected = "La rama rama no existe")]
-    fn test03_error_al_usar_branch_inexistente() {
+    fn test04_error_al_usar_branch_inexistente() {
         let mut args = vec!["rama".to_string()];
-        let logger = Arc::new(Logger::new(PathBuf::from("tmp/log")).unwrap());
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/log_test04")).unwrap());
         let _ = Log::from(&mut args, logger).unwrap();
     }
 }

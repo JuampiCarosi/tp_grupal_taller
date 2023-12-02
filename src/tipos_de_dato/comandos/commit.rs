@@ -1,4 +1,4 @@
-use std::{fs::OpenOptions, io::Write, path, sync::Arc};
+use std::{path, sync::Arc};
 
 use chrono::TimeZone;
 use sha1::{Digest, Sha1};
@@ -169,17 +169,7 @@ impl Commit {
     /// En caso de no poder abrir o escribir en el archivo devuelve un error.
     fn updatear_ref_head(&self, hash: &str) -> Result<(), String> {
         let ruta = Self::obtener_ruta_branch_commit()?;
-
-        let mut f = match OpenOptions::new().write(true).truncate(true).open(ruta) {
-            Ok(f) => f,
-            Err(_) => return Err("No se pudo abrir el archivo head/ref solicitado".to_string()),
-        };
-        match f.write_all(hash.as_bytes()) {
-            Ok(_) => (),
-            Err(_) => {
-                return Err("No se pudo escribir en el archivo head/ref solicitado".to_string())
-            }
-        };
+        io::escribir_bytes(ruta, hash)?;
         Ok(())
     }
 
@@ -246,7 +236,7 @@ mod tests {
 
     fn limpiar_archivo_gir() {
         io::rm_directorio(".gir").unwrap();
-        let logger = Arc::new(Logger::new(PathBuf::from("tmp/branch_init")).unwrap());
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/commit_init")).unwrap());
         let init = Init {
             path: "./.gir".to_string(),
             logger,

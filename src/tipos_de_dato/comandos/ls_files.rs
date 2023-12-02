@@ -50,12 +50,14 @@ impl LsFiles {
         arbol: Tree,
     ) -> Result<Tree, String> {
         let path_hijo = PathBuf::from(direccion_hijo);
+        println!("objetos arbol: {:?}", arbol.objetos);
         for objeto in arbol.objetos {
             match objeto {
                 Objeto::Tree(tree) => {
                     if tree.directorio == path_hijo {
                         return Ok(tree);
                     }
+                    Self::recorrer_arbol_hasta_hijo_buscado(direccion_hijo, tree.clone())?;
                 }
                 _ => continue,
             }
@@ -116,4 +118,70 @@ impl LsFiles {
         self.logger.log("Finalizando ls-files");
         Ok(string_final)
     }
+}
+
+#[cfg(test)]
+mod test {
+    use std::{path::PathBuf, sync::Arc};
+
+    use crate::{
+        tipos_de_dato::{
+            comandos::{add::Add, commit::Commit, init::Init},
+            logger::Logger,
+        },
+        utils::{index::limpiar_archivo_index, io},
+    };
+
+    use super::LsFiles;
+
+    fn addear_archivos_y_comittear(args: Vec<String>, logger: Arc<Logger>) {
+        let mut add = Add::from(args, logger.clone()).unwrap();
+        add.ejecutar().unwrap();
+        let commit =
+            Commit::from(&mut vec!["-m".to_string(), "mensaje".to_string()], logger).unwrap();
+        commit.ejecutar().unwrap();
+    }
+
+    fn limpiar_archivo_gir() {
+        io::rm_directorio(".gir").unwrap();
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/ls_files_init")).unwrap());
+        let init = Init {
+            path: "./.gir".to_string(),
+            logger,
+        };
+        init.ejecutar().unwrap();
+    }
+
+    #[test]
+    fn test01_ls_files_muestra_los_archivos_en_staging() {
+        limpiar_archivo_index().unwrap();
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/ls_files_test01")).unwrap());
+        let mut args = vec!["test_dir/objetos/archivo.txt".to_string()];
+        let ls_files = LsFiles::from(logger.clone(), &mut args).unwrap();
+        let resultado = ls_files.ejecutar().unwrap();
+        assert_eq!(resultado, "test_dir/objetos/archivo.txt\n");
+    }
+
+    #[test]
+    fn test02_ls_files_muestra_los_archivos_trackeados() {
+        limpiar_archivo_gir();
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/ls_files_test02")).unwrap());
+        addear_archivos_y_comittear(vec!["test_dir".to_string()], logger.clone());
+        let mut args = vec![];
+        let ls_files = LsFiles::from(logger.clone(), &mut args).unwrap();
+        let resultado = ls_files.ejecutar().unwrap();
+        assert_eq!(resultado, "test_dir/muchos_objetos/archivo.txt\ntest_dir/muchos_objetos/archivo_copy.txt\ntest_dir/objetos/archivo.txt\n");
+    }
+
+    // #[test]
+    // fn test03_ls_files_muestra_los_archivos_trackeados_y_los_de_staging() {
+    //     let logger = Arc::new(Logger::new(PathBuf::from("tmp/ls_files_test03")).unwrap());
+    //     let mut args = vec!["test_dir/muchos_objetos".to_string()];
+    //     let ls_files = LsFiles::from(logger.clone(), &mut args).unwrap();
+    //     let resultado = ls_files.ejecutar().unwrap();
+    //     assert_eq!(
+    //         resultado,
+    //         "test_dir/muchos_objetos/archivo.txt\ntest_dir/muchos_objetos/archivo_copy.txt\n"
+    //     );
+    // }
 }

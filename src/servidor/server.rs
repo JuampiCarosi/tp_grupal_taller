@@ -6,7 +6,6 @@ use crate::tipos_de_dato::comunicacion::RespuestaDePedido;
 use crate::tipos_de_dato::logger::Logger;
 use crate::utils::io as gir_io;
 use std::env;
-use std::io;
 use std::net::{TcpListener, TcpStream};
 use std::path::PathBuf;
 use std::str;
@@ -102,7 +101,7 @@ impl Servidor {
                 }
                 receive_pack(dir_repo.to_string(), comunicacion)
             }
-            _ => Err("No existe el comando".to_string())
+            _ => Err("No existe el comando".to_string()),
         }
     }
 
