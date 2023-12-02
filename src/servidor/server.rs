@@ -1,5 +1,4 @@
 use crate::servidor::{upload_pack::upload_pack, receive_pack::receive_pack};
-// use crate::utils::server_utils;
 use crate::tipos_de_dato::{comunicacion::Comunicacion, comunicacion::RespuestaDePedido, logger::Logger};
 use crate::utils::io as gir_io;
 use std::{env, net::{TcpListener, TcpStream}, path::PathBuf, str, sync::Arc, thread};
@@ -120,7 +119,10 @@ mod server_utils {
         if let Ok(head) = head_ref {
             refs.push(head)
         }
-        let dir_str = dir.to_str().ok_or("No se pudo convertir el path a string")?;
+        let dir_str = match dir.to_str() { 
+            Some(s) => s,
+            None => return Err("No se pudo convertir el path {dir} a str".to_string())
+        };
         gir_io::obtener_refs_con_largo_hex(
             &mut refs,
             dir.join("refs/heads/"),
@@ -145,7 +147,6 @@ mod server_utils {
         let mut referencia_con_capacidades: String;
         if referencia.len() > 40 {
             referencia_con_capacidades = referencia.split_at(4).1.to_string() + "\0";
-        // borro los primeros 4 caracteres que quedan del tamanio anterior
         } else {
             referencia_con_capacidades = referencia + "\0";
         }
@@ -173,12 +174,12 @@ impl Drop for Servidor {
 }
 
 
-#[cfg(test)]
-mod tests { 
-    use super::*;
+// #[cfg(test)]
+// mod tests { 
+//     use super::*;
     
-    #[test]
-    fn test01() { 
+//     #[test]
+//     fn test01() { 
 
-    }
-}
+//     }
+// }
