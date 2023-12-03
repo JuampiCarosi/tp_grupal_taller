@@ -13,7 +13,6 @@ where T: Read + Write, {
     let mut packfile = comunicacion.obtener_packfile()?;
 
     Packfile::leer_packfile_y_escribir(&mut packfile, dir.clone() + "objects/")?;
-    println!("Actualizaciones: {:?}", actualizaciones);
     for actualizacion in &actualizaciones {
         let mut partes = actualizacion.split(' ');
         let viejo_hash_ref = partes.next().unwrap_or("");
