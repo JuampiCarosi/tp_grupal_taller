@@ -1,6 +1,7 @@
 use std::io::prelude::*;
 use std::{fs::OpenOptions, path::PathBuf, sync::Arc};
 
+use crate::tipos_de_dato::comando::Ejecutar;
 use crate::utils::index::{self, escribir_index};
 use crate::{
     tipos_de_dato::{
@@ -110,7 +111,7 @@ impl Rebase {
         }
 
         let ref_head = io::leer_a_string(".gir/HEAD")?;
-        io::escribir_bytes(".gir/rebase-merge/head-name", &ref_head)?;
+        io::escribir_bytes(".gir/rebase-merge/head-name", ref_head)?;
 
         let head = Commit::obtener_hash_commit_actual()?;
         io::escribir_bytes(".gir/rebase-merge/orig-head", head)?;
@@ -167,7 +168,7 @@ impl Rebase {
         let rama = self.rama.as_ref().ok_or("No se especifico una rama")?;
 
         self.logger.log("Rebaseando...");
-        let commits_a_aplicar = self.obtener_commits_a_aplicar(&rama)?;
+        let commits_a_aplicar = self.obtener_commits_a_aplicar(rama)?;
 
         let tip_nuevo = io::leer_a_string(format!(".gir/refs/heads/{}", rama))?;
         self.crear_carpeta_rebase(&commits_a_aplicar, &tip_nuevo)?;
@@ -175,10 +176,8 @@ impl Rebase {
         let branch_actual = Commit::obtener_branch_actual()?;
         io::escribir_bytes(format!(".gir/refs/heads/{branch_actual}"), &tip_nuevo)?;
 
-        let hash_arbol_commit =
-            conseguir_arbol_from_hash_commit(&tip_nuevo, ".gir/objects/".to_string());
-
-        let arbol = Tree::from_hash(hash_arbol_commit, PathBuf::from("./"), self.logger.clone())?;
+        let hash_arbol_commit = conseguir_arbol_from_hash_commit(&tip_nuevo, ".gir/objects/")?;
+        let arbol = Tree::from_hash(&hash_arbol_commit, PathBuf::from("./"), self.logger.clone())?;
 
         arbol.escribir_en_directorio()?;
 
@@ -218,7 +217,7 @@ impl Rebase {
 
             self.actualizar_lista_de_commits_aplicados(&commit.hash)?;
 
-            let comando_commit = Commit {
+            let mut comando_commit = Commit {
                 mensaje: commit.mensaje,
                 logger: self.logger.clone(),
             };
@@ -237,7 +236,7 @@ impl Rebase {
             .last()
             .ok_or("No se pudo obtener la rama")?;
 
-        io::escribir_bytes(format!(".gir/refs/heads/{}", rama), &orig_head)?;
+        io::escribir_bytes(format!(".gir/refs/heads/{}", rama), orig_head)?;
 
         let tree = Checkout::obtener_arbol_commit_actual(self.logger.clone())?;
 
@@ -253,7 +252,7 @@ impl Rebase {
 
     fn continuar(&self) -> Result<String, String> {
         let mensaje_commit = io::leer_a_string(".gir/rebase-merge/message")?;
-        let commit = Commit::from(
+        let mut commit = Commit::from(
             &mut vec!["-m".to_string(), mensaje_commit],
             self.logger.clone(),
         )?;
@@ -287,7 +286,7 @@ impl Rebase {
             return self.continuar();
         }
 
-        if !self.rama.is_none() {
+        if self.rama.is_some() {
             return self.primera_vez();
         }
 

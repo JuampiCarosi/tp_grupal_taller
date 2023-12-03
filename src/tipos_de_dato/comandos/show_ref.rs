@@ -5,7 +5,7 @@ use std::{
 };
 
 use crate::{
-    tipos_de_dato::logger::Logger,
+    tipos_de_dato::{comando::Ejecutar, logger::Logger},
     utils::{io, path_buf},
 };
 
@@ -19,7 +19,7 @@ pub struct ShowRef {
 
 impl ShowRef {
     pub fn from(args: Vec<String>, logger: Arc<Logger>) -> Result<Self, String> {
-        if args.len() == 0 {
+        if args.is_empty() {
             return Ok(ShowRef {
                 logger,
                 show_head: false,
@@ -62,7 +62,7 @@ impl ShowRef {
     }
 
     fn hay_que_ver_path(&self, path: &Path) -> Result<bool, String> {
-        let nombre = path_buf::obtener_nombre(&path)?;
+        let nombre = path_buf::obtener_nombre(path)?;
         let padre = path.ancestors().nth(1).ok_or("Error al obtener el padre")?;
 
         if &path_buf::obtener_nombre(padre)? != "refs" {
@@ -79,7 +79,7 @@ impl ShowRef {
 
     fn agregar_head(&self, refs: &mut HashMap<String, String>) -> Result<(), String> {
         let binding = io::leer_a_string(PathBuf::from(".gir/HEAD"))?;
-        let head_dir = binding.split(" ").nth(1).ok_or("Error al parsear HEAD")?;
+        let head_dir = binding.split(' ').nth(1).ok_or("Error al parsear HEAD")?;
         let contenido = io::leer_a_string(PathBuf::from(format!(".gir/{}", head_dir)))?;
         refs.insert("HEAD".to_string(), contenido);
         Ok(())
@@ -124,8 +124,11 @@ impl ShowRef {
 
         Ok(refs)
     }
+}
 
-    pub fn ejecutar(&self) -> Result<String, String> {
+impl Ejecutar for ShowRef {
+    fn ejecutar(&mut self) -> Result<String, String> {
+        self.logger.log("Ejecutando comando show-ref");
         let mut refs = self.obtener_referencias(PathBuf::from(".gir/refs/"))?;
 
         if self.show_head {
@@ -137,7 +140,7 @@ impl ShowRef {
         for (ubicacion, contenido) in refs {
             salida.push_str(&format!("{} {}\n", contenido, ubicacion));
         }
-
+        self.logger.log("Se ejecuto el comando show-ref");
         Ok(salida)
     }
 }

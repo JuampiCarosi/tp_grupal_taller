@@ -8,9 +8,8 @@ use std::{env, str};
 use super::path_buf;
 
 //la idea es dejar de usar esta funcion, ->ya hay una mejor en objects
-pub fn obtener_objetos_del_directorio(dir: String) -> Result<Vec<String>, String> {
+pub fn obtener_objetos_del_directorio(dir: &str) -> Result<Vec<String>, String> {
     let dir_abierto = leer_directorio(&dir)?;
-
     let mut objetos: Vec<String> = Vec::new();
 
     for entrada in dir_abierto {
@@ -20,7 +19,6 @@ pub fn obtener_objetos_del_directorio(dir: String) -> Result<Vec<String>, String
                     && entrada.file_name().to_string_lossy() != "info"
                     && entrada.file_name().to_string_lossy() != "pack"
                 {
-                    //que onda este if?? JUANI
                     if !entrada.path().to_string_lossy().contains("log.txt") {
                         objetos.append(&mut obtener_objetos_con_nombre_carpeta(entrada.path())?);
                     }
@@ -96,7 +94,7 @@ pub fn obtener_refs_con_largo_hex(
     refs: &mut Vec<String>,
     refs_path: PathBuf,
     dir: &str,
-) -> Result<(), ErrorDeComunicacion> {
+) -> Result<(), String> {
     // let mut refs: Vec<String> = Vec::new();
     if !refs_path.exists() {
         return Ok(());
@@ -104,7 +102,7 @@ pub fn obtener_refs_con_largo_hex(
     // if !refs_path.exists() {
     //     io::Error::new(io::ErrorKind::NotFound, "No existe el repositorio");
     // }
-    let head_dir = fs::read_dir(&refs_path)?;
+    let head_dir = fs::read_dir(&refs_path).map_err(|e| e.to_string())?;
     for archivo in head_dir {
         match archivo {
             Ok(archivo) => {
@@ -122,7 +120,7 @@ pub fn obtener_refs_con_largo_hex(
     Ok(())
 }
 
-pub fn obtener_refs(refs_path: PathBuf, dir: String) -> Result<Vec<String>, ErrorDeComunicacion> {
+pub fn obtener_refs(refs_path: PathBuf, dir: &str) -> Result<Vec<String>, String> {
     let mut refs: Vec<String> = Vec::new();
     if !refs_path.exists() {
         return Ok(refs);
@@ -132,13 +130,13 @@ pub fn obtener_refs(refs_path: PathBuf, dir: String) -> Result<Vec<String>, Erro
     if refs_path.ends_with("HEAD") {
         refs.push(obtener_ref_head(refs_path.to_path_buf())?);
     } else {
-        let head_dir = fs::read_dir(&refs_path)?;
+        let head_dir = fs::read_dir(&refs_path).map_err(|e| e.to_string())?;
         for archivo in head_dir {
             match archivo {
                 Ok(archivo) => {
                     let mut path = archivo.path();
                     // let mut path = archivo.path().to_string_lossy().split("./.gir/").into_iter().next().unwrap().to_string();
-                    refs.push(obtener_referencia(&mut path, &dir)?);
+                    refs.push(obtener_referencia(&mut path, dir)?);
                 }
                 Err(error) => {
                     eprintln!("Error leyendo directorio: {}", error);
@@ -160,42 +158,35 @@ pub fn obtener_linea_con_largo_hex(line: &str) -> String {
     format!("{}{}", largo_hex, line)
 }
 
-fn leer_archivo(path: &mut Path) -> Result<String, ErrorDeComunicacion> {
-    let archivo = fs::File::open(path)?;
+fn leer_archivo(path: &mut Path) -> Result<String, String> {
+    let archivo = fs::File::open(path).map_err(|e| e.to_string())?;
     let mut contenido = String::new();
-    std::io::BufReader::new(archivo).read_line(&mut contenido)?;
+    std::io::BufReader::new(archivo).read_line(&mut contenido).map_err(|e| e.to_string())?;
     Ok(contenido.trim().to_string())
 }
 //Devuelve true si la ubicacion esta vacia y false en caso contrario.
 //Si falla se presupone que es porque no existe y por lo tanto esta vacio
-pub fn esta_vacio(ubicacion: String) -> bool {
+pub fn esta_vacio(ubicacion: &str) -> bool {
     match fs::metadata(ubicacion) {
         Ok(metadata) => metadata.len() == 0,
         Err(_) => false,
     }
 }
 
-fn obtener_referencia(path: &mut PathBuf, prefijo: &str) -> Result<String, ErrorDeComunicacion> {
+fn obtener_referencia(path: &mut Path, prefijo: &str) -> Result<String, String> {
     let contenido = leer_archivo(path)?;
     // esto esta hardcodeado, hay que cambiar la forma de sacarle el prefijo
     let directorio_sin_prefijo = path.strip_prefix(prefijo).unwrap().to_path_buf();
     let referencia = format!(
         "{} {}",
         contenido.trim(),
-        directorio_sin_prefijo.to_str().ok_or(std::io::Error::new(
-            std::io::ErrorKind::NotFound,
-            "No existe HEAD"
-        ))?
-    );
+        directorio_sin_prefijo.to_str().ok_or("No existe HEAD")?);
     Ok(referencia)
 }
 
-pub fn obtener_ref_head(path: PathBuf) -> Result<String, ErrorDeComunicacion> {
+pub fn obtener_ref_head(path: PathBuf) -> Result<String, String> {
     if !path.exists() {
-        return Err(ErrorDeComunicacion::IoError(io::Error::new(
-            io::ErrorKind::NotFound,
-            "No existe HEAD",
-        )));
+        return Err("No existe HEAD".to_string());
     }
     let contenido = leer_archivo(&mut path.clone())?;
     let head_ref = contenido.split_whitespace().collect::<Vec<&str>>()[1];
@@ -203,23 +194,20 @@ pub fn obtener_ref_head(path: PathBuf) -> Result<String, ErrorDeComunicacion> {
         let cont = leer_archivo(&mut ruta.join(head_ref))? + " HEAD";
         Ok(obtener_linea_con_largo_hex(&cont))
     } else {
-        Err(ErrorDeComunicacion::IoError(io::Error::new(
-            io::ErrorKind::NotFound,
-            "No existe HEAD",
-        )))
+        Err("Error al leer HEAD, verifique la ruta".to_string())
     }
 }
 
 ///Lee un directorio. Devuelve su iterador. Falla si no existe o si no es un directoro
 pub fn leer_directorio<P: AsRef<Path> + Clone + Debug>(directorio: &P) -> Result<ReadDir, String> {
-    let metadada_dir = fs::metadata(&directorio)
-        .map_err(|_| format!("Error no existe el dir {:?}", directorio))?;
+    let metadada_dir =
+        fs::metadata(directorio).map_err(|_| format!("Error no existe el dir {:?}", directorio))?;
 
     if !metadada_dir.is_dir() {
         return Err(format!("Error {:?} no es un dir", directorio));
     }
 
-    fs::read_dir(&directorio).map_err(|e| format!("Error al leer {:?}: {}", directorio, e))
+    fs::read_dir(directorio).map_err(|e| format!("Error al leer {:?}: {}", directorio, e))
 }
 
 ///Devuelve True si el directororio es un directorio o false en caso contrario o si no existe
@@ -281,7 +269,7 @@ where
     C: AsRef<[u8]>,
 {
     si_no_existe_directorio_de_archivo_crearlo(&dir_archivo)?;
-
+    println!("Voy a escribir en: {:?}", dir_archivo.as_ref());
     match fs::write(dir_archivo, contenido) {
         Ok(_) => Ok(()),
         Err(e) => Err(format!("Error al escribir el archivo: {}", e)),
@@ -357,7 +345,7 @@ where
 // HACER MAS EFICIENTE *Hay iteraciones de mas que se pueden evitar unificando las funciones*
 pub fn obtener_archivos_faltantes(nombres_archivos: Vec<String>, dir: String) -> Vec<String> {
     // DESHARDCODEAR EL NOMBRE DEL DIRECTORIO (.gir)
-    let objetcts_contained = obtener_objetos_del_directorio(dir.clone() + "objects/").unwrap();
+    let objetcts_contained = obtener_objetos_del_directorio(&(dir + "objects/")).unwrap();
     // println!("objetcts_contained: {:?}", objetcts_contained);
     // println!("Nombres: {:?}", nombres_archivos);
     let mut archivos_faltantes: Vec<String> = Vec::new();
@@ -370,13 +358,13 @@ pub fn obtener_archivos_faltantes(nombres_archivos: Vec<String>, dir: String) ->
     archivos_faltantes
 }
 // aca depende de si esta multi_ack y esas cosas, esta es para cuando no hay multi_ack ni multi_ack_mode
-pub fn obtener_ack(nombres_archivos: Vec<String>, dir: String) -> Vec<String> {
+pub fn obtener_ack(nombres_archivos: Vec<String>, dir: &str) -> Vec<String> {
     let mut ack = Vec::new();
     for nombre in nombres_archivos {
-        let dir_archivo = format!("{}{}/{}", dir.clone(), &nombre[..2], &nombre[2..]);
+        let dir_archivo = format!("{}{}/{}", dir, &nombre[..2], &nombre[2..]);
         if PathBuf::from(dir_archivo.clone()).exists() {
             ack.push(obtener_linea_con_largo_hex(
-                ("ACK".to_string() + &nombre + "\n").as_str(),
+                ("ACK ".to_string() + &nombre + "\n").as_str(),
             ));
             break;
         }
@@ -415,8 +403,13 @@ pub fn obtener_diferencias_remote(referencias: Vec<String>, dir: String) -> Vec<
     diferencias
 }
 
+
+    
+#[cfg(test)]
 mod tests {
-    use super::*;
+    use std::path::PathBuf;
+
+    use crate::utils::io::{escribir_bytes, leer_a_string, rm_directorio};
 
     #[test]
     fn test_escribir_archivo_pisa_contenido() {

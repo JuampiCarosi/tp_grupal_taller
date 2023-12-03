@@ -10,26 +10,29 @@ use crate::utils::index::{generar_objetos_raiz, leer_index, ObjetoIndex};
 
 /// Dado un hash de un commit y una ubicacion de donde buscar el objeto.
 /// Devuelve el hash del arbol de ese commit.
-pub fn conseguir_arbol_from_hash_commit(hash_commit_padre: &str, dir: String) -> String {
-    let contenido = descomprimir_objeto(hash_commit_padre.to_string(), dir).unwrap();
+pub fn conseguir_arbol_from_hash_commit(
+    hash_commit_padre: &str,
+    dir: &str,
+) -> Result<String, String> {
+    let contenido = descomprimir_objeto(hash_commit_padre, dir)?;
     let lineas_sin_null = contenido.replace('\0', "\n");
     let lineas = lineas_sin_null.split('\n').collect::<Vec<&str>>();
     let arbol_commit = lineas[1];
     let lineas = arbol_commit.split(' ').collect::<Vec<&str>>();
     let arbol_commit = lineas[1];
-    arbol_commit.to_string()
+    Ok(arbol_commit.to_string())
 }
 
 /// Dado un hash de un commit devuelve el hash del arbol de ese commit.
 /// Se espera que el contenido del commit tenga el formato correcto.
-pub fn conseguir_arbol_padre_from_ult_commit(hash_commit_padre: String) -> String {
-    let contenido = descomprimir_objeto_gir(hash_commit_padre.clone()).unwrap();
+pub fn conseguir_arbol_padre_from_ult_commit(hash_commit_padre: &str) -> Result<String, String> {
+    let contenido = descomprimir_objeto_gir(hash_commit_padre)?;
     let lineas_sin_null = contenido.replace('\0', "\n");
     let lineas = lineas_sin_null.split('\n').collect::<Vec<&str>>();
     let arbol_commit = lineas[1];
     let lineas = arbol_commit.split(' ').collect::<Vec<&str>>();
     let arbol_commit = lineas[1];
-    arbol_commit.to_string()
+    Ok(arbol_commit.to_string())
 }
 
 /// Devuelve el arbol mergeado entre el arbol padre y los cambios trackeados en el index.
@@ -75,13 +78,8 @@ pub fn crear_arbol_commit(
     }
 
     let objetos_a_utilizar = if let Some(hash) = commit_padre {
-        let hash_arbol_padre =
-            conseguir_arbol_from_hash_commit(&hash, String::from(".gir/objects/"));
-        let arbol_padre = Tree::from_hash(
-            hash_arbol_padre.clone(),
-            PathBuf::from("./"),
-            logger.clone(),
-        )?;
+        let hash_arbol_padre = conseguir_arbol_from_hash_commit(&hash, ".gir/objects/")?;
+        let arbol_padre = Tree::from_hash(&hash_arbol_padre, PathBuf::from("./"), logger.clone())?;
         let objetos_arbol_nuevo_commit =
             aplicar_index_a_arbol(&objetos_index, &arbol_padre.objetos);
         generar_objetos_raiz(&objetos_arbol_nuevo_commit, logger.clone())?
@@ -104,7 +102,9 @@ mod tests {
     use std::{path::PathBuf, sync::Arc};
 
     use crate::{
-        tipos_de_dato::{comandos::add::Add, comandos::init::Init, logger::Logger},
+        tipos_de_dato::{
+            comando::Ejecutar, comandos::add::Add, comandos::init::Init, logger::Logger,
+        },
         utils::{compresion::descomprimir_objeto_gir, io},
     };
 
@@ -113,7 +113,7 @@ mod tests {
     fn limpiar_archivo_gir() {
         io::rm_directorio(".gir").unwrap();
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/branch_init")).unwrap());
-        let init = Init {
+        let mut init = Init {
             path: "./.gir".to_string(),
             logger,
         };
@@ -131,7 +131,7 @@ mod tests {
             .unwrap();
 
         let arbol_commit = crear_arbol_commit(None, logger.clone()).unwrap();
-        let contenido_commit = descomprimir_objeto_gir(arbol_commit).unwrap();
+        let contenido_commit = descomprimir_objeto_gir(&arbol_commit).unwrap();
 
         assert_eq!(
             contenido_commit,
@@ -152,7 +152,7 @@ mod tests {
 
         assert_eq!(arbol_commit, "01c6c27fe31e9a4c3e64d3ab3489a2d3716a2b49");
 
-        let contenido_commit = descomprimir_objeto_gir(arbol_commit).unwrap();
+        let contenido_commit = descomprimir_objeto_gir(&arbol_commit).unwrap();
 
         assert_eq!(
             contenido_commit,

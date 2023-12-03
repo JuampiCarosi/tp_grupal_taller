@@ -4,6 +4,7 @@ use gtk::{prelude::*, Button};
 
 use crate::{
     tipos_de_dato::{
+        comando::Ejecutar,
         comandos::{add::Add, merge::Merge},
         logger::Logger,
         objeto::Objeto,
@@ -179,7 +180,7 @@ fn crear_notebook(builder: &gtk::Builder, logger: Arc<Logger>) {
     for objeto in sin_mergear {
         let text_area = crear_text_area_de_objeto(&objeto.objeto);
         let label = gtk::Label::new(Some(
-            &objeto.objeto.obtener_path().to_string_lossy().to_string(),
+            objeto.objeto.obtener_path().to_string_lossy().as_ref(),
         ));
         notebook.append_page(&text_area, Some(&label));
     }

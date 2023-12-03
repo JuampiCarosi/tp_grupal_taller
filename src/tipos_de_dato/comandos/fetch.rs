@@ -1,7 +1,8 @@
+use crate::tipos_de_dato::comando::Ejecutar;
 use crate::tipos_de_dato::comunicacion::Comunicacion;
 use crate::tipos_de_dato::config::Config;
 use crate::tipos_de_dato::logger::Logger;
-use crate::tipos_de_dato::packfile;
+use crate::tipos_de_dato::packfile::{self, Packfile};
 use crate::utils::{self, io, objects};
 use std::io::{Read, Write};
 use std::net::TcpStream;
@@ -74,8 +75,8 @@ impl<T: Write + Read> Fetch<T> {
     }
 
     ///Le pide al config el url asosiado a la rama
-    fn obtener_url(remoto: &String) -> Result<String, String> {
-        Config::leer_config()?.obtenet_url_asosiado_remoto(&remoto)
+    fn obtener_url(remoto: &str) -> Result<String, String> {
+        Config::leer_config()?.obtenet_url_asosiado_remoto(remoto)
     }
 
     ///obtiene el remoto para el comando, si argumentos lo contiene y es valido lo saca de argumentos. Si no hay argumetos lo saca
@@ -90,12 +91,12 @@ impl<T: Write + Read> Fetch<T> {
     }
 
     ///verifica si el remoto envio por el usario existe
-    fn verificar_remoto(remoto: &String) -> Result<String, String> {
+    fn verificar_remoto(remoto: &str) -> Result<String, String> {
         if let false = Config::leer_config()?.existe_remote(remoto) {
             return  Err(format!("Remoto desconocido{}\nSi quiere añadir un nuevo remoto:\n\ngir remote add [<nombre-remote>] [<url-remote>]\n\n", remoto));
         };
 
-        Ok(remoto.clone())
+        Ok(remoto.to_string())
     }
 
     ///obtiene el remo asosiado a la rama remota actual. Falla si no existe
@@ -106,51 +107,6 @@ impl<T: Write + Read> Fetch<T> {
                 "La rama actual no se encuentra asosiado a ningun remoto\nUtilice:\n\ngir remote add [<nombre-remote>] [<url-remote>]\n\nDespues:\n\n{}\n\n", GIR_FETCH
             ))
     }
-
-    // -------------------------------------------------------------
-    // -------------------------------------------------------------
-    // -------------------------------------------------------------
-    // -------------------------------------------------------------
-    // -------------------------------------------------------------
-    // -------------------------------------------------------------
-    // -------------------------------------------------------------
-    // -------------------------------------------------------------
-    //verificar si existe /.git
-    pub fn ejecutar(&self) -> Result<String, String> {
-        self.logger.log("Se ejecuto el comando fetch");
-        self.comunicacion.iniciar_git_upload_pack_con_servidor()?;
-
-        let (
-            capacidades_servidor,
-            commit_head_remoto,
-            commits_cabezas_y_dir_rama_asosiado,
-            commits_y_tags_asosiados,
-        ) = self.fase_de_descubrimiento()?;
-
-        if !self.fase_de_negociacion(capacidades_servidor, &commits_cabezas_y_dir_rama_asosiado)? {
-            return Ok(String::from("El cliente esta actualizado"));
-        }
-
-        self.recivir_packfile_y_guardar_objetos()?;
-
-        self.actualizar_ramas_locales_del_remoto(&commits_cabezas_y_dir_rama_asosiado)?;
-
-        self.guardar_los_tags(&commits_y_tags_asosiados)?;
-
-        self.acutualizar_archivo_head_remoto(&commit_head_remoto)?;
-
-        let mensaje = "Fetch ejecutado con exito".to_string();
-        self.logger.log(&mensaje);
-        Ok(mensaje)
-    }
-    // -------------------------------------------------------------
-    // -------------------------------------------------------------
-    // -------------------------------------------------------------
-    // -------------------------------------------------------------
-    // -------------------------------------------------------------
-    // -------------------------------------------------------------
-    // -------------------------------------------------------------
-    // -------------------------------------------------------------
 
     fn guardar_los_tags(
         &self,
@@ -182,14 +138,14 @@ impl<T: Write + Read> Fetch<T> {
 
     //ACA PARA MI HAY UN PROBLEMA DE RESPONSABILIADADES: COMUNICACION DEBERIA RECIBIR EL PACKETE Y FETCH
     //DEBERIA GUARDAR LAS COSAS, PERO COMO NO ENTIENDO EL CODIGO JAJA DENTRO DE COMUNICACION NO METO MANO
-    fn recivir_packfile_y_guardar_objetos(&self) -> Result<(), String> {
+    fn recibir_packfile_y_guardar_objetos(&self) -> Result<(), String> {
         // aca para git daemon hay que poner un recibir linea mas porque envia un ACK repetido (No entiendo por que...)
         println!("Obteniendo paquete..");
         let packfile = self.comunicacion.obtener_packfile()?;
         // Packfile::new()
         //     .obtener_paquete_y_escribir(&mut packfile, String::from("./.gir/objects/"))
         //     .unwrap();
-        packfile::leer_packfile_y_escribir(&packfile, "./.gir/objects/".to_string()).unwrap();
+        Packfile::leer_packfile_y_escribir(&packfile, "./.gir/objects/".to_string()).unwrap();
 
         self.logger.log("Recepcion del pack file en fetch exitoso");
         Ok(())
@@ -257,7 +213,7 @@ impl<T: Write + Read> Fetch<T> {
     /// false
     fn enviar_pedidos(
         &self,
-        capacidades_servidor: &Vec<String>,
+        capacidades_servidor: &[String],
         commits_cabezas_y_dir_rama_asosiado: &Vec<(String, PathBuf)>,
     ) -> Result<bool, String> {
         let capacidades_a_usar_en_la_comunicacion =
@@ -319,7 +275,7 @@ impl<T: Write + Read> Fetch<T> {
     /// para usar en la comunicacion
     fn obtener_capacidades_en_comun_con_el_servidor(
         &self,
-        capacidades_servidor: &Vec<String>,
+        capacidades_servidor: &[String],
     ) -> String {
         let mut capacidades_a_usar_en_la_comunicacion: Vec<&str> = Vec::new();
 
@@ -367,7 +323,7 @@ impl<T: Write + Read> Fetch<T> {
             let dir_rama_local_del_remoto =
                 utils::ramas::convertir_de_dir_rama_remota_a_dir_rama_local(
                     &self.remoto,
-                    &dir_rama_remota,
+                    dir_rama_remota,
                 )?;
 
             io::escribir_bytes(dir_rama_local_del_remoto, commit_cabeza_de_rama)?;
@@ -376,6 +332,36 @@ impl<T: Write + Read> Fetch<T> {
         self.logger
             .log("Actualizacion de ramas remotas en fetch exitosa");
         Ok(())
+    }
+}
+
+impl Ejecutar for Fetch<TcpStream> {
+    fn ejecutar(&mut self) -> Result<String, String> {
+        self.logger.log("Se ejecuto el comando fetch");
+        self.comunicacion.iniciar_git_upload_pack_con_servidor()?;
+
+        let (
+            capacidades_servidor,
+            commit_head_remoto,
+            commits_cabezas_y_dir_rama_asosiado,
+            commits_y_tags_asosiados,
+        ) = self.fase_de_descubrimiento()?;
+
+        if !self.fase_de_negociacion(capacidades_servidor, &commits_cabezas_y_dir_rama_asosiado)? {
+            return Ok(String::from("El cliente esta actualizado"));
+        }
+
+        self.recibir_packfile_y_guardar_objetos()?;
+
+        self.actualizar_ramas_locales_del_remoto(&commits_cabezas_y_dir_rama_asosiado)?;
+
+        self.guardar_los_tags(&commits_y_tags_asosiados)?;
+
+        self.acutualizar_archivo_head_remoto(&commit_head_remoto)?;
+
+        let mensaje = "Fetch ejecutado con exito".to_string();
+        self.logger.log(&mensaje);
+        Ok(mensaje)
     }
 }
 

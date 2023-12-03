@@ -12,7 +12,7 @@ fn main() -> Result<(), String> {
     let mut argv = args().collect::<Vec<String>>();
     argv.remove(0);
 
-    if argv.len() < 1 {
+    if argv.is_empty() {
         return Err("Ningun comando ingresado".to_string());
     }
 

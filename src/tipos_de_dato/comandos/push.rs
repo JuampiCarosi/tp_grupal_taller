@@ -1,4 +1,5 @@
 use super::set_upstream::SetUpstream;
+use crate::tipos_de_dato::comando::Ejecutar;
 use crate::tipos_de_dato::comandos::write_tree;
 use crate::tipos_de_dato::comunicacion::Comunicacion;
 use crate::tipos_de_dato::config::Config;
@@ -31,7 +32,7 @@ pub struct Push {
 
 impl Push {
     pub fn new(args: &mut Vec<String>, logger: Arc<Logger>) -> Result<Self, String> {
-        Self::verificar_argumentos(&args)?;
+        Self::verificar_argumentos(args)?;
 
         let mut set_upstream = false;
 
@@ -142,12 +143,12 @@ impl Push {
         }
     }
 
-    fn verificar_remoto(remoto: &String) -> Result<String, String> {
+    fn verificar_remoto(remoto: &str) -> Result<String, String> {
         if let false = Config::leer_config()?.existe_remote(remoto) {
             return  Err(format!("Remoto desconocido{}\nSi quiere añadir un nuevo remoto:\n\ngir remote add [<nombre-remote>] [<url-remote>]\n\n", remoto));
         };
 
-        Ok(remoto.clone())
+        Ok(remoto.clone().to_owned())
     }
 
     pub fn ejecutar(&self) -> Result<String, String> {
@@ -212,8 +213,10 @@ impl Push {
     ) -> Result<(), String> {
         comunicacion.enviar_flush_pkt()?;
         // el server pide que se le mande un packfile vacio
-        comunicacion
-            .enviar_pack_file(Packfile::new().obtener_pack_con_archivos(vec![], "./.gir/objects/"))
+        comunicacion.enviar_pack_file(Packfile::obtener_pack_con_archivos(
+            vec![],
+            "./.gir/objects/",
+        )?)
     }
 
     fn es_necesario_actualizar(&self, referencia_actualizar: &(String, String, PathBuf)) -> bool {
@@ -293,10 +296,10 @@ impl Push {
     ) -> Result<(), String> {
         comunicacion.enviar_referencia(referencia_actualizar)?;
 
-        comunicacion.enviar_pack_file(Packfile::new().obtener_pack_con_archivos(
+        comunicacion.enviar_pack_file(Packfile::obtener_pack_con_archivos(
             objetos_a_enviar.into_iter().collect(),
             "./.gir/objects/",
-        ))?;
+        )?)?;
         Ok(())
     }
 
@@ -332,9 +335,6 @@ impl Push {
         .concat())
     }
 }
-
-// ------ funciones auxiliares ------
-
 // funcion para obtener los commits que faltan para llegar al commit limite y los objetos asociados a cada commit
 // en caso de que sea una referencia nula, se enviara todo. En caso de que el commit limite no sea una referencia nula
 // y no se encuentre al final de la cadena de commits, se enviara un error, ya que el servidor tiene cambios que el cliente no tiene
@@ -376,11 +376,9 @@ fn obtener_commits_y_objetos_asociados(
             break;
         }
         objetos_a_agregar.insert(commit.hash.clone());
-        let hash_tree = write_tree::conseguir_arbol_from_hash_commit(
-            &commit.hash,
-            "./.gir/objects/".to_string(),
-        );
-        let tree = Tree::from_hash(hash_tree.clone(), PathBuf::from("."), logger.clone())?;
+        let hash_tree =
+            write_tree::conseguir_arbol_from_hash_commit(&commit.hash, "./.gir/objects/")?;
+        let tree = Tree::from_hash(&hash_tree, PathBuf::from("."), logger.clone())?;
         objetos_a_agregar.insert(hash_tree.clone());
         objetos_a_agregar.extend(
             tree.obtener_objetos()
@@ -404,7 +402,6 @@ fn obtener_commits_y_objetos_asociados(
 }
 
 #[cfg(test)]
-
 mod test {
     use std::{path::PathBuf, sync::Arc};
 
@@ -677,94 +674,37 @@ mod test {
 //     refs.append(&mut io::obtener_refs(dir.join("tags/"), prefijo).unwrap());
 //     refs
 // }
-
-// // recibe las referencia junto a la version y las capacidades del servidor.
-// fn obtener_referencias_y_capacidades(&mut self) -> Result<(Vec<String>, String), String> {
-//     let mut refs_recibidas = self.comunicacion.obtener_lineas()?;
-
-//     let _version = refs_recibidas.remove(0);
-//     let first_ref = refs_recibidas.remove(0);
-
-//     let referencia_y_capacidades = first_ref.split('\0').collect::<Vec<&str>>();
-//     let referencia = referencia_y_capacidades[0].to_string();
-//     let capacidades = referencia_y_capacidades[1].to_string();
-//     if !referencia.contains(&"0".repeat(40)) {
-//         refs_recibidas.push(referencia_y_capacidades[0].to_string());
-//     }
-//     Ok((refs_recibidas, capacidades))
-// }
-
-//   // funcion que devuelve los objetos que hay que enviar al server y las actualizaciones que hay que hacer
-//   fn obtener_objetos_a_enviar(
-//     &self,
-//     hash_refs: &HashMap<String, (String, String)>,
-// ) -> Result<(HashSet<String>, Vec<String>), String> {
-//     let mut actualizaciones = Vec::new();
-//     let mut objetos_a_enviar = HashSet::new();
-
-//     for (key, value) in hash_refs {
-//         if value.1 != value.0 {
-//             actualizaciones.push(io::obtener_linea_con_largo_hex(&format!(
-//                 "{} {} {}",
-//                 &value.1, &value.0, &key
-//             )));
-//             let nuevos_objetos = obtener_commits_y_objetos_asociados(key, &value.1);
-//             match nuevos_objetos {
-//                 Ok(nuevos_objetos) => {
-//                     objetos_a_enviar.extend(nuevos_objetos);
-//                 }
-//                 Err(err) => {
-//                     //error
-//                     self.comunicacion.responder(vec![]).unwrap();
-//                     // el server pide que se le mande un packfile vacio
-//                     self.comunicacion
-//                         .enviar_pack_file(
-//                             Packfile::new()
-//                                 .obtener_pack_con_archivos(vec![], "./.gir/objects/"),
-//                         )
-//                         .unwrap();
-//                     return Err(err);
-//                 }
-//             }
+// impl Ejecutar for Push {
+//     fn ejecutar(&mut self) -> Result<String, String> {
+//         if self.set_upstream {
+//             SetUpstream::new(
+//                 self.remoto.clone(),
+//                 self.rama_merge.clone(),
+//                 utils::ramas::obtener_rama_actual()?,
+//                 self.logger.clone(),
+//             )?
+//             .ejecutar()?;
 //         }
-//     }
-//     Ok((objetos_a_enviar, actualizaciones))
-// }
 
-// fn enviar_actualizaciones_y_objetos(
-//     &mut self,
-//     actualizaciones: Vec<String>,
-//     objetos_a_enviar: HashSet<String>,
-// ) -> Result<String, String> {
-//     if !actualizaciones.is_empty() {
-//         self.comunicacion.responder(actualizaciones).unwrap();
-//         self.comunicacion
-//             .enviar_pack_file(Packfile::new().obtener_pack_con_archivos(
-//                 objetos_a_enviar.into_iter().collect(),
-//                 "./.gir/objects/",
-//             ))?;
-//         Ok(String::from("Push ejecutado con exito"))
-//     } else {
-//         //error
-//         Err("No hay actualizaciones".to_string())
-//     }
-// }
+//         self.comunicacion.iniciar_git_recive_pack_con_servidor()?;
+//         let (
+//             _capacidades_servidor,
+//             _commit_head_remoto,
+//             commits_cabezas_y_ref_rama_asosiado,
+//             _commits_y_tags_asosiados,
+//         ) = self.fase_de_descubrimiento()?;
+//         self.logger.log("Fase de descubrimiento ejecuta con exito");
 
-// // funcion para guaradar en el hashmap las diferencias entre las refs del cliente y las del server
-// fn guardar_diferencias(
-//     &mut self,
-//     refs_recibidas: Vec<String>,
-//     hash_refs: &mut HashMap<String, (String, String)>,
-// ) -> Result<(), String> {
-//     for referencia in &refs_recibidas {
-//         let obj_id = referencia.split(' ').collect::<Vec<&str>>()[0];
-//         let referencia = referencia.split(' ').collect::<Vec<&str>>()[1].trim_end_matches('\n');
-//         match hash_refs.get_mut(referencia) {
-//             Some(hash) => {
-//                 hash.1 = obj_id.to_string();
-//             }
-//             None => {}
-//         }
+//         println!("{:?}", commits_cabezas_y_ref_rama_asosiado);
+//         let referencia_acualizar =
+//             self.obtener_referencia_acualizar(&commits_cabezas_y_ref_rama_asosiado)?;
+//         let objetos_a_enviar =
+//             self.obtener_objetos_a_enviar(&referencia_acualizar.2, &referencia_acualizar.0)?;
+
+//         self.enviar_actualizaciones_y_objetos(referencia_acualizar, objetos_a_enviar)?;
+
+//         let mensaje = "Push ejecutado con exito".to_string();
+//         self.logger.log(&mensaje);
+//         Ok(mensaje)
 //     }
-//     Ok(())
 // }

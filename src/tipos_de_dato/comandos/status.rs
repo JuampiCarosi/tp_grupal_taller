@@ -8,14 +8,16 @@ const VERDE: &str = "\x1B[32m";
 const RESET: &str = "\x1B[0m";
 
 use crate::{
-    tipos_de_dato::{logger::Logger, objeto::Objeto, objetos::tree::Tree},
+    tipos_de_dato::{comando::Ejecutar, logger::Logger, objeto::Objeto, objetos::tree::Tree},
     utils::{
         index::{leer_index, ObjetoIndex},
         io,
     },
 };
 
-use super::{commit::Commit, write_tree::conseguir_arbol_from_hash_commit};
+use super::{
+    check_ignore::CheckIgnore, commit::Commit, write_tree::conseguir_arbol_from_hash_commit,
+};
 
 pub struct Status {
     /// Logger para registrar los eventos ocurridos durante la ejecucion del comando.
@@ -40,8 +42,9 @@ pub fn obtener_arbol_del_commit_head(logger: Arc<Logger>) -> Option<Tree> {
         None
     } else {
         let hash_arbol_commit =
-            conseguir_arbol_from_hash_commit(&padre_commit, String::from(".gir/objects/"));
-        let tree = Tree::from_hash(hash_arbol_commit, PathBuf::from("./"), logger.clone()).unwrap();
+            conseguir_arbol_from_hash_commit(&padre_commit, ".gir/objects/").ok()?;
+        let tree =
+            Tree::from_hash(&hash_arbol_commit, PathBuf::from("./"), logger.clone()).unwrap();
         Some(tree)
     }
 }
@@ -111,7 +114,7 @@ impl Status {
         for objeto in self.tree_directorio_actual.obtener_objetos_hoja() {
             if tree_head.contiene_hijo_por_ubicacion(objeto.obtener_path())
                 && !tree_head
-                    .contiene_misma_version_hijo(objeto.obtener_hash(), objeto.obtener_path())
+                    .contiene_misma_version_hijo(&objeto.obtener_hash(), &objeto.obtener_path())
                 && !self.index_contiene_objeto(&objeto)
             {
                 trackeados.push(format!("modificado: {}", objeto.obtener_path().display()));
@@ -131,6 +134,9 @@ impl Status {
 
         for objeto in tree.objetos.iter() {
             if self.index_contiene_objeto(objeto) {
+                continue;
+            }
+            if CheckIgnore::es_directorio_a_ignorar(&objeto.obtener_path(), self.logger.clone())? {
                 continue;
             }
             match objeto {
@@ -159,8 +165,8 @@ impl Status {
         let bool = self.index.iter().any(|objeto_index| match objeto {
             Objeto::Blob(ref blob) => blob.obtener_hash() == objeto_index.objeto.obtener_hash(),
             Objeto::Tree(ref tree) => tree.contiene_misma_version_hijo(
-                objeto_index.objeto.obtener_hash(),
-                objeto_index.objeto.obtener_path(),
+                &objeto_index.objeto.obtener_hash(),
+                &objeto_index.objeto.obtener_path(),
             ),
         });
 
@@ -179,6 +185,12 @@ impl Status {
                     if self.index_contiene_objeto(objeto) {
                         continue;
                     }
+                    if CheckIgnore::es_directorio_a_ignorar(
+                        &objeto.obtener_path(),
+                        self.logger.clone(),
+                    )? {
+                        continue;
+                    }
                     if let Objeto::Tree(_) = objeto {
                         untrackeados.push(format!("{}/", objeto.obtener_path().display()));
                     } else {
@@ -194,10 +206,12 @@ impl Status {
 
         Ok(untrackeados)
     }
+}
 
+impl Ejecutar for Status {
     /// Ejecuta el comando status.
     /// Devuelve un string con los cambios a ser commiteados, los cambios no en zona de preparacion y los cambios no trackeados.
-    pub fn ejecutar(&mut self) -> Result<String, String> {
+    fn ejecutar(&mut self) -> Result<String, String> {
         let staging = self.obtener_staging()?;
         let trackeados = self.obtener_trackeados()?;
         let untrackeados = self.obtener_untrackeados()?;
@@ -226,6 +240,7 @@ mod tests {
 
     use crate::{
         tipos_de_dato::{
+            comando::Ejecutar,
             comandos::{add::Add, commit::Commit, init::Init, status::Status},
             logger::Logger,
         },
@@ -240,7 +255,7 @@ mod tests {
     fn addear_archivos_y_comittear(args: Vec<String>, logger: Arc<Logger>) {
         let mut add = Add::from(args, logger.clone()).unwrap();
         add.ejecutar().unwrap();
-        let commit =
+        let mut commit =
             Commit::from(&mut vec!["-m".to_string(), "mensaje".to_string()], logger).unwrap();
         commit.ejecutar().unwrap();
     }
@@ -248,7 +263,7 @@ mod tests {
     fn limpiar_archivo_gir() {
         io::rm_directorio(".gir").unwrap();
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/branch_init")).unwrap());
-        let init = Init {
+        let mut init = Init {
             path: "./.gir".to_string(),
             logger,
         };

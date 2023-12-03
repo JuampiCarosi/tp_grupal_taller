@@ -4,6 +4,7 @@ use chrono::{FixedOffset, LocalResult, TimeZone};
 
 use crate::{
     tipos_de_dato::{
+        comando::Ejecutar,
         comandos::{add::Add, cat_file},
         logger::Logger,
         region::{unificar_regiones, Region},
@@ -92,16 +93,14 @@ impl CommitObj {
 
         let mut conflictos = Vec::new();
 
-        let tree_actual = Tree::from_hash(
-            self.hash_tree.clone(),
-            PathBuf::from("."),
-            self.logger.clone(),
-        )?;
+        let tree_actual =
+            Tree::from_hash(&self.hash_tree, PathBuf::from("."), self.logger.clone())?;
 
         let hash_tree_padre =
             CommitObj::from_hash(self.padres[0].clone(), self.logger.clone())?.hash_tree;
 
-        let tree_padre = Tree::from_hash(hash_tree_padre, PathBuf::from("."), self.logger.clone())?;
+        let tree_padre =
+            Tree::from_hash(&hash_tree_padre, PathBuf::from("."), self.logger.clone())?;
 
         let deep_diffs = tree_padre.deep_changes(&tree_actual)?;
 
@@ -138,7 +137,7 @@ impl CommitObj {
         if hash.len() != 40 {
             return Err("Hash invalido".to_string());
         }
-        let (_header, contenido) = cat_file::obtener_contenido_objeto(hash.clone())?;
+        let (_header, contenido) = cat_file::obtener_contenido_objeto(&hash)?;
         let mut padres: Vec<String> = Vec::new();
         let mut autor_option: Option<String> = None;
         let mut mail_option: Option<String> = None;
@@ -213,28 +212,25 @@ fn aplicar_diff(texto: &str, diffs: Vec<(usize, TipoDiff)>) -> Vec<Region> {
     let lineas = texto.lines().collect::<Vec<_>>();
 
     let mut anterior_fue_conflicto = false;
-    for i in 0..lineas.len() {
+    for (i, linea_actual) in lineas.iter().enumerate() {
         let diffs_linea: Vec<_> = diffs.iter().filter(|(linea, _)| *linea - 1 == i).collect();
 
         if anterior_fue_conflicto {
             let diffs_a_agregar: Vec<_> = diffs_linea
                 .iter()
-                .filter(|(_, diff)| match diff {
-                    TipoDiff::Removed(_) => false,
-                    _ => true,
-                })
+                .filter(|(_, diff)| !matches!(diff, TipoDiff::Removed(_)))
                 .collect();
 
             let mut buffer = Vec::new();
             for diff in diffs_a_agregar {
                 match &diff.1 {
-                    TipoDiff::Added(linea) => buffer.push(format!("{linea}")),
-                    TipoDiff::Unchanged(linea) => buffer.push(format!("{linea}")),
+                    TipoDiff::Added(linea) => buffer.push(linea.to_string()),
+                    TipoDiff::Unchanged(linea) => buffer.push(linea.to_string()),
                     _ => {}
                 }
             }
             contenido_final.push(Region::Conflicto(
-                format!("{}", lineas[i]),
+                linea_actual.to_string(),
                 buffer.join("\n"),
             ));
             anterior_fue_conflicto = false;
@@ -243,32 +239,32 @@ fn aplicar_diff(texto: &str, diffs: Vec<(usize, TipoDiff)>) -> Vec<Region> {
         if diffs_linea.len() == 1 {
             match &diffs_linea[0].1 {
                 TipoDiff::Added(linea) => {
-                    contenido_final.push(Region::Normal(format!("{}", lineas[i])));
-                    contenido_final.push(Region::Normal(format!("{linea}")));
+                    contenido_final.push(Region::Normal(linea_actual.to_string()));
+                    contenido_final.push(Region::Normal(linea.to_string()));
                 }
                 TipoDiff::Removed(linea) => {
-                    if *lineas[i] != *linea {
+                    if linea != linea_actual {
                         anterior_fue_conflicto = true;
                         contenido_final
-                            .push(Region::Conflicto(format!("{}", lineas[i]), format!("")))
+                            .push(Region::Conflicto(linea_actual.to_string(), String::new()))
                     }
                 }
                 TipoDiff::Unchanged(linea) => {
-                    contenido_final.push(Region::Normal(format!("{linea}")))
+                    contenido_final.push(Region::Normal(linea.to_string()))
                 }
             }
         } else if diffs_linea.len() == 2 {
             if let TipoDiff::Removed(linea) = &diffs_linea[0].1 {
                 if let TipoDiff::Added(linea2) = &diffs_linea[1].1 {
-                    if *lineas[i] != *linea {
+                    if linea != linea_actual {
                         anterior_fue_conflicto = true;
                         contenido_final.push(Region::Conflicto(
-                            format!("{}", lineas[i]),
-                            format!("{linea2}"),
+                            linea_actual.to_string(),
+                            linea2.to_string(),
                         ));
                         continue;
                     }
-                    contenido_final.push(Region::Normal(format!("{linea2}")))
+                    contenido_final.push(Region::Normal(linea2.to_string()))
                 }
             }
         }

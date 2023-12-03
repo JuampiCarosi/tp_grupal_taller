@@ -1,11 +1,10 @@
+use super::comando_gui::ComandoGui;
+use super::hidratar_componentes;
+use crate::tipos_de_dato::comandos::pull::Pull;
 use gtk::prelude::*;
 use gtk::{self};
 use std::sync::Arc;
 use std::thread::sleep;
-
-use crate::tipos_de_dato::comandos::pull::Pull;
-
-use super::{error_dialog, hidratar_componentes};
 
 pub fn render(
     builder: &gtk::Builder,
@@ -25,19 +24,15 @@ pub fn render(
         fetching_dialog.set_position(gtk::WindowPosition::Center);
         fetching_dialog.show_all();
 
-        match Pull::from(Vec::new(), logger.clone()).unwrap().ejecutar() {
-            Ok(_) => {}
-            Err(err) => {
-                error_dialog::mostrar_error(&err);
-                return;
-            }
-        };
+        if let None = Pull::from(Vec::new(), logger.clone()).ejecutar_gui() {
+            return;
+        }
 
         hidratar_componentes(
             &builder_clone,
             &window_clone,
             logger.clone(),
-            branch_actual.clone(),
+            &branch_actual,
         );
 
         sleep(std::time::Duration::from_secs(3));

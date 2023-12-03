@@ -2,8 +2,8 @@ use std::{net::TcpStream, sync::Arc};
 
 use super::{
     comandos::{
-        add::Add, branch::Branch, cat_file::CatFile, checkout::Checkout, clone::Clone,
-        commit::Commit, fetch::Fetch, hash_object::HashObject, init::Init, log::Log,
+        add::Add, branch::Branch, cat_file::CatFile, check_ignore::CheckIgnore, checkout::Checkout,
+        clone::Clone, commit::Commit, fetch::Fetch, hash_object::HashObject, init::Init, log::Log,
         ls_files::LsFiles, ls_tree::LsTree, merge::Merge, pull::Pull, push::Push, rebase::Rebase,
         remote::Remote, rm::Remove, show_ref::ShowRef, status::Status, version::Version,
     },
@@ -20,6 +20,7 @@ pub enum Comando {
     Add(Add),
     Remove(Remove),
     Checkout(Checkout),
+    CheckIgnore(CheckIgnore),
     Branch(Branch),
     Commit(Commit),
     Clone(Clone),
@@ -36,6 +37,10 @@ pub enum Comando {
     LsFiles(LsFiles),
     Rebase(Rebase),
     Unknown,
+}
+
+pub trait Ejecutar {
+    fn ejecutar(&mut self) -> Result<String, String>;
 }
 
 impl Comando {
@@ -66,6 +71,7 @@ impl Comando {
             "tag" => Comando::Tag(Tag::from(vector_args, logger)?),
             "show-ref" => Comando::ShowRef(ShowRef::from(vector_args, logger)?),
             "ls-files" => Comando::LsFiles(LsFiles::from(logger, &mut vector_args)?),
+            "check-ignore" => Comando::CheckIgnore(CheckIgnore::from(vector_args, logger)?),
             "rebase" => Comando::Rebase(Rebase::from(vector_args, logger)?),
             _ => Comando::Unknown,
         };
@@ -98,6 +104,7 @@ impl Comando {
             Comando::ShowRef(ref mut show_ref) => show_ref.ejecutar(),
             Comando::Rebase(ref mut rebase) => rebase.ejecutar(),
             Comando::LsFiles(ref mut ls_files) => ls_files.ejecutar(),
+            Comando::CheckIgnore(ref mut check_ignore) => check_ignore.ejecutar(),
             Comando::Unknown => Err("Comando desconocido".to_string()),
         }
     }

@@ -1,7 +1,7 @@
 use std::{collections::HashSet, path::PathBuf, sync::Arc};
 
 use crate::{
-    tipos_de_dato::{logger::Logger, objeto::Objeto},
+    tipos_de_dato::{comando::Ejecutar, logger::Logger, objeto::Objeto},
     utils::{
         index::{crear_index, escribir_index, leer_index, ObjetoIndex},
         io::{self, rm_directorio},
@@ -114,19 +114,20 @@ impl Remove {
             cached,
         })
     }
+}
 
+impl Ejecutar for Remove {
     /// Ejecuta el comando remove.
     /// Si cached es true, lo elimina del historial de commits pero lo conserva en el disco.
     /// Si cached es false, lo elimina del historial de commits y del disco.
     /// Si es recursive, elimina los archivos de los directorios recursivamente.
-    pub fn ejecutar(&mut self) -> Result<String, String> {
+    fn ejecutar(&mut self) -> Result<String, String> {
         self.logger.log("Ejecutando remove");
 
         for ubicacion in self.ubicaciones.clone() {
             if ubicacion.is_dir() {
                 Err("No se puede borrar un directorio sin la opcion -r".to_string())?;
             }
-
             let nuevo_objeto =
                 Objeto::from_directorio(ubicacion.clone(), None, self.logger.clone())?;
             let nuevo_objeto_index = ObjetoIndex {
@@ -153,7 +154,6 @@ impl Remove {
                 rm_directorio(ubicacion)?;
             }
         }
-
         escribir_index(self.logger.clone(), &mut self.index)?;
         self.limpiar_directorios_vacios();
 
@@ -164,7 +164,10 @@ impl Remove {
 #[cfg(test)]
 mod tests {
 
-    use crate::tipos_de_dato::comandos::{add::Add, commit::Commit};
+    use crate::tipos_de_dato::{
+        comando::Ejecutar,
+        comandos::{add::Add, commit::Commit},
+    };
 
     use super::*;
 

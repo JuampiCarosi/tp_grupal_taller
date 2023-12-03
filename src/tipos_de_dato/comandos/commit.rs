@@ -4,7 +4,7 @@ use chrono::TimeZone;
 use sha1::{Digest, Sha1};
 
 use crate::{
-    tipos_de_dato::logger::Logger,
+    tipos_de_dato::{comando::Ejecutar, logger::Logger},
     utils::{
         compresion::comprimir_contenido,
         gir_config::{armar_config_con_mail_y_nombre, conseguir_nombre_y_mail_del_config},
@@ -93,8 +93,8 @@ impl Commit {
     /// Toma el nombre y mail del archivo de configuracion.
     fn formatear_contenido_commit(
         &self,
-        hash_arbol: String,
-        hash_padre_commit: String,
+        hash_arbol: &str,
+        hash_padre_commit: &str,
     ) -> Result<String, String> {
         let mut contenido_commit = String::new();
         contenido_commit.push_str(&format!("tree {}\n", hash_arbol));
@@ -117,19 +117,15 @@ impl Commit {
 
     /// Crea el contenido del commit.
     /// Devuelve el hash del arbol y el contenido total del commit.
-    fn crear_contenido_commit(
-        &self,
-        hash_padre_commit: String,
-    ) -> Result<(String, String), String> {
-        let hash_arbol = match hash_padre_commit.as_str() {
+    fn crear_contenido_commit(&self, hash_padre_commit: &str) -> Result<(String, String), String> {
+        let hash_arbol = match hash_padre_commit {
             "" => write_tree::crear_arbol_commit(None, self.logger.clone())?,
             _ => write_tree::crear_arbol_commit(
-                Some(hash_padre_commit.clone()),
+                Some(hash_padre_commit.to_string()),
                 self.logger.clone(),
             )?,
         };
-        let contenido_commit =
-            self.formatear_contenido_commit(hash_arbol.clone(), hash_padre_commit)?;
+        let contenido_commit = self.formatear_contenido_commit(&hash_arbol, hash_padre_commit)?;
         let header = format!("commit {}\0", contenido_commit.len());
         let contenido_total = format!("{}{}", header, contenido_commit);
         Ok((hash_arbol, contenido_total))
@@ -137,7 +133,7 @@ impl Commit {
 
     /// Escribe el objeto commit en el repositorio.
     /// El objeto commit se escribe en .gir/objects/.
-    fn escribir_objeto_commit(hash: String, contenido_comprimido: Vec<u8>) -> Result<(), String> {
+    fn escribir_objeto_commit(hash: &str, contenido_comprimido: Vec<u8>) -> Result<(), String> {
         let ruta = format!(".gir/objects/{}/{}", &hash[..2], &hash[2..]);
         io::escribir_bytes(ruta, contenido_comprimido)?;
         Ok(())
@@ -171,7 +167,7 @@ impl Commit {
 
     /// Actualiza el archivo head/ref de la branch actual con el hash del commit creado.
     /// En caso de no poder abrir o escribir en el archivo devuelve un error.
-    fn updatear_ref_head(&self, hash: String) -> Result<(), String> {
+    fn updatear_ref_head(&self, hash: &str) -> Result<(), String> {
         let ruta = Self::obtener_ruta_branch_commit()?;
 
         let mut f = match OpenOptions::new().write(true).truncate(true).open(ruta) {
@@ -189,11 +185,11 @@ impl Commit {
 
     /// Ejecuta el comando commit.
     /// Devuelve un mensaje indicando si se pudo crear el commit o no.
-    fn ejecutar_wrapper(&self, contenido_total: String) -> Result<(), String> {
-        let contenido_comprimido = comprimir_contenido(contenido_total.clone())?;
-        let hash = self.hashear_contenido_objeto(&contenido_total);
-        Self::updatear_ref_head(self, hash.clone())?;
-        Self::escribir_objeto_commit(hash.clone(), contenido_comprimido)?;
+    fn ejecutar_wrapper(&self, contenido_total: &str) -> Result<(), String> {
+        let contenido_comprimido = comprimir_contenido(contenido_total)?;
+        let hash = self.hashear_contenido_objeto(contenido_total);
+        Self::updatear_ref_head(self, &hash)?;
+        Self::escribir_objeto_commit(&hash, contenido_comprimido)?;
         self.logger.log(&format!(
             "commit {}\n Author: {}\n{} ",
             hash, "", self.mensaje
@@ -201,14 +197,16 @@ impl Commit {
         limpiar_archivo_index()?;
         Ok(())
     }
+}
 
+impl Ejecutar for Commit {
     /// Ejecuta el comando commit en su totalidad.
     /// Utiliza un ejecutar wrapper para que en caso de error limpiar los archivos creados.
-    pub fn ejecutar(&self) -> Result<String, String> {
+    fn ejecutar(&mut self) -> Result<String, String> {
         armar_config_con_mail_y_nombre()?;
         let hash_padre_commit = Self::obtener_hash_commit_actual()?;
-        let (hash_arbol, contenido_total) = self.crear_contenido_commit(hash_padre_commit)?;
-        match self.ejecutar_wrapper(contenido_total) {
+        let (hash_arbol, contenido_total) = self.crear_contenido_commit(&hash_padre_commit)?;
+        match self.ejecutar_wrapper(&contenido_total) {
             Ok(_) => (),
             Err(_) => {
                 let _ = std::fs::remove_file(format!(
@@ -230,6 +228,7 @@ mod tests {
 
     use crate::{
         tipos_de_dato::{
+            comando::Ejecutar,
             comandos::{add::Add, hash_object::HashObject, init::Init},
             logger::Logger,
         },
@@ -251,7 +250,7 @@ mod tests {
     fn limpiar_archivo_gir() {
         io::rm_directorio(".gir").unwrap();
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/branch_init")).unwrap());
-        let init = Init {
+        let mut init = Init {
             path: "./.gir".to_string(),
             logger,
         };
@@ -259,9 +258,9 @@ mod tests {
         craer_archivo_config_default();
     }
 
-    fn conseguir_hash_padre(branch: String) -> String {
-        let hash = std::fs::read_to_string(format!(".gir/refs/heads/{}", branch)).unwrap();
-        let contenido = descomprimir_objeto(hash.clone(), String::from(".gir/objects/")).unwrap();
+    fn conseguir_hash_padre(branch: &str) -> Result<String, String> {
+        let hash = io::leer_a_string(format!(".gir/refs/heads/{}", branch))?;
+        let contenido = descomprimir_objeto(&hash, ".gir/objects/")?;
         let lineas_sin_null = contenido.replace('\0', "\n");
         let lineas = lineas_sin_null.split('\n').collect::<Vec<&str>>();
         let linea_supuesto_padre = lineas[2].split(' ').collect::<Vec<&str>>();
@@ -269,25 +268,24 @@ mod tests {
             "parent" => linea_supuesto_padre[1],
             _ => "",
         };
-        hash_padre.to_string()
+        Ok(hash_padre.to_string())
     }
 
-    fn conseguir_arbol_commit(branch: String) -> String {
+    fn conseguir_arbol_commit(branch: &str) -> Result<String, String> {
         let hash_hijo = io::leer_a_string(format!(".gir/refs/heads/{}", branch)).unwrap();
-        let contenido_hijo =
-            descomprimir_objeto(hash_hijo.clone(), String::from(".gir/objects/")).unwrap();
+        let contenido_hijo = descomprimir_objeto(&hash_hijo, ".gir/objects/").unwrap();
         let lineas_sin_null = contenido_hijo.replace('\0', "\n");
         let lineas = lineas_sin_null.split('\n').collect::<Vec<&str>>();
         let arbol_commit = lineas[1];
         let lineas = arbol_commit.split(' ').collect::<Vec<&str>>();
         let arbol_commit = lineas[1];
-        arbol_commit.to_string()
+        Ok(arbol_commit.to_string())
     }
 
     fn addear_archivos_y_comittear(args: Vec<String>, logger: Arc<Logger>) {
         let mut add = Add::from(args, logger.clone()).unwrap();
         add.ejecutar().unwrap();
-        let commit =
+        let mut commit =
             Commit::from(&mut vec!["-m".to_string(), "mensaje".to_string()], logger).unwrap();
         commit.ejecutar().unwrap();
     }
@@ -298,13 +296,13 @@ mod tests {
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/commit_test01")).unwrap());
         let mut add = Add::from(vec!["test_file.txt".to_string()], logger.clone()).unwrap();
         add.ejecutar().unwrap();
-        let commit =
+        let mut commit =
             Commit::from(&mut vec!["-m".to_string(), "mensaje".to_string()], logger).unwrap();
         commit.ejecutar().unwrap();
-        let arbol_last_commit = conseguir_arbol_commit("master".to_string());
+        let arbol_last_commit = conseguir_arbol_commit("master");
         assert_eq!(
             arbol_last_commit,
-            "ce0ef9a25817847d31d12df1295248d24d07b309".to_string()
+            Ok("ce0ef9a25817847d31d12df1295248d24d07b309".to_string())
         );
     }
 
@@ -318,8 +316,8 @@ mod tests {
         let hash_padre = io::leer_a_string(".gir/refs/heads/master").unwrap();
         addear_archivos_y_comittear(vec!["test_file2.txt".to_string()], logger.clone());
 
-        let hash_padre_desde_hijo = conseguir_hash_padre("master".to_string());
-        assert_eq!(hash_padre_desde_hijo, hash_padre.to_string().to_string());
+        let hash_padre_desde_hijo = conseguir_hash_padre("master");
+        assert_eq!(hash_padre_desde_hijo, Ok(hash_padre.to_string()));
     }
 
     #[test]
@@ -328,9 +326,8 @@ mod tests {
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/commit_test03")).unwrap());
         addear_archivos_y_comittear(vec!["test_file.txt".to_string()], logger);
 
-        let hash_arbol = conseguir_arbol_commit("master".to_string());
-        let contenido_arbol =
-            descomprimir_objeto(hash_arbol, String::from(".gir/objects/")).unwrap();
+        let hash_arbol = conseguir_arbol_commit("master").unwrap();
+        let contenido_arbol = descomprimir_objeto(&hash_arbol, ".gir/objects/").unwrap();
 
         assert_eq!(
             contenido_arbol,
@@ -348,8 +345,8 @@ mod tests {
         io::escribir_bytes("test_file.txt", "hola").unwrap();
         addear_archivos_y_comittear(vec!["test_file.txt".to_string()], logger.clone());
 
-        let hash_arbol = conseguir_arbol_commit("master".to_string());
-        let contenido_arbol = descomprimir_objeto_gir(hash_arbol).unwrap();
+        let hash_arbol = conseguir_arbol_commit("master").unwrap();
+        let contenido_arbol = descomprimir_objeto_gir(&hash_arbol).unwrap();
         let hash_correcto =
             HashObject::from(&mut vec!["test_file.txt".to_string()], logger.clone())
                 .unwrap()
@@ -373,7 +370,7 @@ mod tests {
         io::escribir_bytes("test_dir/muchos_objetos/archivo.txt", "hola").unwrap();
         addear_archivos_y_comittear(vec!["test_dir/muchos_objetos".to_string()], logger.clone());
 
-        let hash_arbol = conseguir_arbol_commit("master".to_string());
+        let hash_arbol = conseguir_arbol_commit("master").unwrap();
         let hash_arbol_git = "c847ae43830604fea16a9830f90e60f0a5f0d993";
 
         io::escribir_bytes("test_dir/muchos_objetos/archivo.txt", "mas contenido").unwrap();

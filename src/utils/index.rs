@@ -6,7 +6,9 @@ use std::{
     sync::Arc,
 };
 
-use crate::tipos_de_dato::{comandos::hash_object::HashObject, logger::Logger, objeto::Objeto};
+use crate::tipos_de_dato::{
+    comando::Ejecutar, comandos::hash_object::HashObject, logger::Logger, objeto::Objeto,
+};
 
 use super::{io, path_buf::obtener_directorio_raiz};
 
@@ -29,7 +31,7 @@ pub fn crear_index() {
 //Devuelve true si el index esta vacio y false en caso contrario.
 //Si falla se presupone que es porque no existe y por lo tanto esta vacio
 pub fn esta_vacio_el_index() -> Result<bool, String> {
-    Ok(io::esta_vacio(PATH_INDEX.to_string()))
+    Ok(io::esta_vacio(PATH_INDEX))
 }
 
 /// Lee el archivo index y devuelve un vector de objetos index.
@@ -50,7 +52,7 @@ pub fn leer_index(logger: Arc<Logger>) -> Result<Vec<ObjetoIndex>, String> {
         if let Ok(line) = line.as_ref() {
             let (metadata, line) = line.split_at(4);
             let (simbolo_eliminado, merge) = metadata.split_at(2);
-            let objeto = Objeto::from_index(line.to_string(), logger.clone())?;
+            let objeto = Objeto::from_index(line, logger.clone())?;
             let objeto_index = ObjetoIndex {
                 merge: merge.trim() == "1",
                 es_eliminado: simbolo_eliminado.trim() == "-",

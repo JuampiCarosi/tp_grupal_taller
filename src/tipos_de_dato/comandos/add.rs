@@ -1,14 +1,14 @@
 use std::{path::PathBuf, sync::Arc};
 
 use crate::{
-    tipos_de_dato::{logger::Logger, objeto::Objeto},
+    tipos_de_dato::{comando::Ejecutar, logger::Logger, objeto::Objeto},
     utils::{
         self,
         index::{crear_index, escribir_index, leer_index, ObjetoIndex},
     },
 };
 
-use super::status::obtener_arbol_del_commit_head;
+use super::{check_ignore::CheckIgnore, status::obtener_arbol_del_commit_head};
 
 pub struct Add {
     /// Logger para imprimir los mensajes en el archivo log.
@@ -63,22 +63,26 @@ impl Add {
             || path.contains(".log")
             || path.contains(&format!("{}", log_dir.display())))
     }
+}
 
+impl Ejecutar for Add {
     /// Ejecuta el comando add.
     /// Agrega los archivos pasados por parametro al index.
     /// Si el archivo ya se encuentra en el index, actualiza el objeto.
     /// Si el archivo contiene la misma version que en el commit anterior, no lo agrega.
-    pub fn ejecutar(&mut self) -> Result<String, String> {
+    fn ejecutar(&mut self) -> Result<String, String> {
         self.logger.log("Ejecutando add");
 
         for ubicacion in self.ubicaciones.clone() {
-            if self.es_directorio_a_ignorar(&ubicacion)? {
+            if CheckIgnore::es_directorio_a_ignorar(&ubicacion, self.logger.clone())? {
                 continue;
             }
 
             self.logger.log(&format!(
                 "Agregando {} al index",
-                ubicacion.to_str().unwrap()
+                ubicacion
+                    .to_str()
+                    .ok_or_else(|| "Path invalido".to_string())?,
             ));
             if ubicacion.is_dir() {
                 Err("No se puede agregar un directorio")?;
@@ -106,8 +110,8 @@ impl Add {
                 let tree_head = obtener_arbol_del_commit_head(self.logger.clone());
                 if let Some(tree_head) = tree_head {
                     if tree_head.contiene_misma_version_hijo(
-                        nuevo_objeto_index.objeto.obtener_hash(),
-                        nuevo_objeto_index.objeto.obtener_path(),
+                        &nuevo_objeto_index.objeto.obtener_hash(),
+                        &nuevo_objeto_index.objeto.obtener_path(),
                     ) {
                         continue;
                     }
@@ -120,7 +124,6 @@ impl Add {
         Ok("".to_string())
     }
 }
-
 #[cfg(test)]
 
 mod tests {
@@ -128,6 +131,7 @@ mod tests {
 
     use crate::{
         tipos_de_dato::{
+            comando::Ejecutar,
             comandos::{add::Add, init::Init},
             logger::Logger,
             objeto::Objeto,
@@ -151,7 +155,7 @@ mod tests {
     fn limpiar_archivo_gir() {
         io::rm_directorio(".gir").unwrap();
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/branch_init")).unwrap());
-        let init = Init {
+        let mut init = Init {
             path: "./.gir".to_string(),
             logger,
         };
@@ -279,9 +283,9 @@ mod tests {
     }
 
     #[test]
-    fn test07_agregar_dos_archivos_de_una() {
+    fn test06_agregar_dos_archivos_de_una() {
         limpiar_archivo_gir();
-        let logger = Arc::new(Logger::new(PathBuf::from("tmp/add_test07")).unwrap());
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/add_test06")).unwrap());
         let ubicacion = "test_file.txt".to_string();
 
         let ubicacion2 = "test_dir/objetos/archivo.txt".to_string();

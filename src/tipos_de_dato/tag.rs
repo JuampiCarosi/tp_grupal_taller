@@ -11,7 +11,7 @@ pub struct Tag {
 
 impl Tag {
     pub fn from(args: Vec<String>, logger: Arc<Logger>) -> Result<Tag, String> {
-        if args.len() == 0 {
+        if args.is_empty() {
             return Ok(Tag {
                 logger,
                 tag_to_create: None,
@@ -42,7 +42,7 @@ impl Tag {
         let ubicacion = format!(".gir/refs/tags/{}", tag);
         let commit = Commit::obtener_hash_commit_actual()?;
 
-        io::escribir_bytes(ubicacion, &commit)?;
+        io::escribir_bytes(ubicacion, commit)?;
 
         self.logger.log(&format!("Tag {} creado con exito", tag));
 
@@ -52,7 +52,7 @@ impl Tag {
     pub fn ejecutar(&self) -> Result<String, String> {
         match &self.tag_to_create {
             Some(tag_name) => {
-                self.crear_tag(&tag_name)?;
+                self.crear_tag(tag_name)?;
                 Ok(String::new())
             }
             None => {

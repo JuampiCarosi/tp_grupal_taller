@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use crate::tipos_de_dato::{
+    comando::Ejecutar,
     config::{Config, RemoteInfo},
     logger::Logger,
 };
@@ -208,12 +209,14 @@ impl Remote {
 
         match remote_actual {
             Some(remote) => Ok(remote.remote.clone()),
-            None => return Err("No hay un remote asociado a la branch actual\n".to_string()),
+            None => Err("No hay un remote asociado a la branch actual\n".to_string()),
         }
     }
+}
 
+impl Ejecutar for Remote {
     /// Ejecuta el comando.
-    pub fn ejecutar(&mut self) -> Result<String, String> {
+    fn ejecutar(&mut self) -> Result<String, String> {
         self.logger.log("Ejecutando comando remote");
         match &self.comando {
             ComandoRemote::Mostrar => self.mostrar(),
