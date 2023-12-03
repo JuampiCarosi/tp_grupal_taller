@@ -379,6 +379,7 @@ fn obtener_commits_y_objetos_asociados(
 
 impl Ejecutar for Push {
     fn ejecutar(&mut self) -> Result<String, String> {
+        let mensaje;
         let comunicacion = self.iniciar_git_recive_pack_con_servidor()?;
 
         let commits_y_refs_asosiado = self.fase_de_descubrimiento(&comunicacion)?;
@@ -397,8 +398,10 @@ impl Ejecutar for Push {
                 objetos_a_enviar,
                 &comunicacion,
             )?;
+            mensaje = "Push ejecutado con exito".to_string();
         } else {
             self.terminar_y_mandar_pack_file_vacio(&comunicacion)?;
+            mensaje = "Nada que actualizar".to_string();
         }
 
         if self.set_upstream && !self.referencia.es_tag() {
@@ -411,7 +414,6 @@ impl Ejecutar for Push {
             .ejecutar()?;
         }
 
-        let mensaje = "Push ejecutado con exito".to_string();
         self.logger.log(&mensaje);
         Ok(mensaje)
     }

@@ -125,9 +125,14 @@ impl<T: Write + Read> Fetch<T> {
         &self,
         capacidades_servidor: Vec<String>,
         commits_cabezas_y_dir_rama_asosiado: &Vec<(String, PathBuf)>,
+        commit_y_tags_asosiado: &Vec<(String, PathBuf)>,
     ) -> Result<bool, String> {
         // no hay pedidos :D
-        if !self.enviar_pedidos(&capacidades_servidor, commits_cabezas_y_dir_rama_asosiado)? {
+        if !self.enviar_pedidos(
+            &capacidades_servidor,
+            commits_cabezas_y_dir_rama_asosiado,
+            commit_y_tags_asosiado,
+        )? {
             return Ok(NO_SE_ENVIO_NINGUN_PEDIDO);
         }
 
@@ -217,18 +222,23 @@ impl<T: Write + Read> Fetch<T> {
         &self,
         capacidades_servidor: &[String],
         commits_cabezas_y_dir_rama_asosiado: &Vec<(String, PathBuf)>,
+        commit_y_tags_asosiado: &Vec<(String, PathBuf)>,
     ) -> Result<bool, String> {
         let capacidades_a_usar_en_la_comunicacion =
             self.obtener_capacidades_en_comun_con_el_servidor(capacidades_servidor);
 
         let commits_de_cabeza_de_rama_faltantes =
             self.obtener_commits_cabeza_de_rama_faltantes(commits_cabezas_y_dir_rama_asosiado)?;
-        println!(
-            "commits_cabeza_de_rama_faltantes {:?}",
-            commits_cabezas_y_dir_rama_asosiado
-        );
-        println!("{:?}", commits_de_cabeza_de_rama_faltantes);
-        if commits_de_cabeza_de_rama_faltantes.is_empty() {
+
+        let tags_faltantes = self.obtener_tags_faltantes(commit_y_tags_asosiado)?;
+
+        let pedidos = [
+            &commits_de_cabeza_de_rama_faltantes[..],
+            &tags_faltantes[..],
+        ]
+        .concat();
+
+        if pedidos.is_empty() {
             self.comunicacion.enviar_flush_pkt()?;
             self.logger.log(
                 "Se completo correctamente el envio de pedidos en Fetch pero no se envio nada",
@@ -236,10 +246,8 @@ impl<T: Write + Read> Fetch<T> {
             return Ok(NO_SE_ENVIO_NINGUN_PEDIDO);
         }
 
-        self.comunicacion.enviar_pedidos_al_servidor_pkt(
-            commits_de_cabeza_de_rama_faltantes,
-            capacidades_a_usar_en_la_comunicacion,
-        )?;
+        self.comunicacion
+            .enviar_pedidos_al_servidor_pkt(pedidos, capacidades_a_usar_en_la_comunicacion)?;
 
         self.logger
             .log("Se completo correctamente el envio de pedidos en Fetch");
@@ -266,14 +274,11 @@ impl<T: Write + Read> Fetch<T> {
                     &self.remoto,
                     dir_rama_asosiada,
                 )?;
-            println!("dir_rama: {:?}\n", dir_rama_asosiada);
 
-            println!("dir_rama_remota_local: {:?}\n", dir_rama_asosiada_local);
             if !dir_rama_asosiada_local.exists() {
                 commits_de_cabeza_de_rama_faltantes.push(commit_cabeza_remoto.to_string());
                 continue;
             }
-            println!("accsaaaaaa");
             let commit_cabeza_local = io::leer_a_string(dir_rama_asosiada_local)?;
 
             if commit_cabeza_local != *commit_cabeza_remoto {
@@ -281,9 +286,49 @@ impl<T: Write + Read> Fetch<T> {
             }
         }
 
+        self.logger.log(&format!(
+            "Commits ramas faltantes {:?}",
+            commits_de_cabeza_de_rama_faltantes
+        ));
+
         Ok(commits_de_cabeza_de_rama_faltantes)
     }
 
+    ///Obtiene los commits que son necesarios a actulizar y por lo tanto hay que pedirle al servidor esas ramas.
+    /// Obtiene aquellos commits que pertenecesen a ramas cuyas cabezas en el servidor apuntan commits distintos
+    /// que sus equivalencias en el repositorio local, implicando que la rama local esta desacululizada.
+    ///
+    /// # Resultado
+    ///
+    /// - Devuleve un vector con los commits cabezas de las ramas que son necearias actualizar con
+    ///     respecto a las del servidor
+    fn obtener_tags_faltantes(
+        &self,
+        commit_y_tags_asosiado: &Vec<(String, PathBuf)>,
+    ) -> Result<Vec<String>, String> {
+        let mut commits_de_tags_faltantes: Vec<String> = Vec::new();
+
+        for (commit_cabeza_remoto, tag_asosiado) in commit_y_tags_asosiado {
+            let dir_tag = PathBuf::from("./.gir").join(tag_asosiado);
+
+            if !dir_tag.exists() {
+                commits_de_tags_faltantes.push(commit_cabeza_remoto.to_string());
+                continue;
+            }
+            let commit_cabeza_local = io::leer_a_string(dir_tag)?;
+
+            if commit_cabeza_local != *commit_cabeza_remoto {
+                commits_de_tags_faltantes.push(commit_cabeza_remoto.to_string());
+            }
+        }
+
+        self.logger.log(&format!(
+            "Commits tags faltantes {:?}",
+            commits_de_tags_faltantes
+        ));
+
+        Ok(commits_de_tags_faltantes)
+    }
     ///compara las capacidades del servidor con las locales y devulve un string con las capacidades en comun
     /// para usar en la comunicacion
     fn obtener_capacidades_en_comun_con_el_servidor(
@@ -326,8 +371,10 @@ impl<T: Write + Read> Fetch<T> {
     > {
         let resultado = utils::fase_descubrimiento::fase_de_descubrimiento(&self.comunicacion)?;
 
-        self.logger
-            .log("Se ejecuto correctamte la fase de decubrimiento en Fech");
+        self.logger.log(&format!(
+            "Se ejecuto correctamte la fase de decubrimiento en Fech: {:?}",
+            resultado
+        ));
 
         Ok(resultado)
     }
@@ -365,7 +412,11 @@ impl Ejecutar for Fetch<TcpStream> {
             commits_y_tags_asosiados,
         ) = self.fase_de_descubrimiento()?;
 
-        if !self.fase_de_negociacion(capacidades_servidor, &commits_cabezas_y_dir_rama_asosiado)? {
+        if !self.fase_de_negociacion(
+            capacidades_servidor,
+            &commits_cabezas_y_dir_rama_asosiado,
+            &commits_y_tags_asosiados,
+        )? {
             return Ok(String::from("El cliente esta actualizado"));
         }
 
@@ -386,11 +437,7 @@ impl Ejecutar for Fetch<TcpStream> {
 #[cfg(test)]
 
 mod test {
-    use std::{
-        io::{Read, Write},
-        path::PathBuf,
-        sync::Arc,
-    };
+    use std::{path::PathBuf, sync::Arc};
 
     use crate::{
         tipos_de_dato::{comunicacion::Comunicacion, logger::Logger},
