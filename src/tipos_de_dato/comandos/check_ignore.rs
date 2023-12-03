@@ -6,11 +6,15 @@ use crate::{
 };
 
 pub struct CheckIgnore {
+    /// Logger para imprimir los mensajes en el archivo log.
     logger: Arc<Logger>,
+    /// Paths de los archivos a verificar si son ignorados.
     paths: Vec<String>,
 }
 
 impl CheckIgnore {
+    /// Dada una ubicacion de un directorio/archivo, devuele un booleano indicando
+    /// si la ubicacion esta dentro de los archivos a ignorar.
     pub fn es_directorio_a_ignorar(
         ubicacion: &PathBuf,
         logger: Arc<Logger>,
@@ -32,6 +36,7 @@ impl CheckIgnore {
         Ok(false)
     }
 
+    /// Devueve un CheckIgnore con los paths de los archivos a verificar.
     pub fn from(args: Vec<String>, logger: Arc<Logger>) -> Result<CheckIgnore, String> {
         if args.is_empty() {
             return Err("Ingrese la ruta del archivo buscado como parametro".to_string());
@@ -40,6 +45,9 @@ impl CheckIgnore {
         Ok(CheckIgnore { logger, paths })
     }
 
+    /// Ejecuta el comando check-ignore.
+    /// Devuelve un string con todos los archivos consultados que resultaron estar ignorados.
+    /// Si no hay archivos ignorados, devuelve un string vacio.
     pub fn ejecutar(&self) -> Result<String, String> {
         self.logger.log("Buscando archivos ignorados");
         let archivos_ignorados = match io::leer_a_string(".girignore") {

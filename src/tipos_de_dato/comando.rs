@@ -63,7 +63,7 @@ impl Comando {
             "status" => Comando::Status(Status::from(logger)?),
             "remote" => Comando::Remote(Remote::from(&mut vector_args, logger)?),
             "merge" => Comando::Merge(Merge::from(&mut vector_args, logger)?),
-            "ls-tree" => Comando::LsTree(LsTree::new(logger, &mut vector_args)?),
+            "ls-tree" => Comando::LsTree(LsTree::from(logger, &mut vector_args)?),
             "tag" => Comando::Tag(Tag::from(vector_args, logger)?),
             "show-ref" => Comando::ShowRef(ShowRef::from(vector_args, logger)?),
             "ls-files" => Comando::LsFiles(LsFiles::from(logger, &mut vector_args)?),

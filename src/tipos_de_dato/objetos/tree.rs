@@ -478,6 +478,34 @@ impl Tree {
             Objeto::Tree(tree) => tree.es_vacio(),
         })
     }
+
+    /// Dado un arbol y una ruta de un directorio, busca si la ruta esta dentro del arbol
+    /// y en caso positivo, devuelve el arbol asociado a la ubicacion de ese directorio.
+    pub fn recorrer_arbol_hasta_sub_arbol_buscado(
+        direccion_hijo: &str,
+        arbol: Tree,
+    ) -> Result<Tree, String> {
+        let path_hijo = PathBuf::from(direccion_hijo);
+        for objeto in arbol.objetos {
+            match objeto {
+                Objeto::Tree(tree) => {
+                    if tree.directorio == path_hijo {
+                        return Ok(tree);
+                    } else if esta_directorio_habilitado(&path_hijo, &vec![tree.directorio.clone()])
+                    {
+                        let tree_buscado =
+                            Self::recorrer_arbol_hasta_sub_arbol_buscado(direccion_hijo, tree)?;
+                        return Ok(tree_buscado);
+                    }
+                }
+                _ => continue,
+            }
+        }
+        Err(format!(
+            "No se encontro el directorio {} dentro de los directorios trackeados",
+            direccion_hijo
+        ))
+    }
 }
 
 impl Display for Tree {
