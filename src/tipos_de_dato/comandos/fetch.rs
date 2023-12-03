@@ -196,7 +196,7 @@ impl<T: Write + Read> Fetch<T> {
     fn enviar_lo_que_tengo(&self) -> Result<(), String> {
         //ESTAMOS ENVIANDO TODOS LOS OBJETOS QUE TENEMOS SIN DISTINCION, DE QUE RAMA ESTAN. FUNCIONA
         //PERO SE PODRIA ENVIAR SOLO DE LAS QUE LE PEDISTE
-        let objetos = objects::obtener_objetos()?;
+        let objetos = objects::obtener_objetos_del_dir(&PathBuf::from("./.gir/objects"))?;
 
         if !objetos.is_empty() {
             self.comunicacion

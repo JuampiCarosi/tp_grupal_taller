@@ -1,17 +1,21 @@
-use std::path::PathBuf;
+use std::fs;
+use std::{io, path::PathBuf};
 
-use super::{io, path_buf};
+use crate::err_comunicacion::ErrorDeComunicacion;
+
+use super::io as gir_io;
+use super::path_buf;
 
 ///Devuelve todos los objetos dentro de objetcs (sus hash)
-pub fn obtener_objetos() -> Result<Vec<String>, String> {
-    let dir_abierto = io::leer_directorio(&"./.gir/objects/")?;
+pub fn obtener_objetos_del_dir(dir: &PathBuf) -> Result<Vec<String>, String> {
+    let dir_abierto = gir_io::leer_directorio(dir)?;
 
     let mut objetos: Vec<String> = Vec::new();
 
     for entrada in dir_abierto {
         match entrada {
             Ok(entrada) => {
-                if io::es_dir(entrada.path())
+                if gir_io::es_dir(entrada.path())
                     && entrada.file_name().to_string_lossy() != "info"
                     && entrada.file_name().to_string_lossy() != "pack"
                 {
@@ -40,7 +44,7 @@ pub fn obtener_objetos() -> Result<Vec<String>, String> {
 /// -Si no existe dir
 /// -Si no tiene conti8dio
 fn obtener_objetos_con_nombre_carpeta(dir: PathBuf) -> Result<Vec<String>, String> {
-    let directorio = io::leer_directorio(&dir)?;
+    let directorio = gir_io::leer_directorio(&dir)?;
 
     let mut objetos = Vec::new();
     let nombre_directorio = path_buf::obtener_nombre(&dir)?;
@@ -66,4 +70,42 @@ fn obtener_objetos_con_nombre_carpeta(dir: PathBuf) -> Result<Vec<String>, Strin
     }
 
     Ok(objetos)
+}
+
+// dado un vector con nombres de archivos de vuelve aquellos que no estan en el directorio
+
+// HACER MAS EFICIENTE *Hay iteraciones de mas que se pueden evitar unificando las funciones*
+pub fn obtener_archivos_faltantes(nombres_archivos: Vec<String>, dir: &str) -> Vec<String> {
+    // DESHARDCODEAR EL NOMBRE DEL DIRECTORIO (.gir)
+    let objetcts_contained =
+        obtener_objetos_del_dir(&PathBuf::from(dir.to_string() + "objects/")).unwrap();
+    // println!("objetcts_contained: {:?}", objetcts_contained);
+    // println!("Nombres: {:?}", nombres_archivos);
+    let mut archivos_faltantes: Vec<String> = Vec::new();
+    for nombre in &objetcts_contained {
+        if nombres_archivos.contains(nombre) {
+        } else {
+            archivos_faltantes.push(nombre.clone());
+        }
+    }
+    archivos_faltantes
+}
+
+// dado un directorio devuelve el nombre del archivo contenido (solo caso de objectos de git)
+pub fn obtener_objetos(dir: PathBuf) -> Result<String, ErrorDeComunicacion> {
+    let mut directorio = fs::read_dir(dir.clone())?;
+    if let Some(archivo) = directorio.next() {
+        match archivo {
+            Ok(archivo) => {
+                return Ok(archivo.file_name().to_string_lossy().to_string());
+            }
+            Err(error) => {
+                eprintln!("Error leyendo directorio: {}", error);
+            }
+        }
+    }
+    Err(ErrorDeComunicacion::IoError(io::Error::new(
+        io::ErrorKind::NotFound,
+        "Hubo un error al obtener el objeto",
+    )))
 }
