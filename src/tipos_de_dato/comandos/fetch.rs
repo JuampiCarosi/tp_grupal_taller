@@ -118,7 +118,7 @@ impl<T: Write + Read> Fetch<T> {
 
     //ACA PARA MI HAY UN PROBLEMA DE RESPONSABILIADADES: COMUNICACION DEBERIA RECIBIR EL PACKETE Y FETCH
     //DEBERIA GUARDAR LAS COSAS, PERO COMO NO ENTIENDO EL CODIGO JAJA DENTRO DE COMUNICACION NO METO MANO
-    fn recivir_packfile_y_guardar_objetos(&self) -> Result<(), String> {
+    fn recibir_packfile_y_guardar_objetos(&self) -> Result<(), String> {
         // aca para git daemon hay que poner un recibir linea mas porque envia un ACK repetido (No entiendo por que...)
         println!("Obteniendo paquete..");
         let packfile = self.comunicacion.obtener_packfile()?;
@@ -336,7 +336,7 @@ impl Ejecutar for Fetch<TcpStream> {
             return Ok(String::from("El cliente esta actualizado"));
         }
 
-        self.recivir_packfile_y_guardar_objetos()?;
+        self.recibir_packfile_y_guardar_objetos()?;
 
         self.actualizar_ramas_locales_del_remoto(&commits_cabezas_y_dir_rama_asosiado)?;
 

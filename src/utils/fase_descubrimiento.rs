@@ -33,7 +33,6 @@ pub fn fase_de_descubrimiento<T: Write + Read>(
 > {
     let mut lineas_recibidas = comunicacion.obtener_lineas()?;
     
-    println!("Se recibio {:?}\n", lineas_recibidas);
     let _version = lineas_recibidas.remove(0); //la version del server
     
     let segunda_linea = lineas_recibidas.remove(0);
