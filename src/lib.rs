@@ -62,4 +62,5 @@ pub mod utils {
     pub mod ramas;
     pub mod strings;
     pub mod tags;
+    pub mod testing;
 }

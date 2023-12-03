@@ -41,12 +41,19 @@ impl<T: Write + Read> Fetch<T> {
     }
 
     #[cfg(test)]
-    //pòr ahoar para testing, para mi asi deberia ser recibiendo el comunicacion
-    fn new_testing(logger: Arc<Logger>, comunicacion: Comunicacion<T>) -> Result<Fetch<T>, String> {
-        let remoto = "origin".to_string();
+    fn new_testing(
+        mut arg: Vec<String>,
+        logger: Arc<Logger>,
+        comunicacion: Comunicacion<T>,
+    ) -> Result<Fetch<T>, String> {
+        let remoto = if arg.len() >= 1 {
+            arg.remove(0)
+        } else {
+            "origin".to_string()
+        };
 
         let capacidades_local = Vec::new();
-        //esto lo deberia tener la comunicacion creo yo
+
         Ok(Fetch {
             remoto,
             comunicacion,
@@ -383,34 +390,10 @@ mod test {
 
     use crate::{
         tipos_de_dato::{comunicacion::Comunicacion, logger::Logger},
-        utils,
+        utils::{self, testing::MockTcpStream},
     };
 
     use super::Fetch;
-
-    struct MockTcpStream {
-        lectura_data: Vec<u8>,
-        escritura_data: Vec<u8>,
-    }
-
-    impl Read for MockTcpStream {
-        fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
-            let bytes_to_read = std::cmp::min(buf.len(), self.lectura_data.len());
-            buf[..bytes_to_read].copy_from_slice(&self.lectura_data[..bytes_to_read]);
-            self.lectura_data.drain(..bytes_to_read);
-            Ok(bytes_to_read)
-        }
-    }
-
-    impl Write for MockTcpStream {
-        fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-            self.escritura_data.write(buf)
-        }
-
-        fn flush(&mut self) -> std::io::Result<()> {
-            self.escritura_data.flush()
-        }
-    }
 
     #[test]
     fn test01_la_fase_de_descubrimiento_funcion() {
@@ -432,7 +415,7 @@ mod test {
 
         let comunicacion = Comunicacion::new_para_testing(mock, logger.clone());
         let (capacidades, commit_head, commits_y_ramas, commits_y_tags) =
-            Fetch::new_testing(logger, comunicacion.into())
+            Fetch::new_testing(vec![], logger, comunicacion.into())
                 .unwrap()
                 .fase_de_descubrimiento()
                 .unwrap();
@@ -492,7 +475,7 @@ mod test {
 
         let comunicacion = Comunicacion::new_para_testing(mock, logger.clone());
         let (capacidades, commit_head, commits_y_ramas, commits_y_tags) =
-            Fetch::new_testing(logger, comunicacion.into())
+            Fetch::new_testing(vec![], logger, comunicacion.into())
                 .unwrap()
                 .fase_de_descubrimiento()
                 .unwrap();
@@ -534,6 +517,9 @@ mod test {
 
     #[test]
     fn test_03_los_tags_se_gurdan_correctamtene() {
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/fetch_03.txt")).unwrap());
+        utils::testing::limpiar_archivo_gir(logger.clone());
+
         let tag_1 = "v0.9".to_string();
         let tag_1_contenido = "b88d2441cac0977faf98efc80305012112238d9d".to_string();
         let tag_2 = "v1.0".to_string();
@@ -554,10 +540,9 @@ mod test {
             lectura_data: Vec::new(),
             escritura_data: Vec::new(),
         };
-        let logger = Arc::new(Logger::new(PathBuf::from("tmp/fetch_03.txt")).unwrap());
 
         let comunicacion = Comunicacion::new_para_testing(mock, logger.clone());
-        Fetch::new_testing(logger, comunicacion.into())
+        Fetch::new_testing(vec![], logger, comunicacion.into())
             .unwrap()
             .guardar_los_tags(&commits_y_tags)
             .unwrap();
@@ -571,6 +556,100 @@ mod test {
         let tag_2_contenido_obtenido =
             utils::io::leer_a_string(format!("./.gir/refs/tags/{}", tag_2)).unwrap();
         assert_eq!(tag_2_contenido_obtenido, tag_2_contenido);
+    }
+
+    #[test]
+    fn test_04_los_ramas_remotas_se_escriben_correctamente() {
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/fetch_04.txt")).unwrap());
+        utils::testing::limpiar_archivo_gir(logger.clone());
+
+        let remoto = "san-siro".to_string();
+        let rama_remota = "tomate".to_string();
+        let rama_contenido = "b88d2441cac0977faf98efc80305012112238d9d".to_string();
+
+        let commits_y_ramas = vec![(
+            rama_contenido.clone(),
+            PathBuf::from(format!("refs/heads/{}", rama_remota)),
+        )];
+
+        let mock = MockTcpStream {
+            lectura_data: Vec::new(),
+            escritura_data: Vec::new(),
+        };
+
+        let comunicacion = Comunicacion::new_para_testing(mock, logger.clone());
+        Fetch::new_testing(vec![remoto.clone()], logger, comunicacion.into())
+            .unwrap()
+            .actualizar_ramas_locales_del_remoto(&commits_y_ramas)
+            .unwrap();
+
+        let rama_contendio_obtenido =
+            utils::io::leer_a_string(format!("./.gir/refs/remotes/{}/{}", remoto, rama_remota))
+                .unwrap();
+        assert_eq!(rama_contendio_obtenido, rama_contenido);
+    }
+
+    #[test]
+    fn test_05_los_ramas_remotas_se_actualizan_correctamente() {
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/fetch_05.txt")).unwrap());
+        utils::testing::limpiar_archivo_gir(logger.clone());
+
+        let remoto = "san-siro".to_string();
+        let rama_remota = "tomate".to_string();
+        let rama_contenido_actualizar = "b88d2441cac0977faf98efc80305012112238d9d".to_string();
+        utils::testing::escribir_rama_remota(&remoto, &rama_remota);
+
+        let commits_y_ramas = vec![(
+            rama_contenido_actualizar.clone(),
+            PathBuf::from(format!("refs/heads/{}", rama_remota)),
+        )];
+
+        let mock = MockTcpStream {
+            lectura_data: Vec::new(),
+            escritura_data: Vec::new(),
+        };
+
+        let comunicacion = Comunicacion::new_para_testing(mock, logger.clone());
+        Fetch::new_testing(vec![remoto.clone()], logger, comunicacion.into())
+            .unwrap()
+            .actualizar_ramas_locales_del_remoto(&commits_y_ramas)
+            .unwrap();
+
+        let rama_contendio_obtenido =
+            utils::io::leer_a_string(format!("./.gir/refs/remotes/{}/{}", remoto, rama_remota))
+                .unwrap();
+        assert_eq!(rama_contendio_obtenido, rama_contenido_actualizar);
+    }
+
+    #[test]
+    fn test_05_los_ramas_remotas_se_escriben_correctamente() {
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/fetch_05.txt")).unwrap());
+        utils::testing::limpiar_archivo_gir(logger.clone());
+
+        let remoto = "san-siro".to_string();
+        let rama_remota = "tomate".to_string();
+        let rama_contenido = "b88d2441cac0977faf98efc80305012112238d9d".to_string();
+
+        let commits_y_ramas = vec![(
+            rama_contenido.clone(),
+            PathBuf::from(format!("refs/heads/{}", rama_remota)),
+        )];
+
+        let mock = MockTcpStream {
+            lectura_data: Vec::new(),
+            escritura_data: Vec::new(),
+        };
+
+        let comunicacion = Comunicacion::new_para_testing(mock, logger.clone());
+        Fetch::new_testing(vec![remoto.clone()], logger, comunicacion.into())
+            .unwrap()
+            .actualizar_ramas_locales_del_remoto(&commits_y_ramas)
+            .unwrap();
+
+        let rama_contendio_obtenido =
+            utils::io::leer_a_string(format!("./.gir/refs/remotes/{}/{}", remoto, rama_remota))
+                .unwrap();
+        assert_eq!(rama_contendio_obtenido, rama_contenido);
     }
     // #[test]
     // fn test03_la_fase_de_negociacion_funciona(){

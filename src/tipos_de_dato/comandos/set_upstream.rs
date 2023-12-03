@@ -119,53 +119,11 @@ mod tests {
     use std::{path::PathBuf, sync::Arc};
 
     use crate::{
-        tipos_de_dato::{
-            comandos::{branch::Branch, init::Init, remote::Remote},
-            config::Config,
-            logger::Logger,
-        },
-        utils::io,
+        tipos_de_dato::{config::Config, logger::Logger},
+        utils,
     };
 
     use super::SetUpstream;
-
-    fn limpiar_archivo_gir(logger: Arc<Logger>) {
-        elimar_archivo_gir();
-
-        let init = Init {
-            path: "./.gir".to_string(),
-            logger,
-        };
-        init.ejecutar().unwrap();
-    }
-
-    fn anadir_remoto_default_config(remoto: String, logger: Arc<Logger>) {
-        let mut args_remote = vec!["add".to_string(), remoto, "url".to_string()];
-        Remote::from(&mut args_remote, logger)
-            .unwrap()
-            .ejecutar()
-            .unwrap();
-    }
-
-    //crear la carpeta del
-    fn escribir_rama_remota(remoto: String, nombre_rama_remota: String) {
-        let dir = format!("./.gir/refs/remotes/{}/{}", remoto, nombre_rama_remota);
-        io::escribir_bytes(dir, "contenido").unwrap();
-    }
-
-    fn escribir_rama_local(rama: String, logger: Arc<Logger>) {
-        let mut branch_args = vec![rama];
-        Branch::from(&mut branch_args, logger)
-            .unwrap()
-            .ejecutar()
-            .unwrap();
-    }
-
-    fn elimar_archivo_gir() {
-        if PathBuf::from("./.gir").exists() {
-            io::rm_directorio(".gir").unwrap();
-        }
-    }
 
     #[test]
     fn test_01_se_agrega_correctamente_la_configuracion_a_una_rama() {
@@ -173,11 +131,10 @@ mod tests {
         let remoto = "origin".to_string();
         let rama_remota = "trabajo".to_string();
         let rama_local = "trabajando".to_string();
-
-        limpiar_archivo_gir(logger.clone());
-        anadir_remoto_default_config(remoto.clone(), logger.clone());
-        escribir_rama_local(rama_local.clone(), logger.clone());
-        escribir_rama_remota(remoto.clone(), rama_remota.clone());
+        utils::testing::limpiar_archivo_gir(logger.clone());
+        utils::testing::anadir_remoto_default_config(&remoto, logger.clone());
+        utils::testing::escribir_rama_local(&rama_local, logger.clone());
+        utils::testing::escribir_rama_remota(&remoto, &rama_remota);
 
         SetUpstream::new(
             remoto.clone(),
@@ -210,12 +167,12 @@ mod tests {
         let rama_remota_2 = "rust".to_string();
         let remoto_2 = "tp".to_string();
 
-        limpiar_archivo_gir(logger.clone());
-        anadir_remoto_default_config(remoto.clone(), logger.clone());
-        anadir_remoto_default_config(remoto_2.clone(), logger.clone());
-        escribir_rama_local(rama_local.clone(), logger.clone());
-        escribir_rama_remota(remoto.clone(), rama_remota.clone());
-        escribir_rama_remota(remoto_2.clone(), rama_remota_2.clone());
+        utils::testing::limpiar_archivo_gir(logger.clone());
+        utils::testing::anadir_remoto_default_config(&remoto, logger.clone());
+        utils::testing::anadir_remoto_default_config(&remoto_2, logger.clone());
+        utils::testing::escribir_rama_local(&rama_local, logger.clone());
+        utils::testing::escribir_rama_remota(&remoto, &rama_remota);
+        utils::testing::escribir_rama_remota(&remoto_2, &rama_remota_2);
 
         SetUpstream::new(
             remoto.clone(),
@@ -255,9 +212,9 @@ mod tests {
         let rama_local = "trabajando".to_string();
         let remoto = "origin".to_string();
 
-        limpiar_archivo_gir(logger.clone());
-        escribir_rama_local(rama_local.clone(), logger.clone());
-        escribir_rama_remota(remoto.clone(), rama_remota.clone());
+        utils::testing::limpiar_archivo_gir(logger.clone());
+        utils::testing::escribir_rama_local(&rama_local, logger.clone());
+        utils::testing::escribir_rama_remota(&remoto, &rama_remota);
 
         SetUpstream::new(
             remoto.clone(),
@@ -278,9 +235,9 @@ mod tests {
         let rama_local = "trabajando".to_string();
         let remoto = "origin".to_string();
 
-        limpiar_archivo_gir(logger.clone());
-        anadir_remoto_default_config(remoto.clone(), logger.clone());
-        escribir_rama_remota(remoto.clone(), rama_remota.clone());
+        utils::testing::limpiar_archivo_gir(logger.clone());
+        utils::testing::anadir_remoto_default_config(&remoto, logger.clone());
+        utils::testing::escribir_rama_remota(&remoto, &rama_remota);
 
         SetUpstream::new(
             remoto.clone(),
@@ -301,9 +258,9 @@ mod tests {
         let rama_local = "trabajando".to_string();
         let remoto = "origin".to_string();
 
-        limpiar_archivo_gir(logger.clone());
-        anadir_remoto_default_config(remoto.clone(), logger.clone());
-        escribir_rama_local(rama_local.clone(), logger.clone());
+        utils::testing::limpiar_archivo_gir(logger.clone());
+        utils::testing::anadir_remoto_default_config(&remoto, logger.clone());
+        utils::testing::escribir_rama_local(&rama_local, logger.clone());
 
         SetUpstream::new(
             remoto.clone(),

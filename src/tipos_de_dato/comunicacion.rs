@@ -429,33 +429,12 @@ impl<T: Write + Read> Comunicacion<T> {
 
 #[cfg(test)]
 mod test {
-    use std::{io::Read, io::Write, path::PathBuf};
+    use std::path::PathBuf;
+
+    use crate::utils::testing::MockTcpStream;
 
     use super::*;
 
-    struct MockTcpStream {
-        lectura_data: Vec<u8>,
-        escritura_data: Vec<u8>,
-    }
-
-    impl Read for MockTcpStream {
-        fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
-            let bytes_to_read = std::cmp::min(buf.len(), self.lectura_data.len());
-            buf[..bytes_to_read].copy_from_slice(&self.lectura_data[..bytes_to_read]);
-            self.lectura_data.drain(..bytes_to_read);
-            Ok(bytes_to_read)
-        }
-    }
-
-    impl Write for MockTcpStream {
-        fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-            self.escritura_data.write(buf)
-        }
-
-        fn flush(&mut self) -> std::io::Result<()> {
-            self.escritura_data.flush()
-        }
-    }
     #[test]
 
     fn test01_se_envia_mensajes_de_forma_correcta() {
