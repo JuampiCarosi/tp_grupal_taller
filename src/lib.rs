@@ -15,7 +15,6 @@ pub mod tipos_de_dato {
     pub mod packfile;
     pub mod referencia;
     pub mod region;
-    pub mod tag;
     pub mod tipo_diff;
     pub mod visualizaciones;
     pub mod objetos {
@@ -46,6 +45,7 @@ pub mod tipos_de_dato {
         pub mod set_upstream;
         pub mod show_ref;
         pub mod status;
+        pub mod tag;
         pub mod version;
         pub mod write_tree;
     }
