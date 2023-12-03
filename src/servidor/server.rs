@@ -133,7 +133,12 @@ impl Servidor {
                 comunicacion.responder(&refs)?;
                 receive_pack(dir_repo.to_string(), comunicacion)
             }
-            _ => Err("No existe el comando".to_string()),
+            _ => {
+                comunicacion.enviar(&gir_io::obtener_linea_con_largo_hex(
+                    "ERR No existe el comando\n"),
+                )?;
+                Err("No existe el comando".to_string())
+            },
         }
     }
 }
