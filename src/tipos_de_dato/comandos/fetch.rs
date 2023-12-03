@@ -133,6 +133,8 @@ impl<T: Write + Read> Fetch<T> {
 
         self.enviar_lo_que_tengo()?;
 
+        self.logger
+            .log("Se completo correctamente la fase de negociacion en Fetch");
         Ok(SE_ENVIO_ALGUN_PEDIDO)
     }
 
@@ -194,7 +196,7 @@ impl<T: Write + Read> Fetch<T> {
             self.finalizar_pedido()?;
             self.recivir_nack()?;
         }
-
+        self.logger.log("Se envio con exito lo que tengo en Fetch");
         Ok(())
     }
 
@@ -221,9 +223,16 @@ impl<T: Write + Read> Fetch<T> {
 
         let commits_de_cabeza_de_rama_faltantes =
             self.obtener_commits_cabeza_de_rama_faltantes(commits_cabezas_y_dir_rama_asosiado)?;
-
+        println!(
+            "commits_cabeza_de_rama_faltantes {:?}",
+            commits_cabezas_y_dir_rama_asosiado
+        );
+        println!("{:?}", commits_de_cabeza_de_rama_faltantes);
         if commits_de_cabeza_de_rama_faltantes.is_empty() {
             self.comunicacion.enviar_flush_pkt()?;
+            self.logger.log(
+                "Se completo correctamente el envio de pedidos en Fetch pero no se envio nada",
+            );
             return Ok(NO_SE_ENVIO_NINGUN_PEDIDO);
         }
 
@@ -232,6 +241,8 @@ impl<T: Write + Read> Fetch<T> {
             capacidades_a_usar_en_la_comunicacion,
         )?;
 
+        self.logger
+            .log("Se completo correctamente el envio de pedidos en Fetch");
         Ok(SE_ENVIO_ALGUN_PEDIDO)
     }
 
@@ -255,12 +266,14 @@ impl<T: Write + Read> Fetch<T> {
                     &self.remoto,
                     dir_rama_asosiada,
                 )?;
+            println!("dir_rama: {:?}\n", dir_rama_asosiada);
 
+            println!("dir_rama_remota_local: {:?}\n", dir_rama_asosiada_local);
             if !dir_rama_asosiada_local.exists() {
                 commits_de_cabeza_de_rama_faltantes.push(commit_cabeza_remoto.to_string());
                 continue;
             }
-
+            println!("accsaaaaaa");
             let commit_cabeza_local = io::leer_a_string(dir_rama_asosiada_local)?;
 
             if commit_cabeza_local != *commit_cabeza_remoto {
@@ -311,7 +324,12 @@ impl<T: Write + Read> Fetch<T> {
         ),
         String,
     > {
-        utils::fase_descubrimiento::fase_de_descubrimiento(&self.comunicacion)
+        let resultado = utils::fase_descubrimiento::fase_de_descubrimiento(&self.comunicacion)?;
+
+        self.logger
+            .log("Se ejecuto correctamte la fase de decubrimiento en Fech");
+
+        Ok(resultado)
     }
 
     ///actuliza a donde apuntan las cabeza del rama de las ramas locales pertenecientes al remoto

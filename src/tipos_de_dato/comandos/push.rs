@@ -151,44 +151,6 @@ impl Push {
         Ok(remoto.clone().to_owned())
     }
 
-    pub fn ejecutar(&self) -> Result<String, String> {
-        let comunicacion = self.iniciar_git_recive_pack_con_servidor()?;
-
-        let commits_y_refs_asosiado = self.fase_de_descubrimiento(&comunicacion)?;
-
-        let referencia_acualizar = self.obtener_referencia_acualizar(&commits_y_refs_asosiado)?;
-
-        if self.es_necesario_actualizar(&referencia_acualizar) {
-            let objetos_a_enviar = self.obtener_objetos_a_enviar(
-                &self.referencia.dar_ref_local(),
-                &referencia_acualizar.0,
-                &comunicacion,
-            )?;
-
-            self.enviar_actualizaciones_y_objetos(
-                referencia_acualizar,
-                objetos_a_enviar,
-                &comunicacion,
-            )?;
-        } else {
-            self.terminar_y_mandar_pack_file_vacio(&comunicacion)?;
-        }
-
-        if self.set_upstream && !self.referencia.es_tag() {
-            SetUpstream::new(
-                self.remoto.clone(),
-                self.referencia.dar_nombre_remoto(),
-                self.referencia.dar_nombre_local(),
-                self.logger.clone(),
-            )?
-            .ejecutar()?;
-        }
-
-        let mensaje = "Push ejecutado con exito".to_string();
-        self.logger.log(&mensaje);
-        Ok(mensaje)
-    }
-
     //Le pide al config el url asosiado a la rama
     fn obtener_url(&self, remoto: &String) -> Result<String, String> {
         Config::leer_config()?.obtenet_url_asosiado_remoto(&remoto)
@@ -220,7 +182,7 @@ impl Push {
     }
 
     fn es_necesario_actualizar(&self, referencia_actualizar: &(String, String, PathBuf)) -> bool {
-        referencia_actualizar.0 == referencia_actualizar.1
+        referencia_actualizar.0 != referencia_actualizar.1
     }
 
     //obtiene todo los objetos de una referencia hasta el viejo commit. Si no esta el viejo commit entonces termina la comunicacion
@@ -268,6 +230,10 @@ impl Push {
             }
         }
 
+        self.logger.log(&format!(
+            "Referencia actualizar: {} {} {:?}",
+            commit_viejo, commit_nuevo, nombre_referencia
+        ));
         Ok((commit_viejo, commit_nuevo, nombre_referencia))
     }
 
@@ -294,7 +260,17 @@ impl Push {
         objetos_a_enviar: HashSet<String>,
         comunicacion: &Comunicacion<TcpStream>,
     ) -> Result<(), String> {
+        self.logger.log(&format!(
+            "Se envia en push la referencia: {:?}",
+            referencia_actualizar
+        ));
+
         comunicacion.enviar_referencia(referencia_actualizar)?;
+
+        self.logger.log(&format!(
+            "Se envia en push los objetos: {:?}",
+            objetos_a_enviar
+        ));
 
         comunicacion.enviar_pack_file(Packfile::obtener_pack_con_archivos(
             objetos_a_enviar.into_iter().collect(),
@@ -399,6 +375,46 @@ fn obtener_commits_y_objetos_asociados(
         objetos_a_agregar.remove(commit_limite);
     }
     Ok(objetos_a_agregar)
+}
+
+impl Ejecutar for Push {
+    fn ejecutar(&mut self) -> Result<String, String> {
+        let comunicacion = self.iniciar_git_recive_pack_con_servidor()?;
+
+        let commits_y_refs_asosiado = self.fase_de_descubrimiento(&comunicacion)?;
+
+        let referencia_acualizar = self.obtener_referencia_acualizar(&commits_y_refs_asosiado)?;
+
+        if self.es_necesario_actualizar(&referencia_acualizar) {
+            let objetos_a_enviar = self.obtener_objetos_a_enviar(
+                &self.referencia.dar_ref_local(),
+                &referencia_acualizar.0,
+                &comunicacion,
+            )?;
+
+            self.enviar_actualizaciones_y_objetos(
+                referencia_acualizar,
+                objetos_a_enviar,
+                &comunicacion,
+            )?;
+        } else {
+            self.terminar_y_mandar_pack_file_vacio(&comunicacion)?;
+        }
+
+        if self.set_upstream && !self.referencia.es_tag() {
+            SetUpstream::new(
+                self.remoto.clone(),
+                self.referencia.dar_nombre_remoto(),
+                self.referencia.dar_nombre_local(),
+                self.logger.clone(),
+            )?
+            .ejecutar()?;
+        }
+
+        let mensaje = "Push ejecutado con exito".to_string();
+        self.logger.log(&mensaje);
+        Ok(mensaje)
+    }
 }
 
 #[cfg(test)]
@@ -673,38 +689,4 @@ mod test {
 //     refs.append(&mut io::obtener_refs(dir.join("heads/"), prefijo.clone()).unwrap());
 //     refs.append(&mut io::obtener_refs(dir.join("tags/"), prefijo).unwrap());
 //     refs
-// }
-// impl Ejecutar for Push {
-//     fn ejecutar(&mut self) -> Result<String, String> {
-//         if self.set_upstream {
-//             SetUpstream::new(
-//                 self.remoto.clone(),
-//                 self.rama_merge.clone(),
-//                 utils::ramas::obtener_rama_actual()?,
-//                 self.logger.clone(),
-//             )?
-//             .ejecutar()?;
-//         }
-
-//         self.comunicacion.iniciar_git_recive_pack_con_servidor()?;
-//         let (
-//             _capacidades_servidor,
-//             _commit_head_remoto,
-//             commits_cabezas_y_ref_rama_asosiado,
-//             _commits_y_tags_asosiados,
-//         ) = self.fase_de_descubrimiento()?;
-//         self.logger.log("Fase de descubrimiento ejecuta con exito");
-
-//         println!("{:?}", commits_cabezas_y_ref_rama_asosiado);
-//         let referencia_acualizar =
-//             self.obtener_referencia_acualizar(&commits_cabezas_y_ref_rama_asosiado)?;
-//         let objetos_a_enviar =
-//             self.obtener_objetos_a_enviar(&referencia_acualizar.2, &referencia_acualizar.0)?;
-
-//         self.enviar_actualizaciones_y_objetos(referencia_acualizar, objetos_a_enviar)?;
-
-//         let mensaje = "Push ejecutado con exito".to_string();
-//         self.logger.log(&mensaje);
-//         Ok(mensaje)
-//     }
 // }
