@@ -148,7 +148,11 @@ impl<T: Write + Read> Comunicacion<T> {
         // lee primera parte, 4 bytes en hexadecimal indican el largo del stream
 
         let mut tamanio_bytes = [0; 4];
-        self.flujo.lock().unwrap().read(&mut tamanio_bytes).map_err(|e| e.to_string())?;
+        self.flujo
+            .lock()
+            .unwrap()
+            .read(&mut tamanio_bytes)
+            .map_err(|e| e.to_string())?;
         // largo de bytes a str
         if tamanio_bytes == [0, 0, 0, 0] {
             return Ok(RespuestaDePedido::Terminate);
@@ -162,7 +166,11 @@ impl<T: Write + Read> Comunicacion<T> {
         }
         // lee el resto del flujo
         let mut data = vec![0; (tamanio - 4) as usize];
-        self.flujo.lock().unwrap().read_exact(&mut data).map_err(|e| e.to_string())?;
+        self.flujo
+            .lock()
+            .unwrap()
+            .read_exact(&mut data)
+            .map_err(|e| e.to_string())?;
         let linea = str::from_utf8(&data).map_err(|e| e.to_string())?;
         // if linea.contains("done") {
         // self.aceptar_pedido()?;
@@ -244,7 +252,7 @@ impl<T: Write + Read> Comunicacion<T> {
             lineas.push(linea.clone());
             if linea.contains("NAK")
                 || linea.contains("ACK")
-                || (linea.contains("done") && !linea.contains("ref")) 
+                || (linea.contains("done") && !linea.contains("ref"))
                 || linea.contains("ERR")
             {
                 break;
@@ -257,17 +265,23 @@ impl<T: Write + Read> Comunicacion<T> {
             self.flujo
                 .lock()
                 .unwrap()
-                .write_all(String::from("0000").as_bytes()).map_err(|e| e.to_string())?;
+                .write_all(String::from("0000").as_bytes())
+                .map_err(|e| e.to_string())?;
             return Ok(());
         }
         for linea in lineas {
-            self.flujo.lock().unwrap().write_all(linea.as_bytes()).map_err(|e| e.to_string())?;
+            self.flujo
+                .lock()
+                .unwrap()
+                .write_all(linea.as_bytes())
+                .map_err(|e| e.to_string())?;
         }
         if lineas[0].contains("ref") {
             self.flujo
                 .lock()
                 .unwrap()
-                .write_all(String::from("0000").as_bytes()).map_err(|e| e.to_string())?;
+                .write_all(String::from("0000").as_bytes())
+                .map_err(|e| e.to_string())?;
             return Ok(());
         }
         if !lineas[0].contains(&"NAK".to_string())
@@ -277,13 +291,9 @@ impl<T: Write + Read> Comunicacion<T> {
             self.flujo
                 .lock()
                 .unwrap()
-                .write_all(String::from("0000").as_bytes()).map_err(|e| e.to_string())?;
+                .write_all(String::from("0000").as_bytes())
+                .map_err(|e| e.to_string())?;
         }
-        Ok(())
-    }
-    
-    pub fn enviar_linea(&mut self, linea: &str) -> Result<(), String> {
-        self.flujo.lock().unwrap().write_all(linea.as_bytes()).map_err(|e| e.to_string())?;
         Ok(())
     }
 
@@ -321,6 +331,11 @@ impl<T: Write + Read> Comunicacion<T> {
         Ok(buffer)
     }
 
+    ///Separa las lineas y devuleve solo las hash de estas
+    ///
+    /// # Ejemplo:
+    /// - lineas = `abc233454s890da90088889 ref/heads/maste`
+    /// - devuelve = `abc233454s890da90088889`
     pub fn obtener_obj_ids(&self, lineas: &Vec<String>) -> Vec<String> {
         let mut obj_ids: Vec<String> = Vec::new();
         for linea in lineas {
