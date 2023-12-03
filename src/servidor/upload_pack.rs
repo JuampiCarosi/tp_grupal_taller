@@ -17,7 +17,7 @@ pub fn upload_pack<T>(
     // ------- CLONE --------
     let lineas_siguientes = comunicacion.obtener_lineas()?;
     if lineas_siguientes[0].clone().contains("done") {
-        comunicacion.responder(vec![gir_io::obtener_linea_con_largo_hex("NAK\n")])?; // respondo NAK
+        comunicacion.responder(&vec![gir_io::obtener_linea_con_largo_hex("NAK\n")])?; // respondo NAK
         let packfile =
             packfile::Packfile::obtener_pack_entero(&(dir.clone().to_string() + "objects/"))?; // obtengo el packfile
         comunicacion.enviar_pack_file(packfile)?;
@@ -29,7 +29,7 @@ pub fn upload_pack<T>(
     let have_objs_ids = eliminar_prefijos(&lineas_siguientes);
     let respuesta_acks_nak =
     gir_io::obtener_ack(have_objs_ids.clone(), &(dir.clone() + "objects/"));
-    comunicacion.responder(respuesta_acks_nak)?;
+    comunicacion.responder(&respuesta_acks_nak)?;
     let _ultimo_done= comunicacion.obtener_lineas()?;
     let faltantes = gir_io::obtener_archivos_faltantes(have_objs_ids, dir.clone());
     // obtener un packfile con los archivos faltantes
@@ -106,7 +106,7 @@ mod test {
         let mut comunicacion = Comunicacion::new_para_testing(mock, logger.clone());
         comunicacion.enviar_pedidos_al_servidor_pkt(vec![wants], "".to_string()).unwrap();
         comunicacion.enviar_lo_que_tengo_al_servidor_pkt(&vec!["8f63722a025d936c53304d40ba3197ffebf194d1\n".to_string()]).unwrap();
-        comunicacion.responder(vec![gir_io::obtener_linea_con_largo_hex("done\n")]).unwrap();
+        comunicacion.responder(&vec![gir_io::obtener_linea_con_largo_hex("done\n")]).unwrap();
         upload_pack(test_dir, &mut comunicacion).unwrap();
         let respuesta = comunicacion.obtener_lineas().unwrap();
         let respuesta_esperada = vec!["ACK 8f63722a025d936c53304d40ba3197ffebf194d1\n".to_string()];
