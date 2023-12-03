@@ -31,7 +31,6 @@ pub fn upload_pack<T>(
     gir_io::obtener_ack(have_objs_ids.clone(), &(dir.clone() + "objects/"));
     comunicacion.responder(respuesta_acks_nak)?;
     let _ultimo_done= comunicacion.obtener_lineas()?;
-    println!("ultimo done: {:?}", _ultimo_done);
     let faltantes = gir_io::obtener_archivos_faltantes(have_objs_ids, dir.clone());
     // obtener un packfile con los archivos faltantes
     let packfile =
@@ -106,12 +105,10 @@ mod test {
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/fetch_02.txt")).unwrap());
         let mut comunicacion = Comunicacion::new_para_testing(mock, logger.clone());
         comunicacion.enviar_pedidos_al_servidor_pkt(vec![wants], "".to_string()).unwrap();
-        // comunicacion.enviar(&gir_io::obtener_linea_con_largo_hex("done\n")).unwrap();
         comunicacion.enviar_lo_que_tengo_al_servidor_pkt(&vec!["8f63722a025d936c53304d40ba3197ffebf194d1\n".to_string()]).unwrap();
         comunicacion.responder(vec![gir_io::obtener_linea_con_largo_hex("done\n")]).unwrap();
         upload_pack(test_dir, &mut comunicacion).unwrap();
         let respuesta = comunicacion.obtener_lineas().unwrap();
-        println!("Respuesta: {:?}", respuesta);
         let respuesta_esperada = vec!["ACK 8f63722a025d936c53304d40ba3197ffebf194d1\n".to_string()];
         assert_eq!(respuesta, respuesta_esperada);
         let packfile = comunicacion.obtener_packfile().unwrap();

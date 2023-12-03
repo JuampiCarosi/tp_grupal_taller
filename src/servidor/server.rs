@@ -1,3 +1,4 @@
+use crate::err_comunicacion::ErrorDeComunicacion;
 use crate::servidor::{upload_pack::upload_pack, receive_pack::receive_pack};
 use crate::tipos_de_dato::{comunicacion::Comunicacion, comunicacion::RespuestaDePedido, logger::Logger};
 use crate::utils::io as gir_io;
@@ -54,22 +55,24 @@ impl Servidor {
                 RespuestaDePedido::Mensaje(mensaje) => mensaje,
                 RespuestaDePedido::Terminate => break,
             }; // acepto la primera linea
+            println!("Pedido recibido: {}", pedido);
             Self::procesar_pedido(&pedido, comunicacion, dir)?; // parse de la liena para ver que se pide
         }
         Ok(())
     }
 
     // Facilita la primera parte de la funcion anterior
-    fn parsear_linea_pedido_y_responder_con_version(linea_pedido: &str, comunicacion: &mut Comunicacion<TcpStream>, dir: &str) -> Result<(String, String), String> {
+    fn parsear_linea_pedido_y_responder_con_version(linea_pedido: &str, comunicacion: &mut Comunicacion<TcpStream>, dir: &str) -> Result<(String, String, String), String> {
         let pedido: Vec<String> = linea_pedido.split_whitespace().into_iter().map(|s| s.to_string()).collect();
         let args: Vec<String> = pedido[1].split('\0').into_iter().map(|s| s.to_string()).collect();
+        let repo = args[0].clone();
         let dir_repo = dir.to_string() + &args[0];
         comunicacion
             .enviar_linea(&gir_io::obtener_linea_con_largo_hex(
                 &(VERSION.to_string() + "\n"),
             ))?;
         let pedido = &pedido[0];
-        Ok((pedido.to_owned(), dir_repo))
+        Ok((pedido.to_owned(), repo, dir_repo))
     }
     
     // Funcion para actuar segun si se recibe un upload-pack o un receive-pack, en caso de que sea un receive-pack y el repositorio no exista, se crea el mismo
@@ -78,12 +81,16 @@ impl Servidor {
         comunicacion: &mut Comunicacion<TcpStream>,
         dir: &str,
     ) -> Result<(), String> {
-        let (pedido, dir_repo) = Self::parsear_linea_pedido_y_responder_con_version(linea, comunicacion, dir)?;
-
+        let (pedido, repo, dir_repo) = Self::parsear_linea_pedido_y_responder_con_version(linea, comunicacion, dir)?;
         let refs: Vec<String>;
 
         match pedido.as_str() {
             "git-upload-pack" => {
+                if !PathBuf::from(&dir_repo).exists() {
+                    let error = ErrorDeComunicacion::ErrorRepositorioNoExiste(repo).to_string();
+                    comunicacion.enviar(&gir_io::obtener_linea_con_largo_hex(&error))?;
+                    return Err("No existe el repositorio".to_string());
+                }
                 println!("upload-pack recibido, ejecutando");
                 refs = server_utils::obtener_refs_de(PathBuf::from(&dir_repo))?;
                 comunicacion.responder(refs)?;

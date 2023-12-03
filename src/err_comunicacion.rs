@@ -1,10 +1,23 @@
-use std::{io, str::Utf8Error};
+use std::{io, str::Utf8Error, fmt, error::Error};
 
 #[derive(Debug)]
 pub enum ErrorDeComunicacion {
     Utf8Error(Utf8Error),
     IoError(io::Error),
+    ErrorRepositorioNoExiste(String),
 }
+
+impl fmt::Display for ErrorDeComunicacion {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            ErrorDeComunicacion::Utf8Error(e) => write!(f, "UTF-8 error: {}", e),
+            ErrorDeComunicacion::IoError(e) => write!(f, "IO error: {}", e),
+            ErrorDeComunicacion::ErrorRepositorioNoExiste(e) => write!(f, "ERR El repositorio {} no existe\n", e),
+        }
+    }
+}
+
+impl Error for ErrorDeComunicacion {}
 
 impl From<Utf8Error> for ErrorDeComunicacion {
     fn from(error: Utf8Error) -> Self {

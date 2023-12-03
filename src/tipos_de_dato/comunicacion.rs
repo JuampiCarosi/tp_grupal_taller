@@ -206,7 +206,6 @@ impl<T: Write + Read> Comunicacion<T> {
     fn obtener_largo_de_la_linea(&self) -> Result<u32, String> {
         let bytes_tamanio_linea = 4;
         let tamanio_str = self.leer_del_flujo_tantos_bytes_en_string(bytes_tamanio_linea)?;
-        println!("tamanio_str: {}", tamanio_str);
         let tamanio_u32 = u32::from_str_radix(&tamanio_str, 16)
             .map_err(|e| format!("Fallo en la conversion a entero\n{}\n", e))?;
         Ok(tamanio_u32)
@@ -244,7 +243,8 @@ impl<T: Write + Read> Comunicacion<T> {
             lineas.push(linea.clone());
             if linea.contains("NAK")
                 || linea.contains("ACK")
-                || (linea.contains("done") && !linea.contains("ref"))
+                || (linea.contains("done") && !linea.contains("ref")) 
+                || linea.contains("ERR")
             {
                 break;
             }
