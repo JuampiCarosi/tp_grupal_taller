@@ -4,6 +4,8 @@ use std::io::BufRead;
 use std::path::{Path, PathBuf};
 use std::{env, str};
 
+use super::strings;
+
 pub fn obtener_refs_con_largo_hex(
     refs: &mut Vec<String>,
     refs_path: PathBuf,
@@ -19,7 +21,7 @@ pub fn obtener_refs_con_largo_hex(
                 let mut path = archivo.path();
 
                 let referencia = obtener_referencia(&mut path, dir)?;
-                refs.push(obtener_linea_con_largo_hex(&referencia));
+                refs.push(strings::obtener_linea_con_largo_hex(&referencia));
             }
             Err(error) => {
                 eprintln!("Error leyendo directorio: {}", error);
@@ -54,17 +56,6 @@ pub fn obtener_refs(refs_path: PathBuf, dir: &str) -> Result<Vec<String>, String
         }
     }
     Ok(refs)
-}
-
-pub fn calcular_largo_hex(line: &str) -> String {
-    let largo = line.len() + 4; // el + 4 es por los 4 bytes que indican el largo
-    let largo_hex = format!("{:x}", largo);
-    format!("{:0>4}", largo_hex)
-}
-
-pub fn obtener_linea_con_largo_hex(line: &str) -> String {
-    let largo_hex = calcular_largo_hex(line);
-    format!("{}{}", largo_hex, line)
 }
 
 fn leer_archivo(path: &mut Path) -> Result<String, String> {
@@ -106,7 +97,7 @@ pub fn obtener_ref_head(path: PathBuf) -> Result<String, String> {
     let head_ref = contenido.split_whitespace().collect::<Vec<&str>>()[1];
     if let Some(ruta) = path.clone().parent() {
         let cont = leer_archivo(&mut ruta.join(head_ref))? + " HEAD";
-        Ok(obtener_linea_con_largo_hex(&cont))
+        Ok(strings::obtener_linea_con_largo_hex(&cont))
     } else {
         Err("Error al leer HEAD, verifique la ruta".to_string())
     }
@@ -259,14 +250,14 @@ pub fn obtener_ack(nombres_archivos: Vec<String>, dir: &str) -> Vec<String> {
     for nombre in nombres_archivos {
         let dir_archivo = format!("{}{}/{}", dir, &nombre[..2], &nombre[2..]);
         if PathBuf::from(dir_archivo.clone()).exists() {
-            ack.push(obtener_linea_con_largo_hex(
+            ack.push(strings::obtener_linea_con_largo_hex(
                 ("ACK ".to_string() + &nombre + "\n").as_str(),
             ));
             break;
         }
     }
     if ack.is_empty() {
-        ack.push(obtener_linea_con_largo_hex("NAK\n"));
+        ack.push(strings::obtener_linea_con_largo_hex("NAK\n"));
     }
     ack
 }

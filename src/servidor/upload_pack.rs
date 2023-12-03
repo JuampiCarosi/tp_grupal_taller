@@ -1,7 +1,7 @@
 use crate::tipos_de_dato::comunicacion::Comunicacion;
 use crate::tipos_de_dato::packfile;
 use crate::utils::strings::eliminar_prefijos;
-use crate::utils::{io as gir_io, objects};
+use crate::utils::{self, io as gir_io, objects};
 use std::io::{Read, Write};
 
 /// Envia packfile al cliente,
@@ -41,7 +41,7 @@ fn procesar_pedido_clone<T: Read + Write>(
     dir: &str,
     comunicacion: &mut Comunicacion<T>,
 ) -> Result<(), String> {
-    comunicacion.responder(&vec![gir_io::obtener_linea_con_largo_hex("NAK\n")])?; // respondo NAK
+    comunicacion.responder(&vec![utils::strings::obtener_linea_con_largo_hex("NAK\n")])?; // respondo NAK
     let packfile =
         packfile::Packfile::obtener_pack_entero(&(dir.clone().to_string() + "objects/"))?; // obtengo el packfile
     comunicacion.enviar_pack_file(packfile)?;
@@ -85,10 +85,12 @@ fn comprobar_wants<T: Read + Write>(
             }
         }
         if continua == false {
-            comunicacion.responder(&vec![gir_io::obtener_linea_con_largo_hex(&format!(
-                "ERR La referencia {} no coincide con ninguna referencia enviada\n",
-                want_hash
-            ))])?;
+            comunicacion.responder(&vec![utils::strings::obtener_linea_con_largo_hex(
+                &format!(
+                    "ERR La referencia {} no coincide con ninguna referencia enviada\n",
+                    want_hash
+                ),
+            )])?;
             Err("el want enviado no coincide con las referencias enviadas.".to_string())?;
         }
     }
@@ -99,6 +101,7 @@ fn comprobar_wants<T: Read + Write>(
 mod test {
     use super::*;
     use crate::tipos_de_dato::{comunicacion::Comunicacion, logger::Logger};
+    use crate::utils::{self, strings};
     use std::io::{Read, Write};
     use std::path::PathBuf;
     use std::sync::Arc;
@@ -128,25 +131,29 @@ mod test {
     }
     #[test]
     fn test01_clone() {
-        let wants =
-            gir_io::obtener_linea_con_largo_hex("4163eb28ec61fd1d0c17cf9b77f4c17e1e338b0\n");
+        let wants = utils::strings::obtener_linea_con_largo_hex(
+            "4163eb28ec61fd1d0c17cf9b77f4c17e1e338b0\n",
+        );
         let test_dir = env!("CARGO_MANIFEST_DIR").to_string() + "/server_test_dir/test03/.gir/";
 
         let mock: MockTcpStream = MockTcpStream {
             lectura_data: Vec::new(),
         };
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/fetch_02.txt")).unwrap());
+
         let mut comunicacion = Comunicacion::new_para_testing(mock, logger.clone());
         comunicacion
             .enviar_pedidos_al_servidor_pkt(vec![wants], "".to_string())
             .unwrap();
+
         comunicacion
-            .enviar(&gir_io::obtener_linea_con_largo_hex("done\n"))
+            .enviar(&utils::strings::obtener_linea_con_largo_hex("done\n"))
             .unwrap();
+
         upload_pack(
             test_dir,
             &mut comunicacion,
-            &vec![gir_io::obtener_linea_con_largo_hex(
+            &vec![utils::strings::obtener_linea_con_largo_hex(
                 "4163eb28ec61fd1d0c17cf9b77f4c17e1e338b0 refs/heads/master\n",
             )],
         )
@@ -160,7 +167,8 @@ mod test {
 
     #[test]
     fn test02_fetch() {
-        let wants = gir_io::obtener_linea_con_largo_hex("4163eb28ec61fd1d0c17cf9b77f4c17e1e338b0");
+        let wants =
+            utils::strings::obtener_linea_con_largo_hex("4163eb28ec61fd1d0c17cf9b77f4c17e1e338b0");
         let test_dir = env!("CARGO_MANIFEST_DIR").to_string() + "/server_test_dir/test03/.gir/";
 
         let mock: MockTcpStream = MockTcpStream {
@@ -177,12 +185,12 @@ mod test {
             ])
             .unwrap();
         comunicacion
-            .responder(&vec![gir_io::obtener_linea_con_largo_hex("done\n")])
+            .responder(&vec![utils::strings::obtener_linea_con_largo_hex("done\n")])
             .unwrap();
         upload_pack(
             test_dir,
             &mut comunicacion,
-            &vec![gir_io::obtener_linea_con_largo_hex(
+            &vec![utils::strings::obtener_linea_con_largo_hex(
                 "4163eb28ec61fd1d0c17cf9b77f4c17e1e338b0 refs/heads/master\n",
             )],
         )
@@ -196,7 +204,7 @@ mod test {
 
     #[test]
     fn test03_want_con_referencia_invalida_produce_error() {
-        let wants = gir_io::obtener_linea_con_largo_hex(&"1".repeat(40));
+        let wants = utils::strings::obtener_linea_con_largo_hex(&"1".repeat(40));
         let test_dir = env!("CARGO_MANIFEST_DIR").to_string() + "/server_test_dir/test03/.gir/";
 
         let mock: MockTcpStream = MockTcpStream {
@@ -210,7 +218,7 @@ mod test {
         let resultado_upload = upload_pack(
             test_dir,
             &mut comunicacion,
-            &vec![gir_io::obtener_linea_con_largo_hex(
+            &vec![utils::strings::obtener_linea_con_largo_hex(
                 &("4163eb28ec61fd1d0c17cf9b77f4c17e1e338b0".to_string() + " refs/heads/master\n"),
             )],
         );

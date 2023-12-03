@@ -3,7 +3,7 @@ use crate::servidor::{receive_pack::receive_pack, upload_pack::upload_pack};
 use crate::tipos_de_dato::{
     comunicacion::Comunicacion, comunicacion::RespuestaDePedido, logger::Logger,
 };
-use crate::utils::io as gir_io;
+use crate::utils::{self, io as gir_io};
 use std::{
     env,
     net::{TcpListener, TcpStream},
@@ -45,7 +45,8 @@ impl Servidor {
 
             let handle = thread::spawn(move || -> Result<(), String> {
                 let stream_clonado = stream.try_clone().map_err(|e| e.to_string())?;
-                let mut comunicacion = Comunicacion::new_para_testing(stream_clonado, logge_clone);
+                let mut comunicacion =
+                    Comunicacion::<TcpStream>::new_para_server(stream_clonado, logge_clone);
                 Self::manejar_cliente(
                     &mut comunicacion,
                     &(env!("CARGO_MANIFEST_DIR").to_string() + DIR),
@@ -91,7 +92,7 @@ impl Servidor {
             .collect();
         let repo = args[0].clone();
         let dir_repo = dir.to_string() + &args[0];
-        comunicacion.enviar(&gir_io::obtener_linea_con_largo_hex(
+        comunicacion.enviar(&utils::strings::obtener_linea_con_largo_hex(
             &(VERSION.to_string() + "\n"),
         ))?;
         let pedido = &pedido[0];
@@ -112,7 +113,7 @@ impl Servidor {
             "git-upload-pack" => {
                 if !PathBuf::from(&dir_repo).exists() {
                     let error = ErrorDeComunicacion::ErrorRepositorioNoExiste(repo).to_string();
-                    comunicacion.enviar(&gir_io::obtener_linea_con_largo_hex(&error))?;
+                    comunicacion.enviar(&utils::strings::obtener_linea_con_largo_hex(&error))?;
                     return Err("No existe el repositorio".to_string());
                 }
                 println!("upload-pack recibido, ejecutando");
@@ -179,7 +180,7 @@ mod server_utils {
         }
         let mut referencia_con_capacidades = referencia_con_capacidades.trim_end().to_string();
         referencia_con_capacidades.push('\n');
-        gir_io::obtener_linea_con_largo_hex(&referencia_con_capacidades)
+        utils::strings::obtener_linea_con_largo_hex(&referencia_con_capacidades)
     }
 }
 
@@ -207,7 +208,7 @@ mod tests {
         println!("{}", referencia_con_capacidades);
         assert_eq!(
             referencia_con_capacidades,
-            gir_io::obtener_linea_con_largo_hex(
+            utils::strings::obtener_linea_con_largo_hex(
                 &("0".repeat(40).to_string() + "\0" + CAPABILITIES + "\n")
             )
         );
@@ -221,7 +222,7 @@ mod tests {
         println!("{:?}", refs);
         assert_eq!(
             refs[0],
-            gir_io::obtener_linea_con_largo_hex(
+            utils::strings::obtener_linea_con_largo_hex(
                 &("0".repeat(40).to_string() + "\0" + CAPABILITIES + "\n")
             )
         );
@@ -235,7 +236,7 @@ mod tests {
         println!("{:?}", refs);
         assert_eq!(
             refs[0],
-            gir_io::obtener_linea_con_largo_hex(
+            utils::strings::obtener_linea_con_largo_hex(
                 &("4163eb28ec61fd1d0c17cf9b77f4c17e1e338b0b".to_string()
                     + " HEAD\0"
                     + CAPABILITIES

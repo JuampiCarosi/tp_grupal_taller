@@ -168,7 +168,7 @@ impl<T: Write + Read> Fetch<T> {
     /// Para seguir el protocolo el mensaje que se envia es done
     fn finalizar_pedido(&self) -> Result<(), String> {
         self.comunicacion
-            .enviar(&io::obtener_linea_con_largo_hex("done\n"))
+            .enviar(&utils::strings::obtener_linea_con_largo_hex("done\n"))
     }
 
     ///Actuliza el archivo head correspondiente al remoto que se hizo fetch o si no existe lo crea.
