@@ -94,7 +94,7 @@ impl Servidor {
                 println!("upload-pack recibido, ejecutando");
                 refs = server_utils::obtener_refs_de(PathBuf::from(&dir_repo))?;
                 comunicacion.responder(&refs)?;
-                upload_pack(dir_repo, comunicacion)
+                upload_pack(dir_repo, comunicacion, &refs)
             }
             "git-receive-pack" => {
                 println!("receive-pack recibido, ejecutando");
