@@ -339,9 +339,9 @@ where
 // dado un vector con nombres de archivos de vuelve aquellos que no estan en el directorio
 
 // HACER MAS EFICIENTE *Hay iteraciones de mas que se pueden evitar unificando las funciones*
-pub fn obtener_archivos_faltantes(nombres_archivos: Vec<String>, dir: String) -> Vec<String> {
+pub fn obtener_archivos_faltantes(nombres_archivos: Vec<String>, dir: &str) -> Vec<String> {
     // DESHARDCODEAR EL NOMBRE DEL DIRECTORIO (.gir)
-    let objetcts_contained = obtener_objetos_del_directorio(&(dir + "objects/")).unwrap();
+    let objetcts_contained = obtener_objetos_del_directorio(&(dir.to_string() + "objects/")).unwrap();
     // println!("objetcts_contained: {:?}", objetcts_contained);
     // println!("Nombres: {:?}", nombres_archivos);
     let mut archivos_faltantes: Vec<String> = Vec::new();

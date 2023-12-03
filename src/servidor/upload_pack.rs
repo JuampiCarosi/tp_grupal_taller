@@ -4,6 +4,13 @@ use crate::tipos_de_dato::packfile;
 use crate::utils::io as gir_io;
 use crate::utils::strings::eliminar_prefijos;
 
+
+/// Envia packfile al cliente, 
+/// # Argumentos
+/// * `dir` - Direccion del repositorio
+/// * `comunicacion` - Comunicacion con el cliente
+/// # Errores
+/// 
 pub fn upload_pack<T>(
     dir: String,
     comunicacion: &mut Comunicacion<T>,
@@ -17,31 +24,37 @@ pub fn upload_pack<T>(
     // ------- CLONE --------
     let lineas_siguientes = comunicacion.obtener_lineas()?;
     if lineas_siguientes[0].clone().contains("done") {
-        comunicacion.responder(&vec![gir_io::obtener_linea_con_largo_hex("NAK\n")])?; // respondo NAK
-        let packfile =
-            packfile::Packfile::obtener_pack_entero(&(dir.clone().to_string() + "objects/"))?; // obtengo el packfile
-        comunicacion.enviar_pack_file(packfile)?;
-        println!("Upload pack ejecutado con exito");
-        return Ok(());
+        procesar_pedido_clone(&dir, comunicacion)?;
     }
-
-    // -------- fetch ----------
-    let have_objs_ids = eliminar_prefijos(&lineas_siguientes);
-    let respuesta_acks_nak =
-    gir_io::obtener_ack(have_objs_ids.clone(), &(dir.clone() + "objects/"));
-    comunicacion.responder(&respuesta_acks_nak)?;
-    let _ultimo_done= comunicacion.obtener_lineas()?;
-    let faltantes = gir_io::obtener_archivos_faltantes(have_objs_ids, dir.clone());
-    // obtener un packfile con los archivos faltantes
-    let packfile =
-        packfile::Packfile::obtener_pack_con_archivos(faltantes, &(dir.clone() + "objects/"))?;
-
-    comunicacion.enviar_pack_file(packfile)?;
+    else {
+        // -------- fetch ----------
+        procesar_pedido_fetch(&dir, comunicacion, lineas_siguientes)?;
+    }
     println!("Upload pack ejecutado con exito");
     Ok(())
 }
 
+fn procesar_pedido_clone<T: Read + Write>(dir: &str, comunicacion: &mut Comunicacion<T>) -> Result<(), String>{ 
+    comunicacion.responder(&vec![gir_io::obtener_linea_con_largo_hex("NAK\n")])?; // respondo NAK
+    let packfile =
+        packfile::Packfile::obtener_pack_entero(&(dir.clone().to_string() + "objects/"))?; // obtengo el packfile
+    comunicacion.enviar_pack_file(packfile)?;
+    Ok(())
+}   
 
+fn procesar_pedido_fetch<T: Read + Write>(dir: &str, comunicacion: &mut Comunicacion<T>, lineas: Vec<String>) -> Result<(), String> {
+    let have_objs_ids = eliminar_prefijos(&lineas);
+    let respuesta_acks_nak =
+    gir_io::obtener_ack(have_objs_ids.clone(), &(dir.to_string() + "objects/"));
+    comunicacion.responder(&respuesta_acks_nak)?;
+    let _ultimo_done= comunicacion.obtener_lineas()?;
+    let faltantes = gir_io::obtener_archivos_faltantes(have_objs_ids, dir);
+    let packfile =
+        packfile::Packfile::obtener_pack_con_archivos(faltantes, &(dir.to_string() + "objects/"))?;
+
+    comunicacion.enviar_pack_file(packfile)?;
+    Ok(())
+}
 
 #[cfg(test)]
 mod test {
