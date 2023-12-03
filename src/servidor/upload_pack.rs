@@ -72,10 +72,11 @@ fn comprobar_wants<T: Read + Write>(
     comunicacion: &mut Comunicacion<T>,
 ) -> Result<(), String> {
     for want in wants {
+        println!("want: {}", want);
         let want_split: Vec<&str> = want.split_whitespace().collect();
-        let mut want_hash = want_split[1].to_string();
-        want_hash.drain(..4);
+        let want_hash = want_split[1].to_string();
         let mut continua = false;
+        println!("want_hash: {}", want_hash);
         for ref_enviada in refs_enviadas {
             let ref_enviada_split: Vec<&str> = ref_enviada.split_whitespace().collect();
             let mut ref_enviada_hash = ref_enviada_split[0].to_string();
@@ -128,8 +129,7 @@ mod test {
     }
     #[test]
     fn test01_clone() {
-        let wants =
-            gir_io::obtener_linea_con_largo_hex("4163eb28ec61fd1d0c17cf9b77f4c17e1e338b0\n");
+        let wants = "4163eb28ec61fd1d0c17cf9b77f4c17e1e338b0".to_string();
         let test_dir = env!("CARGO_MANIFEST_DIR").to_string() + "/server_test_dir/test03/.gir/";
 
         let mock: MockTcpStream = MockTcpStream {
@@ -160,7 +160,7 @@ mod test {
 
     #[test]
     fn test02_fetch() {
-        let wants = gir_io::obtener_linea_con_largo_hex("4163eb28ec61fd1d0c17cf9b77f4c17e1e338b0");
+        let wants = "4163eb28ec61fd1d0c17cf9b77f4c17e1e338b0".to_string();
         let test_dir = env!("CARGO_MANIFEST_DIR").to_string() + "/server_test_dir/test03/.gir/";
 
         let mock: MockTcpStream = MockTcpStream {
@@ -196,7 +196,7 @@ mod test {
 
     #[test]
     fn test03_want_con_referencia_invalida_produce_error() {
-        let wants = gir_io::obtener_linea_con_largo_hex(&"1".repeat(40));
+        let wants = "1".repeat(40);
         let test_dir = env!("CARGO_MANIFEST_DIR").to_string() + "/server_test_dir/test03/.gir/";
 
         let mock: MockTcpStream = MockTcpStream {

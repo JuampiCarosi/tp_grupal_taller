@@ -216,6 +216,7 @@ impl<T: Write + Read> Fetch<T> {
         //POR AHORA NO HACEMOS, NADA CON ESTO: EVALUAR QUE HACER. SOLO LEERMOS
         //PARA SEGUIR EL FLUJO
         let _acks_nak = self.comunicacion.obtener_lineas()?;
+        println!("NACK: {:?}", _acks_nak);
         Ok(())
     }
 
@@ -235,7 +236,6 @@ impl<T: Write + Read> Fetch<T> {
 
         let commits_de_cabeza_de_rama_faltantes =
             self.obtener_commits_cabeza_de_rama_faltantes(commits_cabezas_y_dir_rama_asosiado)?;
-
         let tags_faltantes = self.obtener_tags_faltantes(commit_y_tags_asosiado)?;
 
         let pedidos = [
