@@ -6,6 +6,7 @@ use crate::tipos_de_dato::logger::Logger;
 use crate::tipos_de_dato::objetos::commit::CommitObj;
 use crate::tipos_de_dato::objetos::tree::Tree;
 use crate::tipos_de_dato::packfile::Packfile;
+
 use crate::tipos_de_dato::referencia::Referencia;
 use crate::utils;
 use crate::utils::io;
@@ -21,9 +22,7 @@ const FLAG_SET_UPSTREAM: &str = "--set-upstream";
 const FLAG_U: &str = "-u";
 const GIR_PUSH: &str = "gir push <remoto> <rama-local>\ngir push <remoto> <rama-local>:<rama-remota>\ngir push -u <remoto> <rama>\ngir push -u <remoto> <rama-local>:<rama-remota>\n";
 const GIR_PUSH_U: &str = "gir push --set-upstream/-u <nombre-remoto> <nombre-rama-local>";
-// idea: Key -> (String, String) , primera entrada la ref que tiene el cliente, segunda la que tiene el sv.
 pub struct Push {
-    comunicacion: Comunicacion<TcpStream>,
     referencia: Referencia,
     remoto: String,
     set_upstream: bool,
@@ -31,10 +30,6 @@ pub struct Push {
 }
 
 impl Push {
-    // lo que se hace aca es obtener las referencias del cliente, y setear las del servidor en 0 (40 veces 0)
-    // asi queda la estructura del hashmap como: Referencia: (ref_cliente, ref_servidor)
-    // donde referencia puede ser por ejemplo: refs/heads/master
-
     pub fn new(args: &mut Vec<String>, logger: Arc<Logger>) -> Result<Self, String> {
         Self::verificar_argumentos(&args)?;
 
@@ -46,11 +41,7 @@ impl Push {
 
         let (remoto, referencia) = Self::parsear_argumentos(args, set_upstream)?;
 
-        let url: String = Self::obtener_url(&remoto)?;
-        let comunicacion = Comunicacion::<TcpStream>::new_desde_url(&url, logger.clone())?;
-
         Ok(Push {
-            comunicacion,
             referencia,
             remoto,
             set_upstream,
@@ -144,10 +135,6 @@ impl Push {
             Ok(())
         }
     }
-    //Le pide al config el url asosiado a la rama
-    fn obtener_url(remoto: &String) -> Result<String, String> {
-        Config::leer_config()?.obtenet_url_asosiado_remoto(&remoto)
-    }
 
     fn verificar_remoto(remoto: &String) -> Result<String, String> {
         if let false = Config::leer_config()?.existe_remote(remoto) {
@@ -157,10 +144,10 @@ impl Push {
         Ok(remoto.clone())
     }
 
-    pub fn ejecutar(&mut self) -> Result<String, String> {
-        self.comunicacion.iniciar_git_recive_pack_con_servidor()?;
+    pub fn ejecutar(&self) -> Result<String, String> {
+        let comunicacion = self.iniciar_git_recive_pack_con_servidor()?;
 
-        let commits_y_refs_asosiado = self.fase_de_descubrimiento()?;
+        let commits_y_refs_asosiado = self.fase_de_descubrimiento(&comunicacion)?;
 
         let referencia_acualizar = self.obtener_referencia_acualizar(&commits_y_refs_asosiado)?;
 
@@ -168,11 +155,16 @@ impl Push {
             let objetos_a_enviar = self.obtener_objetos_a_enviar(
                 &self.referencia.dar_ref_local(),
                 &referencia_acualizar.0,
+                &comunicacion,
             )?;
 
-            self.enviar_actualizaciones_y_objetos(referencia_acualizar, objetos_a_enviar)?;
+            self.enviar_actualizaciones_y_objetos(
+                referencia_acualizar,
+                objetos_a_enviar,
+                &comunicacion,
+            )?;
         } else {
-            self.terminar_y_mandar_pack_file_vacio()?;
+            self.terminar_y_mandar_pack_file_vacio(&comunicacion)?;
         }
 
         if self.set_upstream && !self.referencia.es_tag() {
@@ -190,10 +182,31 @@ impl Push {
         Ok(mensaje)
     }
 
-    fn terminar_y_mandar_pack_file_vacio(&self) -> Result<(), String> {
-        self.comunicacion.enviar_flush_pkt()?;
+    //Le pide al config el url asosiado a la rama
+    fn obtener_url(&self, remoto: &String) -> Result<String, String> {
+        Config::leer_config()?.obtenet_url_asosiado_remoto(&remoto)
+    }
+    ///Inica la comunicacion con el servidor y el protocolo git-recive-pack
+    ///
+    /// # Resultado
+    /// - Devuelve la Comunicacion establecida con el server
+    fn iniciar_git_recive_pack_con_servidor(&self) -> Result<Comunicacion<TcpStream>, String> {
+        let comunicacion = Comunicacion::<TcpStream>::new_desde_url(
+            &self.obtener_url(&self.remoto)?,
+            self.logger.clone(),
+        )?;
+        comunicacion.iniciar_git_recive_pack_con_servidor()?;
+        Ok(comunicacion)
+    }
+
+    ///termina la comunicacion con el servidor, mandando un flush pkt y deespues un pack file vacio
+    fn terminar_y_mandar_pack_file_vacio(
+        &self,
+        comunicacion: &Comunicacion<TcpStream>,
+    ) -> Result<(), String> {
+        comunicacion.enviar_flush_pkt()?;
         // el server pide que se le mande un packfile vacio
-        self.comunicacion
+        comunicacion
             .enviar_pack_file(Packfile::new().obtener_pack_con_archivos(vec![], "./.gir/objects/"))
     }
 
@@ -207,6 +220,7 @@ impl Push {
         &self,
         referencia: &PathBuf,
         viejo_commit: &String,
+        comunicacion: &Comunicacion<TcpStream>,
     ) -> Result<HashSet<String>, String> {
         let objetos_a_enviar =
             obtener_commits_y_objetos_asociados(referencia, viejo_commit, self.logger.clone());
@@ -215,7 +229,7 @@ impl Push {
             Ok(objetos_a_enviar) => Ok(objetos_a_enviar),
             Err(msj_err) => {
                 //error
-                self.terminar_y_mandar_pack_file_vacio()?;
+                self.terminar_y_mandar_pack_file_vacio(comunicacion)?;
                 return Err(msj_err);
             }
         }
@@ -237,40 +251,53 @@ impl Push {
         &self,
         commits_y_refs_asosiado: &Vec<(String, PathBuf)>,
     ) -> Result<(String, String, PathBuf), String> {
-        let mut commit_viejo = "0".repeat(40);
-        let ref_rama_merge = self.referencia.dar_ref_remota();
-        let commit_nuevo =
-            io::leer_a_string(PathBuf::from("./.gir").join(self.referencia.dar_ref_local()))?;
+        let (mut commit_viejo, commit_nuevo, nombre_referencia) = self.obtener_referencia()?;
 
         for (commit, referencia) in commits_y_refs_asosiado {
-            if *referencia == ref_rama_merge {
+            if *referencia == nombre_referencia {
                 commit_viejo = commit.to_string();
             }
         }
 
-        Ok((commit_viejo, commit_nuevo, ref_rama_merge))
+        Ok((commit_viejo, commit_nuevo, nombre_referencia))
     }
 
+    ///obtiene la una referencia apartir de los parametros recividos en la creacion.
+    ///
+    /// # Resultado
+    ///
+    /// - referencia = commit-viejo(siempre igual 0*40 en este caso), commit-nuevo(el commit
+    ///                 de la referenca acutal), la referencia actualizar en el servidor(puede ser
+    ///                 una rama (Ej: refs/heads/trabajo) o un tag (Ej: refs/tags/v1.0))
+    fn obtener_referencia(&self) -> Result<(String, String, PathBuf), String> {
+        let commit_viejo = "0".repeat(40);
+        let nombre_referencia = self.referencia.dar_ref_remota();
+        let commit_nuevo =
+            io::leer_a_string(PathBuf::from("./.gir").join(self.referencia.dar_ref_local()))?;
+        Ok((commit_viejo, commit_nuevo, nombre_referencia))
+    }
+
+    ///Le envia las referencia a acualizar al servidor junto con todos sus objetos asosiados
+    /// dentro del pack file. Finaliza la comunicacion
     fn enviar_actualizaciones_y_objetos(
-        &mut self,
+        &self,
         referencia_actualizar: (String, String, PathBuf),
         objetos_a_enviar: HashSet<String>,
+        comunicacion: &Comunicacion<TcpStream>,
     ) -> Result<(), String> {
-        self.comunicacion
-            .enviar(&utils::io::obtener_linea_con_largo_hex(&format!(
-                "{} {} {}",
-                referencia_actualizar.0,
-                referencia_actualizar.1,
-                referencia_actualizar.2.to_string_lossy()
-            )))?;
+        comunicacion.enviar(&utils::io::obtener_linea_con_largo_hex(&format!(
+            "{} {} {}",
+            referencia_actualizar.0,
+            referencia_actualizar.1,
+            referencia_actualizar.2.to_string_lossy()
+        )))?;
 
-        self.comunicacion.enviar_flush_pkt()?;
+        comunicacion.enviar_flush_pkt()?;
 
-        self.comunicacion
-            .enviar_pack_file(Packfile::new().obtener_pack_con_archivos(
-                objetos_a_enviar.into_iter().collect(),
-                "./.gir/objects/",
-            ))?;
+        comunicacion.enviar_pack_file(Packfile::new().obtener_pack_con_archivos(
+            objetos_a_enviar.into_iter().collect(),
+            "./.gir/objects/",
+        ))?;
         Ok(())
     }
 
@@ -282,18 +309,19 @@ impl Push {
     ///                        'direccion de la carpeta de la rama en el servidor'
     ///
     /// # Resultado
-    /// - vector con las capacidades del servidor
-    /// - hash del commit cabeza de rama
-    /// - vector de tuplas con los hash del commit cabeza de rama y la ref de la
-    ///     de la rama en el servidor(ojo!! la direccion para el servidor no para el local)
-    /// - vector de tuplas con el hash del commit y el tag asosiado
-    fn fase_de_descubrimiento(&self) -> Result<Vec<(String, PathBuf)>, String> {
+    ///
+    /// - vector de tuplas con los commit cabeza de rama y la ref de la
+    ///     del tag o la rama oen el servidor(ojo!! la direccion para el servidor no para el local)
+    fn fase_de_descubrimiento(
+        &self,
+        comunicacion: &Comunicacion<TcpStream>,
+    ) -> Result<Vec<(String, PathBuf)>, String> {
         let (
             _capacidades_servidor,
             _commit_head_remoto,
             commits_cabezas_y_ref_rama_asosiado,
             commits_y_tags_asosiados,
-        ) = utils::fase_descubrimiento::fase_de_descubrimiento(&self.comunicacion)?;
+        ) = utils::fase_descubrimiento::fase_de_descubrimiento(&comunicacion)?;
 
         self.logger
             .log(&"Fase de descubrimiento ejecuta con exito".to_string());
@@ -374,6 +402,42 @@ fn obtener_commits_y_objetos_asociados(
         objetos_a_agregar.remove(commit_limite);
     }
     Ok(objetos_a_agregar)
+}
+
+#[cfg(test)]
+
+mod test {
+    use std::{path::PathBuf, sync::Arc};
+
+    use crate::{tipos_de_dato::logger::Logger, utils};
+
+    use super::Push;
+
+    #[test]
+    fn test_01_se_crea_bien_la_referencia_actualizar_al_poner_rama_local_y_remota() {
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/push_01")).unwrap());
+        utils::testing::limpiar_archivo_gir(logger.clone());
+        let rama_local = "minas".to_string();
+        let remoto = "buscaminas-rustico".to_string();
+        let commit = "commit_head_rama".to_string();
+
+        utils::testing::escribir_rama_local(&rama_local, logger.clone());
+        utils::testing::anadir_remoto_default_config(&remoto, logger.clone());
+        utils::io::escribir_bytes(format!("./.gir/refs/heads/{}", rama_local), commit.clone())
+            .unwrap();
+
+        let referencia_esperada = (
+            "0".repeat(40),
+            commit,
+            PathBuf::from(format!("refs/heads/{}", remoto)),
+        );
+        let referencia = Push::new(&mut vec![remoto, rama_local], logger)
+            .unwrap()
+            .obtener_referencia()
+            .unwrap();
+
+        assert_eq!(referencia_esperada, referencia);
+    }
 }
 
 // fn obtener_refs_de(dir: PathBuf, prefijo: String) -> Vec<String> {
