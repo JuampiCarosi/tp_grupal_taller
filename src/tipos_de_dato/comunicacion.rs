@@ -206,6 +206,7 @@ impl<T: Write + Read> Comunicacion<T> {
     fn obtener_largo_de_la_linea(&self) -> Result<u32, String> {
         let bytes_tamanio_linea = 4;
         let tamanio_str = self.leer_del_flujo_tantos_bytes_en_string(bytes_tamanio_linea)?;
+        println!("tamanio_str: {}", tamanio_str);
         let tamanio_u32 = u32::from_str_radix(&tamanio_str, 16)
             .map_err(|e| format!("Fallo en la conversion a entero\n{}\n", e))?;
         Ok(tamanio_u32)
@@ -458,7 +459,6 @@ mod test {
         }
     }
     #[test]
-
     fn test01_se_envia_mensajes_de_forma_correcta() {
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/comunicacion_test02.txt")).unwrap());
 

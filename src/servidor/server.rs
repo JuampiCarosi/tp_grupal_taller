@@ -14,6 +14,7 @@ pub struct Servidor {
 }
 
 impl Servidor {
+    // Inicializa un servidor en el puerto dado
     pub fn new(address: &str, logger: Arc<Logger>) -> std::io::Result<Servidor> {
         let listener = TcpListener::bind(address)?;
         println!("Escuchando en {}", address);
@@ -21,6 +22,8 @@ impl Servidor {
         Ok(Servidor { listener, threads: Vec::new(), logger })
     }
 
+    /// Pone en funcionamiento el servidor, spawneando un thread por cada cliente que se conecte al mismo.
+    /// Procesa el pedido del cliente y responde en consecuencia.
     pub fn iniciar_servidor(&mut self) -> Result<(), String> {
         while let Ok((stream, socket)) = self.listener.accept() {
             println!("Conectado al cliente {:?}", socket);
@@ -41,7 +44,8 @@ impl Servidor {
         Ok(())
     }
 
-    pub fn manejar_cliente(
+    // Funcion para parsear el pedido del cliente y actuar segun corresponda
+    fn manejar_cliente(
         comunicacion: &mut Comunicacion<TcpStream>,
         dir: &str,
     ) -> Result<(), String> {
@@ -55,9 +59,8 @@ impl Servidor {
         Ok(())
     }
 
-
+    // Facilita la primera parte de la funcion anterior
     fn parsear_linea_pedido_y_responder_con_version(linea_pedido: &str, comunicacion: &mut Comunicacion<TcpStream>, dir: &str) -> Result<(String, String), String> {
-
         let pedido: Vec<String> = linea_pedido.split_whitespace().into_iter().map(|s| s.to_string()).collect();
         let args: Vec<String> = pedido[1].split('\0').into_iter().map(|s| s.to_string()).collect();
         let dir_repo = dir.to_string() + &args[0];
@@ -69,6 +72,7 @@ impl Servidor {
         Ok((pedido.to_owned(), dir_repo))
     }
     
+    // Funcion para actuar segun si se recibe un upload-pack o un receive-pack, en caso de que sea un receive-pack y el repositorio no exista, se crea el mismo
     fn procesar_pedido(
         linea: &str,
         comunicacion: &mut Comunicacion<TcpStream>,
@@ -95,12 +99,7 @@ impl Servidor {
                     gir_io::crear_directorio(&path.join("refs/tags/"))?;
                 }
                 refs = server_utils::obtener_refs_de(path)?;
-                // if refs.is_empty() {
-                //     comunicacion
-                //         .responder(vec![server_utils::agregar_capacidades("0".repeat(40))])?;
-                // } else {
                 comunicacion.responder(refs)?;
-                // }
                 receive_pack(dir_repo.to_string(), comunicacion)
             }
             _ => Err("No existe el comando".to_string())
@@ -113,6 +112,8 @@ impl Servidor {
 // -------------- utils del server -------------- 
 mod server_utils { 
     use super::*;
+
+    /// Funcion que busca y devuelve las referencias de una direccion dada en formato pkt de un directorio con el formato de git
     pub fn obtener_refs_de(dir: PathBuf) -> Result<Vec<String>, String>{
         let mut refs: Vec<String> = Vec::new();
         let head_ref = gir_io::obtener_ref_head(dir.join("HEAD"));
@@ -144,7 +145,7 @@ mod server_utils {
     }
 
 
-
+    /// Funcion que agrega las capacidades del servidor a una referencia dada en formato pkt
     pub fn agregar_capacidades(referencia: String) -> String {
         let mut referencia_con_capacidades: String;
         if referencia.len() > 40 {

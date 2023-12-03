@@ -75,7 +75,7 @@ impl Packfile {
     /// Dado un directorio, arma el packfile en base a los objetos del mismo y lo devuelve
     pub fn obtener_pack_entero(dir: &str) -> Result<Vec<u8>, String> {
         println!("Despachando packfile");
-        
+        println!("Directorio: {}", dir);
         let (objetos_packfile, cant_objetos) = Self::obtener_objetos_del_dir(dir)?;
 
         Ok(Self::armar_packfile(objetos_packfile, cant_objetos))
