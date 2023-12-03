@@ -93,7 +93,7 @@ impl Servidor {
                 }
                 println!("upload-pack recibido, ejecutando");
                 refs = server_utils::obtener_refs_de(PathBuf::from(&dir_repo))?;
-                comunicacion.responder(refs)?;
+                comunicacion.responder(&refs)?;
                 upload_pack(dir_repo, comunicacion)
             }
             "git-receive-pack" => {
@@ -106,7 +106,7 @@ impl Servidor {
                     gir_io::crear_directorio(&path.join("refs/tags/"))?;
                 }
                 refs = server_utils::obtener_refs_de(path)?;
-                comunicacion.responder(refs)?;
+                comunicacion.responder(&refs)?;
                 receive_pack(dir_repo.to_string(), comunicacion)
             }
             _ => Err("No existe el comando".to_string())

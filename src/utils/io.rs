@@ -95,22 +95,17 @@ pub fn obtener_refs_con_largo_hex(
     refs_path: PathBuf,
     dir: &str,
 ) -> Result<(), String> {
-    // let mut refs: Vec<String> = Vec::new();
     if !refs_path.exists() {
         return Ok(());
     }
-    // if !refs_path.exists() {
-    //     io::Error::new(io::ErrorKind::NotFound, "No existe el repositorio");
-    // }
     let head_dir = fs::read_dir(&refs_path).map_err(|e| e.to_string())?;
     for archivo in head_dir {
         match archivo {
             Ok(archivo) => {
                 let mut path = archivo.path();
-                let referencia =
-                    obtener_linea_con_largo_hex(obtener_referencia(&mut path, dir)?.as_str());
-                refs.push(referencia);
-                // println!("Obtengo la ref: {}", referencia);
+                
+                let referencia = obtener_referencia(&mut path, dir)?;
+                refs.push(obtener_linea_con_largo_hex(&referencia));
             }
             Err(error) => {
                 eprintln!("Error leyendo directorio: {}", error);
@@ -174,8 +169,10 @@ pub fn esta_vacio(ubicacion: &str) -> bool {
 }
 
 fn obtener_referencia(path: &mut Path, prefijo: &str) -> Result<String, String> {
-    let contenido = leer_archivo(path)?;
-    // esto esta hardcodeado, hay que cambiar la forma de sacarle el prefijo
+    let mut contenido = leer_archivo(path)?;
+    if contenido.is_empty() {
+        contenido = "0".repeat(40);
+    }
     let directorio_sin_prefijo = path.strip_prefix(prefijo).unwrap().to_path_buf();
     let referencia = format!(
         "{} {}",
@@ -269,7 +266,6 @@ where
     C: AsRef<[u8]>,
 {
     si_no_existe_directorio_de_archivo_crearlo(&dir_archivo)?;
-    println!("Voy a escribir en: {:?}", dir_archivo.as_ref());
     match fs::write(dir_archivo, contenido) {
         Ok(_) => Ok(()),
         Err(e) => Err(format!("Error al escribir el archivo: {}", e)),

@@ -275,7 +275,6 @@ impl Push {
                 );
             }
         }
-
         while let Some(commit) = commits_a_revisar.pop() {
             if objetos_a_agregar.contains(&commit.hash) {
                 continue;
@@ -330,9 +329,9 @@ impl Ejecutar for Push {
             commits_cabezas_y_ref_rama_asosiado,
             _commits_y_tags_asosiados,
         ) = self.fase_de_descubrimiento()?;
+
         self.logger.log("Fase de descubrimiento ejecuta con exito");
 
-        println!("{:?}", commits_cabezas_y_ref_rama_asosiado);
         let referencia_acualizar =
             self.obtener_referencia_acualizar(&commits_cabezas_y_ref_rama_asosiado)?;
         let objetos_a_enviar =

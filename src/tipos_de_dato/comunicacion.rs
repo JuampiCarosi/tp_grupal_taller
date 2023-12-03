@@ -251,7 +251,7 @@ impl<T: Write + Read> Comunicacion<T> {
         }
         Ok(lineas)
     }
-    pub fn responder(&self, lineas: Vec<String>) -> Result<(), String> {
+    pub fn responder(&self, lineas: &Vec<String>) -> Result<(), String> {
         if lineas.is_empty() {
             self.flujo
                 .lock()
@@ -259,7 +259,7 @@ impl<T: Write + Read> Comunicacion<T> {
                 .write_all(String::from("0000").as_bytes()).map_err(|e| e.to_string())?;
             return Ok(());
         }
-        for linea in &lineas {
+        for linea in lineas {
             self.flujo.lock().unwrap().write_all(linea.as_bytes()).map_err(|e| e.to_string())?;
         }
         if lineas[0].contains("ref") {
