@@ -325,7 +325,6 @@ impl Ejecutar for Fetch<TcpStream> {
     fn ejecutar(&mut self) -> Result<String, String> {
         self.logger.log("Se ejecuto el comando fetch");
         self.comunicacion.iniciar_git_upload_pack_con_servidor()?;
-
         let (
             capacidades_servidor,
             commit_head_remoto,

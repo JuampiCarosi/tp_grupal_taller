@@ -184,7 +184,6 @@ impl Ejecutar for Pull {
             )?
             .ejecutar()?;
         }
-
         Fetch::<TcpStream>::new(vec![self.remoto.clone()], self.logger.clone())?.ejecutar()?;
 
         println!("Llego aca del pull\n");
