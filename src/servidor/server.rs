@@ -62,14 +62,12 @@ impl Servidor {
         comunicacion: &mut Comunicacion<TcpStream>,
         dir: &str,
     ) -> Result<(), String> {
-        loop {
-            let pedido = match comunicacion.aceptar_pedido()? {
-                RespuestaDePedido::Mensaje(mensaje) => mensaje,
-                RespuestaDePedido::Terminate => break,
-            }; // acepto la primera linea
-            println!("Pedido recibido: {}", pedido);
-            Self::procesar_pedido(&pedido, comunicacion, dir)?; // parse de la liena para ver que se pide
-        }
+        let pedido = match comunicacion.aceptar_pedido()? {
+            RespuestaDePedido::Mensaje(mensaje) => mensaje,
+            RespuestaDePedido::Terminate => return Ok(()),
+        }; // acepto la primera linea
+        println!("Pedido recibido: {}", pedido);
+        Self::procesar_pedido(&pedido, comunicacion, dir)?; // parse de la liena para ver que se pide
         Ok(())
     }
 
