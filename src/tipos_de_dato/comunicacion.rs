@@ -3,6 +3,7 @@ use crate::tipos_de_dato::packfile::Packfile;
 use crate::utils::{self, io};
 use std::io::{Read, Write};
 use std::net::TcpStream;
+use std::path::PathBuf;
 use std::str;
 use std::sync::{Arc, Mutex};
 
@@ -421,6 +422,23 @@ impl<T: Write + Read> Comunicacion<T> {
         Ok(())
     }
 
+    ///Envia la referencia a actulizar al servidor con el formato correspondiente. La parte
+    /// del envio de referencia en push
+    pub fn enviar_referencia(
+        &self,
+        referencia_actualizar: (String, String, PathBuf),
+    ) -> Result<(), String> {
+        self.enviar(&utils::io::obtener_linea_con_largo_hex(&format!(
+            "{} {} {}\n",
+            referencia_actualizar.0,
+            referencia_actualizar.1,
+            referencia_actualizar.2.to_string_lossy()
+        )))?;
+
+        self.enviar_flush_pkt()?;
+        Ok(())
+    }
+
     ///recibi el hash de un objeto y le da el formato correcto para hacer el have
     fn dar_formato_have(&self, hash_commit: &String) -> String {
         io::obtener_linea_con_largo_hex(&("have ".to_string() + hash_commit + "\n"))
@@ -497,7 +515,7 @@ mod test {
             lectura_data: Vec::new(),
             escritura_data: Vec::new(),
         };
-        let logger = Arc::new(Logger::new(PathBuf::from("tmp/comunicacion_test02.txt")).unwrap());
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/comunicacion_test03")).unwrap());
 
         let contenido = vec![
             "74730d410fcb6603ace96f1dc55ea6196122532d".to_string(),
@@ -528,7 +546,7 @@ mod test {
             lectura_data: Vec::new(),
             escritura_data: Vec::new(),
         };
-        let logger = Arc::new(Logger::new(PathBuf::from("tmp/comunicacion_test02.txt")).unwrap());
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/comunicacion_test04")).unwrap());
 
         let contenido = vec![
             "7e47fe2bd8d01d481f44d7af0531bd93d3b21c01".to_string(),
@@ -542,6 +560,34 @@ mod test {
         let contenido_esperado_enviar_lo_que_tengo = "\
         0032have 7e47fe2bd8d01d481f44d7af0531bd93d3b21c01\n\
         0032have 74730d410fcb6603ace96f1dc55ea6196122532d\n\
+        0000";
+
+        assert_eq!(
+            contenido_esperado_enviar_lo_que_tengo.as_bytes(),
+            mock.escritura_data.as_slice()
+        )
+    }
+
+    #[test]
+    fn test05_se_envia_correctamente_las_referencias_actulizar() {
+        let mut mock = MockTcpStream {
+            lectura_data: Vec::new(),
+            escritura_data: Vec::new(),
+        };
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/comunicacion_test04")).unwrap());
+
+        let referencia_actulizar = (
+            "74730d410fcb6603ace96f1dc55ea6196122532d".to_string(),
+            "5a3f6be755bbb7deae50065988cbfa1ffa9ab68a".to_string(),
+            PathBuf::from("refs/heads/master"),
+        );
+
+        Comunicacion::new_para_testing(&mut mock, logger)
+            .enviar_referencia(referencia_actulizar)
+            .unwrap();
+
+        let contenido_esperado_enviar_lo_que_tengo = "\
+        006874730d410fcb6603ace96f1dc55ea6196122532d 5a3f6be755bbb7deae50065988cbfa1ffa9ab68a refs/heads/master\n\
         0000";
 
         assert_eq!(

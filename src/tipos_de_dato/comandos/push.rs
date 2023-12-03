@@ -20,7 +20,7 @@ use std::sync::Arc;
 
 const FLAG_SET_UPSTREAM: &str = "--set-upstream";
 const FLAG_U: &str = "-u";
-const GIR_PUSH: &str = "gir push <remoto> <rama-local>\ngir push <remoto> <rama-local>:<rama-remota>\ngir push -u <remoto> <rama>\ngir push -u <remoto> <rama-local>:<rama-remota>\n";
+const GIR_PUSH: &str = "\tgir push <remoto> <rama-local>:<rama-remota>\n";
 const GIR_PUSH_U: &str = "gir push --set-upstream/-u <nombre-remoto> <nombre-rama-local>";
 pub struct Push {
     referencia: Referencia,
@@ -64,7 +64,7 @@ impl Push {
         args.len() == 3
     }
 
-    ///obtiene el remoto  y la rama merge asosiado a la rama remota actual. Falla si no existe
+    ///obtiene el remoto  y la referencia asosiado a la rama remota actual. Falla si no existe
     fn obtener_remoto_y_rama_merge_de_rama_actual() -> Result<(String, Referencia), String> {
         let (remoto, rama_merge) = Config::leer_config()?
             .obtener_remoto_y_rama_merge_rama_actual()
@@ -73,7 +73,13 @@ impl Push {
                 GIR_PUSH_U
             ))?;
 
-        let referencia = Self::obtener_y_verificar_referencia(obtener_nombre(&rama_merge)?)?;
+        let rama_local_y_rama_remota = format!(
+            "{}:{}",
+            utils::ramas::obtener_rama_actual()?,
+            obtener_nombre(&rama_merge)?
+        );
+
+        let referencia = Self::obtener_y_verificar_referencia(rama_local_y_rama_remota)?;
         Ok((remoto, referencia))
     }
     ///Obtiene acorde a los argumentos recibidos, el remoto y la rama merge. En caso de no estar,
@@ -285,14 +291,7 @@ impl Push {
         objetos_a_enviar: HashSet<String>,
         comunicacion: &Comunicacion<TcpStream>,
     ) -> Result<(), String> {
-        comunicacion.enviar(&utils::io::obtener_linea_con_largo_hex(&format!(
-            "{} {} {}",
-            referencia_actualizar.0,
-            referencia_actualizar.1,
-            referencia_actualizar.2.to_string_lossy()
-        )))?;
-
-        comunicacion.enviar_flush_pkt()?;
+        comunicacion.enviar_referencia(referencia_actualizar)?;
 
         comunicacion.enviar_pack_file(Packfile::new().obtener_pack_con_archivos(
             objetos_a_enviar.into_iter().collect(),
@@ -409,7 +408,10 @@ fn obtener_commits_y_objetos_asociados(
 mod test {
     use std::{path::PathBuf, sync::Arc};
 
-    use crate::{tipos_de_dato::logger::Logger, utils};
+    use crate::{
+        tipos_de_dato::{comandos::set_upstream::SetUpstream, logger::Logger},
+        utils,
+    };
 
     use super::Push;
 
@@ -429,11 +431,240 @@ mod test {
         let referencia_esperada = (
             "0".repeat(40),
             commit,
-            PathBuf::from(format!("refs/heads/{}", remoto)),
+            PathBuf::from(format!("refs/heads/{}", rama_local)),
         );
         let referencia = Push::new(&mut vec![remoto, rama_local], logger)
             .unwrap()
             .obtener_referencia()
+            .unwrap();
+
+        assert_eq!(referencia_esperada, referencia);
+    }
+
+    #[test]
+    fn test_02_se_crea_bien_la_referencia_actualizar_al_poner_remoto_y_tag() {
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/push_02")).unwrap());
+        utils::testing::limpiar_archivo_gir(logger.clone());
+        let tag = "v1.0".to_string();
+        let remoto = "buscaminas-rustico".to_string();
+        let commit = "commit_tag".to_string();
+
+        utils::io::escribir_bytes(format!("./.gir/refs/tags/{}", tag), &commit).unwrap();
+        utils::testing::anadir_remoto_default_config(&remoto, logger.clone());
+
+        let referencia_esperada = (
+            "0".repeat(40),
+            commit,
+            PathBuf::from(format!("refs/tags/{}", tag)),
+        );
+        let referencia = Push::new(&mut vec![remoto, tag], logger)
+            .unwrap()
+            .obtener_referencia()
+            .unwrap();
+
+        assert_eq!(referencia_esperada, referencia);
+    }
+
+    #[test]
+    fn test_03_se_crea_bien_la_referencia_al_poner_solo_el_remoto() {
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/push_03")).unwrap());
+        utils::testing::limpiar_archivo_gir(logger.clone());
+        let remoto = "buscaminas-rustico".to_string();
+        let commit = "commit_head_rama".to_string();
+        let rama_actual = utils::ramas::obtener_rama_actual().unwrap();
+        utils::testing::anadir_remoto_default_config(&remoto, logger.clone());
+        utils::io::escribir_bytes(format!("./.gir/refs/heads/{}", rama_actual), commit.clone())
+            .unwrap();
+
+        let referencia_esperada = (
+            "0".repeat(40),
+            commit,
+            PathBuf::from(format!("refs/heads/{}", rama_actual)),
+        );
+        let referencia = Push::new(&mut vec![remoto], logger)
+            .unwrap()
+            .obtener_referencia()
+            .unwrap();
+
+        assert_eq!(referencia_esperada, referencia);
+    }
+
+    #[test]
+    fn test_04_se_crea_bien_la_referencia_al_poner_el_remoto_rama_local_y_rama_remota() {
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/push_04")).unwrap());
+        utils::testing::limpiar_archivo_gir(logger.clone());
+
+        let rama_local = "minas".to_string();
+        let rama_remota = "27-poder-poner-minas-en-tablero".to_string();
+        let remoto = "buscaminas-rustico".to_string();
+        let commit = "commit_head_rama".to_string();
+        let rama_local_y_rama_remota = format!("{}:{}", rama_local, rama_remota);
+
+        utils::testing::escribir_rama_local(&rama_local, logger.clone());
+        utils::testing::anadir_remoto_default_config(&remoto, logger.clone());
+        utils::io::escribir_bytes(format!("./.gir/refs/heads/{}", rama_local), commit.clone())
+            .unwrap();
+
+        let referencia_esperada = (
+            "0".repeat(40),
+            commit,
+            PathBuf::from(format!("refs/heads/{}", rama_remota)),
+        );
+        let referencia = Push::new(&mut vec![remoto, rama_local_y_rama_remota], logger)
+            .unwrap()
+            .obtener_referencia()
+            .unwrap();
+
+        assert_eq!(referencia_esperada, referencia);
+    }
+
+    #[test]
+    fn test_05_se_crea_bien_la_referencia_al_poner_el_tag_local_y_tag_remoto() {
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/push_05")).unwrap());
+        utils::testing::limpiar_archivo_gir(logger.clone());
+
+        let tag_local = "v1.0-trabajador".to_string();
+        let tag_remoto = "v1.0-trabajo".to_string();
+        let remoto = "buscaminas-rustico".to_string();
+        let commit = "commit_tag".to_string();
+        let tag_local_y_tag_remota = format!("{}:{}", tag_local, tag_remoto);
+
+        utils::testing::anadir_remoto_default_config(&remoto, logger.clone());
+        utils::io::escribir_bytes(format!("./.gir/refs/tags/{}", tag_local), commit.clone())
+            .unwrap();
+
+        let referencia_esperada = (
+            "0".repeat(40),
+            commit,
+            PathBuf::from(format!("refs/tags/{}", tag_remoto)),
+        );
+        let referencia = Push::new(&mut vec![remoto, tag_local_y_tag_remota], logger)
+            .unwrap()
+            .obtener_referencia()
+            .unwrap();
+
+        assert_eq!(referencia_esperada, referencia);
+    }
+
+    #[test]
+    fn test_06_se_crea_bien_la_referencia_al_no_poner_nada_si_esta_configurada_la_rama() {
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/push_06")).unwrap());
+        utils::testing::limpiar_archivo_gir(logger.clone());
+        let remoto = "buscaminas-rustico".to_string();
+        let commit = "commit_head_rama".to_string();
+        let rama_actual = utils::ramas::obtener_rama_actual().unwrap();
+        let rama_remota = "28-poner-bombas".to_string();
+
+        utils::testing::anadir_remoto_default_config(&remoto, logger.clone());
+        utils::testing::escribir_rama_remota(&remoto, &rama_remota);
+        utils::io::escribir_bytes(format!("./.gir/refs/heads/{}", rama_actual), commit.clone())
+            .unwrap();
+        SetUpstream::new(
+            remoto.clone(),
+            rama_remota.clone(),
+            rama_actual.clone(),
+            logger.clone(),
+        )
+        .unwrap()
+        .ejecutar()
+        .unwrap();
+
+        let referencia_esperada = (
+            "0".repeat(40),
+            commit,
+            PathBuf::from(format!("refs/heads/{}", rama_remota)),
+        );
+        let referencia = Push::new(&mut vec![], logger)
+            .unwrap()
+            .obtener_referencia()
+            .unwrap();
+
+        assert_eq!(referencia_esperada, referencia);
+    }
+
+    #[test]
+    fn test_07_se_crea_bien_la_referencia_a_la_rama_aun_con_el_flag_u() {
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/push_07")).unwrap());
+        utils::testing::limpiar_archivo_gir(logger.clone());
+
+        let rama_local = "minas".to_string();
+        let rama_remota = "27-poder-poner-minas-en-tablero".to_string();
+        let remoto = "buscaminas-rustico".to_string();
+        let commit = "commit_head_rama".to_string();
+        let rama_local_y_rama_remota = format!("{}:{}", rama_local, rama_remota);
+
+        utils::testing::escribir_rama_local(&rama_local, logger.clone());
+        utils::testing::anadir_remoto_default_config(&remoto, logger.clone());
+        utils::io::escribir_bytes(format!("./.gir/refs/heads/{}", rama_local), commit.clone())
+            .unwrap();
+
+        let referencia_esperada = (
+            "0".repeat(40),
+            commit,
+            PathBuf::from(format!("refs/heads/{}", rama_remota)),
+        );
+        let mut referencia = Push::new(
+            &mut vec![
+                "-u".to_string(),
+                remoto.clone(),
+                rama_local_y_rama_remota.clone(),
+            ],
+            logger.clone(),
+        )
+        .unwrap()
+        .obtener_referencia()
+        .unwrap();
+
+        assert_eq!(referencia_esperada, referencia);
+
+        referencia = Push::new(
+            &mut vec![remoto, rama_local_y_rama_remota, "-u".to_string()],
+            logger,
+        )
+        .unwrap()
+        .obtener_referencia()
+        .unwrap();
+
+        assert_eq!(referencia_esperada, referencia);
+    }
+
+    #[test]
+    fn test_08_se_crea_bien_la_referencia_actualizar() {
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/push_01")).unwrap());
+        utils::testing::limpiar_archivo_gir(logger.clone());
+        let rama_local = "minas".to_string();
+        let remoto = "buscaminas-rustico".to_string();
+        let commit = "commit_head_rama".to_string();
+        let commit_viejo = "commit_viejo".to_string();
+
+        utils::testing::escribir_rama_local(&rama_local, logger.clone());
+        utils::testing::anadir_remoto_default_config(&remoto, logger.clone());
+        utils::io::escribir_bytes(format!("./.gir/refs/heads/{}", rama_local), commit.clone())
+            .unwrap();
+
+        let referencia_esperada = (
+            commit_viejo.clone(),
+            commit,
+            PathBuf::from(format!("refs/heads/{}", rama_local)),
+        );
+
+        let commit_y_refs_asosiado = vec![
+            (
+                "No importa".to_string(),
+                PathBuf::from("refs/heads/no-importa"),
+            ),
+            (
+                "No importaa 2".to_string(),
+                PathBuf::from(format!("refs/tags/{}", rama_local)),
+            ),
+            (
+                commit_viejo,
+                PathBuf::from(format!("refs/heads/{}", rama_local)),
+            ),
+        ];
+        let referencia = Push::new(&mut vec![remoto, rama_local], logger)
+            .unwrap()
+            .obtener_referencia_acualizar(&commit_y_refs_asosiado)
             .unwrap();
 
         assert_eq!(referencia_esperada, referencia);
