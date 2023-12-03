@@ -3,6 +3,13 @@ use crate::tipos_de_dato::packfile::Packfile;
 use crate::utils::io;
 use std::io::{Read, Write};
 
+
+/// Funcion que se encarga de recibir un packfile y actualizar las referencias siguiendo el git transfer protocol
+/// # Argumentos
+/// * `dir` - Direccion del repositorio
+/// * `comunicacion` - Comunicacion con el cliente
+/// # Errores
+/// Devuelve un error si no se puede leer el packfile o si no se puede escribir en el repositorio
 pub fn receive_pack<T>(
     dir: String,
     comunicacion: &mut Comunicacion<T>,
@@ -13,7 +20,6 @@ where T: Read + Write, {
     let mut packfile = comunicacion.obtener_packfile()?;
 
     Packfile::leer_packfile_y_escribir(&mut packfile, dir.clone() + "objects/")?;
-    println!("Actualizaciones: {:?}", actualizaciones);
     for actualizacion in &actualizaciones {
         let mut partes = actualizacion.split(' ');
         let viejo_hash_ref = partes.next().unwrap_or("");

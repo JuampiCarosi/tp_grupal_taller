@@ -186,7 +186,6 @@ impl Ejecutar for Pull {
         }
         Fetch::<TcpStream>::new(vec![self.remoto.clone()], self.logger.clone())?.ejecutar()?;
 
-        println!("Llego aca del pull\n");
         let commit_head_remoto = self.obtener_head_remoto()?;
 
         if io::esta_vacio(UBICACION_RAMA_MASTER) {
