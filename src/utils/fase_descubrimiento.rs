@@ -41,7 +41,7 @@ pub fn fase_de_descubrimiento<T: Write + Read>(
         return Err(format!("Error {}", mensaje_error[1]));
     }
 
-    let (contenido, capacidades) = separara_capacidades(&segunda_linea)?;
+    let (contenido, capacidades) = separar_capacidades(&segunda_linea)?;
 
     //caso el servidor no tiene nada
     if contenido == "0".repeat(40) {
@@ -61,7 +61,7 @@ pub fn fase_de_descubrimiento<T: Write + Read>(
     ))
 }
 
-fn separara_capacidades(primera_linea: &str) -> Result<(String, Vec<String>), String> {
+fn separar_capacidades(primera_linea: &str) -> Result<(String, Vec<String>), String> {
     let (contenido, capacidades) = primera_linea
         .split_once('\0')
         .ok_or("Fallo al separar la linea en commit y capacidades\n".to_string())?;

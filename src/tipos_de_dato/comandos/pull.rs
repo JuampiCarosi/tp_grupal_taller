@@ -118,7 +118,8 @@ impl Pull {
         let (remoto, rama_merge) = Config::leer_config()?
             .obtener_remoto_y_rama_merge_rama_actual()
             .ok_or(format!(
-                "La rama actual no se encuentra asosiado a ningun remoto\nUtilice:\n\ngir remote add [<nombre-remote>] [<url-remote>]\n\nDespues:\n\n{}\n\n", GIR_PULL
+                "La rama actual no se encuentra asosiado a ningun remoto\nUtilice:\n\n{}\n\n",
+                GIR_PULL_U
             ))?;
         //CORREGIR MENSAJE DE ERROR DEBERIA SER QUE USE SET BRANCH
 

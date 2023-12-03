@@ -143,18 +143,24 @@ impl<T: Write + Read> Fetch<T> {
         Ok(SE_ENVIO_ALGUN_PEDIDO)
     }
 
-    //ACA PARA MI HAY UN PROBLEMA DE RESPONSABILIADADES: COMUNICACION DEBERIA RECIBIR EL PACKETE Y FETCH
-    //DEBERIA GUARDAR LAS COSAS, PERO COMO NO ENTIENDO EL CODIGO JAJA DENTRO DE COMUNICACION NO METO MANO
     fn recibir_packfile_y_guardar_objetos(&self) -> Result<(), String> {
         // aca para git daemon hay que poner un recibir linea mas porque envia un ACK repetido (No entiendo por que...)
         println!("Obteniendo paquete..");
         let packfile = self.comunicacion.obtener_packfile()?;
-        // Packfile::new()
-        //     .obtener_paquete_y_escribir(&mut packfile, String::from("./.gir/objects/"))
-        //     .unwrap();
-        Packfile::leer_packfile_y_escribir(&packfile, "./.gir/objects/".to_string()).unwrap();
+        let primeros_bytes = &packfile[..4];
+        if primeros_bytes != "PACK".as_bytes() {
+            println!(
+                "Se recibio: {}",
+                String::from_utf8_lossy(packfile.as_slice())
+            );
+            return Err(format!(
+                "Error al recibir el packfile, se recibio: {}",
+                String::from_utf8_lossy(packfile.as_slice())
+            ));
+        }
 
         self.logger.log("Recepcion del pack file en fetch exitoso");
+        Packfile::leer_packfile_y_escribir(&packfile, "./.gir/objects/".to_string()).unwrap();
         Ok(())
     }
 
