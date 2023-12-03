@@ -201,22 +201,21 @@ impl<T: Write + Read> Fetch<T> {
         if !objetos.is_empty() {
             self.comunicacion
                 .enviar_lo_que_tengo_al_servidor_pkt(&objetos)?;
-            self.recivir_nack()?;
+            self.recibir_nack()?;
             self.finalizar_pedido()?
         } else {
             self.finalizar_pedido()?;
-            self.recivir_nack()?;
+            self.recibir_nack()?;
         }
         self.logger.log("Se envio con exito lo que tengo en Fetch");
         Ok(())
     }
 
     ///Recibe el la repusta Nack del servidor del envio de HAVE
-    fn recivir_nack(&self) -> Result<(), String> {
+    fn recibir_nack(&self) -> Result<(), String> {
         //POR AHORA NO HACEMOS, NADA CON ESTO: EVALUAR QUE HACER. SOLO LEERMOS
         //PARA SEGUIR EL FLUJO
         let _acks_nak = self.comunicacion.obtener_lineas()?;
-        println!("NACK: {:?}", _acks_nak);
         Ok(())
     }
 
