@@ -150,6 +150,10 @@ impl Pull {
 
         tree_branch_a_mergear.escribir_en_directorio()?;
 
+        self.logger.log(&format!(
+            "Fast forward ejucutado con exito en pull de la rama remota {} ",
+            self.rama_merge
+        ));
         Ok(true)
     }
 
@@ -158,6 +162,12 @@ impl Pull {
         self.verificar_rama_mergear(&rama_a_mergear)?;
 
         Merge::from(&mut vec![rama_a_mergear], self.logger.clone())?.ejecutar()?;
+
+        self.logger.log(&format!(
+            "Merge ejucutado con exito en pull de la rama {} con {}",
+            self.rama_merge,
+            utils::ramas::obtener_rama_actual()?
+        ));
 
         Ok(())
     }
@@ -176,6 +186,16 @@ impl Pull {
 
 impl Ejecutar for Pull {
     fn ejecutar(&mut self) -> Result<String, String> {
+        Fetch::<TcpStream>::new(vec![self.remoto.clone()], self.logger.clone())?.ejecutar()?;
+
+        let commit_head_remoto = self.obtener_head_remoto()?;
+
+        if io::esta_vacio(UBICACION_RAMA_MASTER) {
+            self.fast_forward_de_cero(&commit_head_remoto)?;
+        } else {
+            self.mergear_rama()?;
+        }
+
         if self.set_upstream {
             SetUpstream::new(
                 self.remoto.clone(),
@@ -185,17 +205,6 @@ impl Ejecutar for Pull {
             )?
             .ejecutar()?;
         }
-        Fetch::<TcpStream>::new(vec![self.remoto.clone()], self.logger.clone())?.ejecutar()?;
-
-        println!("Llego aca del pull\n");
-        let commit_head_remoto = self.obtener_head_remoto()?;
-
-        if io::esta_vacio(UBICACION_RAMA_MASTER) {
-            self.fast_forward_de_cero(&commit_head_remoto)?;
-        } else {
-            self.mergear_rama()?;
-        }
-
         let mensaje = "Pull ejecutado con exito";
         self.logger.log(mensaje);
         Ok(mensaje.to_string())
