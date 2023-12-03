@@ -91,7 +91,7 @@ impl LsFiles {
         Ok(texto_tree)
     }
 
-    fn agregar_archivos_pedidos_por_param(&self) -> Vec<String> {
+    fn obtener_archivos_pedidos_por_parametro(&self) -> Vec<String> {
         let mut texto_a_mostrar = Vec::new();
         for archivo in &self.archivos {
             let path = PathBuf::from(archivo.to_string());
@@ -102,7 +102,7 @@ impl LsFiles {
         texto_a_mostrar
     }
 
-    fn agregar_archivos_trackeados_e_index(&self) -> Result<Vec<String>, String> {
+    fn obtener_archivos_trackeados_e_index(&self) -> Result<Vec<String>, String> {
         let mut texto_tree_e_index = Vec::new();
         match &self.arbol_commit {
             Some(arbol) => {
@@ -124,14 +124,14 @@ impl LsFiles {
     pub fn ejecutar(&self) -> Result<String, String> {
         self.logger.log("Ejecutando ls-files");
         let mut texto_a_mostrar = Vec::new();
-        texto_a_mostrar.extend(self.agregar_archivos_pedidos_por_param());
+        texto_a_mostrar.extend(self.obtener_archivos_pedidos_por_parametro());
 
         if self.trees_directorios.is_empty() && !self.archivos.is_empty() {
             let string_final = texto_a_mostrar.concat();
             return Ok(string_final);
         }
 
-        let texto_tree_e_index = self.agregar_archivos_trackeados_e_index()?;
+        let texto_tree_e_index = self.obtener_archivos_trackeados_e_index()?;
         texto_a_mostrar.extend(texto_tree_e_index);
 
         let string_final = texto_a_mostrar.concat();
