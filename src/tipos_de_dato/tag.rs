@@ -10,6 +10,7 @@ pub struct Tag {
 }
 
 impl Tag {
+    /// Devuelve un Tag con los parametros ingresados por el usuario.
     pub fn from(args: Vec<String>, logger: Arc<Logger>) -> Result<Tag, String> {
         if args.is_empty() {
             return Ok(Tag {
@@ -30,6 +31,8 @@ impl Tag {
         })
     }
 
+    /// Devuelve un vector con los nombres de los tags existentes dentro del repositorio.
+    /// Si no hay tags, devuelve un vector vacio.
     fn obtener_tags(&self) -> Result<Vec<String>, String> {
         let ubicacion = "./.gir/refs/tags";
         let mut tags: Vec<String> = Vec::new();
@@ -49,6 +52,8 @@ impl Tag {
         Ok(tags)
     }
 
+    /// Crea un tag con el nombre ingresado por el usuario.
+    /// Si el tag ya existe, devuelve un error.
     fn crear_tag(&self, tag: &str) -> Result<(), String> {
         let tags = self.obtener_tags()?;
 
@@ -66,6 +71,7 @@ impl Tag {
         Ok(())
     }
 
+    /// Ejecuta el comando tag.
     pub fn ejecutar(&self) -> Result<String, String> {
         match &self.tag_to_create {
             Some(tag_name) => {

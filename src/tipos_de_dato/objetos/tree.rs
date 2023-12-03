@@ -59,6 +59,8 @@ impl Tree {
         objetos
     }
 
+    /// Devuelve un vector con todos los objetos que se encuentran en el arbol.
+    /// Si el arbol contiene un objeto de tipo Tree, tambien se lo incluye y se llama recursivamente a la funcion.
     pub fn obtener_objetos(&self) -> Vec<Objeto> {
         let mut objetos: Vec<Objeto> = Vec::new();
         for objeto in &self.objetos {
@@ -208,18 +210,6 @@ impl Tree {
             let entrada = entrada
                 .map_err(|_| format!("Error al leer entrada el directorio {directorio:#?}"))?;
             let path = entrada.path();
-
-            // if path.ends_with(".DS_Store")
-            //     || path.starts_with("./.target")
-            //     || path.starts_with("./.gir")
-            //     || path.starts_with("./.git")
-            //     || path == PathBuf::from("./gir")
-            //     || path == PathBuf::from("./git")
-            //     || path == PathBuf::from("./target")
-            //     || path == PathBuf::from("./diagrama.png")
-            // {
-            //     continue;
-            // }
 
             if CheckIgnore::es_directorio_a_ignorar(&path, logger.clone())? {
                 continue;

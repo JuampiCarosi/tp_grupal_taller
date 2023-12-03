@@ -18,6 +18,8 @@ pub struct Add {
 
 impl Add {
     /// Devuelve un vector con las ubicaciones de cada archivo dentro de las ubicaciones que se le pasaron.
+    /// Si se le pasa un archivo, devuelve el path de ese archivo.
+    /// Si se le pasa un directorio, devuelve el path de todos los archivos que se encuentran dentro de ese directorio.
     pub fn obtener_ubicaciones_hoja(ubicaciones: Vec<PathBuf>) -> Result<Vec<PathBuf>, String> {
         let mut ubicaciones_hoja: Vec<PathBuf> = Vec::new();
         for ubicacion in ubicaciones {
@@ -52,6 +54,7 @@ impl Add {
         })
     }
 
+    /// Crea un objeto index a partir de una ubicacion.
     fn crear_objeto_index_from_ubicacion(
         ubicacion: PathBuf,
         logger: Arc<Logger>,
@@ -65,6 +68,8 @@ impl Add {
         })
     }
 
+    /// Dada una ubicacion, devuelve el indice del objeto index que contiene esa ubicacion.
+    /// Si no se encuentra, devuelve None.
     fn obtener_indice_objeto_index(&self, ubicacion: PathBuf) -> Option<usize> {
         self.index
             .iter()
@@ -74,6 +79,10 @@ impl Add {
             })
     }
 
+    /// Agrega un objeto index al index.
+    /// Si el objeto ya se encuentra en el index, actualiza el objeto.
+    /// Si el objeto contiene la misma version que en el commit anterior, no lo agrega.
+    /// Si el objeto tiene modificaciones, lo agrega.
     fn aniadir_ubicacion_pedida_al_index(&mut self, ubicacion: PathBuf) -> Result<(), String> {
         let nuevo_objeto_index =
             Self::crear_objeto_index_from_ubicacion(ubicacion.clone(), self.logger.clone())?;

@@ -17,12 +17,17 @@ use super::{commit::Commit, log::Log, merge::Merge};
 
 pub struct Rebase {
     pub rama: Option<String>,
+    /// Logger para imprimir mensajes en el archivo log.
     pub logger: Arc<Logger>,
+    /// Indica si se debe abortar el rebase.
     pub abort: bool,
+    /// Indica si se debe continuar el rebase.
     pub continue_: bool,
 }
 
 impl Rebase {
+    /// Crea un nuevo objeto Rebase a partir de los argumentos pasados por linea de comandos.
+    /// En el caso de indicar continue o abort, el objeto no va a tener una rama asociada.
     pub fn from(args: Vec<String>, logger: Arc<Logger>) -> Result<Rebase, String> {
         if args.len() != 1 {
             return Err("Se esperaba un argumento".to_string());
@@ -51,6 +56,9 @@ impl Rebase {
         }
     }
 
+    /// Obtiene el hash del commit base entre la rama actual y la rama pasada por parametro.
+    /// El commit base es el primer commit que tienen en comun las dos ramas.
+    /// En caso de no encontrar un commit base devuelve un error.
     fn obtener_commit_base_entre_dos_branches(&self, rama: &str) -> Result<String, String> {
         let hash_commit_actual = ramas::obtener_hash_commit_asociado_rama_actual()?;
         let hash_commit_a_rebasear = Merge::obtener_commit_de_branch(rama)?;
@@ -74,21 +82,24 @@ impl Rebase {
         Err("No se encontro un commit base entre las dos ramas".to_string())
     }
 
+    /// Obtiene la lista de commits que se le debe aplicar a la rama actual.
     fn obtener_commits_a_aplicar(&self, rama: &str) -> Result<Vec<CommitObj>, String> {
         let hash_ultimo_commit = ramas::obtener_hash_commit_asociado_rama_actual()?;
         let ultimo_commit = CommitObj::from_hash(hash_ultimo_commit, self.logger.clone())?;
         let commits = Log::obtener_listas_de_commits(ultimo_commit, self.logger.clone())?;
         let hash_commit_base = self.obtener_commit_base_entre_dos_branches(rama)?;
-        let commis_spliteados: Vec<&[CommitObj]> = commits
+        let commits_spliteados: Vec<&[CommitObj]> = commits
             .split(|commit| commit.hash == hash_commit_base)
             .collect();
 
-        commis_spliteados
+        commits_spliteados
             .get(0)
             .ok_or("No se encontro el commit base".to_string())
             .map(|commits| commits.to_vec())
     }
 
+    /// Crea la carpeta .gir/rebase-merge y los archivos necesarios para realizar el rebase.
+    /// En caso de no poder crear la carpeta o los archivos devuelve un error.
     fn crear_carpeta_rebase(
         &self,
         commits_a_aplicar: &[CommitObj],
@@ -121,6 +132,12 @@ impl Rebase {
         Ok(())
     }
 
+    /// Actualiza el archivo .gir/rebase-merge/git-rebase-todo con el commit que se acaba de aplicar.
+    /// Este archivo contiene los commits que faltan aplicar.
+    /// Actualiza el archivo .gir/rebase-merge/done con el commit que se acaba de aplicar.
+    /// Este archivo contiene los commits que ya se aplicaron.
+    /// Actualiza el archivo .gir/rebase-merge/message con el mensaje del commit que se acaba de aplicar.
+    /// Actualiza el archivo .gir/rebase-merge/msgnum con el numero de commit que se acaba de aplicar.
     fn actualizar_carpeta_rebase(&self, commit: &CommitObj) -> Result<(), String> {
         let to_do = io::leer_a_string(".gir/rebase-merge/git-rebase-todo")?;
         let mut to_do = to_do.lines().collect::<Vec<&str>>();
@@ -149,6 +166,8 @@ impl Rebase {
         Ok(())
     }
 
+    /// Actualiza el archivo .gir/rebase-merge/rewritten-list con el commit que se acaba de aplicar.
+    /// Este archivo contiene los commits que ya se aplicaron.
     fn actualizar_lista_de_commits_aplicados(&self, commit_sha: &str) -> Result<(), String> {
         let mut archivo = OpenOptions::new()
             .write(true)
@@ -164,6 +183,8 @@ impl Rebase {
         Ok(())
     }
 
+    /// Realiza el rebase por primera vez.
+    /// Crea la carpeta .gir/rebase-merge y los archivos necesarios para realizar el rebase.
     fn primera_vez(&self) -> Result<String, String> {
         let rama = self.rama.as_ref().ok_or("No se especifico una rama")?;
 
@@ -191,6 +212,9 @@ impl Rebase {
         ))
     }
 
+    /// Aplica los commits a la rama actual.
+    /// En caso de encontrar un conflicto, se detiene el rebase y se guarda el estado actual.
+    /// En caso de no encontrar conflictos, se aplica el commit y se continua con el rebase.
     fn rebasear_commits(&self, commits_a_aplicar: Vec<CommitObj>) -> Result<(), String> {
         for commit in commits_a_aplicar {
             self.actualizar_carpeta_rebase(&commit)?;
@@ -227,6 +251,9 @@ impl Rebase {
         Ok(())
     }
 
+    /// Aborta el rebase.
+    /// Vuelve al estado original previo a comenzar con el rebase.
+    /// Borra toda la informacion que se creo para el rebase.
     fn abortar(&self) -> Result<String, String> {
         let head_name = io::leer_a_string(".gir/rebase-merge/head-name")?;
         let orig_head = io::leer_a_string(".gir/rebase-merge/orig-head")?;
@@ -250,7 +277,14 @@ impl Rebase {
         Ok("Rebase abortado".to_string())
     }
 
+    /// Continua con el rebase.
+    /// Aplica el commit que se estaba aplicando antes de detener el rebase.
+    /// En caso de no haber mas commits para aplicar, termina el rebase.
+    /// En caso de encontrar un conflicto, se detiene el rebase y se guarda el estado actual.
     fn continuar(&self) -> Result<String, String> {
+        if !PathBuf::from(".gir/rebase-merge").exists() {
+            return Err("No hay rebase en progreso".to_string());
+        }
         let mensaje_commit = io::leer_a_string(".gir/rebase-merge/message")?;
         let commit = Commit::from(
             &mut vec!["-m".to_string(), mensaje_commit],
@@ -274,9 +308,16 @@ impl Rebase {
         }
 
         self.rebasear_commits(commits_restantes)?;
+        let msg_num = io::leer_a_string(".gir/rebase-merge/msgnum")?;
+        let end = io::leer_a_string(".gir/rebase-merge/end")?;
+        if msg_num == end {
+            io::rm_directorio(".gir/rebase-merge")?;
+            index::limpiar_archivo_index()?;
+        }
         Ok("Rebase terminado con extito".to_string())
     }
 
+    /// Ejecuta el comando rebase.
     pub fn ejecutar(&self) -> Result<String, String> {
         if self.abort {
             return self.abortar();
