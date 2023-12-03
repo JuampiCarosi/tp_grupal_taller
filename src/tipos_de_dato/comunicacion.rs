@@ -3,6 +3,7 @@ use crate::tipos_de_dato::packfile::Packfile;
 use crate::utils::{self, io};
 use std::io::{Read, Write};
 use std::net::TcpStream;
+use std::path::PathBuf;
 use std::str;
 use std::sync::{Arc, Mutex};
 
@@ -147,7 +148,11 @@ impl<T: Write + Read> Comunicacion<T> {
         // lee primera parte, 4 bytes en hexadecimal indican el largo del stream
 
         let mut tamanio_bytes = [0; 4];
-        self.flujo.lock().unwrap().read(&mut tamanio_bytes).map_err(|e| e.to_string())?;
+        self.flujo
+            .lock()
+            .unwrap()
+            .read(&mut tamanio_bytes)
+            .map_err(|e| e.to_string())?;
         // largo de bytes a str
         if tamanio_bytes == [0, 0, 0, 0] {
             return Ok(RespuestaDePedido::Terminate);
@@ -161,7 +166,11 @@ impl<T: Write + Read> Comunicacion<T> {
         }
         // lee el resto del flujo
         let mut data = vec![0; (tamanio - 4) as usize];
-        self.flujo.lock().unwrap().read_exact(&mut data).map_err(|e| e.to_string())?;
+        self.flujo
+            .lock()
+            .unwrap()
+            .read_exact(&mut data)
+            .map_err(|e| e.to_string())?;
         let linea = str::from_utf8(&data).map_err(|e| e.to_string())?;
         // if linea.contains("done") {
         // self.aceptar_pedido()?;
@@ -243,7 +252,7 @@ impl<T: Write + Read> Comunicacion<T> {
             lineas.push(linea.clone());
             if linea.contains("NAK")
                 || linea.contains("ACK")
-                || (linea.contains("done") && !linea.contains("ref")) 
+                || (linea.contains("done") && !linea.contains("ref"))
                 || linea.contains("ERR")
             {
                 break;
@@ -256,17 +265,23 @@ impl<T: Write + Read> Comunicacion<T> {
             self.flujo
                 .lock()
                 .unwrap()
-                .write_all(String::from("0000").as_bytes()).map_err(|e| e.to_string())?;
+                .write_all(String::from("0000").as_bytes())
+                .map_err(|e| e.to_string())?;
             return Ok(());
         }
         for linea in lineas {
-            self.flujo.lock().unwrap().write_all(linea.as_bytes()).map_err(|e| e.to_string())?;
+            self.flujo
+                .lock()
+                .unwrap()
+                .write_all(linea.as_bytes())
+                .map_err(|e| e.to_string())?;
         }
         if lineas[0].contains("ref") {
             self.flujo
                 .lock()
                 .unwrap()
-                .write_all(String::from("0000").as_bytes()).map_err(|e| e.to_string())?;
+                .write_all(String::from("0000").as_bytes())
+                .map_err(|e| e.to_string())?;
             return Ok(());
         }
         if !lineas[0].contains(&"NAK".to_string())
@@ -276,13 +291,9 @@ impl<T: Write + Read> Comunicacion<T> {
             self.flujo
                 .lock()
                 .unwrap()
-                .write_all(String::from("0000").as_bytes()).map_err(|e| e.to_string())?;
+                .write_all(String::from("0000").as_bytes())
+                .map_err(|e| e.to_string())?;
         }
-        Ok(())
-    }
-    
-    pub fn enviar_linea(&mut self, linea: &str) -> Result<(), String> {
-        self.flujo.lock().unwrap().write_all(linea.as_bytes()).map_err(|e| e.to_string())?;
         Ok(())
     }
 
@@ -320,6 +331,11 @@ impl<T: Write + Read> Comunicacion<T> {
         Ok(buffer)
     }
 
+    ///Separa las lineas y devuleve solo las hash de estas
+    ///
+    /// # Ejemplo:
+    /// - lineas = `abc233454s890da90088889 ref/heads/maste`
+    /// - devuelve = `abc233454s890da90088889`
     pub fn obtener_obj_ids(&self, lineas: &Vec<String>) -> Vec<String> {
         let mut obj_ids: Vec<String> = Vec::new();
         for linea in lineas {
@@ -423,6 +439,23 @@ impl<T: Write + Read> Comunicacion<T> {
         Ok(())
     }
 
+    ///Envia la referencia a actulizar al servidor con el formato correspondiente. La parte
+    /// del envio de referencia en push
+    pub fn enviar_referencia(
+        &self,
+        referencia_actualizar: (String, String, PathBuf),
+    ) -> Result<(), String> {
+        self.enviar(&utils::io::obtener_linea_con_largo_hex(&format!(
+            "{} {} {}\n",
+            referencia_actualizar.0,
+            referencia_actualizar.1,
+            referencia_actualizar.2.to_string_lossy()
+        )))?;
+
+        self.enviar_flush_pkt()?;
+        Ok(())
+    }
+
     ///recibi el hash de un objeto y le da el formato correcto para hacer el have
     fn dar_formato_have(&self, hash_commit: &str) -> String {
         io::obtener_linea_con_largo_hex(&("have ".to_string() + hash_commit + "\n"))
@@ -431,33 +464,12 @@ impl<T: Write + Read> Comunicacion<T> {
 
 #[cfg(test)]
 mod test {
-    use std::{io::Read, io::Write, path::PathBuf};
+    use std::path::PathBuf;
+
+    use crate::utils::testing::MockTcpStream;
 
     use super::*;
 
-    struct MockTcpStream {
-        lectura_data: Vec<u8>,
-        escritura_data: Vec<u8>,
-    }
-
-    impl Read for MockTcpStream {
-        fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
-            let bytes_to_read = std::cmp::min(buf.len(), self.lectura_data.len());
-            buf[..bytes_to_read].copy_from_slice(&self.lectura_data[..bytes_to_read]);
-            self.lectura_data.drain(..bytes_to_read);
-            Ok(bytes_to_read)
-        }
-    }
-
-    impl Write for MockTcpStream {
-        fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-            self.escritura_data.write(buf)
-        }
-
-        fn flush(&mut self) -> std::io::Result<()> {
-            self.escritura_data.flush()
-        }
-    }
     #[test]
     fn test01_se_envia_mensajes_de_forma_correcta() {
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/comunicacion_test02.txt")).unwrap());
@@ -519,7 +531,7 @@ mod test {
             lectura_data: Vec::new(),
             escritura_data: Vec::new(),
         };
-        let logger = Arc::new(Logger::new(PathBuf::from("tmp/comunicacion_test02.txt")).unwrap());
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/comunicacion_test03")).unwrap());
 
         let contenido = vec![
             "74730d410fcb6603ace96f1dc55ea6196122532d".to_string(),
@@ -550,7 +562,7 @@ mod test {
             lectura_data: Vec::new(),
             escritura_data: Vec::new(),
         };
-        let logger = Arc::new(Logger::new(PathBuf::from("tmp/comunicacion_test02.txt")).unwrap());
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/comunicacion_test04")).unwrap());
 
         let contenido = vec![
             "7e47fe2bd8d01d481f44d7af0531bd93d3b21c01".to_string(),
@@ -564,6 +576,34 @@ mod test {
         let contenido_esperado_enviar_lo_que_tengo = "\
         0032have 7e47fe2bd8d01d481f44d7af0531bd93d3b21c01\n\
         0032have 74730d410fcb6603ace96f1dc55ea6196122532d\n\
+        0000";
+
+        assert_eq!(
+            contenido_esperado_enviar_lo_que_tengo.as_bytes(),
+            mock.escritura_data.as_slice()
+        )
+    }
+
+    #[test]
+    fn test05_se_envia_correctamente_las_referencias_actulizar() {
+        let mut mock = MockTcpStream {
+            lectura_data: Vec::new(),
+            escritura_data: Vec::new(),
+        };
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/comunicacion_test04")).unwrap());
+
+        let referencia_actulizar = (
+            "74730d410fcb6603ace96f1dc55ea6196122532d".to_string(),
+            "5a3f6be755bbb7deae50065988cbfa1ffa9ab68a".to_string(),
+            PathBuf::from("refs/heads/master"),
+        );
+
+        Comunicacion::new_para_testing(&mut mock, logger)
+            .enviar_referencia(referencia_actulizar)
+            .unwrap();
+
+        let contenido_esperado_enviar_lo_que_tengo = "\
+        006874730d410fcb6603ace96f1dc55ea6196122532d 5a3f6be755bbb7deae50065988cbfa1ffa9ab68a refs/heads/master\n\
         0000";
 
         assert_eq!(

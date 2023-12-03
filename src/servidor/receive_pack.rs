@@ -3,18 +3,16 @@ use crate::tipos_de_dato::packfile::Packfile;
 use crate::utils::io;
 use std::io::{Read, Write};
 
-
 /// Funcion que se encarga de recibir un packfile y actualizar las referencias siguiendo el git transfer protocol
 /// # Argumentos
 /// * `dir` - Direccion del repositorio
 /// * `comunicacion` - Comunicacion con el cliente
 /// # Errores
 /// Devuelve un error si no se puede leer el packfile o si no se puede escribir en el repositorio
-pub fn receive_pack<T>(
-    dir: String,
-    comunicacion: &mut Comunicacion<T>,
-) -> Result<(), String>
-where T: Read + Write, {
+pub fn receive_pack<T>(dir: String, comunicacion: &mut Comunicacion<T>) -> Result<(), String>
+where
+    T: Read + Write,
+{
     println!("Se ejecuto el comando receive-pack");
     let actualizaciones = comunicacion.obtener_lineas()?;
     let mut packfile = comunicacion.obtener_packfile()?;
@@ -34,11 +32,11 @@ where T: Read + Write, {
 }
 #[cfg(test)]
 mod test {
+    use super::*;
+    use crate::tipos_de_dato::{comunicacion::Comunicacion, logger::Logger, packfile};
     use std::io::{Read, Write};
     use std::path::PathBuf;
     use std::sync::Arc;
-    use crate::tipos_de_dato::{comunicacion::Comunicacion, logger::Logger, packfile};
-    use super::*;
 
     struct MockTcpStream {
         lectura_data: Vec<u8>,
@@ -65,17 +63,21 @@ mod test {
     }
     #[test]
     fn test01_refs_se_actualizan_correctamente() {
-        let test_dir = env!("CARGO_MANIFEST_DIR").to_string() + "/server_test_dir/test03/.gir/"; 
+        let test_dir = env!("CARGO_MANIFEST_DIR").to_string() + "/server_test_dir/test03/.gir/";
         let mock: MockTcpStream = MockTcpStream {
             lectura_data: Vec::new(),
         };
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/fetch_02.txt")).unwrap());
         let mut comunicacion = Comunicacion::new_para_testing(mock, logger.clone());
 
-        let actualizaciones = io::obtener_linea_con_largo_hex(&("0".repeat(40) + " " + &"1".repeat(40) + " refs/heads/master\n"));
+        let actualizaciones = io::obtener_linea_con_largo_hex(
+            &("0".repeat(40) + " " + &"1".repeat(40) + " refs/heads/master\n"),
+        );
         comunicacion.enviar(&actualizaciones).unwrap();
         comunicacion.enviar("0000").unwrap();
-        let packfile = packfile::Packfile::obtener_pack_con_archivos(vec![], &(test_dir.clone() + "objects/")).unwrap();
+        let packfile =
+            packfile::Packfile::obtener_pack_con_archivos(vec![], &(test_dir.clone() + "objects/"))
+                .unwrap();
         comunicacion.enviar_pack_file(packfile).unwrap();
         let nuevo_repo = env!("CARGO_MANIFEST_DIR").to_string() + "/server_test_dir/test04/";
         receive_pack(nuevo_repo.clone(), &mut comunicacion).unwrap();
@@ -83,5 +85,4 @@ mod test {
         let nueva_ref = io::leer_a_string(nuevo_repo + "refs/heads/master").unwrap();
         assert_eq!(nueva_ref, "1".repeat(40));
     }
-
 }

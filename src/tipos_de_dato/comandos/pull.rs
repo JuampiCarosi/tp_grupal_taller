@@ -16,6 +16,7 @@ use super::{fetch::Fetch, merge::Merge, set_upstream::SetUpstream};
 
 const UBICACION_RAMA_MASTER: &str = "./.gir/refs/heads/master";
 const GIR_PULL: &str = "gir pull <remoto> <rama>";
+const GIR_PULL_U: &str = "gir pull -u <remoto> <rama-remota>";
 const FLAG_SET_UPSTREAM: &str = "--set-upstream";
 const FLAG_U: &str = "-u";
 
@@ -117,7 +118,8 @@ impl Pull {
         let (remoto, rama_merge) = Config::leer_config()?
             .obtener_remoto_y_rama_merge_rama_actual()
             .ok_or(format!(
-                "La rama actual no se encuentra asosiado a ningun remoto\nUtilice:\n\ngir remote add [<nombre-remote>] [<url-remote>]\n\nDespues:\n\n{}\n\n", GIR_PULL
+                "La rama actual no se encuentra asosiado a ningun remoto\nUtilice:\n\n{}\n\n",
+                GIR_PULL_U
             ))?;
         //CORREGIR MENSAJE DE ERROR DEBERIA SER QUE USE SET BRANCH
 
@@ -149,6 +151,10 @@ impl Pull {
 
         tree_branch_a_mergear.escribir_en_directorio()?;
 
+        self.logger.log(&format!(
+            "Fast forward ejucutado con exito en pull de la rama remota {} ",
+            self.rama_merge
+        ));
         Ok(true)
     }
 
@@ -157,6 +163,12 @@ impl Pull {
         self.verificar_rama_mergear(&rama_a_mergear)?;
 
         Merge::from(&mut vec![rama_a_mergear], self.logger.clone())?.ejecutar()?;
+
+        self.logger.log(&format!(
+            "Merge ejucutado con exito en pull de la rama {} con {}",
+            self.rama_merge,
+            utils::ramas::obtener_rama_actual()?
+        ));
 
         Ok(())
     }
@@ -175,15 +187,6 @@ impl Pull {
 
 impl Ejecutar for Pull {
     fn ejecutar(&mut self) -> Result<String, String> {
-        if self.set_upstream {
-            SetUpstream::new(
-                self.remoto.clone(),
-                self.rama_merge.clone(),
-                utils::ramas::obtener_rama_actual()?,
-                self.logger.clone(),
-            )?
-            .ejecutar()?;
-        }
         Fetch::<TcpStream>::new(vec![self.remoto.clone()], self.logger.clone())?.ejecutar()?;
 
         let commit_head_remoto = self.obtener_head_remoto()?;
@@ -194,6 +197,15 @@ impl Ejecutar for Pull {
             self.mergear_rama()?;
         }
 
+        if self.set_upstream {
+            SetUpstream::new(
+                self.remoto.clone(),
+                self.rama_merge.clone(),
+                utils::ramas::obtener_rama_actual()?,
+                self.logger.clone(),
+            )?
+            .ejecutar()?;
+        }
         let mensaje = "Pull ejecutado con exito";
         self.logger.log(mensaje);
         Ok(mensaje.to_string())
