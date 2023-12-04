@@ -8,3 +8,4 @@ log.txt
 !/srv/.gitkeep
 .log
 .log.txt
+*.html
