@@ -178,6 +178,7 @@ impl Ejecutar for Commit {
 
 #[cfg(test)]
 mod tests {
+    use serial_test::serial;
     use std::{path::PathBuf, sync::Arc};
 
     use crate::{
@@ -245,6 +246,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test01_se_actualiza_el_head_ref_correspondiente_con_el_hash_del_commit() {
         limpiar_archivo_gir();
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/commit_test01")).unwrap());
@@ -261,6 +263,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test02_al_hacer_dos_commits_el_primero_es_padre_del_segundo() {
         limpiar_archivo_gir();
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/commit_test02")).unwrap());
@@ -275,6 +278,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test03_al_hacer_commit_apunta_al_arbol_correcto() {
         limpiar_archivo_gir();
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/commit_test03")).unwrap());
@@ -290,6 +294,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test04_al_hacer_commit_de_un_archivo_y_luego_hacer_otro_commit_de_ese_archivo_modificado_el_hash_tree_es_correcto(
     ) {
         limpiar_archivo_gir();
@@ -315,6 +320,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test05_al_hacer_commit_de_un_directorio_y_luego_hacer_otro_commit_de_ese_directorio_modificado_el_hash_tree_es_correcto(
     ) {
         limpiar_archivo_gir();

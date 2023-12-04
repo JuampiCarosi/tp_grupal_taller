@@ -109,7 +109,7 @@ impl Ejecutar for Branch {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::*;
     use crate::tipos_de_dato::comando::Ejecutar;
     use crate::tipos_de_dato::comandos::add::Add;
@@ -118,6 +118,7 @@ mod test {
     use crate::tipos_de_dato::logger::Logger;
     use crate::utils;
     use crate::utils::gir_config::obtener_gir_config_path;
+    use serial_test::serial;
     use std::path::PathBuf;
     use std::sync::Arc;
 
@@ -161,6 +162,7 @@ mod test {
     }
 
     #[test]
+    #[serial]
     fn test01_mostrar_ramas() {
         limpiar_archivo_gir();
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/branch_test01")).unwrap());
@@ -176,6 +178,7 @@ mod test {
     }
 
     #[test]
+    #[serial]
     fn test02_crear_rama() {
         limpiar_archivo_gir();
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/branch_test02")).unwrap());
@@ -191,6 +194,7 @@ mod test {
     }
 
     #[test]
+    #[serial]
     fn test03_crear_una_rama_y_mostrar_ramas() {
         limpiar_archivo_gir();
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/branch_test03")).unwrap());
@@ -216,6 +220,7 @@ mod test {
     }
 
     #[test]
+    #[serial]
     fn test04_mostrar_from() {
         limpiar_archivo_gir();
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/branch_test04")).unwrap());
@@ -227,6 +232,7 @@ mod test {
     }
 
     #[test]
+    #[serial]
     fn test05_crear_from() {
         limpiar_archivo_gir();
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/branch_test05")).unwrap());
@@ -238,6 +244,7 @@ mod test {
     }
 
     #[test]
+    #[serial]
     #[should_panic(expected = "Demasiados argumentos\\ngir branch [<nombre-rama-nueva>]")]
     fn test06_muchos_argumentos() {
         limpiar_archivo_gir();
@@ -252,6 +259,7 @@ mod test {
     }
 
     #[test]
+    #[serial]
     fn test07_la_branch_se_crea_apuntando_al_ultimo_commit() {
         limpiar_archivo_gir();
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/branch_test07")).unwrap());

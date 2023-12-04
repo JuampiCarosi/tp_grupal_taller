@@ -36,7 +36,7 @@ use super::{
     cat_file,
     commit::Commit,
     log::Log,
-    write_tree::{self, conseguir_arbol_from_hash_commit},
+    write_tree::{self, conseguir_arbol_en_directorio},
 };
 
 pub struct Merge {
@@ -64,7 +64,7 @@ impl Merge {
 
     pub fn obtener_arbol_commit_actual(branch: &str, logger: Arc<Logger>) -> Result<Tree, String> {
         let head_commit = Self::obtener_commit_de_branch(branch)?;
-        let hash_tree_padre = conseguir_arbol_from_hash_commit(&head_commit, ".gir/objects/")?;
+        let hash_tree_padre = conseguir_arbol_en_directorio(&head_commit, ".gir/objects/")?;
         Tree::from_hash(&hash_tree_padre, PathBuf::from("."), logger.clone())
     }
 
@@ -304,7 +304,7 @@ impl Merge {
         commit_base: &str,
     ) -> Result<(Tree, Tree, Tree), String> {
         let hash_tree_base =
-            write_tree::conseguir_arbol_from_hash_commit(commit_base, ".gir/objects/")?;
+            write_tree::conseguir_arbol_en_directorio(commit_base, ".gir/objects/")?;
         let tree_base = Tree::from_hash(&hash_tree_base, PathBuf::from("."), self.logger.clone())?;
 
         let tree_branch_actual =
@@ -619,8 +619,10 @@ impl Ejecutar for Merge {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serial_test::serial;
 
     #[test]
+    #[serial]
     fn test01_mergear_archivos_sin_conflictos() {
         let base = "primera linea
         segunda linea
@@ -652,6 +654,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test02_mergear_archivos_con_cambios_cerca() {
         let base = "primera linea
         segunda linea
@@ -680,6 +683,7 @@ mod tests {
         )
     }
     #[test]
+    #[serial]
     fn test03_mergear_archivos_con_cambios_lejos() {
         let base = "primera linea
         segunda linea
@@ -710,6 +714,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test04_mergear_archivos_con_muchos_conflictos() {
         let base = "primera linea
         segunda linea
@@ -739,6 +744,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test05_mergear_archivos_con_conflictos_y_lineas_repetidas() {
         let base = "primera linea
         segunda linea

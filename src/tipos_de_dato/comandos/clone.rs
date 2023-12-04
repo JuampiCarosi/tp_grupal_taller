@@ -79,16 +79,13 @@ impl Clone {
     /// de trabajo.
     fn fast_forward_de_cero(&self, commit_head_remoto: &str) -> Result<bool, String> {
         io::escribir_bytes(UBICACION_RAMA_MASTER, commit_head_remoto)?;
-        let hash_tree_padre =
-            write_tree::conseguir_arbol_from_hash_commit(commit_head_remoto, ".gir/objects/")?;
+        let hash_tree_padre = write_tree::conseguir_arbol(commit_head_remoto)?;
         let tree_branch_a_mergear =
             Tree::from_hash(&hash_tree_padre, PathBuf::from("."), self.logger.clone())?;
 
         tree_branch_a_mergear.escribir_en_directorio()?;
 
-        self.logger.log(&format!(
-            "Fast forward ejucutado con exito en clone de la rama remota"
-        ));
+        self.logger.log("Fast forward ejucutado con exito en clone de la rama remota");
 
         Ok(true)
     }

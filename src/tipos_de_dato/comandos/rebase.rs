@@ -6,7 +6,7 @@ use crate::utils::index::{self, escribir_index};
 use crate::utils::ramas;
 use crate::{
     tipos_de_dato::{
-        comandos::write_tree::conseguir_arbol_from_hash_commit,
+        comandos::write_tree::conseguir_arbol_en_directorio,
         logger::Logger,
         objetos::{commit::CommitObj, tree::Tree},
     },
@@ -173,6 +173,7 @@ impl Rebase {
         let mut archivo = OpenOptions::new()
             .write(true)
             .append(true)
+            .create(true)
             .open(".gir/rebase-merge/rewritten-list")
             .map_err(|_| "No se pudo abrir el archivo .gir/rebase-merge/rewritten-list")?;
 
@@ -187,6 +188,10 @@ impl Rebase {
     /// Realiza el rebase por primera vez.
     /// Crea la carpeta .gir/rebase-merge y los archivos necesarios para realizar el rebase.
     fn primera_vez(&self) -> Result<String, String> {
+        if PathBuf::from(".gir/rebase-merge").exists() {
+            return Err("Hay rebase en progreso".to_string());
+        }
+
         let rama = self.rama.as_ref().ok_or("No se especifico una rama")?;
 
         self.logger.log("Rebaseando...");
@@ -198,7 +203,7 @@ impl Rebase {
         let branch_actual = ramas::obtener_rama_actual()?;
         io::escribir_bytes(format!(".gir/refs/heads/{branch_actual}"), &tip_nuevo)?;
 
-        let hash_arbol_commit = conseguir_arbol_from_hash_commit(&tip_nuevo, ".gir/objects/")?;
+        let hash_arbol_commit = conseguir_arbol_en_directorio(&tip_nuevo, ".gir/objects/")?;
         let arbol = Tree::from_hash(&hash_arbol_commit, PathBuf::from("./"), self.logger.clone())?;
 
         arbol.escribir_en_directorio()?;

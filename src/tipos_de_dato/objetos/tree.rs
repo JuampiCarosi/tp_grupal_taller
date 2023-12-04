@@ -520,6 +520,7 @@ impl Display for Tree {
 #[cfg(test)]
 
 mod tests {
+    use serial_test::serial;
 
     use crate::tipos_de_dato::logger::Logger;
     use crate::tipos_de_dato::{objeto::Objeto, objetos::tree::Tree};
@@ -552,6 +553,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test01_test_obtener_hash() {
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/tree_test01")).unwrap());
         let objeto =
@@ -565,6 +567,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test02_test_obtener_tamanio() {
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/tree_test02")).unwrap());
         let objeto =
@@ -575,6 +578,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test03_test_mostrar_contenido() {
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/tree_test03")).unwrap());
 
@@ -593,6 +597,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test04_test_mostrar_contenido_recursivo() {
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/tree_test04")).unwrap());
 
@@ -610,6 +615,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test05_escribir_en_base() -> Result<(), String> {
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/tree_test05")).unwrap());
 
@@ -638,6 +644,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test06_escribir_en_base_con_anidados() -> Result<(), String> {
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/tree_test06")).unwrap());
 
@@ -666,6 +673,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
 
     fn test07_contiene_hijo_por_ubicacion() {
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/tree_test07")).unwrap());
@@ -676,6 +684,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
 
     fn test08_contiene_hijo_por_ubicacion_rec() {
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/tree_test08")).unwrap());

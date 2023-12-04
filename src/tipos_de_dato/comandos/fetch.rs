@@ -426,7 +426,8 @@ impl Ejecutar for Fetch {
 
 #[cfg(test)]
 
-mod test {
+mod tests {
+    use serial_test::serial;
     use std::{path::PathBuf, sync::Arc};
 
     use crate::{
@@ -565,6 +566,7 @@ mod test {
     }
 
     #[test]
+    #[serial]
     fn test_03_los_tags_se_gurdan_correctamtene() {
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/fetch_03.txt")).unwrap());
         utils::testing::limpiar_archivo_gir(logger.clone());
@@ -605,6 +607,7 @@ mod test {
     }
 
     #[test]
+    #[serial]
     fn test_04_los_ramas_remotas_se_escriben_correctamente() {
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/fetch_04.txt")).unwrap());
         utils::testing::limpiar_archivo_gir(logger.clone());
@@ -631,6 +634,7 @@ mod test {
     }
 
     #[test]
+    #[serial]
     fn test_05_los_ramas_remotas_se_actualizan_correctamente() {
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/fetch_05.txt")).unwrap());
         utils::testing::limpiar_archivo_gir(logger.clone());
@@ -657,6 +661,7 @@ mod test {
     }
 
     #[test]
+    #[serial]
     fn test_05_los_ramas_remotas_se_escriben_correctamente() {
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/fetch_05.txt")).unwrap());
         utils::testing::limpiar_archivo_gir(logger.clone());

@@ -8,7 +8,7 @@ use crate::{
     utils::{self, io},
 };
 
-use super::{show_ref::ShowRef, write_tree::conseguir_arbol_from_hash_commit};
+use super::{show_ref::ShowRef, write_tree::conseguir_arbol_en_directorio};
 
 const PATH_HEAD: &str = "./.gir/HEAD";
 
@@ -197,7 +197,7 @@ impl Checkout {
         let ref_actual = io::leer_a_string(PATH_HEAD)?;
         let rama_actual = Self::conseguir_rama_actual(&ref_actual)?;
         let head_commit = io::leer_a_string(format!(".gir/refs/heads/{}", rama_actual))?;
-        let hash_tree_padre = conseguir_arbol_from_hash_commit(&head_commit, ".gir/objects/")?;
+        let hash_tree_padre = conseguir_arbol_en_directorio(&head_commit, ".gir/objects/")?;
         Tree::from_hash(&hash_tree_padre, PathBuf::from("."), logger)
     }
 
@@ -268,6 +268,7 @@ impl Ejecutar for Checkout {
 
 #[cfg(test)]
 mod tests {
+    use serial_test::serial;
     use std::{path::PathBuf, sync::Arc};
 
     use crate::{
@@ -310,6 +311,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test01_checkout_cambia_de_rama() {
         limpiar_archivo_gir();
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/checkout_test02")).unwrap());
@@ -329,6 +331,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
 
     fn test02_checkout_crea_y_cambia_de_rama() {
         limpiar_archivo_gir();
@@ -348,6 +351,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test03_al_hacer_checkout_actualiza_contenido() {
         limpiar_archivo_gir();
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/checkout_test03")).unwrap());
@@ -375,6 +379,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test04_al_hacer_checkout_se_eliminan_no_trackeados() {
         limpiar_archivo_gir();
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/checkout_test03")).unwrap());
@@ -443,6 +448,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test05_obtener_objetos_eliminados() {
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/checkout_test04")).unwrap());
 

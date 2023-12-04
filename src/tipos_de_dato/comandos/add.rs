@@ -138,6 +138,7 @@ impl Ejecutar for Add {
 #[cfg(test)]
 
 mod tests {
+    use serial_test::serial;
     use std::{io::Write, path::PathBuf, sync::Arc};
 
     use crate::{
@@ -164,7 +165,7 @@ mod tests {
     }
 
     fn limpiar_archivo_gir() {
-        io::rm_directorio(".gir").unwrap();
+        let _ = io::rm_directorio(".gir");
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/branch_init")).unwrap());
         let mut init = Init {
             path: "./.gir".to_string(),
@@ -174,6 +175,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test01_archivo_vacio_se_llena_con_objeto_agregado() {
         limpiar_archivo_gir();
         create_test_file();
@@ -193,6 +195,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test02_archivo_con_objeto_actualiza_el_objeto() {
         limpiar_archivo_gir();
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/add_test02")).unwrap());
@@ -225,6 +228,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test03_agregar_un_objeto_en_un_directorio() {
         limpiar_archivo_gir();
 
@@ -243,6 +247,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test04_archivo_con_objetos_agrega_nuevos_objetos() {
         limpiar_archivo_gir();
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/add_test04")).unwrap());
@@ -277,6 +282,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test05_agregar_un_directorio_al_index() {
         limpiar_archivo_gir();
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/add_test05")).unwrap());
@@ -294,6 +300,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test06_agregar_dos_archivos_de_una() {
         limpiar_archivo_gir();
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/add_test06")).unwrap());

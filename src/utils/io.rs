@@ -171,11 +171,13 @@ where
 
 #[cfg(test)]
 mod tests {
+    use serial_test::serial;
     use std::path::PathBuf;
 
     use crate::utils::io::{escribir_bytes, leer_a_string, rm_directorio};
 
     #[test]
+    #[serial]
     fn test_escribir_archivo_pisa_contenido() {
         let dir = PathBuf::from("tmp/test_escribir_archivo_pisa_contenido.txt");
         escribir_bytes(&dir, "contenido 1").unwrap();

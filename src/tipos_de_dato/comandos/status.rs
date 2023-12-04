@@ -15,7 +15,7 @@ use crate::{
     },
 };
 
-use super::{check_ignore::CheckIgnore, write_tree::conseguir_arbol_from_hash_commit};
+use super::{check_ignore::CheckIgnore, write_tree::conseguir_arbol_en_directorio};
 
 pub struct Status {
     /// Logger para registrar los eventos ocurridos durante la ejecucion del comando.
@@ -40,7 +40,7 @@ pub fn obtener_arbol_del_commit_head(logger: Arc<Logger>) -> Option<Tree> {
         None
     } else {
         let hash_arbol_commit =
-            conseguir_arbol_from_hash_commit(&padre_commit, ".gir/objects/").ok()?;
+            conseguir_arbol_en_directorio(&padre_commit, ".gir/objects/").ok()?;
         let tree =
             Tree::from_hash(&hash_arbol_commit, PathBuf::from("./"), logger.clone()).unwrap();
         Some(tree)
@@ -254,6 +254,7 @@ impl Ejecutar for Status {
 
 #[cfg(test)]
 mod tests {
+    use serial_test::serial;
     use std::{io::Write, path::PathBuf, sync::Arc};
 
     use crate::{
@@ -306,6 +307,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test01_obtener_staging() {
         limpiar_archivo_gir();
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/status_test01")).unwrap());
@@ -326,6 +328,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test02_obtener_staging_con_archivos_multiples() {
         limpiar_archivo_gir();
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/status_test02")).unwrap());
@@ -354,6 +357,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test03_obtener_trackeados() {
         limpiar_archivo_gir();
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/status_test03")).unwrap());
@@ -367,6 +371,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test04_obtener_trackeados_con_varios_archivos() {
         limpiar_archivo_gir();
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/status_test04")).unwrap());
@@ -386,6 +391,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test05_addear_archivo_lo_elimina_de_untrackeados() {
         limpiar_archivo_gir();
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/status_test05")).unwrap());
@@ -396,6 +402,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test06_addear_y_luego_modificar_aparece_en_staging_y_trackeados() {
         limpiar_archivo_gir();
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/status_test06")).unwrap());

@@ -170,10 +170,12 @@ impl Config {
 #[cfg(test)]
 
 mod tests {
+    use serial_test::serial;
 
     use super::*;
 
     #[test]
+    #[serial]
     fn test01_guardar_config() {
         let remote = RemoteInfo {
             nombre: "origin".to_string(),
@@ -203,6 +205,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
 
     fn test02_leer_config() {
         let remote = RemoteInfo {
@@ -233,6 +236,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test03_existe_remoto() {
         let mut config = Config {
             remotos: vec![],

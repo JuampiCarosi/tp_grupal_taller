@@ -105,12 +105,14 @@ impl Objeto {
 #[cfg(test)]
 
 mod tests {
+    use serial_test::serial;
 
     use crate::tipos_de_dato::logger;
 
     use super::*;
 
     #[test]
+    #[serial]
     fn test01_blob_from_index() {
         let logger = Arc::new(logger::Logger::new(PathBuf::from("tmp/objeto_test01")).unwrap());
         let objeto = Objeto::from_index("100644 1234567890 ./hola.txt", logger.clone()).unwrap();
@@ -126,6 +128,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test02_blob_from_directorio() {
         let logger = Arc::new(logger::Logger::new(PathBuf::from("tmp/objeto_test02")).unwrap());
         let objeto = Objeto::from_directorio(
@@ -147,6 +150,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
 
     fn test03_tree_from_directorio() {
         let logger = Arc::new(logger::Logger::new(PathBuf::from("tmp/objeto_test03")).unwrap());
@@ -172,6 +176,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test04_tree_from_index() {
         let logger = Arc::new(logger::Logger::new(PathBuf::from("tmp/objeto_test04")).unwrap());
         let objeto_a_escibir =

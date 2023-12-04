@@ -138,3 +138,149 @@ impl Ejecutar for LsTree {
         Ok(string_resultante)
     }
 }
+
+#[cfg(test)]
+
+mod tests {
+    use std::{path::PathBuf, sync::Arc};
+
+    use serial_test::serial;
+
+    use super::*;
+    use crate::{
+        tipos_de_dato::{
+            comando::Ejecutar,
+            comandos::{add::Add, commit::Commit, init::Init, write_tree},
+            logger::Logger,
+        },
+        utils::{io, ramas},
+    };
+
+    fn add_y_commit_anindado(logger: Arc<Logger>) {
+        let mut add = Add::from(
+            vec!["test_dir/objetos/archivo.txt".to_string()],
+            logger.clone(),
+        )
+        .unwrap();
+        add.ejecutar().unwrap();
+        let mut commit = Commit::from(
+            &mut vec!["-m".to_string(), "mensaje".to_string()],
+            logger.clone(),
+        )
+        .unwrap();
+        commit.ejecutar().unwrap();
+    }
+
+    fn add_y_commit_en_root(logger: Arc<Logger>) {
+        let mut add = Add::from(vec!["test_file.txt".to_string()], logger.clone()).unwrap();
+        add.ejecutar().unwrap();
+        let mut commit = Commit::from(
+            &mut vec!["-m".to_string(), "mensaje".to_string()],
+            logger.clone(),
+        )
+        .unwrap();
+        commit.ejecutar().unwrap();
+    }
+
+    fn limpiar_archivo_gir(logger: Arc<Logger>) {
+        if PathBuf::from("./.gir").exists() {
+            io::rm_directorio(".gir").unwrap();
+        }
+
+        let mut init = Init {
+            path: "./.gir".to_string(),
+            logger,
+        };
+        init.ejecutar().unwrap();
+    }
+
+    #[test]
+    #[serial]
+
+    fn test01_sin_flags() {
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/ls_tree_test01")).unwrap());
+        limpiar_archivo_gir(logger.clone());
+        add_y_commit_anindado(logger.clone());
+
+        let hash_commit = ramas::obtener_hash_commit_asociado_rama_actual().unwrap();
+        let arbol = write_tree::conseguir_arbol(&hash_commit).unwrap();
+        let mut ls_tree = LsTree::from(logger.clone(), &mut vec![arbol]).unwrap();
+        let resultado = ls_tree.ejecutar().unwrap();
+        assert_eq!(
+            resultado,
+            "040000 tree 1f67151c34d6b33ec1a98fdafef8b021068395a0    test_dir\n"
+        );
+    }
+
+    #[test]
+    #[serial]
+
+    fn test02_recursivo() {
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/ls_tree_test02")).unwrap());
+        limpiar_archivo_gir(logger.clone());
+        add_y_commit_anindado(logger.clone());
+
+        let hash_commit = ramas::obtener_hash_commit_asociado_rama_actual().unwrap();
+        let arbol = write_tree::conseguir_arbol(&hash_commit).unwrap();
+        let mut ls_tree =
+            LsTree::from(logger.clone(), &mut vec!["-r".to_string(), arbol.clone()]).unwrap();
+        let resultado = ls_tree.ejecutar().unwrap();
+        assert_eq!(
+            resultado,
+            "100644 blob 2b824e648965b94c6c6b3dd0702feb91f699ed62    test_dir/objetos/archivo.txt\n"
+        );
+    }
+
+    #[test]
+    #[serial]
+
+    fn test03_arboles() {
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/ls_tree_test01")).unwrap());
+        limpiar_archivo_gir(logger.clone());
+        add_y_commit_anindado(logger.clone());
+        add_y_commit_en_root(logger.clone());
+
+        let hash_commit = ramas::obtener_hash_commit_asociado_rama_actual().unwrap();
+        let arbol = write_tree::conseguir_arbol(&hash_commit).unwrap();
+        let mut ls_tree = LsTree::from(logger.clone(), &mut vec!["-d".to_string(), arbol]).unwrap();
+        let resultado = ls_tree.ejecutar().unwrap();
+        assert_eq!(
+            resultado,
+            "040000 tree 1f67151c34d6b33ec1a98fdafef8b021068395a0    test_dir\n"
+        );
+    }
+
+    #[test]
+    #[serial]
+    fn test03_tamanio() {
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/ls_tree_test01")).unwrap());
+        limpiar_archivo_gir(logger.clone());
+        add_y_commit_en_root(logger.clone());
+
+        let hash_commit = ramas::obtener_hash_commit_asociado_rama_actual().unwrap();
+        let arbol = write_tree::conseguir_arbol(&hash_commit).unwrap();
+        let mut ls_tree = LsTree::from(logger.clone(), &mut vec!["-l".to_string(), arbol]).unwrap();
+        let resultado = ls_tree.ejecutar().unwrap();
+        assert_eq!(
+            resultado,
+            "100644 blob 678e12dc5c03a7cf6e9f64e688868962ab5d8b65      18    test_file.txt\n"
+        );
+    }
+
+    #[test]
+    #[serial]
+    fn test04_tamanio_arbol() {
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/ls_tree_test01")).unwrap());
+        limpiar_archivo_gir(logger.clone());
+        add_y_commit_anindado(logger.clone());
+
+        let hash_commit = ramas::obtener_hash_commit_asociado_rama_actual().unwrap();
+        let arbol = write_tree::conseguir_arbol(&hash_commit).unwrap();
+        let mut ls_tree = LsTree::from(logger.clone(), &mut vec!["-l".to_string(), arbol]).unwrap();
+        let resultado = ls_tree.ejecutar().unwrap();
+        assert_eq!(
+            resultado,
+            "040000 tree 1f67151c34d6b33ec1a98fdafef8b021068395a0       -    test_dir\n"
+        );
+    }
+}

@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{path::PathBuf, sync::Arc};
 
 use gtk::prelude::*;
 
@@ -60,7 +60,12 @@ fn comfirmar(builder: &gtk::Builder, accion: AccionBranchDialog, logger: Arc<Log
         let mut args = vec![activo.to_string()];
         match accion {
             AccionBranchDialog::Merge => Merge::from(&mut args, logger.clone()).ejecutar_gui(),
-            AccionBranchDialog::Rebase => Rebase::from(args, logger.clone()).ejecutar_gui(),
+            AccionBranchDialog::Rebase => {
+                if PathBuf::from(".gir/rebase-merge").exists() {
+                    args = vec!["--continue".to_string()];
+                }
+                Rebase::from(args, logger.clone()).ejecutar_gui()
+            }
         };
 
         conflicts_modal::boton_conflictos(&builder_clone, logger.clone());

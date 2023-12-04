@@ -81,7 +81,8 @@ impl Ejecutar for CheckIgnore {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
+    use serial_test::serial;
     use std::{path::PathBuf, sync::Arc};
 
     use crate::{
@@ -117,6 +118,7 @@ mod test {
     }
 
     #[test]
+    #[serial]
     fn test01_check_ignore_ignora_un_solo_archivo() {
         settupear_girignore_para_tests();
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/check_ignore_test01")).unwrap());
@@ -126,6 +128,7 @@ mod test {
     }
 
     #[test]
+    #[serial]
     fn test02_check_ignore_ignora_varios_archivos() {
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/check_ignore_test02")).unwrap());
         let mut check_ignore = CheckIgnore::from(
@@ -142,6 +145,7 @@ mod test {
     }
 
     #[test]
+    #[serial]
     fn test03_al_addear_archivos_ignorados_estos_no_se_addean() {
         limpiar_archivo_gir();
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/check_ignore_test03")).unwrap());
@@ -160,6 +164,7 @@ mod test {
     }
 
     #[test]
+    #[serial]
     fn test04_obtener_untrackeados_del_status_ignora_los_archivos_ignorados() {
         girignore_original();
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/check_ignore_test04")).unwrap());
@@ -171,6 +176,7 @@ mod test {
     }
 
     #[test]
+    #[serial]
     fn test05_ignora_files_dentro_de_directorios_ignorados() {
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/check_ignore_test05")).unwrap());
         let mut check_ignore =
@@ -180,6 +186,7 @@ mod test {
     }
 
     #[test]
+    #[serial]
     fn test06_si_tengo_un_archivo_y_directorio_con_nombres_parecidos_solo_ignora_al_indicado() {
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/check_ignore_test06")).unwrap());
         io::escribir_bytes(".girignore", "test_file/").unwrap();

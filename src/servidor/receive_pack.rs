@@ -1,5 +1,5 @@
-use crate::tipos_de_dato::logger::Logger;
 use crate::tipos_de_dato::comunicacion::Comunicacion;
+use crate::tipos_de_dato::logger::Logger;
 use crate::tipos_de_dato::packfile::Packfile;
 use crate::utils::io;
 use std::io::{Read, Write};
@@ -11,7 +11,11 @@ use std::sync::Arc;
 /// * `comunicacion` - Comunicacion con el cliente
 /// # Errores
 /// Devuelve un error si no se puede leer el packfile o si no se puede escribir en el repositorio
-pub fn receive_pack<T>(dir: String, comunicacion: &mut Comunicacion<T>, logger: Arc<Logger>) -> Result<(), String>
+pub fn receive_pack<T>(
+    dir: String,
+    comunicacion: &mut Comunicacion<T>,
+    logger: Arc<Logger>,
+) -> Result<(), String>
 where
     T: Read + Write,
 {
@@ -33,10 +37,11 @@ where
     Ok(())
 }
 #[cfg(test)]
-mod test {
+mod tests {
     use super::*;
     use crate::tipos_de_dato::{comunicacion::Comunicacion, logger::Logger, packfile};
     use crate::utils;
+    use serial_test::serial;
     use std::io::{Read, Write};
     use std::path::PathBuf;
     use std::sync::Arc;
@@ -65,6 +70,7 @@ mod test {
         }
     }
     #[test]
+    #[serial]
     fn test01_refs_se_actualizan_correctamente() {
         let test_dir = env!("CARGO_MANIFEST_DIR").to_string() + "/server_test_dir/test03/.gir/";
         let mock: MockTcpStream = MockTcpStream {

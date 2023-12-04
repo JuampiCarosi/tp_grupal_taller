@@ -122,19 +122,22 @@ impl Ejecutar for Init {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
+    use serial_test::serial;
     use std::{path::Path, sync::Arc};
 
     use crate::tipos_de_dato::{comandos::init::Init, logger::Logger};
     use std::path::PathBuf;
 
     #[test]
+    #[serial]
     fn test01_obtener_path() {
         let args = vec!["otro".to_string()];
         assert_eq!(Init::obtener_path(args), "otro/.gir");
     }
 
     #[test]
+    #[serial]
     fn test02_crear_directorio_gir() {
         let _ = std::fs::remove_dir_all("./.gir");
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/commit_test01")).unwrap());

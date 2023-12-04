@@ -388,8 +388,9 @@ impl Packfile {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::*;
+    use serial_test::serial;
 
     fn leer_blob_de_packfile(packfile: &[u8], offset: &mut usize) -> (Vec<u8>, u8, u32) {
         let (tipo, tamanio) = Packfile::decodificar_bytes(packfile, offset);
@@ -405,6 +406,7 @@ mod test {
     }
 
     #[test]
+    #[serial]
     fn test01_codificar_bytes_de_un_byte() {
         let tipo = 1;
         let largo = 10;
@@ -413,6 +415,7 @@ mod test {
     }
 
     #[test]
+    #[serial]
     fn test02_codificar_bytes_de_mas_de_un_byte() {
         let tipo = 2;
         let largo = 100;
@@ -421,6 +424,7 @@ mod test {
     }
 
     #[test]
+    #[serial]
     fn test03_decodificar_un_byte() {
         let bytes = vec![0x1a];
         let mut offset = 0;
@@ -429,6 +433,7 @@ mod test {
     }
 
     #[test]
+    #[serial]
     fn test04_decodificar_mas_de_un_byte() {
         let bytes = vec![0xa4, 0x06];
         let mut offset = 0;
@@ -437,6 +442,7 @@ mod test {
     }
 
     #[test]
+    #[serial]
     fn test05_header_se_escribe_bien() {
         let packfile = Packfile::obtener_pack_con_archivos(Vec::new(), "").unwrap();
         let header = Packfile::leer_header_packfile(&packfile).unwrap();
@@ -446,6 +452,7 @@ mod test {
     }
 
     #[test]
+    #[serial]
     fn test06_obtener_pack_entero() {
         let dir = env!("CARGO_MANIFEST_DIR").to_string() + "/packfile_test_dir/"; // replace with a valid directory path
         let result = Packfile::obtener_pack_entero(&dir);
@@ -483,6 +490,7 @@ mod test {
     }
 
     #[test]
+    #[serial]
     fn test07_obtener_pack_con_archivos() {
         let directorio = env!("CARGO_MANIFEST_DIR").to_string() + "/packfile_test_dir/";
         let dir_objeto = "51/22b1de1b7a07e36b01cd62bd622a0715f92478";
@@ -502,6 +510,7 @@ mod test {
         assert!(Packfile::verificar_checksum(packfile.as_slice()));
     }
     #[test]
+    #[serial]
     fn test08_leer_objeto_packfile() {
         let directorio = env!("CARGO_MANIFEST_DIR").to_string() + "/packfile_test_dir/";
         let dir_objeto = "51/22b1de1b7a07e36b01cd62bd622a0715f92478";

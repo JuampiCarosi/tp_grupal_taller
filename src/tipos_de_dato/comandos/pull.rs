@@ -149,7 +149,7 @@ impl Pull {
     fn fast_forward_de_cero(&self, commit_head_remoto: &str) -> Result<bool, String> {
         io::escribir_bytes(UBICACION_RAMA_MASTER, commit_head_remoto)?;
         let hash_tree_padre =
-            write_tree::conseguir_arbol_from_hash_commit(commit_head_remoto, ".gir/objects/")?;
+            write_tree::conseguir_arbol_en_directorio(commit_head_remoto, ".gir/objects/")?;
         let tree_branch_a_mergear =
             Tree::from_hash(&hash_tree_padre, PathBuf::from("."), self.logger.clone())?;
 

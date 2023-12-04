@@ -103,6 +103,7 @@ impl Ejecutar for SetUpstream {
 #[cfg(test)]
 
 mod tests {
+    use serial_test::serial;
     use std::{path::PathBuf, sync::Arc};
 
     use crate::{
@@ -113,6 +114,7 @@ mod tests {
     use super::SetUpstream;
 
     #[test]
+    #[serial]
     fn test_01_se_agrega_correctamente_la_configuracion_a_una_rama() {
         let logger = Arc::new(Logger::new("tmp/set_up_stream_01".into()).unwrap());
         let remoto = "origin".to_string();
@@ -146,6 +148,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_02_se_puede_modificar_el_seteado_de_la_rama() {
         let logger = Arc::new(Logger::new("tmp/set_up_stream_02".into()).unwrap());
         let remoto = "origin".to_string();
@@ -192,6 +195,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     #[should_panic]
     fn test_03_no_se_puede_setear_un_remoto_que_no_existe() {
         let logger = Arc::new(Logger::new("tmp/set_up_stream_03".into()).unwrap());
@@ -215,6 +219,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     #[should_panic]
     fn test_04_no_se_puede_setear_una_rama_local_que_no_exite() {
         let logger = Arc::new(Logger::new("tmp/set_up_stream_04".into()).unwrap());

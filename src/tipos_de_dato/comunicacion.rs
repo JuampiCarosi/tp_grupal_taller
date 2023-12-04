@@ -1,6 +1,6 @@
 use crate::err_comunicacion::ErrorDeComunicacion;
 use crate::tipos_de_dato::packfile::Packfile;
-use crate::utils::{self, io, strings};
+use crate::utils::{self, strings};
 use std::io::{Read, Write};
 use std::net::TcpStream;
 use std::path::PathBuf;
@@ -37,7 +37,7 @@ impl<T: Write + Read> Comunicacion<T> {
 
     pub fn new_para_server(flujo: TcpStream, logger: Arc<Logger>) -> Comunicacion<TcpStream> {
         Comunicacion {
-            flujo: flujo,
+            flujo,
             repositorio: None,
             logger,
         }
@@ -48,7 +48,7 @@ impl<T: Write + Read> Comunicacion<T> {
 
         Comunicacion {
             logger,
-            flujo: flujo,
+            flujo,
             repositorio: Some(repositorio),
         }
     }
@@ -211,7 +211,7 @@ impl<T: Write + Read> Comunicacion<T> {
             return Ok(());
         }
         for linea in lineas {
-            self.enviar(&linea)?;
+            self.enviar(linea)?;
         }
 
         if lineas[0].contains("ref") {
@@ -390,7 +390,8 @@ impl<T: Write + Read> Comunicacion<T> {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
+    use serial_test::serial;
     use std::path::PathBuf;
 
     use crate::utils::testing::MockTcpStream;
@@ -398,6 +399,7 @@ mod test {
     use super::*;
 
     #[test]
+    #[serial]
     fn test01_se_envia_mensajes_de_forma_correcta() {
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/comunicacion_test02.txt")).unwrap());
 
@@ -417,6 +419,7 @@ mod test {
     }
 
     #[test]
+    #[serial]
 
     fn test02_se_obtiene_el_contenido_del_server_de_forma_correcta() {
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/comunicacion_test02.txt")).unwrap());
@@ -453,6 +456,7 @@ mod test {
     }
 
     #[test]
+    #[serial]
     fn test03_se_envia_correctamente_los_want() {
         let mut mock = MockTcpStream {
             lectura_data: Vec::new(),
@@ -484,6 +488,7 @@ mod test {
     }
 
     #[test]
+    #[serial]
     fn test04_se_envia_correctamente_los_have() {
         let mut mock = MockTcpStream {
             lectura_data: Vec::new(),
@@ -512,6 +517,7 @@ mod test {
     }
 
     #[test]
+    #[serial]
     fn test05_se_envia_correctamente_las_referencias_actulizar() {
         let mut mock = MockTcpStream {
             lectura_data: Vec::new(),
