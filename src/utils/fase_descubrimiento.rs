@@ -33,7 +33,7 @@ pub fn fase_de_descubrimiento<T: Write + Read>(
 > {
     let mut lineas_recibidas = comunicacion.obtener_lineas()?;
     let primera_linea = lineas_recibidas.remove(0);
-    if &primera_linea != "version 1" { 
+    if &primera_linea != "version 1\n" { 
         let mensaje_error: Vec<&str> = primera_linea.splitn(2, ' ').collect();
         return Err(format!("Error, {}", mensaje_error[1]));
     }

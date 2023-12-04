@@ -13,7 +13,7 @@ use std::{
     thread,
 };
 
-const VERSION: &str = "version 1";
+const VERSION: &str = "version 1\n";
 const CAPABILITIES: &str = "ofs-delta symref=HEAD:refs/heads/master agent=git/2.17.1";
 const DIR: &str = "/srv"; // direccion relativa
 
@@ -84,7 +84,6 @@ impl Servidor {
     // Facilita la primera parte de la funcion anterior
     fn parsear_linea_pedido_y_responder_con_version(
         linea_pedido: &str,
-        comunicacion: &mut Comunicacion<TcpStream>,
         dir: &str,
     ) -> Result<(String, String, String), String> {
         let pedido: Vec<String> = linea_pedido
@@ -112,7 +111,7 @@ impl Servidor {
         logger: Arc<Logger>,
     ) -> Result<(), String> {
         let (pedido, repo, dir_repo) =
-            Self::parsear_linea_pedido_y_responder_con_version(linea, comunicacion, dir)?;
+            Self::parsear_linea_pedido_y_responder_con_version(linea, dir)?;
         let refs: Vec<String>;
         let resultado_de_ejecucion: Result<(), String>;
         match pedido.as_str() {
@@ -124,7 +123,7 @@ impl Servidor {
                     return Err("No existe el repositorio".to_string());
                 }
                 comunicacion.enviar(&gir_io::obtener_linea_con_largo_hex(
-                    &(VERSION.to_string() + "\n"),
+                    &(VERSION.to_string()),
                 ))?;
                 println!("upload-pack recibido, ejecutando");
                 refs = server_utils::obtener_refs_de(PathBuf::from(&dir_repo))?;
@@ -145,7 +144,7 @@ impl Servidor {
                     gir_io::crear_directorio(&path.join("refs/tags/"))?;
                 }
                 comunicacion.enviar(&gir_io::obtener_linea_con_largo_hex(
-                    &(VERSION.to_string() + "\n"),
+                    &(VERSION.to_string()),
                 ))?;
                 refs = server_utils::obtener_refs_de(path)?;
                 comunicacion.responder(&refs)?;
