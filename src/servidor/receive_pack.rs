@@ -34,6 +34,7 @@ where
 mod test {
     use super::*;
     use crate::tipos_de_dato::{comunicacion::Comunicacion, logger::Logger, packfile};
+    use crate::utils;
     use std::io::{Read, Write};
     use std::path::PathBuf;
     use std::sync::Arc;
