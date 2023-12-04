@@ -42,7 +42,6 @@ impl SetUpstream {
 
         self.verificar_remoto()?;
         self.verificar_rama_local()?;
-        self.verificar_rama_remota()?;
 
         self.set_upstream()?;
 
@@ -86,18 +85,6 @@ impl SetUpstream {
                 self.remoto
             ));
         };
-
-        Ok(())
-    }
-
-    fn verificar_rama_remota(&self) -> Result<(), String> {
-        let rama_remota = format!("{}/{}", self.remoto, self.rama_remota);
-        if !utils::ramas::existe_la_rama_remota(&rama_remota) {
-            return Err(format!(
-                "Rama remota desconocida: {}\n No se puede usar set-upstream\n",
-                self.rama_local
-            ));
-        }
 
         Ok(())
     }
@@ -238,29 +225,6 @@ mod tests {
         utils::testing::limpiar_archivo_gir(logger.clone());
         utils::testing::anadir_remoto_default_config(&remoto, logger.clone());
         utils::testing::escribir_rama_remota(&remoto, &rama_remota);
-
-        SetUpstream::new(
-            remoto.clone(),
-            rama_remota.clone(),
-            rama_local.clone(),
-            logger.clone(),
-        )
-        .unwrap()
-        .ejecutar()
-        .unwrap();
-    }
-
-    #[test]
-    #[should_panic]
-    fn test_05_no_se_puede_setear_una_rama_remota_que_no_exite() {
-        let logger = Arc::new(Logger::new("tmp/set_up_stream_05".into()).unwrap());
-        let rama_remota = "trabajo".to_string();
-        let rama_local = "trabajando".to_string();
-        let remoto = "origin".to_string();
-
-        utils::testing::limpiar_archivo_gir(logger.clone());
-        utils::testing::anadir_remoto_default_config(&remoto, logger.clone());
-        utils::testing::escribir_rama_local(&rama_local, logger.clone());
 
         SetUpstream::new(
             remoto.clone(),
