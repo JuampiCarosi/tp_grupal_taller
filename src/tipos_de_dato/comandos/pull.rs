@@ -186,7 +186,6 @@ impl Pull {
                 self.rama_merge
             ));
         }
-
         Ok(())
     }
 }
