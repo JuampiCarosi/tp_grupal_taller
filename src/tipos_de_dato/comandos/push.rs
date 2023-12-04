@@ -160,7 +160,7 @@ impl Push {
     /// # Resultado
     /// - Devuelve la Comunicacion establecida con el server
     fn iniciar_git_recive_pack_con_servidor(&self) -> Result<Comunicacion<TcpStream>, String> {
-        let comunicacion = Comunicacion::<TcpStream>::new_desde_url(
+        let mut comunicacion = Comunicacion::<TcpStream>::new_desde_url(
             &self.obtener_url(&self.remoto)?,
             self.logger.clone(),
         )?;
@@ -171,7 +171,7 @@ impl Push {
     ///termina la comunicacion con el servidor, mandando un flush pkt y deespues un pack file vacio
     fn terminar_y_mandar_pack_file_vacio(
         &self,
-        comunicacion: &Comunicacion<TcpStream>,
+        comunicacion: &mut Comunicacion<TcpStream>,
     ) -> Result<(), String> {
         comunicacion.enviar_flush_pkt()?;
         // el server pide que se le mande un packfile vacio
@@ -191,7 +191,7 @@ impl Push {
         &self,
         referencia: &Path,
         viejo_commit: &str,
-        comunicacion: &Comunicacion<TcpStream>,
+        comunicacion: &mut Comunicacion<TcpStream>,
     ) -> Result<HashSet<String>, String> {
         let objetos_a_enviar =
             obtener_commits_y_objetos_asociados(referencia, viejo_commit, self.logger.clone());
@@ -258,7 +258,7 @@ impl Push {
         &self,
         referencia_actualizar: (String, String, PathBuf),
         objetos_a_enviar: HashSet<String>,
-        comunicacion: &Comunicacion<TcpStream>,
+        comunicacion: &mut Comunicacion<TcpStream>,
     ) -> Result<(), String> {
         self.logger.log(&format!(
             "Se envia en push la referencia: {:?}",
@@ -292,7 +292,7 @@ impl Push {
     ///     del tag o la rama oen el servidor(ojo!! la direccion para el servidor no para el local)
     fn fase_de_descubrimiento(
         &self,
-        comunicacion: &Comunicacion<TcpStream>,
+        comunicacion: &mut Comunicacion<TcpStream>,
     ) -> Result<Vec<(String, PathBuf)>, String> {
         let (
             _capacidades_servidor,
@@ -376,9 +376,9 @@ fn obtener_commits_y_objetos_asociados(
 
 impl Ejecutar for Push {
     fn ejecutar(&mut self) -> Result<String, String> {
-        let comunicacion = self.iniciar_git_recive_pack_con_servidor()?;
+        let mut comunicacion = self.iniciar_git_recive_pack_con_servidor()?;
 
-        let commits_y_refs_asosiado = self.fase_de_descubrimiento(&comunicacion)?;
+        let commits_y_refs_asosiado = self.fase_de_descubrimiento(&mut comunicacion)?;
 
         let referencia_acualizar = self.obtener_referencia_acualizar(&commits_y_refs_asosiado)?;
 
@@ -386,17 +386,17 @@ impl Ejecutar for Push {
             let objetos_a_enviar = self.obtener_objetos_a_enviar(
                 &self.referencia.dar_ref_local(),
                 &referencia_acualizar.0,
-                &comunicacion,
+                &mut comunicacion,
             )?;
 
             self.enviar_actualizaciones_y_objetos(
                 referencia_acualizar,
                 objetos_a_enviar,
-                &comunicacion,
+                &mut comunicacion,
             )?;
             "Push ejecutado con exito".to_string()
         } else {
-            self.terminar_y_mandar_pack_file_vacio(&comunicacion)?;
+            self.terminar_y_mandar_pack_file_vacio(&mut comunicacion)?;
             "Nada que actualizar".to_string()
         };
 

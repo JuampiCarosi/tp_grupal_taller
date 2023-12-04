@@ -99,7 +99,7 @@ impl Fetch {
         capacidades_servidor: Vec<String>,
         commits_cabezas_y_dir_rama_asosiado: &Vec<(String, PathBuf)>,
         commit_y_tags_asosiado: &Vec<(String, PathBuf)>,
-        comunicacion: &Comunicacion<TcpStream>,
+        comunicacion: &mut Comunicacion<TcpStream>,
     ) -> Result<bool, String> {
         // no hay pedidos :D
         if !self.enviar_pedidos(
@@ -120,7 +120,7 @@ impl Fetch {
 
     fn recibir_packfile_y_guardar_objetos(
         &self,
-        comunicacion: &Comunicacion<TcpStream>,
+        comunicacion: &mut Comunicacion<TcpStream>,
     ) -> Result<(), String> {
         self.logger.log("Obteniendo paquete..");
 
@@ -144,7 +144,7 @@ impl Fetch {
 
     ///Envia un mensaje al servidor para avisarle que ya se termino de de mandarle lineas.
     /// Para seguir el protocolo el mensaje que se envia es done
-    fn finalizar_pedido(&self, comunicacion: &Comunicacion<TcpStream>) -> Result<(), String> {
+    fn finalizar_pedido(&self, comunicacion: &mut Comunicacion<TcpStream>) -> Result<(), String> {
         comunicacion.enviar(&utils::strings::obtener_linea_con_largo_hex("done\n"))
     }
 
@@ -170,7 +170,10 @@ impl Fetch {
     }
 
     ///Envia todo los objetos (sus hash) que ya se tienen y por lo tanto no es necesario que el servidor manda
-    fn enviar_lo_que_tengo(&self, comunicacion: &Comunicacion<TcpStream>) -> Result<(), String> {
+    fn enviar_lo_que_tengo(
+        &self,
+        comunicacion: &mut Comunicacion<TcpStream>,
+    ) -> Result<(), String> {
         let objetos = objects::obtener_objetos_del_dir(&PathBuf::from("./.gir/objects"))?;
 
         if !objetos.is_empty() {
@@ -186,7 +189,7 @@ impl Fetch {
     }
 
     ///Recibe el la repusta Nack del servidor del envio de HAVE
-    fn recivir_nack(&self, comunicacion: &Comunicacion<TcpStream>) -> Result<(), String> {
+    fn recivir_nack(&self, comunicacion: &mut Comunicacion<TcpStream>) -> Result<(), String> {
         let _acks_nak = comunicacion.obtener_lineas()?;
         Ok(())
     }
@@ -201,7 +204,7 @@ impl Fetch {
         capacidades_servidor: &[String],
         commits_cabezas_y_dir_rama_asosiado: &Vec<(String, PathBuf)>,
         commit_y_tags_asosiado: &Vec<(String, PathBuf)>,
-        comunicacion: &Comunicacion<TcpStream>,
+        comunicacion: &mut Comunicacion<TcpStream>,
     ) -> Result<bool, String> {
         let capacidades_a_usar_en_la_comunicacion =
             self.obtener_capacidades_en_comun_con_el_servidor(capacidades_servidor);
@@ -338,7 +341,7 @@ impl Fetch {
     /// - vector de tuplas con el hash del commit y el tag asosiado
     fn fase_de_descubrimiento<T: Write + Read>(
         &self,
-        comunicacion: &Comunicacion<T>,
+        comunicacion: &mut Comunicacion<T>,
     ) -> Result<
         (
             Vec<String>,
@@ -348,7 +351,7 @@ impl Fetch {
         ),
         String,
     > {
-        let resultado = utils::fase_descubrimiento::fase_de_descubrimiento(&comunicacion)?;
+        let resultado = utils::fase_descubrimiento::fase_de_descubrimiento(comunicacion)?;
 
         self.logger.log(&format!(
             "Se ejecuto correctamte la fase de decubrimiento en Fetch: {:?}",
@@ -380,7 +383,7 @@ impl Fetch {
 
     fn iniciar_git_upload_pack_con_servidor(&self) -> Result<Comunicacion<TcpStream>, String> {
         let url = self.obtener_url(&self.remoto)?;
-        let comunicacion = Comunicacion::<TcpStream>::new_desde_url(&url, self.logger.clone())?;
+        let mut comunicacion = Comunicacion::<TcpStream>::new_desde_url(&url, self.logger.clone())?;
         comunicacion.iniciar_git_upload_pack_con_servidor()?;
         Ok(comunicacion)
     }
@@ -389,25 +392,25 @@ impl Fetch {
 impl Ejecutar for Fetch {
     fn ejecutar(&mut self) -> Result<String, String> {
         self.logger.log("Se ejecuto el comando fetch");
-        let comunicacion = self.iniciar_git_upload_pack_con_servidor()?;
+        let mut comunicacion = self.iniciar_git_upload_pack_con_servidor()?;
 
         let (
             capacidades_servidor,
             commit_head_remoto,
             commits_cabezas_y_dir_rama_asosiado,
             commits_y_tags_asosiados,
-        ) = self.fase_de_descubrimiento(&comunicacion)?;
+        ) = self.fase_de_descubrimiento(&mut comunicacion)?;
 
         if !self.fase_de_negociacion(
             capacidades_servidor,
             &commits_cabezas_y_dir_rama_asosiado,
             &commits_y_tags_asosiados,
-            &comunicacion,
+            &mut comunicacion,
         )? {
             return Ok(String::from("El cliente esta actualizado"));
         }
 
-        self.recibir_packfile_y_guardar_objetos(&comunicacion)?;
+        self.recibir_packfile_y_guardar_objetos(&mut comunicacion)?;
 
         self.actualizar_ramas_locales_del_remoto(&commits_cabezas_y_dir_rama_asosiado)?;
 
@@ -451,13 +454,13 @@ mod test {
             escritura_data: Vec::new(),
         };
 
-        let comunicacion = Comunicacion::new_para_testing(mock, logger.clone());
+        let mut comunicacion = Comunicacion::new_para_testing(mock, logger.clone());
         let remoto = "origin".to_string();
         utils::testing::anadir_remoto_default_config(&remoto, logger.clone());
         let (capacidades, commit_head, commits_y_ramas, commits_y_tags) =
             Fetch::new(vec![remoto], logger)
                 .unwrap()
-                .fase_de_descubrimiento(&comunicacion)
+                .fase_de_descubrimiento(&mut comunicacion)
                 .unwrap();
 
         let capacidades_esperadas =
@@ -515,7 +518,7 @@ mod test {
             escritura_data: Vec::new(),
         };
 
-        let comunicacion = Comunicacion::new_para_testing(mock, logger.clone());
+        let mut comunicacion = Comunicacion::new_para_testing(mock, logger.clone());
 
         let remoto = "origin".to_string();
         utils::testing::anadir_remoto_default_config(&remoto, logger.clone());
@@ -523,7 +526,7 @@ mod test {
         let (capacidades, commit_head, commits_y_ramas, commits_y_tags) =
             Fetch::new(vec![remoto], logger)
                 .unwrap()
-                .fase_de_descubrimiento(&comunicacion)
+                .fase_de_descubrimiento(&mut comunicacion)
                 .unwrap();
 
         let capacidades_esperadas =

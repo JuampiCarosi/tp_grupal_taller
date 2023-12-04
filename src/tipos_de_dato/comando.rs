@@ -1,4 +1,4 @@
-use std::{net::TcpStream, sync::Arc};
+use std::sync::Arc;
 
 use super::{
     comandos::{
