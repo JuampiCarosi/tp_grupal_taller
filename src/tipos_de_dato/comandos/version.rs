@@ -6,6 +6,6 @@ impl Version {
     }
 
     pub fn ejecutar(&self) -> Result<String, String> {
-        Ok("git version 0.0.1".to_string())
+        Ok("gir version 2.0".to_string())
     }
 }

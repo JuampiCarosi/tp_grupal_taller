@@ -1,6 +1,10 @@
+/// Representa los posibles flags que puede tener el comando cat-file.
 pub enum Visualizaciones {
+    /// Muestra el tipo de objeto.
     TipoObjeto,
+    /// Muestra el tamanio del objeto.
     Tamanio,
+    /// Muestra el contenido del objeto.
     Contenido,
 }
 

@@ -76,6 +76,9 @@ impl Tree {
         objetos
     }
 
+    /// Devuelve un hashmap con todos los elementos que difieren.
+    /// La key del hasmap es el nombre del archivo.
+    /// El value es un vector de tuplas con el numero de linea y el tipo de diff.
     pub fn deep_changes(
         &self,
         arbol_a_comparar: &Tree,

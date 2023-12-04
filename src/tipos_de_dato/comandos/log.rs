@@ -82,7 +82,7 @@ impl Ejecutar for Log {
         self.logger.log("Ejecutando comando log");
         let hash_commit = Self::obtener_commit_branch(&self.branch)?;
         if hash_commit.is_empty() {
-            return Err(format!("La rama {} no tiene commits", self.branch));
+            return Ok(format!("La rama {} no tiene commits", self.branch));
         }
 
         let objeto_commit = CommitObj::from_hash(hash_commit, self.logger.clone())?;

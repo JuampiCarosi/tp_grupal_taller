@@ -1,8 +1,7 @@
 use crate::err_comunicacion::ErrorDeComunicacion;
 use crate::servidor::{receive_pack::receive_pack, upload_pack::upload_pack};
-use crate::tipos_de_dato::{
-    comunicacion::Comunicacion, comunicacion::RespuestaDePedido, logger::Logger,
-};
+use crate::tipos_de_dato::respuesta_pedido::RespuestaDePedido;
+use crate::tipos_de_dato::{comunicacion::Comunicacion, logger::Logger};
 use crate::utils::io as gir_io;
 use std::{
     env,

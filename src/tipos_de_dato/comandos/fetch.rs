@@ -3,7 +3,7 @@ use crate::tipos_de_dato::comunicacion::Comunicacion;
 use crate::tipos_de_dato::config::Config;
 use crate::tipos_de_dato::logger::Logger;
 use crate::tipos_de_dato::packfile::Packfile;
-use crate::utils::fase_descubrimiento::VecHashDireccion;
+use crate::tipos_de_dato::referencia_commit::ReferenciaCommit;
 use crate::utils::{self, io, objects};
 use std::io::{Read, Write};
 use std::net::TcpStream;
@@ -370,8 +370,8 @@ impl<T: Write + Read> Fetch<T> {
         (
             Vec<String>,
             Option<String>,
-            VecHashDireccion,
-            VecHashDireccion,
+            ReferenciaCommit,
+            ReferenciaCommit,
         ),
         String,
     > {

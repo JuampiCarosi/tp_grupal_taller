@@ -3,11 +3,9 @@ use std::{
     path::PathBuf,
 };
 
-use crate::tipos_de_dato::comunicacion::Comunicacion;
+use crate::tipos_de_dato::{comunicacion::Comunicacion, referencia_commit::ReferenciaCommit};
 
 use super::ramas;
-
-pub type VecHashDireccion = Vec<(String, PathBuf)>;
 
 ///Se encarga de la fase de descubrimiento con el servidor, en la cual se recibe del servidor
 /// una lista de referencias.
@@ -28,8 +26,8 @@ pub fn fase_de_descubrimiento<T: Write + Read>(
     (
         Vec<String>,
         Option<String>,
-        VecHashDireccion,
-        VecHashDireccion,
+        ReferenciaCommit,
+        ReferenciaCommit,
     ),
     String,
 > {
@@ -90,10 +88,10 @@ fn separar_commit_head_de_ser_necesario(
 
 fn obtener_commits_y_dir_rama_o_tag_asosiados(
     lineas_recibidas: &Vec<String>,
-) -> Result<(VecHashDireccion, VecHashDireccion), String> {
-    let mut commits_cabezas_y_dir_rama_asosiados: VecHashDireccion = Vec::new();
+) -> Result<(ReferenciaCommit, ReferenciaCommit), String> {
+    let mut commits_cabezas_y_dir_rama_asosiados: ReferenciaCommit = Vec::new();
 
-    let mut commits_y_tags_asosiados: VecHashDireccion = Vec::new();
+    let mut commits_y_tags_asosiados: ReferenciaCommit = Vec::new();
 
     for linea in lineas_recibidas {
         let (commit, dir) = obtener_commit_y_dir_asosiado(linea)?;

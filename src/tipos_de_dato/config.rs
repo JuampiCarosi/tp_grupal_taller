@@ -2,19 +2,12 @@ use std::path::PathBuf;
 
 use crate::utils::{self, io};
 
+use super::info_ramas::RamasInfo;
+
 #[derive(Debug, Clone)]
 pub struct RemoteInfo {
     pub nombre: String,
     pub url: String,
-}
-
-#[derive(Debug, Clone)]
-
-pub struct RamasInfo {
-    pub nombre: String,
-    pub remote: String,
-    ///ojo!! es como lo ve el server la rama, por eso PathBuf(Ej: refs/heads/master)
-    pub merge: PathBuf,
 }
 
 pub struct Config {
