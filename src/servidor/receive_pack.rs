@@ -15,9 +15,9 @@ where
 {
     println!("Se ejecuto el comando receive-pack");
     let actualizaciones = comunicacion.obtener_lineas()?;
-    let mut packfile = comunicacion.obtener_packfile()?;
+    let packfile = comunicacion.obtener_packfile()?;
 
-    Packfile::leer_packfile_y_escribir(&mut packfile, dir.clone() + "objects/")?;
+    Packfile::leer_packfile_y_escribir(&packfile, dir.clone() + "objects/")?;
     for actualizacion in &actualizaciones {
         let mut partes = actualizacion.split(' ');
         let viejo_hash_ref = partes.next().unwrap_or("");

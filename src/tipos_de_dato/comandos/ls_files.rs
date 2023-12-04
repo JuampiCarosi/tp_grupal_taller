@@ -77,13 +77,10 @@ impl LsFiles {
         let mut texto_a_mostrar = Vec::new();
         for archivo in &self.archivos {
             let path = PathBuf::from(archivo.to_string());
-            match self.arbol_commit.clone() {
-                Some(arbol) => {
-                    if arbol.contiene_hijo_por_ubicacion(path) {
-                        texto_a_mostrar.push(format!("{}\n", archivo));
-                    }
+            if let Some(arbol) = self.arbol_commit.clone() {
+                if arbol.contiene_hijo_por_ubicacion(path) {
+                    texto_a_mostrar.push(format!("{}\n", archivo));
                 }
-                None => {}
             }
         }
         texto_a_mostrar

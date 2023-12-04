@@ -30,10 +30,7 @@ impl Referencia {
     }
 
     pub fn es_tag(&self) -> bool {
-        match self {
-            Referencia::Tag(_, _) => true,
-            _ => false,
-        }
+        matches!(self, Referencia::Tag(_, _))
     }
 
     pub fn dar_nombre_local(&self) -> String {
