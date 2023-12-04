@@ -1,50 +1,22 @@
 use crate::err_comunicacion::ErrorDeComunicacion;
 use crate::tipos_de_dato::packfile::Packfile;
-use crate::utils::{self, io};
+use crate::utils::{self, strings};
 use std::io::{Read, Write};
 use std::net::TcpStream;
 use std::path::PathBuf;
 use std::str;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use super::logger::Logger;
 use super::respuesta_pedido::RespuestaDePedido;
 
 pub struct Comunicacion<T: Read + Write> {
-    flujo: Mutex<T>,
-    repositorio: String,
+    flujo: T,
+    repositorio: Option<String>,
     logger: Arc<Logger>,
 }
 
 impl<T: Write + Read> Comunicacion<T> {
-    ///Inicia el flujo de comunicacion con la direccion de servidor recivida.
-    ///Pensanda para ser usada desde el cliente
-    ///
-    /// Argumentos:
-    /// direccion_servidor: la direccion del servidor con la cual se desea iniciar
-    ///     la coneccion. Tiene el formato 'ip:puerto'
-    ///
-    /// Errores:
-    /// -Puede fallar el flujo
-    pub fn new_desde_direccion_servidor(
-        direccion_servidor: &str,
-        logger: Arc<Logger>,
-    ) -> Result<Comunicacion<TcpStream>, String> {
-        let partes: Vec<&str> = direccion_servidor.split('/').collect();
-        let ip_puerto = partes[0];
-        let repositorio = "/".to_string() + partes[1] + "/";
-        let flujo = Mutex::new(
-            TcpStream::connect(ip_puerto)
-                .map_err(|e| format!("Fallo en en la conecciion con el servidor.\n{}\n", e))?,
-        );
-        // let repositorio = "/gir/".to_string();
-        Ok(Comunicacion {
-            flujo,
-            repositorio,
-            logger,
-        })
-    }
-
     ///Crea una comunicacion en base a una url.
     /// La url tiene el formato ip:puerto/repositorio/
     pub fn new_desde_url(
@@ -53,16 +25,22 @@ impl<T: Write + Read> Comunicacion<T> {
     ) -> Result<Comunicacion<TcpStream>, String> {
         let (ip_puerto, repositorio) = utils::strings::obtener_ip_puerto_y_repositorio(url)?;
 
-        let flujo = Mutex::new(
-            TcpStream::connect(ip_puerto)
-                .map_err(|e| format!("Fallo en en la coneccion con el servidor.\n{}\n", e))?,
-        );
+        let flujo = TcpStream::connect(ip_puerto)
+            .map_err(|e| format!("Fallo en en la coneccion con el servidor.\n{}\n", e))?;
 
         Ok(Comunicacion {
             flujo,
-            repositorio,
+            repositorio: Some(repositorio),
             logger,
         })
+    }
+
+    pub fn new_para_server(flujo: TcpStream, logger: Arc<Logger>) -> Comunicacion<TcpStream> {
+        Comunicacion {
+            flujo: flujo,
+            repositorio: None,
+            logger,
+        }
     }
 
     pub fn new_para_testing(flujo: T, logger: Arc<Logger>) -> Comunicacion<T> {
@@ -70,29 +48,17 @@ impl<T: Write + Read> Comunicacion<T> {
 
         Comunicacion {
             logger,
-            flujo: Mutex::new(flujo),
-            repositorio,
+            flujo: flujo,
+            repositorio: Some(repositorio),
         }
     }
 
-    pub fn new_desde_gir_config(logger: Arc<Logger>) -> Result<Comunicacion<TcpStream>, String> {
-        let direccion_servidor = match utils::gir_config::conseguir_url_servidor() {
-            Some(direccion_servidor) => direccion_servidor,
-            None => {
-                return Err("No se pudo obtener la direccion del servidor del config".to_string())
-            }
-        };
-        Self::new_desde_direccion_servidor(&direccion_servidor, logger)
-    }
-
-    pub fn enviar(&self, mensaje: &str) -> Result<(), String> {
+    pub fn enviar(&mut self, mensaje: &str) -> Result<(), String> {
         self.enviar_bytes(mensaje.as_bytes())
     }
 
-    pub fn enviar_bytes(&self, mensaje: &[u8]) -> Result<(), String> {
+    pub fn enviar_bytes(&mut self, mensaje: &[u8]) -> Result<(), String> {
         self.flujo
-            .lock()
-            .map_err(|e| format!("Fallo en el envio del mensaje.\n{}\n", e))?
             .write_all(mensaje)
             .map_err(|e| format!("Fallo en el envio del mensaje.\n{}\n", e))
     }
@@ -102,10 +68,13 @@ impl<T: Write + Read> Comunicacion<T> {
     ///
     /// - ''git-upload-pack 'directorio'\0host='host'\0\0verision='numero de version'\0''
     ///
-    pub fn iniciar_git_upload_pack_con_servidor(&self) -> Result<(), String> {
+    pub fn iniciar_git_upload_pack_con_servidor(&mut self) -> Result<(), String> {
         self.logger.log("Iniciando git upload pack con el servidor");
         let comando = "git-upload-pack";
-        let repositorio = &self.repositorio;
+        let repositorio = self
+            .repositorio
+            .clone()
+            .ok_or("No se puede iniciar la comunicacion falta repositorio".to_string())?;
         let host = "gir.com";
         let numero_de_version = 1;
 
@@ -113,7 +82,7 @@ impl<T: Write + Read> Comunicacion<T> {
             "{} {}\0host={}\0\0version={}\0",
             comando, repositorio, host, numero_de_version
         );
-        let pedido = io::obtener_linea_con_largo_hex(&mensaje);
+        let pedido = strings::obtener_linea_con_largo_hex(&mensaje);
         self.enviar(&pedido)?;
         Ok(())
     }
@@ -123,11 +92,14 @@ impl<T: Write + Read> Comunicacion<T> {
     ///
     /// - ''git-upload-pack 'directorio'\0host='host'\0\0verision='numero de version'\0''
     ///
-    pub fn iniciar_git_recive_pack_con_servidor(&self) -> Result<(), String> {
+    pub fn iniciar_git_recive_pack_con_servidor(&mut self) -> Result<(), String> {
         self.logger
             .log("Iniciando git receive pack con el servidor");
         let comando = "git-receive-pack";
-        let repositorio = &self.repositorio;
+        let repositorio = self
+            .repositorio
+            .clone()
+            .ok_or("No se puede iniciar la comunicacion falta repositorio".to_string())?;
         let host = "gir.com";
         let numero_de_version = 1;
 
@@ -135,62 +107,37 @@ impl<T: Write + Read> Comunicacion<T> {
             "{} {}\0host={}\0\0version={}\0",
             comando, repositorio, host, numero_de_version
         );
-        let pedido = io::obtener_linea_con_largo_hex(&mensaje);
+        let pedido = strings::obtener_linea_con_largo_hex(&mensaje);
         self.enviar(&pedido)?;
         Ok(())
     }
 
-    pub fn aceptar_pedido(&self) -> Result<RespuestaDePedido, String> {
-        // lee primera parte, 4 bytes en hexadecimal indican el largo del stream
-
-        let mut tamanio_bytes = [0; 4];
-        self.flujo
-            .lock()
-            .unwrap()
-            .read(&mut tamanio_bytes)
-            .map_err(|e| e.to_string())?;
-        // largo de bytes a str
-        if tamanio_bytes == [0, 0, 0, 0] {
+    ///acepta a una sola linea de la comunicacion
+    pub fn aceptar_pedido(&mut self) -> Result<RespuestaDePedido, String> {
+        let tamanio = self.obtener_largo_de_la_linea()?;
+        if tamanio == 0 {
             return Ok(RespuestaDePedido::Terminate);
         }
-
-        let tamanio_str = str::from_utf8(&tamanio_bytes).map_err(|e| e.to_string())?;
-        // transforma str a u32
-        let tamanio = u32::from_str_radix(tamanio_str, 16).map_err(|e| e.to_string())?;
-        if tamanio == 0 {
-            return Ok(RespuestaDePedido::Mensaje('\0'.to_string()));
-        }
-        // lee el resto del flujo
-        let mut data = vec![0; (tamanio - 4) as usize];
-        self.flujo
-            .lock()
-            .unwrap()
-            .read_exact(&mut data)
-            .map_err(|e| e.to_string())?;
-        let linea = str::from_utf8(&data).map_err(|e| e.to_string())?;
-        // if linea.contains("done") {
-        // self.aceptar_pedido()?;
-        // }
-        Ok(RespuestaDePedido::Mensaje(linea.to_string()))
+        let linea = self.obtener_contenido_linea(tamanio)?;
+        Ok(RespuestaDePedido::Mensaje(linea))
     }
 
-    fn leer_del_flujo_tantos_bytes(&self, cantida_bytes_a_leer: usize) -> Result<Vec<u8>, String> {
+    fn leer_del_flujo_tantos_bytes(
+        &mut self,
+        cantida_bytes_a_leer: usize,
+    ) -> Result<Vec<u8>, String> {
         let mut data = vec![0; cantida_bytes_a_leer];
-        self.flujo
-            .lock()
-            .map_err(|e| format!("Fallo en el mutex de la lectura.\n{}\n", e))?
-            .read(&mut data)
-            .map_err(|e| {
-                format!(
-                    "Fallo en obtener la linea al leer los priemeros 4 bytes.\n{}\n",
-                    e
-                )
-            })?;
+        self.flujo.read(&mut data).map_err(|e| {
+            format!(
+                "Fallo en obtener la linea al leer los priemeros 4 bytes.\n{}\n",
+                e
+            )
+        })?;
         Ok(data)
     }
 
     fn leer_del_flujo_tantos_bytes_en_string(
-        &self,
+        &mut self,
         cantida_bytes_a_leer: usize,
     ) -> Result<String, String> {
         let data = self.leer_del_flujo_tantos_bytes(cantida_bytes_a_leer)?;
@@ -208,7 +155,7 @@ impl<T: Write + Read> Comunicacion<T> {
     /// # Resultado:
     /// -Devuelve el largo de la linea actual (ojo !!contando todavia los primeros 4 bytes
     /// de la linea donde dice el largo) en u32
-    fn obtener_largo_de_la_linea(&self) -> Result<u32, String> {
+    fn obtener_largo_de_la_linea(&mut self) -> Result<u32, String> {
         let bytes_tamanio_linea = 4;
         let tamanio_str = self.leer_del_flujo_tantos_bytes_en_string(bytes_tamanio_linea)?;
         let tamanio_u32 = u32::from_str_radix(&tamanio_str, 16)
@@ -224,7 +171,7 @@ impl<T: Write + Read> Comunicacion<T> {
     ///
     /// # Resultado
     /// - Devuelve el contendio de la linea actual
-    fn obtener_contenido_linea(&self, tamanio: u32) -> Result<String, String> {
+    fn obtener_contenido_linea(&mut self, tamanio: u32) -> Result<String, String> {
         let tamanio_sin_largo = (tamanio - 4) as usize;
         let linea = self.leer_del_flujo_tantos_bytes_en_string(tamanio_sin_largo)?;
         Ok(linea)
@@ -236,7 +183,7 @@ impl<T: Write + Read> Comunicacion<T> {
     /// # Resultado
     /// - Devuelve cada linea envia por el servidor (sin el largo)
     ///
-    pub fn obtener_lineas(&self) -> Result<Vec<String>, String> {
+    pub fn obtener_lineas(&mut self) -> Result<Vec<String>, String> {
         let mut lineas: Vec<String> = Vec::new();
         loop {
             let tamanio = self.obtener_largo_de_la_linea()?;
@@ -256,45 +203,33 @@ impl<T: Write + Read> Comunicacion<T> {
         }
         Ok(lineas)
     }
-    pub fn responder(&self, lineas: &Vec<String>) -> Result<(), String> {
+
+    ///Escribe por el flujo las lineas recibidas
+    pub fn responder(&mut self, lineas: &Vec<String>) -> Result<(), String> {
         if lineas.is_empty() {
-            self.flujo
-                .lock()
-                .unwrap()
-                .write_all(String::from("0000").as_bytes())
-                .map_err(|e| e.to_string())?;
+            self.enviar_flush_pkt()?;
             return Ok(());
         }
         for linea in lineas {
-            self.flujo
-                .lock()
-                .unwrap()
-                .write_all(linea.as_bytes())
-                .map_err(|e| e.to_string())?;
+            self.enviar(&linea)?;
         }
+
         if lineas[0].contains("ref") {
-            self.flujo
-                .lock()
-                .unwrap()
-                .write_all(String::from("0000").as_bytes())
-                .map_err(|e| e.to_string())?;
+            self.enviar_flush_pkt()?;
             return Ok(());
         }
+
         if !lineas[0].contains(&"NAK".to_string())
             && !lineas[0].contains(&"ACK".to_string())
             && !lineas[0].contains(&"done".to_string())
         {
-            self.flujo
-                .lock()
-                .unwrap()
-                .write_all(String::from("0000").as_bytes())
-                .map_err(|e| e.to_string())?;
+            self.enviar_flush_pkt()?;
         }
         Ok(())
     }
 
     //envia el pack file junto con el flush pkt
-    pub fn enviar_pack_file(&self, lineas: Vec<u8>) -> Result<(), String> {
+    pub fn enviar_pack_file(&mut self, lineas: Vec<u8>) -> Result<(), String> {
         self.enviar_bytes(&lineas)?;
         if !lineas.starts_with(b"PACK") {
             self.enviar_flush_pkt()?;
@@ -302,23 +237,17 @@ impl<T: Write + Read> Comunicacion<T> {
         Ok(())
     }
 
-    pub fn obtener_packfile(&self) -> Result<Vec<u8>, String> {
+    pub fn obtener_packfile(&mut self) -> Result<Vec<u8>, String> {
         let mut buffer = Vec::new();
         let mut temp_buffer = [0u8; 1024]; // Tamaño del búfer de lectura
 
         loop {
-            let bytes_read = self
-                .flujo
-                .lock()
-                .map_err(|e| format!("Fallo en el mutex.\n{}\n", e))?
-                .read(&mut temp_buffer)
-                .map_err(|e| {
-                    format!("Fallo en la lectura de la respuesta del servidor.\n{}\n", e)
-                })?;
+            let bytes_read = self.flujo.read(&mut temp_buffer).map_err(|e| {
+                format!("Fallo en la lectura de la respuesta del servidor.\n{}\n", e)
+            })?;
 
             // Copiar los bytes leídos al búfer principal
             buffer.extend_from_slice(&temp_buffer[0..bytes_read]);
-
             if buffer.len() > 20 && Packfile::verificar_checksum(&buffer) {
                 break;
             }
@@ -340,6 +269,8 @@ impl<T: Write + Read> Comunicacion<T> {
         obj_ids
     }
 
+    //escribe por el flujo las lineas recibidas con el formato wants. La primera linea
+    //ademas se le agregan las capacidades
     pub fn obtener_wants_pkt(
         &self,
         lineas: &Vec<String>,
@@ -353,7 +284,7 @@ impl<T: Write + Read> Comunicacion<T> {
             obj_ids[0].push_str(&(" ".to_string() + &capacidades)); // le aniado las capacidades
         }
         for linea in obj_ids {
-            lista_wants.push(io::obtener_linea_con_largo_hex(
+            lista_wants.push(strings::obtener_linea_con_largo_hex(
                 &("want ".to_string() + &linea + "\n"),
             ));
         }
@@ -374,7 +305,7 @@ impl<T: Write + Read> Comunicacion<T> {
     ///     con respecto a las del servidor
     /// - capacidades: las capacidades que va a ver en la comunicacion con el servidor
     pub fn enviar_pedidos_al_servidor_pkt(
-        &self,
+        &mut self,
         mut pedidos: Vec<String>,
         capacidades: String,
     ) -> Result<(), String> {
@@ -396,20 +327,20 @@ impl<T: Write + Read> Comunicacion<T> {
     }
     ///recibi el hash de un commit y le da el formato correcto para hacer el want
     fn dar_formato_de_solicitud(&self, hash_commit: &mut String) -> String {
-        io::obtener_linea_con_largo_hex(&("want ".to_string() + hash_commit + "\n"))
+        strings::obtener_linea_con_largo_hex(&("want ".to_string() + hash_commit + "\n"))
     }
 
     pub fn obtener_haves_pkt(&self, lineas: &Vec<String>) -> Vec<String> {
         let mut haves: Vec<String> = Vec::new();
         for linea in lineas {
-            haves.push(io::obtener_linea_con_largo_hex(
+            haves.push(strings::obtener_linea_con_largo_hex(
                 &("have ".to_string() + linea + "\n"),
             ))
         }
         haves
     }
 
-    pub fn enviar_flush_pkt(&self) -> Result<(), String> {
+    pub fn enviar_flush_pkt(&mut self) -> Result<(), String> {
         self.enviar("0000")?;
         Ok(())
     }
@@ -422,7 +353,7 @@ impl<T: Write + Read> Comunicacion<T> {
     /// - hash_objetos: lista con todos los hash de los objetos que ya se tiene y que no debe mandar
     ///     el servidor
     pub fn enviar_lo_que_tengo_al_servidor_pkt(
-        &self,
+        &mut self,
         hash_objetos: &Vec<String>,
     ) -> Result<(), String> {
         for hash_objeto in hash_objetos {
@@ -438,10 +369,10 @@ impl<T: Write + Read> Comunicacion<T> {
     ///Envia la referencia a actulizar al servidor con el formato correspondiente. La parte
     /// del envio de referencia en push
     pub fn enviar_referencia(
-        &self,
+        &mut self,
         referencia_actualizar: (String, String, PathBuf),
     ) -> Result<(), String> {
-        self.enviar(&utils::io::obtener_linea_con_largo_hex(&format!(
+        self.enviar(&utils::strings::obtener_linea_con_largo_hex(&format!(
             "{} {} {}\n",
             referencia_actualizar.0,
             referencia_actualizar.1,
@@ -454,7 +385,7 @@ impl<T: Write + Read> Comunicacion<T> {
 
     ///recibi el hash de un objeto y le da el formato correcto para hacer el have
     fn dar_formato_have(&self, hash_commit: &str) -> String {
-        io::obtener_linea_con_largo_hex(&("have ".to_string() + hash_commit + "\n"))
+        strings::obtener_linea_con_largo_hex(&("have ".to_string() + hash_commit + "\n"))
     }
 }
 

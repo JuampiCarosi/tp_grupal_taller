@@ -20,4 +20,15 @@ pub fn obtener_ip_puerto_y_repositorio(url: &str) -> Result<(String, String), St
     Ok((ip_puerto_str.to_string(), "/".to_string() + repositorio))
 }
 
+//le calcula en hexa el largo a una linea
+pub fn calcular_largo_hex(line: &str) -> String {
+    let largo = line.len() + 4; // el + 4 es por los 4 bytes que indican el largo
+    let largo_hex = format!("{:x}", largo);
+    format!("{:0>4}", largo_hex)
+}
 
+///le agrega a la linea al principio el largo en hexa 
+pub fn obtener_linea_con_largo_hex(line: &str) -> String {
+    let largo_hex = calcular_largo_hex(line);
+    format!("{}{}", largo_hex, line)
+}

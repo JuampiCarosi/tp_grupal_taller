@@ -3,8 +3,8 @@ use std::{io, path::PathBuf};
 
 use crate::err_comunicacion::ErrorDeComunicacion;
 
-use super::io as gir_io;
 use super::path_buf;
+use super::{io as gir_io, strings};
 
 ///Devuelve todos los objetos dentro de objetcs (sus hash)
 pub fn obtener_objetos_del_dir(dir: &PathBuf) -> Result<Vec<String>, String> {
@@ -102,4 +102,22 @@ pub fn obtener_objetos(dir: PathBuf) -> Result<String, ErrorDeComunicacion> {
         io::ErrorKind::NotFound,
         "Hubo un error al obtener el objeto",
     )))
+}
+
+// aca depende de si esta multi_ack y esas cosas, esta es para cuando no hay multi_ack ni multi_ack_mode
+pub fn obtener_objetos_en_comun(nombres_archivos: Vec<String>, dir: &str) -> Vec<String> {
+    let mut ack = Vec::new();
+    for nombre in nombres_archivos {
+        let dir_archivo = format!("{}{}/{}", dir, &nombre[..2], &nombre[2..]);
+        if PathBuf::from(dir_archivo.clone()).exists() {
+            ack.push(strings::obtener_linea_con_largo_hex(
+                ("ACK ".to_string() + &nombre + "\n").as_str(),
+            ));
+            break;
+        }
+    }
+    if ack.is_empty() {
+        ack.push(strings::obtener_linea_con_largo_hex("NAK\n"));
+    }
+    ack
 }

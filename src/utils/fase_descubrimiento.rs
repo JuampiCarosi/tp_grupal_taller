@@ -21,7 +21,7 @@ use super::ramas;
 ///     carpeta de la rama en el servidor(ojo!! la direccion para el servidor no para el local)
 /// - vector de tuplas con el hash del commit y el tag asosiado
 pub fn fase_de_descubrimiento<T: Write + Read>(
-    comunicacion: &Comunicacion<T>,
+    comunicacion: &mut Comunicacion<T>,
 ) -> Result<
     (
         Vec<String>,
@@ -32,12 +32,13 @@ pub fn fase_de_descubrimiento<T: Write + Read>(
     String,
 > {
     let mut lineas_recibidas = comunicacion.obtener_lineas()?;
-    let _version = lineas_recibidas.remove(0); //la version del server
-    let segunda_linea = lineas_recibidas.remove(0);
-    if segunda_linea.contains(&"ERR".to_string()) {
-        let mensaje_error: Vec<&str> = segunda_linea.splitn(2, ' ').collect();
-        return Err(format!("Error {}", mensaje_error[1]));
+    let primera_linea = lineas_recibidas.remove(0);
+    if &primera_linea != "version 1 " {
+        let mensaje_error: Vec<&str> = primera_linea.splitn(2, ' ').collect();
+        return Err(format!("Error, {}", mensaje_error[1]));
     }
+    let _version = primera_linea; //la version del server
+    let segunda_linea = lineas_recibidas.remove(0);
 
     let (contenido, capacidades) = separar_capacidades(&segunda_linea)?;
 
