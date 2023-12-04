@@ -1,4 +1,4 @@
-use std::{net::TcpStream, sync::Arc};
+use std::sync::Arc;
 
 use super::{
     comandos::{
@@ -23,7 +23,7 @@ pub enum Comando {
     Branch(Branch),
     Commit(Commit),
     Clone(Clone),
-    Fetch(Fetch<TcpStream>),
+    Fetch(Fetch),
     ShowRef(ShowRef),
     Push(Push),
     Pull(Pull),
@@ -58,7 +58,7 @@ impl Comando {
             "branch" => Comando::Branch(Branch::from(&mut vector_args, logger)?),
             "checkout" => Comando::Checkout(Checkout::from(vector_args, logger)?),
             "commit" => Comando::Commit(Commit::from(&mut vector_args, logger)?),
-            "fetch" => Comando::Fetch(Fetch::<TcpStream>::new(vector_args, logger)?),
+            "fetch" => Comando::Fetch(Fetch::new(vector_args, logger)?),
             "clone" => Comando::Clone(Clone::from(&mut vector_args, logger)?),
             "push" => Comando::Push(Push::new(&mut vector_args, logger)?),
             "pull" => Comando::Pull(Pull::from(vector_args, logger)?),

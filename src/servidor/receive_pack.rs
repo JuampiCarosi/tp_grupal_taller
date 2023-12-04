@@ -36,6 +36,7 @@ where
 mod test {
     use super::*;
     use crate::tipos_de_dato::{comunicacion::Comunicacion, logger::Logger, packfile};
+    use crate::utils;
     use std::io::{Read, Write};
     use std::path::PathBuf;
     use std::sync::Arc;
@@ -72,7 +73,7 @@ mod test {
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/fetch_02.txt")).unwrap());
         let mut comunicacion = Comunicacion::new_para_testing(mock, logger.clone());
 
-        let actualizaciones = io::obtener_linea_con_largo_hex(
+        let actualizaciones = utils::strings::obtener_linea_con_largo_hex(
             &("0".repeat(40) + " " + &"1".repeat(40) + " refs/heads/master\n"),
         );
         comunicacion.enviar(&actualizaciones).unwrap();

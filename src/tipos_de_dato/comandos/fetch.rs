@@ -14,51 +14,23 @@ const SE_ENVIO_ALGUN_PEDIDO: bool = true;
 const NO_SE_ENVIO_NINGUN_PEDIDO: bool = false;
 const GIR_FETCH: &str = "gir fetch <remoto>";
 
-pub struct Fetch<T: Write + Read> {
+pub struct Fetch {
     remoto: String,
-    comunicacion: Comunicacion<T>,
     capacidades_local: Vec<String>,
     logger: Arc<Logger>,
 }
 
-impl<T: Write + Read> Fetch<T> {
-    pub fn new(args: Vec<String>, logger: Arc<Logger>) -> Result<Fetch<TcpStream>, String> {
+impl Fetch {
+    pub fn new(args: Vec<String>, logger: Arc<Logger>) -> Result<Fetch, String> {
         Self::verificar_argumentos(&args)?;
 
         let remoto = Self::obtener_remoto(args)?;
-        let url = Self::obtener_url(&remoto)?;
 
         let capacidades_local = vec!["ofs-delta".to_string()];
         //esto lo deberia tener la comunicacion creo yo
 
-        //fijarse si sigue siendo necesario el arc
-        let comunicacion = Comunicacion::<TcpStream>::new_desde_url(&url, logger.clone())?;
-
         Ok(Fetch {
             remoto,
-            comunicacion,
-            capacidades_local,
-            logger,
-        })
-    }
-
-    #[cfg(test)]
-    fn new_testing(
-        mut arg: Vec<String>,
-        logger: Arc<Logger>,
-        comunicacion: Comunicacion<T>,
-    ) -> Result<Fetch<T>, String> {
-        let remoto = if !arg.is_empty() {
-            arg.remove(0)
-        } else {
-            "origin".to_string()
-        };
-
-        let capacidades_local = Vec::new();
-
-        Ok(Fetch {
-            remoto,
-            comunicacion,
             capacidades_local,
             logger,
         })
@@ -76,7 +48,7 @@ impl<T: Write + Read> Fetch<T> {
     }
 
     ///Le pide al config el url asosiado a la rama
-    fn obtener_url(remoto: &str) -> Result<String, String> {
+    fn obtener_url(&self, remoto: &str) -> Result<String, String> {
         Config::leer_config()?.obtenet_url_asosiado_remoto(remoto)
     }
 
@@ -127,29 +99,39 @@ impl<T: Write + Read> Fetch<T> {
         capacidades_servidor: Vec<String>,
         commits_cabezas_y_dir_rama_asosiado: &Vec<(String, PathBuf)>,
         commit_y_tags_asosiado: &Vec<(String, PathBuf)>,
+        comunicacion: &mut Comunicacion<TcpStream>,
     ) -> Result<bool, String> {
         // no hay pedidos :D
         if !self.enviar_pedidos(
             &capacidades_servidor,
             commits_cabezas_y_dir_rama_asosiado,
             commit_y_tags_asosiado,
+            comunicacion,
         )? {
             return Ok(NO_SE_ENVIO_NINGUN_PEDIDO);
         }
 
-        self.enviar_lo_que_tengo()?;
+        self.enviar_lo_que_tengo(comunicacion)?;
 
         self.logger
             .log("Se completo correctamente la fase de negociacion en Fetch");
         Ok(SE_ENVIO_ALGUN_PEDIDO)
     }
 
-    fn recibir_packfile_y_guardar_objetos(&self) -> Result<(), String> {
-        // aca para git daemon hay que poner un recibir linea mas porque envia un ACK repetido (No entiendo por que...)
-        println!("Obteniendo paquete..");
-        let packfile = self.comunicacion.obtener_packfile()?;
+    fn recibir_packfile_y_guardar_objetos(
+        &self,
+        comunicacion: &mut Comunicacion<TcpStream>,
+    ) -> Result<(), String> {
+        self.logger.log("Obteniendo paquete..");
+
+        let packfile = comunicacion.obtener_packfile()?;
         let primeros_bytes = &packfile[..4];
         if primeros_bytes != "PACK".as_bytes() {
+            self.logger.log(&format!(
+                "Se recibio: {}",
+                String::from_utf8_lossy(packfile.as_slice())
+            ));
+
             return Err(format!(
                 "Error al recibir el packfile, se recibio: {}",
                 String::from_utf8_lossy(packfile.as_slice())
@@ -162,9 +144,8 @@ impl<T: Write + Read> Fetch<T> {
 
     ///Envia un mensaje al servidor para avisarle que ya se termino de de mandarle lineas.
     /// Para seguir el protocolo el mensaje que se envia es done
-    fn finalizar_pedido(&self) -> Result<(), String> {
-        self.comunicacion
-            .enviar(&io::obtener_linea_con_largo_hex("done\n"))
+    fn finalizar_pedido(&self, comunicacion: &mut Comunicacion<TcpStream>) -> Result<(), String> {
+        comunicacion.enviar(&utils::strings::obtener_linea_con_largo_hex("done\n"))
     }
 
     ///Actuliza el archivo head correspondiente al remoto que se hizo fetch o si no existe lo crea.
@@ -189,29 +170,27 @@ impl<T: Write + Read> Fetch<T> {
     }
 
     ///Envia todo los objetos (sus hash) que ya se tienen y por lo tanto no es necesario que el servidor manda
-    fn enviar_lo_que_tengo(&self) -> Result<(), String> {
-        //ESTAMOS ENVIANDO TODOS LOS OBJETOS QUE TENEMOS SIN DISTINCION, DE QUE RAMA ESTAN. FUNCIONA
-        //PERO SE PODRIA ENVIAR SOLO DE LAS QUE LE PEDISTE
+    fn enviar_lo_que_tengo(
+        &self,
+        comunicacion: &mut Comunicacion<TcpStream>,
+    ) -> Result<(), String> {
         let objetos = objects::obtener_objetos_del_dir(&PathBuf::from("./.gir/objects"))?;
 
         if !objetos.is_empty() {
-            self.comunicacion
-                .enviar_lo_que_tengo_al_servidor_pkt(&objetos)?;
-            self.recibir_nack()?;
-            self.finalizar_pedido()?
+            comunicacion.enviar_lo_que_tengo_al_servidor_pkt(&objetos)?;
+            self.recivir_nack(comunicacion)?;
+            self.finalizar_pedido(comunicacion)?
         } else {
-            self.finalizar_pedido()?;
-            self.recibir_nack()?;
+            self.finalizar_pedido(comunicacion)?;
+            self.recivir_nack(comunicacion)?;
         }
         self.logger.log("Se envio con exito lo que tengo en Fetch");
         Ok(())
     }
 
     ///Recibe el la repusta Nack del servidor del envio de HAVE
-    fn recibir_nack(&self) -> Result<(), String> {
-        //POR AHORA NO HACEMOS, NADA CON ESTO: EVALUAR QUE HACER. SOLO LEERMOS
-        //PARA SEGUIR EL FLUJO
-        let _acks_nak = self.comunicacion.obtener_lineas()?;
+    fn recivir_nack(&self, comunicacion: &mut Comunicacion<TcpStream>) -> Result<(), String> {
+        let _acks_nak = comunicacion.obtener_lineas()?;
         Ok(())
     }
 
@@ -225,6 +204,7 @@ impl<T: Write + Read> Fetch<T> {
         capacidades_servidor: &[String],
         commits_cabezas_y_dir_rama_asosiado: &Vec<(String, PathBuf)>,
         commit_y_tags_asosiado: &Vec<(String, PathBuf)>,
+        comunicacion: &mut Comunicacion<TcpStream>,
     ) -> Result<bool, String> {
         let capacidades_a_usar_en_la_comunicacion =
             self.obtener_capacidades_en_comun_con_el_servidor(capacidades_servidor);
@@ -240,14 +220,14 @@ impl<T: Write + Read> Fetch<T> {
         .concat();
 
         if pedidos.is_empty() {
-            self.comunicacion.enviar_flush_pkt()?;
+            comunicacion.enviar_flush_pkt()?;
             self.logger.log(
                 "Se completo correctamente el envio de pedidos en Fetch pero no se envio nada",
             );
             return Ok(NO_SE_ENVIO_NINGUN_PEDIDO);
         }
 
-        self.comunicacion
+        comunicacion
             .enviar_pedidos_al_servidor_pkt(pedidos, capacidades_a_usar_en_la_comunicacion)?;
 
         self.logger
@@ -359,8 +339,9 @@ impl<T: Write + Read> Fetch<T> {
     /// - vector de tuplas con los hash del commit cabeza de rama y la direccion de la
     ///     carpeta de la rama en el servidor(ojo!! la direccion para el servidor no para el local)
     /// - vector de tuplas con el hash del commit y el tag asosiado
-    fn fase_de_descubrimiento(
+    fn fase_de_descubrimiento<T: Write + Read>(
         &self,
+        comunicacion: &mut Comunicacion<T>,
     ) -> Result<
         (
             Vec<String>,
@@ -370,8 +351,8 @@ impl<T: Write + Read> Fetch<T> {
         ),
         String,
     > {
-        let resultado = utils::fase_descubrimiento::fase_de_descubrimiento(&self.comunicacion)?;
-        
+        let resultado = utils::fase_descubrimiento::fase_de_descubrimiento(comunicacion)?;
+
         self.logger.log(&format!(
             "Se ejecuto correctamte la fase de decubrimiento en Fetch: {:?}",
             resultado
@@ -399,29 +380,37 @@ impl<T: Write + Read> Fetch<T> {
             .log("Actualizacion de ramas remotas en fetch exitosa");
         Ok(())
     }
+
+    fn iniciar_git_upload_pack_con_servidor(&self) -> Result<Comunicacion<TcpStream>, String> {
+        let url = self.obtener_url(&self.remoto)?;
+        let mut comunicacion = Comunicacion::<TcpStream>::new_desde_url(&url, self.logger.clone())?;
+        comunicacion.iniciar_git_upload_pack_con_servidor()?;
+        Ok(comunicacion)
+    }
 }
 
-impl Ejecutar for Fetch<TcpStream> {
+impl Ejecutar for Fetch {
     fn ejecutar(&mut self) -> Result<String, String> {
         self.logger.log("Se ejecuto el comando fetch");
-        self.comunicacion.iniciar_git_upload_pack_con_servidor()?;
+        let mut comunicacion = self.iniciar_git_upload_pack_con_servidor()?;
 
         let (
             capacidades_servidor,
             commit_head_remoto,
             commits_cabezas_y_dir_rama_asosiado,
             commits_y_tags_asosiados,
-        ) = self.fase_de_descubrimiento()?;
+        ) = self.fase_de_descubrimiento(&mut comunicacion)?;
 
         if !self.fase_de_negociacion(
             capacidades_servidor,
             &commits_cabezas_y_dir_rama_asosiado,
             &commits_y_tags_asosiados,
+            &mut comunicacion,
         )? {
             return Ok(String::from("El cliente esta actualizado"));
         }
 
-        self.recibir_packfile_y_guardar_objetos()?;
+        self.recibir_packfile_y_guardar_objetos(&mut comunicacion)?;
 
         self.actualizar_ramas_locales_del_remoto(&commits_cabezas_y_dir_rama_asosiado)?;
 
@@ -446,6 +435,134 @@ mod test {
     };
 
     use super::Fetch;
+    #[test]
+    fn test01_la_fase_de_descubrimiento_funcion() {
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/fetch_01.txt")).unwrap());
+        utils::testing::limpiar_archivo_gir(logger.clone());
+        let contenido_mock = "000eversion 1 \
+        00887217a7c7e582c46cec22a130adf4b9d7d950fba0 HEAD\0multi_ack thin-pack \
+        side-band side-band-64k ofs-delta shallow no-progress include-tag \
+        00441d3fcd5ced445d1abc402225c0b8a1299641f497 refs/heads/integration \
+        003f7217a7c7e582c46cec22a130adf4b9d7d950fba0 refs/heads/master \
+        003cb88d2441cac0977faf98efc80305012112238d9d refs/tags/v0.9 \
+        003c525128480b96c89e6418b1e40909bf6c5b2d580f refs/tags/v1.0 \
+        003fe92df48743b7bc7d26bcaabfddde0a1e20cae47c refs/tags/v1.0^{} \
+        0000";
+
+        let mock = MockTcpStream {
+            lectura_data: contenido_mock.as_bytes().to_vec(),
+            escritura_data: Vec::new(),
+        };
+
+        let mut comunicacion = Comunicacion::new_para_testing(mock, logger.clone());
+        let remoto = "origin".to_string();
+        utils::testing::anadir_remoto_default_config(&remoto, logger.clone());
+        let (capacidades, commit_head, commits_y_ramas, commits_y_tags) =
+            Fetch::new(vec![remoto], logger)
+                .unwrap()
+                .fase_de_descubrimiento(&mut comunicacion)
+                .unwrap();
+
+        let capacidades_esperadas =
+            "multi_ack thin-pack side-band side-band-64k ofs-delta shallow no-progress include-tag";
+        assert_eq!(capacidades_esperadas, capacidades.join(" "));
+
+        let commit_head_esperado = "7217a7c7e582c46cec22a130adf4b9d7d950fba0";
+        assert_eq!(commit_head_esperado, commit_head.unwrap());
+
+        let commits_y_ramas_esperadas = vec![
+            (
+                "1d3fcd5ced445d1abc402225c0b8a1299641f497".to_string(),
+                PathBuf::from("refs/heads/integration"),
+            ),
+            (
+                "7217a7c7e582c46cec22a130adf4b9d7d950fba0".to_string(),
+                PathBuf::from("refs/heads/master"),
+            ),
+        ];
+        assert_eq!(commits_y_ramas_esperadas, commits_y_ramas);
+
+        let commits_y_tags_esperados = vec![
+            (
+                "b88d2441cac0977faf98efc80305012112238d9d".to_string(),
+                PathBuf::from("refs/tags/v0.9"),
+            ),
+            (
+                "525128480b96c89e6418b1e40909bf6c5b2d580f".to_string(),
+                PathBuf::from("refs/tags/v1.0"),
+            ),
+            (
+                "e92df48743b7bc7d26bcaabfddde0a1e20cae47c".to_string(),
+                PathBuf::from("refs/tags/v1.0^{}".to_string()),
+            ),
+        ];
+        assert_eq!(commits_y_tags_esperados, commits_y_tags)
+    }
+
+    #[test]
+    fn test02_la_fase_de_descubrimiento_funcion_aun_si_no_hay_un_head() {
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/fetch_02.txt")).unwrap());
+        utils::testing::limpiar_archivo_gir(logger.clone());
+
+        let contenido_mock = "000eversion 1 \
+        009a1d3fcd5ced445d1abc402225c0b8a1299641f497 refs/heads/integration\0multi_ack thin-pack \
+        side-band side-band-64k ofs-delta shallow no-progress include-tag \
+        003f7217a7c7e582c46cec22a130adf4b9d7d950fba0 refs/heads/master \
+        003cb88d2441cac0977faf98efc80305012112238d9d refs/tags/v0.9 \
+        003c525128480b96c89e6418b1e40909bf6c5b2d580f refs/tags/v1.0 \
+        003fe92df48743b7bc7d26bcaabfddde0a1e20cae47c refs/tags/v1.0^{} \
+        0000";
+
+        let mock = MockTcpStream {
+            lectura_data: contenido_mock.as_bytes().to_vec(),
+            escritura_data: Vec::new(),
+        };
+
+        let mut comunicacion = Comunicacion::new_para_testing(mock, logger.clone());
+
+        let remoto = "origin".to_string();
+        utils::testing::anadir_remoto_default_config(&remoto, logger.clone());
+
+        let (capacidades, commit_head, commits_y_ramas, commits_y_tags) =
+            Fetch::new(vec![remoto], logger)
+                .unwrap()
+                .fase_de_descubrimiento(&mut comunicacion)
+                .unwrap();
+
+        let capacidades_esperadas =
+            "multi_ack thin-pack side-band side-band-64k ofs-delta shallow no-progress include-tag";
+        assert_eq!(capacidades_esperadas, capacidades.join(" "));
+
+        assert_eq!(Option::None, commit_head);
+
+        let commits_y_ramas_esperadas = vec![
+            (
+                "1d3fcd5ced445d1abc402225c0b8a1299641f497".to_string(),
+                PathBuf::from("refs/heads/integration"),
+            ),
+            (
+                "7217a7c7e582c46cec22a130adf4b9d7d950fba0".to_string(),
+                PathBuf::from("refs/heads/master"),
+            ),
+        ];
+        assert_eq!(commits_y_ramas_esperadas, commits_y_ramas);
+
+        let commits_y_tags_esperados = vec![
+            (
+                "b88d2441cac0977faf98efc80305012112238d9d".to_string(),
+                PathBuf::from("refs/tags/v0.9"),
+            ),
+            (
+                "525128480b96c89e6418b1e40909bf6c5b2d580f".to_string(),
+                PathBuf::from("refs/tags/v1.0"),
+            ),
+            (
+                "e92df48743b7bc7d26bcaabfddde0a1e20cae47c".to_string(),
+                PathBuf::from("refs/tags/v1.0^{}".to_string()),
+            ),
+        ];
+        assert_eq!(commits_y_tags_esperados, commits_y_tags)
+    }
 
     #[test]
     fn test_03_los_tags_se_gurdan_correctamtene() {
@@ -468,13 +585,10 @@ mod test {
             ),
         ];
 
-        let mock = MockTcpStream {
-            lectura_data: Vec::new(),
-            escritura_data: Vec::new(),
-        };
+        let remoto = "origin".to_string();
+        utils::testing::anadir_remoto_default_config(&remoto, logger.clone());
 
-        let comunicacion = Comunicacion::new_para_testing(mock, logger.clone());
-        Fetch::new_testing(vec![], logger, comunicacion)
+        Fetch::new(vec![remoto], logger)
             .unwrap()
             .guardar_los_tags(&commits_y_tags)
             .unwrap();
@@ -498,19 +612,14 @@ mod test {
         let remoto = "san-siro".to_string();
         let rama_remota = "tomate".to_string();
         let rama_contenido = "b88d2441cac0977faf98efc80305012112238d9d".to_string();
+        utils::testing::anadir_remoto_default_config(&remoto, logger.clone());
 
         let commits_y_ramas = vec![(
             rama_contenido.clone(),
             PathBuf::from(format!("refs/heads/{}", rama_remota)),
         )];
 
-        let mock = MockTcpStream {
-            lectura_data: Vec::new(),
-            escritura_data: Vec::new(),
-        };
-
-        let comunicacion = Comunicacion::new_para_testing(mock, logger.clone());
-        Fetch::new_testing(vec![remoto.clone()], logger, comunicacion)
+        Fetch::new(vec![remoto.clone()], logger)
             .unwrap()
             .actualizar_ramas_locales_del_remoto(&commits_y_ramas)
             .unwrap();
@@ -529,20 +638,14 @@ mod test {
         let remoto = "san-siro".to_string();
         let rama_remota = "tomate".to_string();
         let rama_contenido_actualizar = "b88d2441cac0977faf98efc80305012112238d9d".to_string();
-        utils::testing::escribir_rama_remota(&remoto, &rama_remota);
+        utils::testing::anadir_remoto_default_config(&remoto, logger.clone());
 
         let commits_y_ramas = vec![(
             rama_contenido_actualizar.clone(),
             PathBuf::from(format!("refs/heads/{}", rama_remota)),
         )];
 
-        let mock = MockTcpStream {
-            lectura_data: Vec::new(),
-            escritura_data: Vec::new(),
-        };
-
-        let comunicacion = Comunicacion::new_para_testing(mock, logger.clone());
-        Fetch::new_testing(vec![remoto.clone()], logger, comunicacion)
+        Fetch::new(vec![remoto.clone()], logger)
             .unwrap()
             .actualizar_ramas_locales_del_remoto(&commits_y_ramas)
             .unwrap();
@@ -561,19 +664,14 @@ mod test {
         let remoto = "san-siro".to_string();
         let rama_remota = "tomate".to_string();
         let rama_contenido = "b88d2441cac0977faf98efc80305012112238d9d".to_string();
+        utils::testing::anadir_remoto_default_config(&remoto, logger.clone());
 
         let commits_y_ramas = vec![(
             rama_contenido.clone(),
             PathBuf::from(format!("refs/heads/{}", rama_remota)),
         )];
 
-        let mock = MockTcpStream {
-            lectura_data: Vec::new(),
-            escritura_data: Vec::new(),
-        };
-
-        let comunicacion = Comunicacion::new_para_testing(mock, logger.clone());
-        Fetch::new_testing(vec![remoto.clone()], logger, comunicacion)
+        Fetch::new(vec![remoto.clone()], logger)
             .unwrap()
             .actualizar_ramas_locales_del_remoto(&commits_y_ramas)
             .unwrap();
@@ -583,37 +681,4 @@ mod test {
                 .unwrap();
         assert_eq!(rama_contendio_obtenido, rama_contenido);
     }
-    // #[test]
-    // fn test03_la_fase_de_negociacion_funciona(){
-    //     let nuevo_dir = "test03_fetch";
-    //     let viejo_dir = crear_y_cambiar_directorio(nuevo_dir);
-
-    //     let mock = MockTcpStream {
-    //         lectura_data: Vec::new(),
-    //         escritura_data: Vec::new(),
-    //     };
-
-    //     let comunicacion = Comunicacion::new_para_testing(mock);
-    //     let logger = Rc::new(Logger::new(PathBuf::from(".log.txt")).unwrap());
-    //     let capacidades_servidor = vec!["multi_ack".to_string(), "thin-pack".to_string(), "side-band".to_string(), "side-band-64k".to_string(), "ofs-delta".to_string(), "shallow".to_string(), "no-progress".to_string(),  "include-tag".to_string()];
-    //     let commits_y_ramas = vec![("1d3fcd5ced445d1abc402225c0b8a1299641f497".to_string(), PathBuf::from("refs/heads/integration")),("7217a7c7e582c46cec22a130adf4b9d7d950fba0".to_string(), PathBuf::from("refs/heads/master"))];
-
-    //     Fetch::new_testing(logger, comunicacion).unwrap().fase_de_negociacion(capacidades_servidor, &commits_y_ramas).unwrap();
-
-    //     volver_al_viejo_dir_y_borrar_el_nuevo(nuevo_dir, viejo_dir);
-    // }
-
-    // fn volver_al_viejo_dir_y_borrar_el_nuevo(nuevo_dir: &str, viejo_dir: PathBuf) {
-    //     std::env::set_current_dir(viejo_dir).unwrap();
-    //     std::fs::remove_dir_all(nuevo_dir).unwrap();
-    // }
-
-    // fn crear_y_cambiar_directorio(nombre: &str)-> PathBuf{
-    //     let viejo_dir = env::current_dir().unwrap();
-
-    //     fs::create_dir_all(nombre).unwrap();
-    //     std::env::set_current_dir(nombre).unwrap();
-
-    //     viejo_dir
-    // }
 }
