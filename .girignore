@@ -4,3 +4,8 @@
 .girignore
 .log.txt
 tes_dir/
+diagrama.png
+target/
+.DS_Store
+.gir/
+.git/

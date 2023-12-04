@@ -1,9 +1,13 @@
 mod estrategias_conflictos;
 
-use crate::tipos_de_dato::{
-    conflicto::Conflicto,
-    lado_conflicto::LadoConflicto,
-    region::{unificar_regiones, Region},
+use crate::{
+    tipos_de_dato::{
+        conflicto::Conflicto,
+        lado_conflicto::LadoConflicto,
+        objeto::Objeto,
+        region::{unificar_regiones, Region},
+    },
+    utils::ramas,
 };
 use std::{
     path::{self, Path, PathBuf},
@@ -48,7 +52,10 @@ impl Merge {
             return Err("Cantidad de argumentos invalida".to_string());
         }
         let branch_a_mergear = args.pop().unwrap();
-        let branch_actual = Commit::obtener_branch_actual()?;
+        if !ramas::existe_la_rama(&branch_a_mergear) {
+            return Err("La rama a mergear no existe".to_string());
+        }
+        let branch_actual = ramas::obtener_rama_actual()?;
         Ok(Merge {
             logger,
             branch_actual,
@@ -65,9 +72,7 @@ impl Merge {
     /// Devuelve el commit base mas cercano entre dos ramas
     /// Por ejemplo en el arbol a-b-c vs d-b-e, el commit base es b
     fn obtener_commit_base_entre_dos_branches(&self) -> Result<String, String> {
-        // ab5f798d5ab
-        let hash_commit_actual = Commit::obtener_hash_commit_actual()?;
-        // ab5f798d5ab
+        let hash_commit_actual = ramas::obtener_hash_commit_asociado_rama_actual()?;
         let hash_commit_a_mergear = Self::obtener_commit_de_branch(&self.branch_a_mergear)?;
 
         let commit_obj_actual = CommitObj::from_hash(hash_commit_actual, self.logger.clone())?;
@@ -82,7 +87,6 @@ impl Merge {
         for commit_actual in commits_branch_actual {
             for commit_branch_merge in commits_branch_a_mergear.clone() {
                 if commit_actual.hash == commit_branch_merge.hash {
-                    // ab5f798d5ab
                     return Ok(commit_actual.hash);
                 }
             }
@@ -216,18 +220,14 @@ impl Merge {
         posibles_conflictos
     }
 
-    /// Devuelve el contenido del archivo mergeado y un booleano que indica si hubo conflictos
-    fn mergear_diffs(
-        diff_actual: Vec<(usize, TipoDiff)>,
-        diff_a_mergear: Vec<(usize, TipoDiff)>,
-        archivo_base: &str,
-    ) -> (String, bool) {
-        let mut hubo_conflictos = false;
-        let lineas_archivo_base = archivo_base.split('\n').collect::<Vec<&str>>();
+    fn resolver_conflictos_totales(
+        posibles_conflictos: Vec<Conflicto>,
+        lineas_archivo_base: Vec<&str>,
+        mut anterior_fue_conflicto: bool,
+    ) -> (Vec<Region>, bool) {
         let mut contenido_por_regiones: Vec<Region> = Vec::new();
-        let posibles_conflictos = Self::obtener_posibles_conflictos(diff_actual, diff_a_mergear);
+        let mut hubo_conflictos = false;
 
-        let mut anterior_fue_conflicto = false;
         for i in 0..posibles_conflictos.len() {
             let posible_conflicto = &posibles_conflictos[i];
             println!("{:?}", posible_conflicto);
@@ -256,6 +256,27 @@ impl Merge {
             contenido_por_regiones.push(region);
         }
 
+        (contenido_por_regiones, hubo_conflictos)
+    }
+
+    /// Teniendo el diff de dos archivos respecto a una base devuelve el contenido
+    /// del archivo mergeado y un booleano que indica si hubo conflictos
+    fn mergear_diffs(
+        diff_actual: Vec<(usize, TipoDiff)>,
+        diff_a_mergear: Vec<(usize, TipoDiff)>,
+        archivo_base: &str,
+    ) -> (String, bool) {
+        let lineas_archivo_base = archivo_base.split('\n').collect::<Vec<&str>>();
+        let posibles_conflictos = Self::obtener_posibles_conflictos(diff_actual, diff_a_mergear);
+
+        let anterior_fue_conflicto = false;
+
+        let (contenido_por_regiones, hubo_conflictos) = Self::resolver_conflictos_totales(
+            posibles_conflictos,
+            lineas_archivo_base,
+            anterior_fue_conflicto,
+        );
+
         let regiones_unificadas = unificar_regiones(contenido_por_regiones);
 
         let mut resultado = String::new();
@@ -267,8 +288,15 @@ impl Merge {
         (resultado, hubo_conflictos)
     }
 
-    /// Realiza un auto-merge, realizando un merge de cada file que difiera entre los dos commits
-    fn automerge(&self, commit_base: &str) -> Result<String, String> {
+    /// Obtiene los arboles necesarios para realizar el merge.
+    /// El arbol base es el arbol del commit base, el arbol branch_actual es el arbol del commit
+    /// de la rama actual, y el arbol branch_a_mergear es el arbol del commit de la rama a mergear.
+    /// La base es el primer commit en comun entre ambas ramas.
+    /// Devuelve un error si no se puede conseguir alguno de los arboles.
+    fn obtener_arboles_para_ejecutar_merge(
+        &self,
+        commit_base: &str,
+    ) -> Result<(Tree, Tree, Tree), String> {
         let hash_tree_base =
             write_tree::conseguir_arbol_from_hash_commit(commit_base, ".gir/objects/")?;
         let tree_base = Tree::from_hash(&hash_tree_base, PathBuf::from("."), self.logger.clone())?;
@@ -277,76 +305,153 @@ impl Merge {
             Self::obtener_arbol_commit_actual(&self.branch_actual, self.logger.clone())?;
         let tree_branch_a_mergear =
             Self::obtener_arbol_commit_actual(&self.branch_a_mergear, self.logger.clone())?;
+        Ok((tree_base, tree_branch_actual, tree_branch_a_mergear))
+    }
 
+    /// Recorrer los tres arboles indicados y obtiene todos los objetos asociados a los archivos hoja
+    /// de cada uno.
+    fn obtener_nodos_hoja_de_arboles_a_mergear(
+        tree_base: Tree,
+        tree_branch_actual: Tree,
+        tree_branch_a_mergear: Tree,
+    ) -> (Vec<Objeto>, Vec<Objeto>, Vec<Objeto>) {
         let nodos_hoja_base = tree_base.obtener_objetos_hoja();
         let nodos_hoja_branch_actual = tree_branch_actual.obtener_objetos_hoja();
         let nodos_hoja_branch_a_mergear = tree_branch_a_mergear.obtener_objetos_hoja();
+        (
+            nodos_hoja_base,
+            nodos_hoja_branch_actual,
+            nodos_hoja_branch_a_mergear,
+        )
+    }
 
-        let mut objetos_index: Vec<ObjetoIndex> = Vec::new();
-        let mut paths_con_conflictos: Vec<String> = Vec::new();
+    /// Dados dos objetos hoja, o sea, archivos, calcula el diff de cada uno respecto a la base, mergea esos diffs
+    /// y escribe el resultado en el archivo base
+    /// Devuelve un booleano que indica si hubo conflictos.
+    /// En caso de haber conflicto agrega el path del archivo con conflicto al listado de archivos con conflictos
+    fn obtener_conflictos_entre_archivos_a_mergear(
+        &self,
+        objeto_base: &Objeto,
+        objeto_a_mergear: &Objeto,
+        objeto_actual: &Objeto,
+        paths_con_conflictos: &mut Vec<String>,
+    ) -> Result<bool, String> {
+        let diff_a_mergear = Self::obtener_diffs_entre_dos_objetos(
+            &objeto_base.obtener_hash(),
+            &objeto_a_mergear.obtener_hash(),
+        )?;
 
-        for objeto_base in nodos_hoja_base {
-            let nombre_objeto = objeto_base.obtener_path();
-            let objeto_a_mergear_encontrado = nodos_hoja_branch_a_mergear
-                .iter()
-                .find(|&nodo| nodo.obtener_path() == nombre_objeto);
+        let diff_actual = Self::obtener_diffs_entre_dos_objetos(
+            &objeto_base.obtener_hash(),
+            &objeto_actual.obtener_hash(),
+        )?;
 
-            let objeto_actual_encontrado = nodos_hoja_branch_actual
-                .iter()
-                .find(|&nodo| nodo.obtener_path() == nombre_objeto);
+        let contenido_base = descomprimir_objeto_gir(&objeto_base.obtener_hash())?;
 
-            let (objeto_a_mergear, objeto_actual) =
-                match (objeto_a_mergear_encontrado, objeto_actual_encontrado) {
-                    (Some(objeto_a_mergear), Some(objeto_actual)) => {
-                        (objeto_a_mergear, objeto_actual)
-                    }
-                    (None, Some(objeto_actual)) => {
-                        let objeto = ObjetoIndex {
-                            objeto: objeto_actual.clone(),
-                            es_eliminado: false,
-                            merge: false,
-                        };
+        let (resultado, hubo_conflictos) =
+            Self::mergear_diffs(diff_actual, diff_a_mergear, &contenido_base);
 
-                        objetos_index.push(objeto);
-                        continue;
-                    }
+        io::escribir_bytes(objeto_base.obtener_path(), resultado)?;
+        if hubo_conflictos {
+            paths_con_conflictos.push(format!("{}\n", objeto_base.obtener_path().display()));
+        }
+        Ok(hubo_conflictos)
+    }
 
-                    _ => continue,
+    /// Crea un objeto index dependiendo asiganndo si hubo conflictos o no
+    /// entre los archivos a mergear y lo agrega al vector de objetos index
+    fn agregar_objeto_index_merge_con_conflicto(
+        objeto_base: Objeto,
+        objetos_index: &mut Vec<ObjetoIndex>,
+        hubo_conflictos: bool,
+    ) {
+        let objeto = ObjetoIndex {
+            objeto: objeto_base,
+            es_eliminado: false,
+            merge: hubo_conflictos,
+        };
+
+        objetos_index.push(objeto);
+    }
+
+    /// Busca en los dos arboles a mergear el objeto que se esta mergeando actualmente
+    /// Si no encuentra el objeto a mergear en el arbol a mergear, agrega el objeto del arbo,actual al index
+    fn buscar_objeto_a_mergear_en_ambos_arboles<'a>(
+        objeto_base: &'a Objeto,
+        nodos_hoja_branch_a_mergear: &'a [Objeto],
+        nodos_hoja_branch_actual: &'a [Objeto],
+        objetos_index: &mut Vec<ObjetoIndex>,
+    ) -> Option<(&'a Objeto, &'a Objeto)> {
+        let nombre_objeto = objeto_base.obtener_path();
+
+        let objeto_a_mergear_encontrado = nodos_hoja_branch_a_mergear
+            .iter()
+            .find(|&nodo| nodo.obtener_path() == nombre_objeto);
+
+        let objeto_actual_encontrado = nodos_hoja_branch_actual
+            .iter()
+            .find(|&nodo| nodo.obtener_path() == nombre_objeto);
+
+        match (objeto_a_mergear_encontrado, objeto_actual_encontrado) {
+            (Some(objeto_a_mergear), Some(objeto_actual)) => {
+                Some((objeto_a_mergear, objeto_actual))
+            }
+            (None, Some(objeto_actual)) => {
+                let objeto = ObjetoIndex {
+                    objeto: objeto_actual.clone(),
+                    es_eliminado: false,
+                    merge: false,
                 };
 
-            let diff_a_mergear = Self::obtener_diffs_entre_dos_objetos(
-                &objeto_base.obtener_hash(),
-                &objeto_a_mergear.obtener_hash(),
-            )?;
-
-            let diff_actual = Self::obtener_diffs_entre_dos_objetos(
-                &objeto_base.obtener_hash(),
-                &objeto_actual.obtener_hash(),
-            )?;
-
-            let contenido_base = descomprimir_objeto_gir(&objeto_base.obtener_hash())?;
-
-            let (resultado, hubo_conflictos) =
-                Self::mergear_diffs(diff_actual, diff_a_mergear, &contenido_base);
-
-            io::escribir_bytes(objeto_base.obtener_path(), resultado)?;
-            if hubo_conflictos {
-                paths_con_conflictos.push(format!("{}\n", objeto_base.obtener_path().display()));
+                objetos_index.push(objeto);
+                None
             }
-
-            let objeto = ObjetoIndex {
-                objeto: objeto_base,
-                es_eliminado: false,
-                merge: hubo_conflictos,
-            };
-
-            objetos_index.push(objeto);
+            _ => None,
         }
+    }
 
-        escribir_index(self.logger.clone(), &mut objetos_index)?;
-        self.escribir_merge_head()?;
-        self.escribir_mensaje_merge()?;
+    /// Recorre todos los objetos hoja del arbol base y por cada uno mergea la version de cada rama en un archivo
+    fn mergear_todos_los_objetos_del_tree_actual(
+        &self,
+        nodos_hoja_base: Vec<Objeto>,
+        nodos_hoja_branch_actual: Vec<Objeto>,
+        nodos_hoja_branch_a_mergear: Vec<Objeto>,
+        objetos_index: &mut Vec<ObjetoIndex>,
+        paths_con_conflictos: &mut Vec<String>,
+    ) -> Result<(), String> {
+        for objeto_base in nodos_hoja_base {
+            if let Some((objeto_a_mergear, objeto_actual)) =
+                Self::buscar_objeto_a_mergear_en_ambos_arboles(
+                    &objeto_base,
+                    &nodos_hoja_branch_a_mergear,
+                    &nodos_hoja_branch_actual,
+                    objetos_index,
+                )
+            {
+                let hubo_conflictos = self.obtener_conflictos_entre_archivos_a_mergear(
+                    &objeto_base,
+                    &objeto_a_mergear,
+                    &objeto_actual,
+                    paths_con_conflictos,
+                )?;
 
+                Self::agregar_objeto_index_merge_con_conflicto(
+                    objeto_base,
+                    objetos_index,
+                    hubo_conflictos,
+                );
+            }
+        }
+        Ok(())
+    }
+
+    /// Finaliza el auto-merge, si hay conflictos devuelve un mensaje indicando
+    /// los archivos con conflictos, si no hay conflictos realiza el commit
+    /// del merge.
+    fn finalizar_automerge(
+        &self,
+        paths_con_conflictos: &mut Vec<String>,
+    ) -> Result<String, String> {
         if !paths_con_conflictos.is_empty() {
             Ok(format!(
                 "Se encontraron conflictos en los siguientes archivos: \n{:#?}",
@@ -357,6 +462,36 @@ impl Merge {
             commit.ejecutar()?;
             Ok("Merge completado".to_string())
         }
+    }
+
+    /// Realiza un auto-merge, realizando un merge de cada file que difiera entre los dos commits
+    fn automerge(&self, commit_base: &str) -> Result<String, String> {
+        let (tree_base, tree_branch_actual, tree_branch_a_mergear) =
+            self.obtener_arboles_para_ejecutar_merge(commit_base)?;
+
+        let (nodos_hoja_base, nodos_hoja_branch_actual, nodos_hoja_branch_a_mergear) =
+            Self::obtener_nodos_hoja_de_arboles_a_mergear(
+                tree_base,
+                tree_branch_actual,
+                tree_branch_a_mergear,
+            );
+
+        let mut objetos_index: Vec<ObjetoIndex> = Vec::new();
+        let mut paths_con_conflictos: Vec<String> = Vec::new();
+
+        self.mergear_todos_los_objetos_del_tree_actual(
+            nodos_hoja_base,
+            nodos_hoja_branch_actual,
+            nodos_hoja_branch_a_mergear,
+            &mut objetos_index,
+            &mut paths_con_conflictos,
+        )?;
+
+        escribir_index(self.logger.clone(), &mut objetos_index)?;
+        self.escribir_merge_head()?;
+        self.escribir_mensaje_merge()?;
+
+        self.finalizar_automerge(&mut paths_con_conflictos)
     }
 
     /// Realiza un fast-forward, moviendo el puntero de la rama actual al commit de la rama a mergear
@@ -424,6 +559,7 @@ impl Merge {
         Ok(())
     }
 
+    /// Escribe el mensaje del merge en el archivo COMMIT_EDITMSG.
     fn escribir_mensaje_merge(&self) -> Result<(), String> {
         let ruta_merge_msg = Path::new(".gir/COMMIT_EDITMSG");
         io::escribir_bytes(
@@ -436,6 +572,7 @@ impl Merge {
         Ok(())
     }
 
+    /// Limpia los archivos que quedan luego de un merge
     pub fn limpiar_merge_post_commit() -> Result<(), String> {
         let ruta_merge = Path::new(".gir/MERGE_HEAD");
         if ruta_merge.exists() {
@@ -452,8 +589,7 @@ impl Ejecutar for Merge {
         if Self::hay_merge_en_curso()? {
             return Err("Ya hay un merge en curso".to_string());
         }
-
-        let commit_actual = Commit::obtener_hash_commit_actual()?;
+        let commit_actual = ramas::obtener_hash_commit_asociado_rama_actual()?;
         let commit_a_mergear = Self::obtener_commit_de_branch(&self.branch_a_mergear)?;
         let commit_base = self.obtener_commit_base_entre_dos_branches()?;
 
@@ -476,7 +612,6 @@ impl Ejecutar for Merge {
 
 #[cfg(test)]
 mod tests {
-
     use super::*;
 
     #[test]
@@ -503,7 +638,6 @@ mod tests {
         let diff_1 = Merge::obtener_diffs_entre_dos_archivos(&base, &version_1).unwrap();
         let diff_2 = Merge::obtener_diffs_entre_dos_archivos(&base, &version_2).unwrap();
         let (contenido_final, _conflictos) = Merge::mergear_diffs(diff_1, diff_2, &base);
-        println!("{}", contenido_final);
 
         assert_eq!(
             contenido_final,
@@ -534,7 +668,6 @@ mod tests {
         let diff_1 = Merge::obtener_diffs_entre_dos_archivos(&base, &version_1).unwrap();
         let diff_2 = Merge::obtener_diffs_entre_dos_archivos(&base, &version_2).unwrap();
         let (contenido_final, _conflictos) = Merge::mergear_diffs(diff_1, diff_2, &base);
-
         assert_eq!(
             contenido_final,
             "primera linea\n<<<<<< HEAD\nsegunda_linea\n3ra linea\n======\n2da linea\ntercera linea\n>>>>>> Entrante\ncuarta linea\n"
@@ -563,7 +696,6 @@ mod tests {
         let diff_1 = Merge::obtener_diffs_entre_dos_archivos(&base, &version_1).unwrap();
         let diff_2 = Merge::obtener_diffs_entre_dos_archivos(&base, &version_2).unwrap();
         let (contenido_final, _conflictos) = Merge::mergear_diffs(diff_1, diff_2, &base);
-        println!("{}", contenido_final);
 
         assert_eq!(
             contenido_final,

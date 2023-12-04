@@ -2,10 +2,8 @@ use std::{path::PathBuf, sync::Arc};
 
 use crate::{
     tipos_de_dato::{comando::Ejecutar, logger::Logger},
-    utils::{io, path_buf::obtener_nombre},
+    utils::{io, path_buf::obtener_nombre, ramas},
 };
-
-use super::commit::Commit;
 
 const VERDE: &str = "\x1B[32m";
 const RESET: &str = "\x1B[0m";
@@ -17,6 +15,9 @@ pub struct Branch {
 }
 
 impl Branch {
+    /// Devuelve un Branch con los parametros ingresados por el usuario.
+    /// Si no se ingresa el nombre de la rama, devuelve un Branch con mostrar en true.
+    /// Si se ingresa el nombre de la rama, devuelve un Branch con mostrar en false.
     pub fn from(args: &mut Vec<String>, logger: Arc<Logger>) -> Result<Branch, String> {
         if args.is_empty() {
             return Ok(Branch {
@@ -62,7 +63,7 @@ impl Branch {
     ///  Devuelve un string con la lista de ramas en el repo,
     /// marcando con un * y verde la rama actual
     pub fn mostrar_ramas() -> Result<String, String> {
-        let rama_actual = Commit::obtener_branch_actual()?;
+        let rama_actual = ramas::obtener_rama_actual()?;
 
         let mut output = String::new();
 
@@ -77,17 +78,10 @@ impl Branch {
         Ok(output)
     }
 
-    pub fn obtener_commit_head() -> Result<String, String> {
-        let direccion_head = ".gir/HEAD";
-        let direccion_branch_actual = io::leer_a_string(direccion_head)?;
-        let branch_actual = direccion_branch_actual
-            .split('/')
-            .last()
-            .ok_or("No se pudo obtener el hash del commit".to_string())?;
-        let hash_commit = io::leer_a_string(format!(".gir/refs/heads/{}", branch_actual))?;
-        Ok(hash_commit.to_string())
-    }
-
+    /// Crea una rama nueva con el nombre ingresado por el usuario.
+    /// Si la rama ya existe, devuelve un error.
+    /// Si no se pudo obtener el nombre de la rama, devuelve un error.
+    /// Utiliza como base el hash del commit que apunta HEAD.
     fn crear_rama(&mut self) -> Result<String, String> {
         let rama_nueva = self
             .rama_nueva
@@ -99,7 +93,7 @@ impl Branch {
         if PathBuf::from(&direccion_rama_nueva).exists() {
             return Err(format!("La rama {} ya existe", rama_nueva));
         }
-        let ultimo_commit = Self::obtener_commit_head()?;
+        let ultimo_commit = ramas::obtener_hash_commit_asociado_rama_actual()?;
         io::escribir_bytes(direccion_rama_nueva, ultimo_commit)?;
         Ok(format!("Se creó la rama {}", rama_nueva))
     }

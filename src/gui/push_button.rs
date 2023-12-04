@@ -4,16 +4,16 @@ use gtk::{self};
 use std::sync::Arc;
 
 use crate::gui::comando_gui::ComandoGui;
-use crate::tipos_de_dato::comandos::commit::Commit;
 use crate::tipos_de_dato::comandos::push::Push;
 use crate::tipos_de_dato::comandos::set_upstream::SetUpstream;
 use crate::tipos_de_dato::config::Config;
 use crate::tipos_de_dato::logger::Logger;
+use crate::utils::ramas;
 
 use super::info_dialog;
 
 fn setear_remoto(builder: &gtk::Builder, logger: Arc<Logger>) {
-    let rama_actual = Commit::obtener_branch_actual().unwrap();
+    let rama_actual = ramas::obtener_rama_actual().unwrap();
 
     let remoto = builder
         .object::<gtk::Entry>("remote-u")
@@ -31,7 +31,7 @@ fn setear_remoto(builder: &gtk::Builder, logger: Arc<Logger>) {
 
 fn upstream_modal(builder: &gtk::Builder, logger: Arc<Logger>) {
     let config = Config::leer_config().unwrap();
-    let rama_actual = Commit::obtener_branch_actual().unwrap();
+    let rama_actual = ramas::obtener_rama_actual().unwrap();
     let hay_upstream = config.hay_upstream(&rama_actual);
 
     if hay_upstream {

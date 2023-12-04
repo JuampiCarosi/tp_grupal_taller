@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use crate::{
     tipos_de_dato::{comando::Ejecutar, logger::Logger},
-    utils::{self, io},
+    utils::{self, io, ramas},
 };
 
 pub struct Tag {
@@ -11,6 +11,7 @@ pub struct Tag {
 }
 
 impl Tag {
+    /// Devuelve un Tag con los parametros ingresados por el usuario.
     pub fn from(args: Vec<String>, logger: Arc<Logger>) -> Result<Tag, String> {
         if args.is_empty() {
             return Ok(Tag {
@@ -31,17 +32,21 @@ impl Tag {
         })
     }
 
+    /// Devuelve un vector con los nombres de los tags existentes dentro del repositorio.
+    /// Si no hay tags, devuelve un vector vacio.
     fn obtener_tags(&self) -> Result<Vec<String>, String> {
         utils::tags::obtener_tags()
     }
 
+    /// Crea un tag con el nombre ingresado por el usuario.
+    /// Si el tag ya existe, devuelve un error.
     fn crear_tag(&self, tag: &str) -> Result<(), String> {
         if utils::tags::existe_tag(&tag.to_string()) {
             return Err(format!("El tag {} ya existe", tag));
         }
 
         let ubicacion = format!(".gir/refs/tags/{}", tag);
-        let commit = utils::ramas::obtner_commit_head_rama_acutual()?;
+        let commit = ramas::obtener_hash_commit_asociado_rama_actual()?;
 
         io::escribir_bytes(ubicacion, commit)?;
 
@@ -52,6 +57,7 @@ impl Tag {
 }
 
 impl Ejecutar for Tag {
+    /// Ejecuta el comando tag.
     fn ejecutar(&mut self) -> Result<String, String> {
         match &self.tag_to_create {
             Some(tag_name) => {

@@ -27,7 +27,7 @@ fn ejecutar(builder: &gtk::Builder, input: &gtk::Entry, logger: Arc<Logger>) {
     let input_texto = input.text();
     args.push(input_texto.to_string());
 
-    let resultado = LsTree::new(logger.clone(), &mut args).ejecutar_gui();
+    let resultado = LsTree::from(logger.clone(), &mut args).ejecutar_gui();
 
     if let Some(resulado) = resultado {
         info_dialog::mostrar_mensaje("Hash del objeto:", &resulado);

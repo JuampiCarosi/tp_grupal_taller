@@ -2,19 +2,27 @@ use std::{path::PathBuf, sync::Arc};
 
 use crate::{
     tipos_de_dato::{comando::Ejecutar, logger::Logger},
-    utils::{self, io},
+    utils::{self, io, path_buf::esta_directorio_habilitado},
 };
 
 pub struct CheckIgnore {
+    /// Logger para imprimir los mensajes en el archivo log.
     logger: Arc<Logger>,
+    /// Paths de los archivos a verificar si son ignorados.
     paths: Vec<String>,
 }
 
 impl CheckIgnore {
+    /// Dada una ubicacion de un directorio/archivo, devuele un booleano indicando
+    /// si la ubicacion esta dentro de los archivos a ignorar.
     pub fn es_directorio_a_ignorar(
         ubicacion: &PathBuf,
         logger: Arc<Logger>,
     ) -> Result<bool, String> {
+        if esta_directorio_habilitado(&ubicacion, &vec![PathBuf::from(".gir")]) {
+            return Ok(true);
+        }
+
         let path = ubicacion
             .to_str()
             .ok_or_else(|| "Path invalido".to_string())?;
@@ -28,6 +36,7 @@ impl CheckIgnore {
         Ok(false)
     }
 
+    /// Devueve un CheckIgnore con los paths de los archivos a verificar.
     pub fn from(args: Vec<String>, logger: Arc<Logger>) -> Result<CheckIgnore, String> {
         if args.is_empty() {
             return Err("Ingrese la ruta del archivo buscado como parametro".to_string());
@@ -37,6 +46,9 @@ impl CheckIgnore {
     }
 }
 
+/// Ejecuta el comando check-ignore.
+/// Devuelve un string con todos los archivos consultados que resultaron estar ignorados.
+/// Si no hay archivos ignorados, devuelve un string vacio.
 impl Ejecutar for CheckIgnore {
     fn ejecutar(&mut self) -> Result<String, String> {
         self.logger.log("Buscando archivos ignorados");
@@ -84,8 +96,15 @@ mod test {
         utils::{self, io},
     };
 
-    fn settupear_girignore() {
+    fn settupear_girignore_para_tests() {
         let archivos_a_ignorar = ".log\n.gitignore\n.vscode\n.girignore\n.log.txt\ntes_dir/";
+        io::crear_archivo(".girignore").unwrap();
+        io::escribir_bytes(".girignore", archivos_a_ignorar).unwrap();
+    }
+
+    //para evitar el target al obtener el status
+    fn girignore_original() {
+        let archivos_a_ignorar = ".log\n.gitignore\n.vscode\n.girignore\n.log.txt\ntes_dir/\ndiagrama.png\ntarget/\n.DS_Store\n.gir/\n.git/";
         io::crear_archivo(".girignore").unwrap();
         io::escribir_bytes(".girignore", archivos_a_ignorar).unwrap();
     }
@@ -102,7 +121,7 @@ mod test {
 
     #[test]
     fn test01_check_ignore_ignora_un_solo_archivo() {
-        settupear_girignore();
+        settupear_girignore_para_tests();
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/check_ignore_test01")).unwrap());
         let mut check_ignore = CheckIgnore::from(vec![".log".to_string()], logger).unwrap();
         let resultado = check_ignore.ejecutar().unwrap();
@@ -145,6 +164,7 @@ mod test {
 
     #[test]
     fn test04_obtener_untrackeados_del_status_ignora_los_archivos_ignorados() {
+        girignore_original();
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/check_ignore_test04")).unwrap());
         let status = Status::from(logger).unwrap();
         let untrackeados = status.obtener_untrackeados().unwrap();
@@ -171,7 +191,7 @@ mod test {
         io::crear_directorio("test_file").unwrap();
         let resultado = check_ignore.ejecutar().unwrap();
         io::rm_directorio("test_file").unwrap();
-        settupear_girignore();
+        girignore_original();
         assert!(resultado.is_empty());
     }
 }

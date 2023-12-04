@@ -3,9 +3,12 @@ use std::sync::Arc;
 use gtk::prelude::*;
 
 use super::{comando_gui::ComandoGui, conflicts_modal, dibujar_dialog, info_dialog, log_list};
-use crate::tipos_de_dato::{
-    comandos::{branch::Branch, commit::Commit, merge::Merge, rebase::Rebase},
-    logger::Logger,
+use crate::{
+    tipos_de_dato::{
+        comandos::{branch::Branch, merge::Merge, rebase::Rebase},
+        logger::Logger,
+    },
+    utils::ramas,
 };
 
 pub enum AccionBranchDialog {
@@ -92,6 +95,6 @@ pub fn render(builder: &gtk::Builder, logger: Arc<Logger>, accion: AccionBranchD
 
     dibujar_dialog(&dialog);
     conflicts_modal::boton_conflictos(builder, logger.clone());
-    let branch = Commit::obtener_branch_actual().unwrap();
+    let branch = ramas::obtener_rama_actual().unwrap();
     log_list::render(builder, &branch, logger.clone());
 }

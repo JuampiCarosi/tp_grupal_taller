@@ -133,10 +133,10 @@ impl Servidor {
             }
             _ => {
                 comunicacion.enviar(&gir_io::obtener_linea_con_largo_hex(
-                    "ERR No existe el comando\n"),
-                )?;
+                    "ERR No existe el comando\n",
+                ))?;
                 Err("No existe el comando".to_string())
-            },
+            }
         }
     }
 }

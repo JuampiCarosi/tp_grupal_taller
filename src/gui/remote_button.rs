@@ -4,7 +4,7 @@ use gtk::{glib::Propagation, prelude::*};
 
 use crate::tipos_de_dato::{comandos::remote::Remote, logger::Logger};
 
-use super::{comando_gui::ComandoGui, dibujar_dialog, info_dialog, staging_area};
+use super::{comando_gui::ComandoGui, dibujar_dialog, info_dialog};
 
 fn ejecutar(builder: &gtk::Builder, logger: Arc<Logger>) {
     let input = builder.object::<gtk::Entry>("remote-input").unwrap();
