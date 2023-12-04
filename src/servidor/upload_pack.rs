@@ -9,7 +9,7 @@ use std::io::{Read, Write};
 /// * `dir` - Direccion del repositorio
 /// * `comunicacion` - Comunicacion con el cliente
 /// # Errores
-///
+/// 
 pub fn upload_pack<T>(
     dir: String,
     comunicacion: &mut Comunicacion<T>,

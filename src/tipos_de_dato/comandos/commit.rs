@@ -59,7 +59,7 @@ impl Commit {
         }
 
         if args.len() != 2 {
-            return Err("La cantidad de argumentos es invalida".to_string());
+            return Err("La cantidad de argumentos es invalida, -m esperado".to_string());
         }
         let mensaje = args
             .pop()
