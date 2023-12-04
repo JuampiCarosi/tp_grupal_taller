@@ -24,3 +24,11 @@ Realizamos un documento con el cronograma planeado para esta primera parte del T
 ### Diagrama de infraestructura
 
 ![Diagrama de infraestructura](diagrama.png)
+
+### Notas
+Para correr los tests se deben correr con la opcion de un thread
+
+```
+cargo test -- --test-threads 1
+```
+
