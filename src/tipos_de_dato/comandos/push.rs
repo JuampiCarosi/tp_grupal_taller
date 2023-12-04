@@ -148,7 +148,7 @@ impl Push {
             return  Err(format!("Remoto desconocido{}\nSi quiere añadir un nuevo remoto:\n\ngir remote add [<nombre-remote>] [<url-remote>]\n\n", remoto));
         };
 
-        Ok(remoto.clone().to_owned())
+        Ok(remoto.to_owned())
     }
 
     //Le pide al config el url asosiado a la rama

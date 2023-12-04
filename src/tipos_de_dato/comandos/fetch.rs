@@ -2,7 +2,8 @@ use crate::tipos_de_dato::comando::Ejecutar;
 use crate::tipos_de_dato::comunicacion::Comunicacion;
 use crate::tipos_de_dato::config::Config;
 use crate::tipos_de_dato::logger::Logger;
-use crate::tipos_de_dato::packfile::{Packfile};
+use crate::tipos_de_dato::packfile::Packfile;
+use crate::utils::fase_descubrimiento::VecHashDireccion;
 use crate::utils::{self, io, objects};
 use std::io::{Read, Write};
 use std::net::TcpStream;
@@ -369,8 +370,8 @@ impl<T: Write + Read> Fetch<T> {
         (
             Vec<String>,
             Option<String>,
-            Vec<(String, PathBuf)>,
-            Vec<(String, PathBuf)>,
+            VecHashDireccion,
+            VecHashDireccion,
         ),
         String,
     > {

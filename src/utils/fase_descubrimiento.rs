@@ -7,6 +7,8 @@ use crate::tipos_de_dato::comunicacion::Comunicacion;
 
 use super::ramas;
 
+pub type VecHashDireccion = Vec<(String, PathBuf)>;
+
 ///Se encarga de la fase de descubrimiento con el servidor, en la cual se recibe del servidor
 /// una lista de referencias.
 /// La primera linea contiene la version del server
@@ -26,8 +28,8 @@ pub fn fase_de_descubrimiento<T: Write + Read>(
     (
         Vec<String>,
         Option<String>,
-        Vec<(String, PathBuf)>,
-        Vec<(String, PathBuf)>,
+        VecHashDireccion,
+        VecHashDireccion,
     ),
     String,
 > {
@@ -88,10 +90,10 @@ fn separar_commit_head_de_ser_necesario(
 
 fn obtener_commits_y_dir_rama_o_tag_asosiados(
     lineas_recibidas: &Vec<String>,
-) -> Result<(Vec<(String, PathBuf)>, Vec<(String, PathBuf)>), String> {
-    let mut commits_cabezas_y_dir_rama_asosiados: Vec<(String, PathBuf)> = Vec::new();
+) -> Result<(VecHashDireccion, VecHashDireccion), String> {
+    let mut commits_cabezas_y_dir_rama_asosiados: VecHashDireccion = Vec::new();
 
-    let mut commits_y_tags_asosiados: Vec<(String, PathBuf)> = Vec::new();
+    let mut commits_y_tags_asosiados: VecHashDireccion = Vec::new();
 
     for linea in lineas_recibidas {
         let (commit, dir) = obtener_commit_y_dir_asosiado(linea)?;
