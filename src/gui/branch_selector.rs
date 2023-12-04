@@ -4,14 +4,13 @@ use gtk::prelude::*;
 
 use crate::{
     tipos_de_dato::{
-        comando::Ejecutar,
         comandos::{branch::Branch, checkout::Checkout},
         logger::Logger,
     },
     utils::ramas,
 };
 
-use super::{info_dialog, log_list, log_seleccionado, staging_area};
+use super::{comando_gui::ComandoGui, info_dialog, log_list, log_seleccionado, staging_area};
 
 pub fn render(builder: &gtk::Builder, logger: Arc<Logger>) {
     let select: gtk::ComboBoxText = builder.object("select-branch").unwrap();
@@ -48,14 +47,7 @@ pub fn render(builder: &gtk::Builder, logger: Arc<Logger>) {
         log_list::render(&builder_clone, active.as_str(), logger.clone());
         log_seleccionado::render(&builder_clone, None);
 
-        let mut checkout = Checkout::from(vec![active.to_string()], logger.clone()).unwrap();
-
-        match checkout.ejecutar() {
-            Ok(_) => {}
-            Err(err) => {
-                info_dialog::mostrar_error(&err);
-            }
-        }
+        Checkout::from(vec![active.to_string()], logger.clone()).ejecutar_gui();
 
         log_list::refresh(&builder_clone);
         staging_area::refresh(&builder_clone);

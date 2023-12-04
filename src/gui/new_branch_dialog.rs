@@ -1,10 +1,10 @@
-use std::{path::PathBuf, sync::Arc};
+use std::sync::Arc;
 
 use gtk::prelude::*;
 
-use crate::tipos_de_dato::{comando::Ejecutar, comandos::branch::Branch, logger::Logger};
+use crate::tipos_de_dato::{comandos::branch::Branch, logger::Logger};
 
-use super::{branch_selector, info_dialog};
+use super::{branch_selector, comando_gui::ComandoGui};
 
 fn run_dialog(builder: &gtk::Builder) {
     let branch_button: gtk::Button = builder.object("branch-button").unwrap();
@@ -34,19 +34,12 @@ fn boton_confimar_dialog(builder: &gtk::Builder, logger: Arc<Logger>) {
 
     let builder_clone = builder.clone();
     confirm.connect_clicked(move |_| {
-        match Branch::from(
-            &mut vec![input.text().to_string()],
-            Arc::new(Logger::new(PathBuf::from("log.txt")).unwrap()),
-        )
-        .unwrap()
-        .ejecutar()
-        {
-            Ok(_) => {}
-            Err(err) => {
-                info_dialog::mostrar_error(&err);
-                return;
-            }
-        };
+        let branch =
+            Branch::from(&mut vec![input.text().to_string()], logger.clone()).ejecutar_gui();
+
+        if branch.is_none() {
+            return;
+        }
 
         branch_selector::render(&builder_clone, logger.clone());
         input.set_text("");
