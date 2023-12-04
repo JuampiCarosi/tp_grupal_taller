@@ -424,7 +424,7 @@ mod test {
     use std::{path::PathBuf, sync::Arc};
 
     use crate::{
-        tipos_de_dato::{comandos::set_upstream::SetUpstream, logger::Logger},
+        tipos_de_dato::{comando::Ejecutar, comandos::set_upstream::SetUpstream, logger::Logger},
         utils,
     };
 

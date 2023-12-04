@@ -18,9 +18,12 @@ mod pull_button;
 mod push_button;
 mod rebase_button;
 mod refresh;
+mod remote_button;
 mod rm_button;
 mod show_ref_button;
 mod staging_area;
+mod tag_button;
+mod tag_list;
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -33,7 +36,11 @@ use gtk::{gdk, prelude::*};
 /// Dibuja el dialogo 3 veces para que se vea bien, de forma contraria
 /// en ocasiones no se dibujan los bordes del mismo
 /// esto es por un bug en la propiedad "Transient for" de gtk
-pub fn dibujar_dialog(dialog: &gtk::Dialog) {
+pub fn dibujar_dialog<T>(dialog: &T)
+where
+    T: IsA<gtk::Dialog>,
+    T: gtk::prelude::IsA<gtk::Widget>,
+{
     dialog.show_all();
     dialog.hide();
     dialog.show_all();
@@ -41,25 +48,20 @@ pub fn dibujar_dialog(dialog: &gtk::Dialog) {
     dialog.run();
 }
 
-fn hidratar_componentes(
-    builder: &gtk::Builder,
-    window: &gtk::Window,
-    logger: Arc<Logger>,
-    branch_actual: &str,
-) {
+fn hidratar_componentes(builder: &gtk::Builder, logger: Arc<Logger>, branch_actual: &str) {
     let screen = gdk::Screen::default().unwrap();
     estilos(screen);
-    new_branch_dialog::render(builder, window, logger.clone());
-    branch_selector::render(builder, window, logger.clone());
+    new_branch_dialog::render(builder, logger.clone());
+    branch_selector::render(builder, logger.clone());
     log_list::render(builder, branch_actual, logger.clone());
     log_seleccionado::render(builder, None);
     staging_area::render(builder, logger.clone());
     new_commit_dialog::render(builder, logger.clone());
-    push_button::render(builder, window, logger.clone());
+    push_button::render(builder, logger.clone());
     info_dialog::setup(builder);
-    pull_button::render(builder, window, logger.clone(), branch_actual.to_string());
+    pull_button::render(builder, logger.clone(), branch_actual.to_string());
     conflicts_modal::render(builder, logger.clone());
-    refresh::render(builder, window, logger.clone());
+    refresh::render(builder, logger.clone());
     merge_button::render(builder, logger.clone());
     rebase_button::render(builder, logger.clone());
     hash_object_button::render(builder, logger.clone());
@@ -69,6 +71,9 @@ fn hidratar_componentes(
     ls_tree_button::render(builder, logger.clone());
     ls_files_button::render(builder, logger.clone());
     rm_button::render(builder, logger.clone());
+    tag_list::render(builder, logger.clone());
+    tag_button::render(builder, logger.clone());
+    remote_button::render(builder, logger.clone());
 }
 
 pub fn estilos(screen: gdk::Screen) {
@@ -104,9 +109,10 @@ pub fn ejecutar(logger: Arc<Logger>) {
 
     let branch_actual = ramas::obtener_rama_actual().unwrap();
 
-    hidratar_componentes(&builder, &window, logger.clone(), &branch_actual);
+    hidratar_componentes(&builder, logger.clone(), &branch_actual);
 
     window.show_all();
+    tag_list::render(&builder, logger.clone());
 
     window.connect_delete_event(|_, _| {
         gtk::main_quit();

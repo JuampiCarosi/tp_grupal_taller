@@ -2,9 +2,11 @@ use crate::tipos_de_dato::comando::Ejecutar;
 use crate::tipos_de_dato::logger::Logger;
 use crate::utils;
 
+use std::net::TcpStream;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use super::fetch::Fetch;
 use super::init::Init;
 use super::pull::Pull;
 use super::remote::Remote;
@@ -47,13 +49,32 @@ impl Clone {
 
         Ok(())
     }
+
+    pub fn obtener_rama_predeterminada() -> Result<String, String> {
+        let ramas = utils::io::leer_directorio(".gir/refs/remotes/origin")?;
+        let mut rama_predeterminada = String::new();
+
+        for rama in ramas {
+            let rama = rama.map_err(|e| e.to_string())?;
+            let nombre_rama = utils::path_buf::obtener_nombre(&rama.path())?;
+            if nombre_rama == "master" {
+                return Ok(nombre_rama);
+            }
+            rama_predeterminada = nombre_rama;
+        }
+
+        Ok(rama_predeterminada)
+    }
+
     fn crear_repositorio(&mut self) -> Result<(), String> {
         Init::from(Vec::new(), self.logger.clone())?.ejecutar()?;
 
         let remote_args = &mut vec!["add".to_string(), "origin".to_string(), self.url.clone()];
         Remote::from(remote_args, self.logger.clone())?.ejecutar()?;
 
-        let pull_args = vec!["-u".to_string(), "origin".to_string(), "master".to_string()];
+        Fetch::<TcpStream>::new(vec!["origin".to_string()], self.logger.clone())?.ejecutar()?;
+        let rama_predeterminada = Self::obtener_rama_predeterminada()?;
+        let pull_args = vec!["-u".to_string(), "origin".to_string(), rama_predeterminada];
         Pull::from(pull_args, self.logger.clone())?.ejecutar()?;
         Ok(())
     }
@@ -73,7 +94,7 @@ impl Ejecutar for Clone {
         utils::io::cambiar_directorio("..")?;
 
         if let Err(e) = resutado {
-            utils::io::rm_directorio(repositorio)?;
+            // utils::io::rm_directorio(repositorio)?;
             return Err(e);
         }
 

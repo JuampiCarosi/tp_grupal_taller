@@ -135,3 +135,8 @@ pub fn render(builder: &gtk::Builder, logger: Arc<Logger>) {
     escribir_archivos_untrackeados(builder, logger);
     container.show_all();
 }
+
+pub fn refresh(builder: &gtk::Builder) {
+    let container: gtk::Box = builder.object("staging").unwrap();
+    container.show_all();
+}

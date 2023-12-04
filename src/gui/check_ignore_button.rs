@@ -17,7 +17,6 @@ fn ejecutar(input: &gtk::Entry, logger: Arc<Logger>) {
 }
 
 fn dialog(builder: &gtk::Builder, logger: Arc<Logger>) {
-    // let tree_view = builder.object::<gtk::TreeView>("hash-object-tree").unwrap();
     let dialog = builder
         .object::<gtk::Dialog>("check-ignore-dialog")
         .unwrap();

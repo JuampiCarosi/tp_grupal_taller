@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use crate::{
-    tipos_de_dato::logger::Logger,
+    tipos_de_dato::{comando::Ejecutar, logger::Logger},
     utils::{self, io, ramas},
 };
 
@@ -54,9 +54,11 @@ impl Tag {
 
         Ok(())
     }
+}
 
+impl Ejecutar for Tag {
     /// Ejecuta el comando tag.
-    pub fn ejecutar(&self) -> Result<String, String> {
+    fn ejecutar(&mut self) -> Result<String, String> {
         match &self.tag_to_create {
             Some(tag_name) => {
                 self.crear_tag(tag_name)?;

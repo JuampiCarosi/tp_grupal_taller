@@ -9,6 +9,10 @@ button {
   border: 0.5px solid #cbd5e1;
 }
 
+scrolledwindow {
+  border: none;
+}
+
 .button-blue {
   background-color: #2563eb;
   color: #f1f5f9;
@@ -109,6 +113,11 @@ header > tabs > tab:checked label {
 
 .label-red {
   color: #be123c;
+}
+
+.label-grey {
+  color: #6b7280;
+  font-size: medium;
 }
 
 .label-green {
