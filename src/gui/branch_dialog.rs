@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use gtk::prelude::*;
 
-use super::{comando_gui::ComandoGui, conflicts_modal, error_dialog};
+use super::{comando_gui::ComandoGui, conflicts_modal, dibujar_dialog, info_dialog};
 use crate::tipos_de_dato::{
     comandos::{branch::Branch, merge::Merge, rebase::Rebase},
     logger::Logger,
@@ -17,7 +17,7 @@ fn obtener_ramas_disponibles() -> Vec<String> {
     let todas = match Branch::mostrar_ramas() {
         Ok(ramas) => ramas,
         Err(err) => {
-            error_dialog::mostrar_error(&err);
+            info_dialog::mostrar_error(&err);
             return vec![];
         }
     };
@@ -33,29 +33,23 @@ fn obtener_ramas_disponibles() -> Vec<String> {
         .collect();
 }
 
-pub fn render(builder: &gtk::Builder, logger: Arc<Logger>, accion: AccionBranchDialog) {
-    let dialog = builder.object::<gtk::Dialog>("branch-dialog").unwrap();
-
-    let confirmar = builder.object::<gtk::Button>("confirm-branc").unwrap();
-
-    let combobox = builder
-        .object::<gtk::ComboBoxText>("branch-combo-box")
-        .unwrap();
-
-    dialog.set_position(gtk::WindowPosition::Center);
-
+fn combo_box(builder: &gtk::Builder) {
+    let combobox: gtk::ComboBoxText = builder.object("branch-combo-box").unwrap();
     let ramas = obtener_ramas_disponibles();
-    if ramas.is_empty() {
-        return;
-    }
-
+    combobox.remove_all();
     for rama in ramas {
         combobox.append_text(&rama);
     }
+}
 
-    let dialog_clone = dialog.clone();
+fn comfirmar(builder: &gtk::Builder, accion: AccionBranchDialog, logger: Arc<Logger>) {
+    let confirmar = builder.object::<gtk::Button>("confirm-branc").unwrap();
     let builder_clone = builder.clone();
     confirmar.connect_clicked(move |_| {
+        let dialog = builder_clone
+            .object::<gtk::Dialog>("branch-dialog")
+            .unwrap();
+        let combobox: gtk::ComboBoxText = builder_clone.object("branch-combo-box").unwrap();
         let activo = match combobox.active_text() {
             Some(activo) => activo,
             None => return,
@@ -68,8 +62,33 @@ pub fn render(builder: &gtk::Builder, logger: Arc<Logger>, accion: AccionBranchD
 
         conflicts_modal::boton_conflictos(&builder_clone, logger.clone());
 
-        dialog_clone.hide();
+        dialog.hide();
+    });
+}
+
+fn cancelar(builder: &gtk::Builder) {
+    let cancelar = builder.object::<gtk::Button>("cancel-branc").unwrap();
+    let builder_clone = builder.clone();
+    cancelar.connect_clicked(move |_| {
+        let dialog = builder_clone
+            .object::<gtk::Dialog>("branch-dialog")
+            .unwrap();
+        dialog.hide();
+    });
+}
+
+pub fn render(builder: &gtk::Builder, logger: Arc<Logger>, accion: AccionBranchDialog) {
+    let dialog = builder.object::<gtk::Dialog>("branch-dialog").unwrap();
+    dialog.set_position(gtk::WindowPosition::Center);
+
+    combo_box(builder);
+    comfirmar(builder, accion, logger.clone());
+    cancelar(builder);
+
+    dialog.connect_delete_event(move |dialog, _| {
+        dialog.hide();
+        gtk::glib::Propagation::Stop
     });
 
-    dialog.run();
+    dibujar_dialog(&dialog);
 }

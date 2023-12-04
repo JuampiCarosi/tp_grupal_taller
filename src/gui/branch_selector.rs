@@ -8,7 +8,7 @@ use crate::tipos_de_dato::{
     logger::Logger,
 };
 
-use super::{error_dialog, log_list, log_seleccionado};
+use super::{info_dialog, log_list, log_seleccionado};
 
 pub fn render(builder: &gtk::Builder, window: &gtk::Window, logger: Arc<Logger>) {
     let select: gtk::ComboBoxText = builder.object("select-branch").unwrap();
@@ -18,7 +18,7 @@ pub fn render(builder: &gtk::Builder, window: &gtk::Window, logger: Arc<Logger>)
     let branches = match Branch::obtener_ramas() {
         Ok(branches) => branches,
         Err(err) => {
-            error_dialog::mostrar_error(&err);
+            info_dialog::mostrar_error(&err);
             return;
         }
     };
@@ -51,7 +51,7 @@ pub fn render(builder: &gtk::Builder, window: &gtk::Window, logger: Arc<Logger>)
         match checkout.ejecutar() {
             Ok(_) => {}
             Err(err) => {
-                error_dialog::mostrar_error(&err);
+                info_dialog::mostrar_error(&err);
             }
         }
 

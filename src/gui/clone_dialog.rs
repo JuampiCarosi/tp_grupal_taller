@@ -4,7 +4,7 @@ use gtk::prelude::*;
 
 use crate::tipos_de_dato::{comando::Ejecutar, comandos::clone::Clone, logger::Logger};
 
-use super::error_dialog;
+use super::info_dialog;
 
 fn run_dialog(builder: &gtk::Builder) {
     let dialog: gtk::MessageDialog = builder.object("clone").unwrap();
@@ -24,7 +24,7 @@ fn clonar_dialog(builder: &gtk::Builder, logger: Arc<Logger>) {
             match Clone::from(&mut vec!["127.0.0.1:9418/gir/".to_string()], logger.clone()) {
                 Ok(clone) => clone,
                 Err(err) => {
-                    error_dialog::mostrar_error(&err);
+                    info_dialog::mostrar_error(&err);
                     input.set_text("");
                     dialog.hide();
                     return;
@@ -33,7 +33,7 @@ fn clonar_dialog(builder: &gtk::Builder, logger: Arc<Logger>) {
 
         match clone.ejecutar() {
             Ok(_) => {}
-            Err(err) => error_dialog::mostrar_error(&err),
+            Err(err) => info_dialog::mostrar_error(&err),
         }
 
         input.set_text("");
