@@ -134,9 +134,10 @@ impl Pull {
         if path_remoto.exists() {
             leer_a_string(path_remoto)
         } else {
-            //Siempre tiene un commit
-            let path_master_remoto =
-                PathBuf::from(format!("./.gir/refs/remotes/{}/master", self.remoto));
+            let path_master_remoto = PathBuf::from(format!(
+                "./.gir/refs/remotes/{}/{}",
+                self.remoto, self.rama_merge
+            ));
 
             leer_a_string(path_master_remoto)
         }
