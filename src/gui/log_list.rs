@@ -38,6 +38,7 @@ fn obtener_commits_con_branches(
     logger: Arc<Logger>,
 ) -> Result<Vec<(CommitObj, String)>, String> {
     let ramas_largas = Branch::obtener_ramas()?;
+
     let ramas: Vec<_> = ramas_largas
         .iter()
         .map(|rama| if rama.len() > 25 { &rama[..25] } else { rama })
@@ -46,7 +47,10 @@ fn obtener_commits_con_branches(
     let mut commits_por_ramas = Vec::new();
 
     for rama in ramas {
-        let commit_hash_rama = leer_a_string(".gir/refs/heads/".to_string() + &rama)?;
+        let commit_hash_rama = leer_a_string(".gir/refs/heads/".to_string() + rama)?;
+        if commit_hash_rama.is_empty() {
+            continue;
+        }
         let commit_rama = CommitObj::from_hash(commit_hash_rama, logger.clone())?;
         let commits_rama = obtener_tronco_principal_padres(commit_rama, logger.clone());
         commits_por_ramas.push((rama.to_string(), commits_rama));
@@ -55,6 +59,10 @@ fn obtener_commits_con_branches(
     let mut commits_y_ramas: Vec<(CommitObj, String)> = Vec::new();
 
     let commits = obtener_listas_de_commits(rama, logger.clone())?;
+
+    if commits.is_empty() {
+        return Ok(Vec::new());
+    }
 
     for commit in commits {
         let mut encontrados = Vec::new();
@@ -75,7 +83,7 @@ fn obtener_commits_con_branches(
 }
 
 fn generar_clases_por_rama() -> HashMap<String, String> {
-    let clases_posibles = vec!["green", "blue", "yellow", "red"];
+    let clases_posibles = ["green", "blue", "yellow", "red"];
 
     let mut clases_por_rama = HashMap::new();
     let mut i = 0;
@@ -123,7 +131,7 @@ pub fn obtener_mensaje_commit(commit_hash: &str) -> Result<String, String> {
     }
 }
 
-fn crear_label(string: &str, color: &str, branch: &str) -> gtk::EventBox {
+fn crear_label(mensaje: &str, hash: &str, color: &str, branch: &str) -> gtk::EventBox {
     let event_box = gtk::EventBox::new();
 
     let container = gtk::Box::new(Orientation::Horizontal, 0);
@@ -133,8 +141,16 @@ fn crear_label(string: &str, color: &str, branch: &str) -> gtk::EventBox {
     container.set_margin_bottom(1);
     container.set_margin_end(18); // Set margin at the end
 
-    let label_message = gtk::Label::new(Some(string));
-    container.add(&label_message);
+    let commit_y_hash = gtk::Box::new(Orientation::Horizontal, 8);
+    let label_message = gtk::Label::new(Some(mensaje));
+    let label_hash = gtk::Label::new(Some(&hash[0..10]));
+
+    label_hash.style_context().add_class("label-grey");
+
+    commit_y_hash.add(&label_message);
+    commit_y_hash.add(&label_hash);
+
+    container.add(&commit_y_hash);
 
     let spacer = gtk::Box::new(Orientation::Horizontal, 0);
     spacer.set_hexpand(true);
@@ -168,12 +184,17 @@ pub fn render(builder: &gtk::Builder, branch: &str, logger: Arc<Logger>) {
         }
     };
 
+    if commits.is_empty() {
+        return;
+    }
+
     let clases = generar_clases_por_rama();
 
     for (commit, branch) in commits {
         let event_box = crear_label(
             &obtener_mensaje_commit(&commit.hash).unwrap(),
-            &clases.get(&branch).unwrap(),
+            &commit.hash,
+            clases.get(&branch).unwrap(),
             &branch,
         );
 
@@ -189,5 +210,10 @@ pub fn render(builder: &gtk::Builder, branch: &str, logger: Arc<Logger>) {
         let ultimo = children.last().unwrap();
         ultimo.style_context().add_class("last-commit-label");
     }
+    container.show_all();
+}
+
+pub fn refresh(builder: &gtk::Builder) {
+    let container: gtk::Box = builder.object("log-container").unwrap();
     container.show_all();
 }

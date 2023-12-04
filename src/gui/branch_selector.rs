@@ -2,17 +2,19 @@ use std::sync::Arc;
 
 use gtk::prelude::*;
 
-use crate::tipos_de_dato::{
-    comando::Ejecutar,
-    comandos::{branch::Branch, checkout::Checkout, commit::Commit},
-    logger::Logger,
+use crate::{
+    tipos_de_dato::{
+        comandos::{branch::Branch, checkout::Checkout},
+        logger::Logger,
+    },
+    utils::ramas,
 };
 
-use super::{info_dialog, log_list, log_seleccionado};
+use super::{comando_gui::ComandoGui, info_dialog, log_list, log_seleccionado, staging_area};
 
-pub fn render(builder: &gtk::Builder, window: &gtk::Window, logger: Arc<Logger>) {
+pub fn render(builder: &gtk::Builder, logger: Arc<Logger>) {
     let select: gtk::ComboBoxText = builder.object("select-branch").unwrap();
-    let branch_actual = Commit::obtener_branch_actual().unwrap();
+    let branch_actual = ramas::obtener_rama_actual().unwrap();
     select.remove_all();
 
     let branches = match Branch::obtener_ramas() {
@@ -36,7 +38,6 @@ pub fn render(builder: &gtk::Builder, window: &gtk::Window, logger: Arc<Logger>)
     });
 
     let builder_clone = builder.clone();
-    let window_clone = window.clone();
     select.connect_changed(move |a| {
         let active = match a.active_text() {
             Some(text) => text,
@@ -46,15 +47,9 @@ pub fn render(builder: &gtk::Builder, window: &gtk::Window, logger: Arc<Logger>)
         log_list::render(&builder_clone, active.as_str(), logger.clone());
         log_seleccionado::render(&builder_clone, None);
 
-        let mut checkout = Checkout::from(vec![active.to_string()], logger.clone()).unwrap();
+        Checkout::from(vec![active.to_string()], logger.clone()).ejecutar_gui();
 
-        match checkout.ejecutar() {
-            Ok(_) => {}
-            Err(err) => {
-                info_dialog::mostrar_error(&err);
-            }
-        }
-
-        window_clone.show_all();
+        log_list::refresh(&builder_clone);
+        staging_area::refresh(&builder_clone);
     });
 }

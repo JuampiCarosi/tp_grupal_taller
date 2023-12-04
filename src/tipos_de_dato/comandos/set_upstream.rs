@@ -1,10 +1,7 @@
 use std::{path::PathBuf, sync::Arc};
 
 use crate::{
-    tipos_de_dato::{
-        config::{Config, RamasInfo},
-        logger::Logger,
-    },
+    tipos_de_dato::{comando::Ejecutar, config::Config, info_ramas::RamasInfo, logger::Logger},
     utils,
 };
 
@@ -33,23 +30,6 @@ impl SetUpstream {
             rama_local,
             logger,
         })
-    }
-    pub fn ejecutar(&self) -> Result<(), String> {
-        self.logger.log(&format!(
-            "Se ejecuta set-upstream - remoto: {}, rama remota: {},rama local: {}",
-            self.remoto, self.rama_remota, self.rama_local
-        ));
-
-        self.verificar_remoto()?;
-        self.verificar_rama_local()?;
-
-        self.set_upstream()?;
-
-        self.logger.log(&format!(
-            "Se ejecuto set-upstream con exito - remoto: {}, rama remota: {},rama local: {}",
-            self.remoto, self.rama_remota, self.rama_local
-        ));
-        Ok(())
     }
 
     ///Setea la rama asosiadandola al remoto y seteando el campo de merge. Para ello escribie
@@ -100,13 +80,33 @@ impl SetUpstream {
         Ok(())
     }
 }
+
+impl Ejecutar for SetUpstream {
+    fn ejecutar(&mut self) -> Result<String, String> {
+        self.logger.log(&format!(
+            "Se ejecuta set-upstream - remoto: {}, rama remota: {},rama local: {}",
+            self.remoto, self.rama_remota, self.rama_local
+        ));
+
+        self.verificar_remoto()?;
+        self.verificar_rama_local()?;
+
+        self.set_upstream()?;
+
+        self.logger.log(&format!(
+            "Se ejecuto set-upstream con exito - remoto: {}, rama remota: {},rama local: {}",
+            self.remoto, self.rama_remota, self.rama_local
+        ));
+        Ok("".to_string())
+    }
+}
 #[cfg(test)]
 
 mod tests {
     use std::{path::PathBuf, sync::Arc};
 
     use crate::{
-        tipos_de_dato::{config::Config, logger::Logger},
+        tipos_de_dato::{comando::Ejecutar, config::Config, logger::Logger},
         utils,
     };
 

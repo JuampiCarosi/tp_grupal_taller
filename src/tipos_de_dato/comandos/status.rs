@@ -11,13 +11,11 @@ use crate::{
     tipos_de_dato::{comando::Ejecutar, logger::Logger, objeto::Objeto, objetos::tree::Tree},
     utils::{
         index::{leer_index, ObjetoIndex},
-        io,
+        io, ramas,
     },
 };
 
-use super::{
-    check_ignore::CheckIgnore, commit::Commit, write_tree::conseguir_arbol_from_hash_commit,
-};
+use super::{check_ignore::CheckIgnore, write_tree::conseguir_arbol_from_hash_commit};
 
 pub struct Status {
     /// Logger para registrar los eventos ocurridos durante la ejecucion del comando.
@@ -33,8 +31,8 @@ pub struct Status {
 /// Obtiene el arbol del commit al que apunta la rama actual.
 /// En caso de no haber un commit devuelve None.
 pub fn obtener_arbol_del_commit_head(logger: Arc<Logger>) -> Option<Tree> {
-    let ruta = match Commit::obtener_ruta_branch_commit() {
-        Ok(ruta) => ruta,
+    let ruta = match ramas::obtener_gir_dir_rama_actual() {
+        Ok(ruta) => format!("{}", ruta.display()),
         Err(_) => return None,
     };
     let padre_commit = io::leer_a_string(path::Path::new(&ruta)).unwrap_or_else(|_| "".to_string());
@@ -68,7 +66,7 @@ impl Status {
     /// Devuelve un vector con los cambios formateados segun su respectivo tipo de cambio.
     /// Si el archivo no se encuentra en el commit anterior, se considera un nuevo archivo.
     pub fn obtener_staging(&self) -> Result<Vec<String>, String> {
-        let mut staging = Vec::new();
+        let mut staging: Vec<String> = Vec::new();
         for objeto_index in &self.index {
             match self.tree_commit_head {
                 Some(ref tree) => {
@@ -99,6 +97,22 @@ impl Status {
             }
         }
         Ok(staging)
+    }
+
+    /// Obtiene los archivos que quedaron con conflictos luego de realizar un merge.
+    /// Devuelve un vector con los mismos formateados indicando que quedaron con conflictos.
+    fn obtener_archivos_unmergeados(&self) -> Result<Vec<String>, String> {
+        let mut unmergeados = Vec::new();
+        for objeto_index in &self.index {
+            if objeto_index.merge {
+                let linea_formateada = format!(
+                    "unmergeado: {}",
+                    objeto_index.objeto.obtener_path().display()
+                );
+                unmergeados.push(linea_formateada);
+            }
+        }
+        Ok(unmergeados)
     }
 
     /// Obtiene los archivos que fueron commiteados anteriormente, fueron modificados en el directorio actual y no estan en el index.
@@ -169,7 +183,6 @@ impl Status {
                 &objeto_index.objeto.obtener_path(),
             ),
         });
-
         bool
     }
 
@@ -213,6 +226,7 @@ impl Ejecutar for Status {
     /// Devuelve un string con los cambios a ser commiteados, los cambios no en zona de preparacion y los cambios no trackeados.
     fn ejecutar(&mut self) -> Result<String, String> {
         let staging = self.obtener_staging()?;
+        let unmergeados = self.obtener_archivos_unmergeados()?;
         let trackeados = self.obtener_trackeados()?;
         let untrackeados = self.obtener_untrackeados()?;
 
@@ -220,6 +234,10 @@ impl Ejecutar for Status {
         mensaje.push_str("Cambios a ser commiteados:\n");
         for cambio in staging {
             mensaje.push_str(&format!("         {}{}{}\n", VERDE, cambio, RESET));
+        }
+        mensaje.push_str("\nArchivos unmergeados:\n");
+        for cambio in unmergeados {
+            mensaje.push_str(&format!("         {}{}{}\n", ROJO, cambio, RESET));
         }
         mensaje.push_str("\nCambios no en zona de preparacion:\n");
         for cambio in trackeados {

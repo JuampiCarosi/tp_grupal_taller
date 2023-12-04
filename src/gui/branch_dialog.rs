@@ -2,10 +2,13 @@ use std::sync::Arc;
 
 use gtk::prelude::*;
 
-use super::{comando_gui::ComandoGui, conflicts_modal, dibujar_dialog, info_dialog};
-use crate::tipos_de_dato::{
-    comandos::{branch::Branch, merge::Merge, rebase::Rebase},
-    logger::Logger,
+use super::{comando_gui::ComandoGui, conflicts_modal, dibujar_dialog, info_dialog, log_list};
+use crate::{
+    tipos_de_dato::{
+        comandos::{branch::Branch, merge::Merge, rebase::Rebase},
+        logger::Logger,
+    },
+    utils::ramas,
 };
 
 pub enum AccionBranchDialog {
@@ -24,7 +27,7 @@ fn obtener_ramas_disponibles() -> Vec<String> {
     return todas
         .lines()
         .filter_map(|rama| {
-            if rama.starts_with("*") {
+            if rama.starts_with('*') {
                 None
             } else {
                 Some(rama.trim().to_string())
@@ -91,4 +94,7 @@ pub fn render(builder: &gtk::Builder, logger: Arc<Logger>, accion: AccionBranchD
     });
 
     dibujar_dialog(&dialog);
+    conflicts_modal::boton_conflictos(builder, logger.clone());
+    let branch = ramas::obtener_rama_actual().unwrap();
+    log_list::render(builder, &branch, logger.clone());
 }

@@ -120,3 +120,38 @@ impl Ejecutar for Init {
         Ok(mensaje)
     }
 }
+
+#[cfg(test)]
+mod test {
+    use std::{path::Path, sync::Arc};
+
+    use crate::tipos_de_dato::{comandos::init::Init, logger::Logger};
+    use std::path::PathBuf;
+
+    #[test]
+    fn test01_obtener_path() {
+        let args = vec!["otro".to_string()];
+        assert_eq!(Init::obtener_path(args), "otro/.gir");
+    }
+
+    #[test]
+    fn test02_crear_directorio_gir() {
+        let _ = std::fs::remove_dir_all("./.gir");
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/commit_test01")).unwrap());
+        let init = Init {
+            path: "./.gir".to_string(),
+            logger,
+        };
+
+        assert!(init.crear_directorio_gir().is_ok());
+        assert!(Path::new("./.gir").exists());
+        assert!(Path::new("./.gir/objects").exists());
+        assert!(Path::new("./.gir/refs/heads").exists());
+        assert!(Path::new("./.gir/refs/tags").exists());
+        assert!(Path::new("./.gir/refs/remotes").exists());
+        assert!(Path::new("./.gir/config").exists());
+        assert!(Path::new("./.gir/refs/heads/master").exists());
+        assert!(Path::new("./.gir/HEAD").exists());
+        assert!(Path::new("./.gir/index").exists());
+    }
+}

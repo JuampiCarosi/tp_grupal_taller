@@ -9,13 +9,21 @@ pub mod tipos_de_dato {
     pub mod comunicacion;
     pub mod config;
     pub mod conflicto;
+    pub mod date;
+    pub mod diffgrid;
+    pub mod info_ramas;
     pub mod lado_conflicto;
     pub mod logger;
+    pub mod mensajes_log;
     pub mod objeto;
     pub mod packfile;
     pub mod referencia;
+    pub mod referencia_commit;
     pub mod region;
+    pub mod respuesta_pedido;
+    pub mod tipo_de_rama;
     pub mod tipo_diff;
+    pub mod variante_comando_remote;
     pub mod visualizaciones;
     pub mod objetos {
         pub mod blob;

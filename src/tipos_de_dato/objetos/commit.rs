@@ -6,6 +6,7 @@ use crate::{
     tipos_de_dato::{
         comando::Ejecutar,
         comandos::{add::Add, cat_file},
+        date::Date,
         logger::Logger,
         region::{unificar_regiones, Region},
         tipo_diff::TipoDiff,
@@ -35,14 +36,6 @@ pub struct CommitObj {
     /// Hash de los commits padres del commit.
     pub padres: Vec<String>,
     pub logger: Arc<Logger>,
-}
-#[derive(Clone, Debug)]
-
-pub struct Date {
-    /// Fecha del commit, guardada en fomarto unix.
-    pub tiempo: String,
-    /// Offset de la fecha del commit.
-    pub offset: String,
 }
 
 impl CommitObj {
@@ -88,9 +81,9 @@ impl CommitObj {
         Self::format_timestamp(timestamp, offset_horas, offset_minutos)
     }
 
+    /// Aplica el diff del commit al directorio actual.
+    /// Devuelve un vector con los archivos que tuvieron conflictos.
     pub fn aplicar_a_directorio(&self) -> Result<Vec<PathBuf>, String> {
-        println!("Aplicando commit: {}", self.mensaje);
-
         let mut conflictos = Vec::new();
 
         let tree_actual =
@@ -123,7 +116,6 @@ impl CommitObj {
                 .collect::<Vec<String>>()
                 .join("\n");
             escribir_bytes(&archivo, &contenido_a_escribir)?;
-            println!("Escrito: {}", contenido_a_escribir);
             let mut add = Add::from(vec![archivo], self.logger.clone())?;
             add.ejecutar()?;
         }
@@ -207,6 +199,9 @@ impl CommitObj {
     }
 }
 
+/// Aplica el diff del commit al texto recibido.
+/// Devuelve un vector con las lineas del texto con el diff aplicado.
+/// Si hay conflictos, de ser posible los unifica y devuelve una region de conflicto.
 fn aplicar_diff(texto: &str, diffs: Vec<(usize, TipoDiff)>) -> Vec<Region> {
     let mut contenido_final = vec![];
     let lineas = texto.lines().collect::<Vec<_>>();

@@ -18,11 +18,9 @@ pub fn obtener_objetos_del_dir(dir: &PathBuf) -> Result<Vec<String>, String> {
                 if gir_io::es_dir(entrada.path())
                     && entrada.file_name().to_string_lossy() != "info"
                     && entrada.file_name().to_string_lossy() != "pack"
+                    && !entrada.path().to_string_lossy().contains("log.txt")
                 {
-                    //que onda este if?? JUANI
-                    if !entrada.path().to_string_lossy().contains("log.txt") {
-                        objetos.append(&mut obtener_objetos_con_nombre_carpeta(entrada.path())?);
-                    }
+                    objetos.append(&mut obtener_objetos_con_nombre_carpeta(entrada.path())?);
                 }
             }
             Err(error) => {
@@ -73,14 +71,10 @@ fn obtener_objetos_con_nombre_carpeta(dir: PathBuf) -> Result<Vec<String>, Strin
 }
 
 // dado un vector con nombres de archivos de vuelve aquellos que no estan en el directorio
-
-// HACER MAS EFICIENTE *Hay iteraciones de mas que se pueden evitar unificando las funciones*
 pub fn obtener_archivos_faltantes(nombres_archivos: Vec<String>, dir: &str) -> Vec<String> {
     // DESHARDCODEAR EL NOMBRE DEL DIRECTORIO (.gir)
     let objetcts_contained =
         obtener_objetos_del_dir(&PathBuf::from(dir.to_string() + "objects/")).unwrap();
-    // println!("objetcts_contained: {:?}", objetcts_contained);
-    // println!("Nombres: {:?}", nombres_archivos);
     let mut archivos_faltantes: Vec<String> = Vec::new();
     for nombre in &objetcts_contained {
         if nombres_archivos.contains(nombre) {

@@ -3,7 +3,7 @@ use std::{
     path::PathBuf,
 };
 
-use crate::tipos_de_dato::comunicacion::Comunicacion;
+use crate::tipos_de_dato::{comunicacion::Comunicacion, referencia_commit::ReferenciaCommit};
 
 use super::ramas;
 
@@ -26,8 +26,8 @@ pub fn fase_de_descubrimiento<T: Write + Read>(
     (
         Vec<String>,
         Option<String>,
-        Vec<(String, PathBuf)>,
-        Vec<(String, PathBuf)>,
+        ReferenciaCommit,
+        ReferenciaCommit,
     ),
     String,
 > {
@@ -89,10 +89,10 @@ fn separar_commit_head_de_ser_necesario(
 
 fn obtener_commits_y_dir_rama_o_tag_asosiados(
     lineas_recibidas: &Vec<String>,
-) -> Result<(Vec<(String, PathBuf)>, Vec<(String, PathBuf)>), String> {
-    let mut commits_cabezas_y_dir_rama_asosiados: Vec<(String, PathBuf)> = Vec::new();
+) -> Result<(ReferenciaCommit, ReferenciaCommit), String> {
+    let mut commits_cabezas_y_dir_rama_asosiados: ReferenciaCommit = Vec::new();
 
-    let mut commits_y_tags_asosiados: Vec<(String, PathBuf)> = Vec::new();
+    let mut commits_y_tags_asosiados: ReferenciaCommit = Vec::new();
 
     for linea in lineas_recibidas {
         let (commit, dir) = obtener_commit_y_dir_asosiado(linea)?;

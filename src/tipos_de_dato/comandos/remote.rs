@@ -1,20 +1,14 @@
 use std::sync::Arc;
 
-use crate::tipos_de_dato::{
-    comando::Ejecutar,
-    config::{Config, RemoteInfo},
-    logger::Logger,
+use crate::{
+    tipos_de_dato::{
+        comando::Ejecutar,
+        config::{Config, RemoteInfo},
+        logger::Logger,
+        variante_comando_remote::ComandoRemote,
+    },
+    utils::ramas,
 };
-
-use super::commit::Commit;
-
-enum ComandoRemote {
-    Mostrar,
-    Agregar,
-    Eliminar,
-    CambiarUrl,
-    MostrarUrl,
-}
 
 pub struct Remote {
     /// Comando a ejecutar.
@@ -27,7 +21,7 @@ pub struct Remote {
     logger: Arc<Logger>,
 }
 
-const INPUT_ERROR: &str = "gir remote add [<nombre-remote>] [<url-remote>]\ngir remote delete [<nombre-remote>] [<url-remote>]\ngir remote set-url [<nombre-remote>] [<url-remote>]\ngir remote show-url [<nombre-remote>] [<url-remote>]";
+const INPUT_ERROR: &str = "gir remote add [<nombre-remote>] [<url-remote>]\ngir remote delete [<nombre-remote>] [<url-remote>]\ngir remote set-url [<nombre-remote>] [<url-remote>]\ngir remote show-url [<nombre-remote>]";
 
 impl Remote {
     /// Crea una instancia de Remote.
@@ -35,6 +29,7 @@ impl Remote {
     /// Si la cantidad de argumentos es 0 devuelve una instancia de Remote con el comando Mostrar.
     /// Si la cantidad de argumentos es 2 devuelve una instancia de Remote con el comando Eliminar o MostrarUrl.
     /// Si la cantidad de argumentos es 3 devuelve una instancia de Remote con el comando Agregar o CambiarUrl.
+    /// Quedo muy largo debido a que son muchas variantes del mismo comando y cargo fmt agrega muchas lineas innecesarias
     pub fn from(args: &mut Vec<String>, logger: Arc<Logger>) -> Result<Remote, String> {
         if args.len() > 3 {
             return Err(format!("Demasiados argumentos\n{}", INPUT_ERROR));
@@ -201,7 +196,7 @@ impl Remote {
     fn mostrar(&self) -> Result<String, String> {
         let config = Config::leer_config()?;
 
-        let branch_actual = Commit::obtener_branch_actual()?;
+        let branch_actual = ramas::obtener_rama_actual()?;
         let remote_actual = config
             .ramas
             .iter()

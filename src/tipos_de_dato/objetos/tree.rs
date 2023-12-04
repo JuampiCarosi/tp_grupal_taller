@@ -12,7 +12,7 @@ use sha1::{Digest, Sha1};
 use crate::{
     tipos_de_dato::{
         comando::Ejecutar,
-        comandos::{cat_file, hash_object::HashObject, merge::Merge},
+        comandos::{cat_file, check_ignore::CheckIgnore, hash_object::HashObject, merge::Merge},
         logger::Logger,
         objeto::Objeto,
         tipo_diff::TipoDiff,
@@ -60,6 +60,8 @@ impl Tree {
         objetos
     }
 
+    /// Devuelve un vector con todos los objetos que se encuentran en el arbol.
+    /// Si el arbol contiene un objeto de tipo Tree, tambien se lo incluye y se llama recursivamente a la funcion.
     pub fn obtener_objetos(&self) -> Vec<Objeto> {
         let mut objetos: Vec<Objeto> = Vec::new();
         for objeto in &self.objetos {
@@ -74,6 +76,9 @@ impl Tree {
         objetos
     }
 
+    /// Devuelve un hashmap con todos los elementos que difieren.
+    /// La key del hasmap es el nombre del archivo.
+    /// El value es un vector de tuplas con el numero de linea y el tipo de diff.
     pub fn deep_changes(
         &self,
         arbol_a_comparar: &Tree,
@@ -210,15 +215,7 @@ impl Tree {
                 .map_err(|_| format!("Error al leer entrada el directorio {directorio:#?}"))?;
             let path = entrada.path();
 
-            if path.ends_with(".DS_Store")
-                || path.starts_with("./.target")
-                || path.starts_with("./.gir")
-                || path.starts_with("./.git")
-                || path == PathBuf::from("./gir")
-                || path == PathBuf::from("./git")
-                || path == PathBuf::from("./target")
-                || path == PathBuf::from("./diagrama.png")
-            {
+            if CheckIgnore::es_directorio_a_ignorar(&path, logger.clone())? {
                 continue;
             }
 
@@ -302,7 +299,6 @@ impl Tree {
     /// Lee el objeto tree de la base de datos en base a un hash pasado por parametro junto con
     /// el directorio en el que se encuentra el tree y lo devuelve como un objeto Tree
     pub fn from_hash(hash: &str, directorio: PathBuf, logger: Arc<Logger>) -> Result<Tree, String> {
-        // let hash_completo = Self::obtener_hash_completo(hash)?;
         let contenido = descomprimir_objeto(hash, ".gir/objects/")?;
         let contenido_parseado = Self::obtener_datos_de_contenido(&contenido)?;
         let mut objetos: Vec<Objeto> = Vec::new();
@@ -476,6 +472,34 @@ impl Tree {
             Objeto::Tree(tree) => tree.es_vacio(),
         })
     }
+
+    /// Dado un arbol y una ruta de un directorio, busca si la ruta esta dentro del arbol
+    /// y en caso positivo, devuelve el arbol asociado a la ubicacion de ese directorio.
+    pub fn recorrer_arbol_hasta_sub_arbol_buscado(
+        direccion_hijo: &str,
+        arbol: Tree,
+    ) -> Result<Tree, String> {
+        let path_hijo = PathBuf::from(direccion_hijo);
+        for objeto in arbol.objetos {
+            match objeto {
+                Objeto::Tree(tree) => {
+                    if tree.directorio == path_hijo {
+                        return Ok(tree);
+                    } else if esta_directorio_habilitado(&path_hijo, &vec![tree.directorio.clone()])
+                    {
+                        let tree_buscado =
+                            Self::recorrer_arbol_hasta_sub_arbol_buscado(direccion_hijo, tree)?;
+                        return Ok(tree_buscado);
+                    }
+                }
+                _ => continue,
+            }
+        }
+        Err(format!(
+            "No se encontro el directorio {} dentro de los directorios trackeados",
+            direccion_hijo
+        ))
+    }
 }
 
 impl Display for Tree {
@@ -564,7 +588,7 @@ mod tests {
                 "100644 archivo.txt    2b824e648965b94c6c6b3dd0702feb91f699ed62\n"
             );
         } else {
-            assert!(false)
+            unreachable!()
         }
     }
 
@@ -581,7 +605,7 @@ mod tests {
                 "40000 muchos_objetos    896ca4eb090e033d16d4e9b1027216572ac3eaae\n40000 objetos    1442e275fd3a2e743f6bccf3b11ab27862157179\n"
             );
         } else {
-            assert!(false)
+            unreachable!()
         }
     }
 
@@ -609,8 +633,7 @@ mod tests {
 
             Ok(())
         } else {
-            assert!(false);
-            Err("No se pudo leer el directorio".to_string())
+            unreachable!();
         }
     }
 
@@ -638,8 +661,7 @@ mod tests {
 
             Ok(())
         } else {
-            assert!(false);
-            Err("No se pudo leer el directorio".to_string())
+            unreachable!();
         }
     }
 

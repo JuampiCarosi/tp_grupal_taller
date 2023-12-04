@@ -10,6 +10,8 @@ use crate::{
 };
 use gtk::prelude::*;
 
+use super::comando_gui::ComandoGui;
+
 fn crear_label(string: &str) -> gtk::EventBox {
     let event_box = gtk::EventBox::new();
     let label = gtk::Label::new(Some(string));
@@ -106,9 +108,8 @@ fn escribir_archivos_untrackeados(builder: &gtk::Builder, logger: Arc<Logger>) {
         let builder_callback = builder.clone();
         label.connect_button_press_event(move |_, _| {
             logger_callback.log("Gui: Agregando archivo a staging");
-            let mut add =
-                Add::from(vec![nombre_callback.clone()], logger_callback.clone()).unwrap();
-            add.ejecutar().unwrap();
+
+            Add::from(vec![nombre_callback.clone()], logger_callback.clone()).ejecutar_gui();
 
             render(&builder_callback, logger_callback.clone());
 
@@ -133,5 +134,10 @@ pub fn render(builder: &gtk::Builder, logger: Arc<Logger>) {
     escribir_archivos_index(builder, logger.clone());
     escribir_archivos_modificados(builder, logger.clone());
     escribir_archivos_untrackeados(builder, logger);
+    container.show_all();
+}
+
+pub fn refresh(builder: &gtk::Builder) {
+    let container: gtk::Box = builder.object("staging").unwrap();
     container.show_all();
 }

@@ -8,11 +8,7 @@ use std::str;
 use std::sync::{Arc, Mutex};
 
 use super::logger::Logger;
-
-pub enum RespuestaDePedido {
-    Mensaje(String),
-    Terminate,
-}
+use super::respuesta_pedido::RespuestaDePedido;
 
 pub struct Comunicacion<T: Read + Write> {
     flujo: Mutex<T>,
