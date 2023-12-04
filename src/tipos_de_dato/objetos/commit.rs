@@ -116,6 +116,7 @@ impl CommitObj {
                 .collect::<Vec<String>>()
                 .join("\n");
             escribir_bytes(&archivo, &contenido_a_escribir)?;
+
             let mut add = Add::from(vec![archivo], self.logger.clone())?;
             add.ejecutar()?;
         }

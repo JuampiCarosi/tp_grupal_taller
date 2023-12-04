@@ -173,6 +173,7 @@ impl Rebase {
         let mut archivo = OpenOptions::new()
             .write(true)
             .append(true)
+            .create(true)
             .open(".gir/rebase-merge/rewritten-list")
             .map_err(|_| "No se pudo abrir el archivo .gir/rebase-merge/rewritten-list")?;
 
@@ -187,6 +188,10 @@ impl Rebase {
     /// Realiza el rebase por primera vez.
     /// Crea la carpeta .gir/rebase-merge y los archivos necesarios para realizar el rebase.
     fn primera_vez(&self) -> Result<String, String> {
+        if PathBuf::from(".gir/rebase-merge").exists() {
+            return Err("Hay rebase en progreso".to_string());
+        }
+
         let rama = self.rama.as_ref().ok_or("No se especifico una rama")?;
 
         self.logger.log("Rebaseando...");
