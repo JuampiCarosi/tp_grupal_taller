@@ -187,7 +187,7 @@ impl Pull {
 
 impl Ejecutar for Pull {
     fn ejecutar(&mut self) -> Result<String, String> {
-        Fetch::<TcpStream>::new(vec![self.remoto.clone()], self.logger.clone())?.ejecutar()?;
+        Fetch::new(vec![self.remoto.clone()], self.logger.clone())?.ejecutar()?;
 
         let commit_head_remoto = self.obtener_head_remoto()?;
 
