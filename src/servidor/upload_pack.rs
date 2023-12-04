@@ -10,8 +10,7 @@ use std::sync::Arc;
 /// # Argumentos
 /// * `dir` - Direccion del repositorio
 /// * `comunicacion` - Comunicacion con el cliente
-/// # Errores
-/// 
+/// * `refs_enviadas` - Referencias enviadas al cliente previamente, se utilizan para comparar con los wants posteriormente
 pub fn upload_pack<T>(
     dir: String,
     comunicacion: &mut Comunicacion<T>,
@@ -37,10 +36,11 @@ where
         // -------- fetch ----------
         procesar_pedido_fetch(&dir, comunicacion, lineas_siguientes)?;
     }
-    println!("Upload pack ejecutado con exito");
+    logger.log("Upload pack ejecutado con exito");
     Ok(())
 }
 
+// Funcion que se encarga de seguir el protocolo en caso de clone   
 fn procesar_pedido_clone<T: Read + Write>(
     dir: &str,
     comunicacion: &mut Comunicacion<T>,
@@ -52,6 +52,7 @@ fn procesar_pedido_clone<T: Read + Write>(
     Ok(())
 }
 
+// Funcion que se encarga de seguir el protocolo en caso de fetch   
 fn procesar_pedido_fetch<T: Read + Write>(
     dir: &str,
     comunicacion: &mut Comunicacion<T>,
@@ -70,6 +71,8 @@ fn procesar_pedido_fetch<T: Read + Write>(
     Ok(())
 }
 
+
+// Funcion para comprobar si los wants enviados por el cliente son o no validos, en caso de que no lo sean se le envia un mensaje de error al cliente
 fn comprobar_wants<T: Read + Write>(
     wants: &Vec<String>,
     refs_enviadas: &Vec<String>,

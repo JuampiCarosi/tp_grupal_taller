@@ -64,6 +64,7 @@ impl Servidor {
             });
             self.threads.push(Some(handle));
         }
+        self.logger.log("Se cerro el servidor");
         Ok(())
     }
 
