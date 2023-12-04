@@ -5,7 +5,7 @@ use std::io::{Read, Write};
 use std::net::TcpStream;
 use std::path::PathBuf;
 use std::str;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use super::logger::Logger;
 use super::respuesta_pedido::RespuestaDePedido;
@@ -112,7 +112,7 @@ impl<T: Write + Read> Comunicacion<T> {
         Ok(())
     }
 
-    ///
+    ///acepta a una sola linea de la comunicacion
     pub fn aceptar_pedido(&mut self) -> Result<RespuestaDePedido, String> {
         // lee primera parte, 4 bytes en hexadecimal indican el largo del stream
 

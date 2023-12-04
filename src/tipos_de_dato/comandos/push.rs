@@ -681,10 +681,3 @@ mod test {
         assert_eq!(referencia_esperada, referencia);
     }
 }
-
-// fn obtener_refs_de(dir: PathBuf, prefijo: String) -> Vec<String> {
-//     let mut refs: Vec<String> = Vec::new();
-//     refs.append(&mut io::obtener_refs(dir.join("heads/"), prefijo.clone()).unwrap());
-//     refs.append(&mut io::obtener_refs(dir.join("tags/"), prefijo).unwrap());
-//     refs
-// }

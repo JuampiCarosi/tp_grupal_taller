@@ -1,6 +1,7 @@
 use crate::tipos_de_dato::comando::Ejecutar;
 use crate::tipos_de_dato::logger::Logger;
-use crate::utils;
+use crate::tipos_de_dato::objetos::tree::Tree;
+use crate::utils::{self, io};
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -9,7 +10,10 @@ use super::fetch::Fetch;
 use super::init::Init;
 use super::pull::Pull;
 use super::remote::Remote;
+use super::set_upstream::SetUpstream;
+use super::write_tree;
 
+const UBICACION_RAMA_MASTER: &str = "./.gir/refs/heads/master";
 const GIR_CLONE: &str = "gir clone <ip:puerto/repositorio/>";
 pub struct Clone {
     logger: Arc<Logger>,
@@ -70,6 +74,39 @@ impl Clone {
         Ok(rama_predeterminada)
     }
 
+    /// Realiza un fast forward de la rama master local a la rama master remota. Para ello
+    /// se obtiene el arbol del commit de la rama master remota y se lo escribe en el directorio
+    /// de trabajo.
+    fn fast_forward_de_cero(&self, commit_head_remoto: &str) -> Result<bool, String> {
+        io::escribir_bytes(UBICACION_RAMA_MASTER, commit_head_remoto)?;
+        let hash_tree_padre =
+            write_tree::conseguir_arbol_from_hash_commit(commit_head_remoto, ".gir/objects/")?;
+        let tree_branch_a_mergear =
+            Tree::from_hash(&hash_tree_padre, PathBuf::from("."), self.logger.clone())?;
+
+        tree_branch_a_mergear.escribir_en_directorio()?;
+
+        self.logger.log(&format!(
+            "Fast forward ejucutado con exito en clone de la rama remota"
+        ));
+
+        Ok(true)
+    }
+
+    ///Busca el archivo correspondiente que contien el HEAD del remoto (el NOMBREREMOTO_HEAD)y lo obtiene. En caso de no
+    /// existir dicho archivo toma por defecto devulevor el commit de master del remoto.   
+    fn obtener_head_remoto(&self, remoto: &str, rama_remota: &str) -> Result<String, String> {
+        let path_remoto = PathBuf::from(format!("./.gir/{}_HEAD", remoto.to_uppercase()));
+
+        if path_remoto.exists() {
+            utils::io::leer_a_string(path_remoto)
+        } else {
+            let path_master_remoto =
+                PathBuf::from(format!("./.gir/refs/remotes/{}/{}", remoto, rama_remota));
+
+            utils::io::leer_a_string(path_master_remoto)
+        }
+    }
     /// Crea el repositorio en el sistema
     fn crear_repositorio(&mut self) -> Result<(), String> {
         Init::from(Vec::new(), self.logger.clone())?.ejecutar()?;
@@ -79,8 +116,18 @@ impl Clone {
 
         Fetch::new(vec!["origin".to_string()], self.logger.clone())?.ejecutar()?;
         let rama_predeterminada = Self::obtener_rama_predeterminada()?;
-        let pull_args = vec!["-u".to_string(), "origin".to_string(), rama_predeterminada];
-        Pull::from(pull_args, self.logger.clone())?.ejecutar()?;
+
+        let commit_head_remoto = self.obtener_head_remoto("origin", &rama_predeterminada)?;
+        self.fast_forward_de_cero(&commit_head_remoto)?;
+
+        SetUpstream::new(
+            "origin".to_string(),
+            rama_predeterminada,
+            utils::ramas::obtener_rama_actual()?,
+            self.logger.clone(),
+        )?
+        .ejecutar()?;
+
         Ok(())
     }
 }
