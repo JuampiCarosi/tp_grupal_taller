@@ -1,7 +1,7 @@
 use std::{path::PathBuf, sync::Arc};
 
 use crate::{
-    tipos_de_dato::{logger::Logger, objetos::tree::Tree},
+    tipos_de_dato::{comando::Ejecutar, logger::Logger, objetos::tree::Tree},
     utils::index::{leer_index, ObjetoIndex},
 };
 
@@ -109,9 +109,11 @@ impl LsFiles {
         texto_tree_e_index.sort();
         Ok(texto_tree_e_index)
     }
+}
 
+impl Ejecutar for LsFiles {
     /// Ejecuta el comando ls-files.
-    pub fn ejecutar(&self) -> Result<String, String> {
+    fn ejecutar(&mut self) -> Result<String, String> {
         self.logger.log("Ejecutando ls-files");
         let mut texto_a_mostrar = Vec::new();
         if self.trees_directorios.is_empty() && !self.archivos.is_empty() && self.index.is_empty() {
@@ -136,6 +138,7 @@ mod test {
 
     use crate::{
         tipos_de_dato::{
+            comando::Ejecutar,
             comandos::{add::Add, commit::Commit, init::Init},
             logger::Logger,
         },
@@ -147,7 +150,7 @@ mod test {
     fn addear_archivos_y_comittear(args: Vec<String>, logger: Arc<Logger>) {
         let mut add = Add::from(args, logger.clone()).unwrap();
         add.ejecutar().unwrap();
-        let commit =
+        let mut commit =
             Commit::from(&mut vec!["-m".to_string(), "mensaje".to_string()], logger).unwrap();
         commit.ejecutar().unwrap();
     }
@@ -155,7 +158,7 @@ mod test {
     fn limpiar_archivo_gir() {
         io::rm_directorio(".gir").unwrap();
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/ls_files_init")).unwrap());
-        let init = Init {
+        let mut init = Init {
             path: "./.gir".to_string(),
             logger,
         };
@@ -169,7 +172,7 @@ mod test {
         let mut args = vec!["test_dir/objetos/archivo.txt".to_string()];
         let mut add = Add::from(args.clone(), logger.clone()).unwrap();
         add.ejecutar().unwrap();
-        let ls_files = LsFiles::from(logger.clone(), &mut args).unwrap();
+        let mut ls_files = LsFiles::from(logger.clone(), &mut args).unwrap();
         let resultado = ls_files.ejecutar().unwrap();
         assert_eq!(resultado, "test_dir/objetos/archivo.txt\n");
     }
@@ -180,7 +183,7 @@ mod test {
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/ls_files_test02")).unwrap());
         addear_archivos_y_comittear(vec!["test_dir".to_string()], logger.clone());
         let mut args = vec![];
-        let ls_files = LsFiles::from(logger.clone(), &mut args).unwrap();
+        let mut ls_files = LsFiles::from(logger.clone(), &mut args).unwrap();
         let resultado = ls_files.ejecutar().unwrap();
         assert_eq!(resultado, "test_dir/muchos_objetos/archivo.txt\ntest_dir/muchos_objetos/archivo_copy.txt\ntest_dir/objetos/archivo.txt\n");
     }
@@ -189,7 +192,7 @@ mod test {
     fn test03_ls_files_muestra_subdirectorios_pedidos() {
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/ls_files_test03")).unwrap());
         let mut args = vec!["test_dir/muchos_objetos".to_string()];
-        let ls_files = LsFiles::from(logger.clone(), &mut args).unwrap();
+        let mut ls_files = LsFiles::from(logger.clone(), &mut args).unwrap();
         let resultado = ls_files.ejecutar().unwrap();
         assert_eq!(
             resultado,
@@ -201,7 +204,7 @@ mod test {
     fn test04_ls_files_con_archivo_inexistente_devuelve_string_vacio() {
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/ls_files_test04")).unwrap());
         let mut args = vec!["archivo_inexistente".to_string()];
-        let ls_files = LsFiles::from(logger.clone(), &mut args).unwrap();
+        let mut ls_files = LsFiles::from(logger.clone(), &mut args).unwrap();
         let resultado = ls_files.ejecutar().unwrap();
         assert_eq!(resultado, "");
     }
@@ -211,7 +214,7 @@ mod test {
         limpiar_archivo_gir();
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/ls_files_test05")).unwrap());
         let mut args = vec!["test_dir/objetos/archivo.txt".to_string()];
-        let ls_files = LsFiles::from(logger.clone(), &mut args).unwrap();
+        let mut ls_files = LsFiles::from(logger.clone(), &mut args).unwrap();
         let resultado = ls_files.ejecutar().unwrap();
         assert_eq!(resultado, "");
     }

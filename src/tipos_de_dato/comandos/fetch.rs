@@ -1,7 +1,8 @@
+use crate::tipos_de_dato::comando::Ejecutar;
 use crate::tipos_de_dato::comunicacion::Comunicacion;
 use crate::tipos_de_dato::config::Config;
 use crate::tipos_de_dato::logger::Logger;
-use crate::tipos_de_dato::packfile::Packfile;
+use crate::tipos_de_dato::packfile::{self, Packfile};
 use crate::utils::{self, io, objects};
 use std::io::{Read, Write};
 use std::net::TcpStream;
@@ -41,12 +42,19 @@ impl<T: Write + Read> Fetch<T> {
     }
 
     #[cfg(test)]
-    //pòr ahoar para testing, para mi asi deberia ser recibiendo el comunicacion
-    fn new_testing(logger: Arc<Logger>, comunicacion: Comunicacion<T>) -> Result<Fetch<T>, String> {
-        let remoto = "origin".to_string();
+    fn new_testing(
+        mut arg: Vec<String>,
+        logger: Arc<Logger>,
+        comunicacion: Comunicacion<T>,
+    ) -> Result<Fetch<T>, String> {
+        let remoto = if arg.len() >= 1 {
+            arg.remove(0)
+        } else {
+            "origin".to_string()
+        };
 
         let capacidades_local = Vec::new();
-        //esto lo deberia tener la comunicacion creo yo
+
         Ok(Fetch {
             remoto,
             comunicacion,
@@ -100,75 +108,59 @@ impl<T: Write + Read> Fetch<T> {
             ))
     }
 
-    // -------------------------------------------------------------
-    // -------------------------------------------------------------
-    // -------------------------------------------------------------
-    // -------------------------------------------------------------
-    // -------------------------------------------------------------
-    // -------------------------------------------------------------
-    // -------------------------------------------------------------
-    // -------------------------------------------------------------
-    //verificar si existe /.git
-    pub fn ejecutar(&self) -> Result<String, String> {
-        self.logger.log("Se ejecuto el comando fetch");
-        self.comunicacion.iniciar_git_upload_pack_con_servidor()?;
-
-        let (
-            capacidades_servidor,
-            commit_head_remoto,
-            commits_cabezas_y_dir_rama_asosiado,
-            _commits_y_tags_asosiados,
-        ) = self.fase_de_descubrimiento()?;
-
-        if !self.fase_de_negociacion(capacidades_servidor, &commits_cabezas_y_dir_rama_asosiado)? {
-            return Ok(String::from("El cliente esta actualizado"));
+    fn guardar_los_tags(
+        &self,
+        commits_y_tags_asosiados: &Vec<(String, PathBuf)>,
+    ) -> Result<(), String> {
+        for (commit, ref_tag) in commits_y_tags_asosiados {
+            let dir_tag = PathBuf::from("./.gir/").join(ref_tag);
+            utils::io::escribir_bytes(dir_tag, commit)?
         }
 
-        self.recivir_packfile_y_guardar_objetos()?;
-
-        self.actualizar_ramas_locales_del_remoto(&commits_cabezas_y_dir_rama_asosiado)?;
-
-        self.acutualizar_archivo_head_remoto(&commit_head_remoto)?;
-
-        let mensaje = "Fetch ejecutado con exito".to_string();
-        self.logger.log(&mensaje);
-        Ok(mensaje)
+        self.logger.log("Escritura de tags en fetch exitosa");
+        Ok(())
     }
-    // -------------------------------------------------------------
-    // -------------------------------------------------------------
-    // -------------------------------------------------------------
-    // -------------------------------------------------------------
-    // -------------------------------------------------------------
-    // -------------------------------------------------------------
-    // -------------------------------------------------------------
-    // -------------------------------------------------------------
 
     fn fase_de_negociacion(
         &self,
         capacidades_servidor: Vec<String>,
         commits_cabezas_y_dir_rama_asosiado: &Vec<(String, PathBuf)>,
+        commit_y_tags_asosiado: &Vec<(String, PathBuf)>,
     ) -> Result<bool, String> {
         // no hay pedidos :D
-        if !self.enviar_pedidos(&capacidades_servidor, commits_cabezas_y_dir_rama_asosiado)? {
+        if !self.enviar_pedidos(
+            &capacidades_servidor,
+            commits_cabezas_y_dir_rama_asosiado,
+            commit_y_tags_asosiado,
+        )? {
             return Ok(NO_SE_ENVIO_NINGUN_PEDIDO);
         }
 
         self.enviar_lo_que_tengo()?;
 
+        self.logger
+            .log("Se completo correctamente la fase de negociacion en Fetch");
         Ok(SE_ENVIO_ALGUN_PEDIDO)
     }
 
-    //ACA PARA MI HAY UN PROBLEMA DE RESPONSABILIADADES: COMUNICACION DEBERIA RECIBIR EL PACKETE Y FETCH
-    //DEBERIA GUARDAR LAS COSAS, PERO COMO NO ENTIENDO EL CODIGO JAJA DENTRO DE COMUNICACION NO METO MANO
-    fn recivir_packfile_y_guardar_objetos(&self) -> Result<(), String> {
+    fn recibir_packfile_y_guardar_objetos(&self) -> Result<(), String> {
         // aca para git daemon hay que poner un recibir linea mas porque envia un ACK repetido (No entiendo por que...)
         println!("Obteniendo paquete..");
         let packfile = self.comunicacion.obtener_packfile()?;
-        // Packfile::new()
-        //     .obtener_paquete_y_escribir(&mut packfile, String::from("./.gir/objects/"))
-        //     .unwrap();
-        Packfile::leer_packfile_y_escribir(&packfile, "./.gir/objects/".to_string()).unwrap();
+        let primeros_bytes = &packfile[..4];
+        if primeros_bytes != "PACK".as_bytes() {
+            println!(
+                "Se recibio: {}",
+                String::from_utf8_lossy(packfile.as_slice())
+            );
+            return Err(format!(
+                "Error al recibir el packfile, se recibio: {}",
+                String::from_utf8_lossy(packfile.as_slice())
+            ));
+        }
 
+        self.logger.log("Recepcion del pack file en fetch exitoso");
+        Packfile::leer_packfile_y_escribir(&packfile, "./.gir/objects/".to_string()).unwrap();
         Ok(())
     }
 
@@ -204,23 +196,23 @@ impl<T: Write + Read> Fetch<T> {
     fn enviar_lo_que_tengo(&self) -> Result<(), String> {
         //ESTAMOS ENVIANDO TODOS LOS OBJETOS QUE TENEMOS SIN DISTINCION, DE QUE RAMA ESTAN. FUNCIONA
         //PERO SE PODRIA ENVIAR SOLO DE LAS QUE LE PEDISTE
-        let objetos = objects::obtener_objetos()?;
+        let objetos = objects::obtener_objetos_del_dir(&PathBuf::from("./.gir/objects"))?;
 
         if !objetos.is_empty() {
             self.comunicacion
                 .enviar_lo_que_tengo_al_servidor_pkt(&objetos)?;
-            self.recivir_nack()?;
+            self.recibir_nack()?;
             self.finalizar_pedido()?
         } else {
             self.finalizar_pedido()?;
-            self.recivir_nack()?;
+            self.recibir_nack()?;
         }
-
+        self.logger.log("Se envio con exito lo que tengo en Fetch");
         Ok(())
     }
 
     ///Recibe el la repusta Nack del servidor del envio de HAVE
-    fn recivir_nack(&self) -> Result<(), String> {
+    fn recibir_nack(&self) -> Result<(), String> {
         //POR AHORA NO HACEMOS, NADA CON ESTO: EVALUAR QUE HACER. SOLO LEERMOS
         //PARA SEGUIR EL FLUJO
         let _acks_nak = self.comunicacion.obtener_lineas()?;
@@ -236,23 +228,34 @@ impl<T: Write + Read> Fetch<T> {
         &self,
         capacidades_servidor: &[String],
         commits_cabezas_y_dir_rama_asosiado: &Vec<(String, PathBuf)>,
+        commit_y_tags_asosiado: &Vec<(String, PathBuf)>,
     ) -> Result<bool, String> {
         let capacidades_a_usar_en_la_comunicacion =
             self.obtener_capacidades_en_comun_con_el_servidor(capacidades_servidor);
 
         let commits_de_cabeza_de_rama_faltantes =
             self.obtener_commits_cabeza_de_rama_faltantes(commits_cabezas_y_dir_rama_asosiado)?;
+        let tags_faltantes = self.obtener_tags_faltantes(commit_y_tags_asosiado)?;
 
-        if commits_de_cabeza_de_rama_faltantes.is_empty() {
+        let pedidos = [
+            &commits_de_cabeza_de_rama_faltantes[..],
+            &tags_faltantes[..],
+        ]
+        .concat();
+
+        if pedidos.is_empty() {
             self.comunicacion.enviar_flush_pkt()?;
+            self.logger.log(
+                "Se completo correctamente el envio de pedidos en Fetch pero no se envio nada",
+            );
             return Ok(NO_SE_ENVIO_NINGUN_PEDIDO);
         }
 
-        self.comunicacion.enviar_pedidos_al_servidor_pkt(
-            commits_de_cabeza_de_rama_faltantes,
-            capacidades_a_usar_en_la_comunicacion,
-        )?;
+        self.comunicacion
+            .enviar_pedidos_al_servidor_pkt(pedidos, capacidades_a_usar_en_la_comunicacion)?;
 
+        self.logger
+            .log("Se completo correctamente el envio de pedidos en Fetch");
         Ok(SE_ENVIO_ALGUN_PEDIDO)
     }
 
@@ -281,7 +284,6 @@ impl<T: Write + Read> Fetch<T> {
                 commits_de_cabeza_de_rama_faltantes.push(commit_cabeza_remoto.to_string());
                 continue;
             }
-
             let commit_cabeza_local = io::leer_a_string(dir_rama_asosiada_local)?;
 
             if commit_cabeza_local != *commit_cabeza_remoto {
@@ -289,9 +291,49 @@ impl<T: Write + Read> Fetch<T> {
             }
         }
 
+        self.logger.log(&format!(
+            "Commits ramas faltantes {:?}",
+            commits_de_cabeza_de_rama_faltantes
+        ));
+
         Ok(commits_de_cabeza_de_rama_faltantes)
     }
 
+    ///Obtiene los commits que son necesarios a actulizar y por lo tanto hay que pedirle al servidor esas ramas.
+    /// Obtiene aquellos commits que pertenecesen a ramas cuyas cabezas en el servidor apuntan commits distintos
+    /// que sus equivalencias en el repositorio local, implicando que la rama local esta desacululizada.
+    ///
+    /// # Resultado
+    ///
+    /// - Devuleve un vector con los commits cabezas de las ramas que son necearias actualizar con
+    ///     respecto a las del servidor
+    fn obtener_tags_faltantes(
+        &self,
+        commit_y_tags_asosiado: &Vec<(String, PathBuf)>,
+    ) -> Result<Vec<String>, String> {
+        let mut commits_de_tags_faltantes: Vec<String> = Vec::new();
+
+        for (commit_cabeza_remoto, tag_asosiado) in commit_y_tags_asosiado {
+            let dir_tag = PathBuf::from("./.gir").join(tag_asosiado);
+
+            if !dir_tag.exists() {
+                commits_de_tags_faltantes.push(commit_cabeza_remoto.to_string());
+                continue;
+            }
+            let commit_cabeza_local = io::leer_a_string(dir_tag)?;
+
+            if commit_cabeza_local != *commit_cabeza_remoto {
+                commits_de_tags_faltantes.push(commit_cabeza_remoto.to_string());
+            }
+        }
+
+        self.logger.log(&format!(
+            "Commits tags faltantes {:?}",
+            commits_de_tags_faltantes
+        ));
+
+        Ok(commits_de_tags_faltantes)
+    }
     ///compara las capacidades del servidor con las locales y devulve un string con las capacidades en comun
     /// para usar en la comunicacion
     fn obtener_capacidades_en_comun_con_el_servidor(
@@ -332,7 +374,14 @@ impl<T: Write + Read> Fetch<T> {
         ),
         String,
     > {
-        utils::fase_descubrimiento::fase_de_descubrimiento(&self.comunicacion)
+        let resultado = utils::fase_descubrimiento::fase_de_descubrimiento(&self.comunicacion)?;
+
+        self.logger.log(&format!(
+            "Se ejecuto correctamte la fase de decubrimiento en Fech: {:?}",
+            resultado
+        ));
+
+        Ok(resultado)
     }
 
     ///actuliza a donde apuntan las cabeza del rama de las ramas locales pertenecientes al remoto
@@ -350,168 +399,194 @@ impl<T: Write + Read> Fetch<T> {
             io::escribir_bytes(dir_rama_local_del_remoto, commit_cabeza_de_rama)?;
         }
 
+        self.logger
+            .log("Actualizacion de ramas remotas en fetch exitosa");
         Ok(())
+    }
+}
+
+impl Ejecutar for Fetch<TcpStream> {
+    fn ejecutar(&mut self) -> Result<String, String> {
+        self.logger.log("Se ejecuto el comando fetch");
+        self.comunicacion.iniciar_git_upload_pack_con_servidor()?;
+
+        let (
+            capacidades_servidor,
+            commit_head_remoto,
+            commits_cabezas_y_dir_rama_asosiado,
+            commits_y_tags_asosiados,
+        ) = self.fase_de_descubrimiento()?;
+
+        if !self.fase_de_negociacion(
+            capacidades_servidor,
+            &commits_cabezas_y_dir_rama_asosiado,
+            &commits_y_tags_asosiados,
+        )? {
+            return Ok(String::from("El cliente esta actualizado"));
+        }
+
+        self.recibir_packfile_y_guardar_objetos()?;
+
+        self.actualizar_ramas_locales_del_remoto(&commits_cabezas_y_dir_rama_asosiado)?;
+
+        self.guardar_los_tags(&commits_y_tags_asosiados)?;
+
+        self.acutualizar_archivo_head_remoto(&commit_head_remoto)?;
+
+        let mensaje = "Fetch ejecutado con exito".to_string();
+        self.logger.log(&mensaje);
+        Ok(mensaje)
     }
 }
 
 #[cfg(test)]
 
 mod test {
-    use std::{
-        io::{Read, Write},
-        path::PathBuf,
-        sync::Arc,
-    };
+    use std::{path::PathBuf, sync::Arc};
 
-    use crate::tipos_de_dato::{comunicacion::Comunicacion, logger::Logger};
+    use crate::{
+        tipos_de_dato::{comunicacion::Comunicacion, logger::Logger},
+        utils::{self, testing::MockTcpStream},
+    };
 
     use super::Fetch;
 
-    struct MockTcpStream {
-        lectura_data: Vec<u8>,
-        escritura_data: Vec<u8>,
-    }
-
-    impl Read for MockTcpStream {
-        fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
-            let bytes_to_read = std::cmp::min(buf.len(), self.lectura_data.len());
-            buf[..bytes_to_read].copy_from_slice(&self.lectura_data[..bytes_to_read]);
-            self.lectura_data.drain(..bytes_to_read);
-            Ok(bytes_to_read)
-        }
-    }
-
-    impl Write for MockTcpStream {
-        fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-            self.escritura_data.write(buf)
-        }
-
-        fn flush(&mut self) -> std::io::Result<()> {
-            self.escritura_data.flush()
-        }
-    }
-
     #[test]
-    fn test01_la_fase_de_descubrimiento_funcion() {
-        let logger = Arc::new(Logger::new(PathBuf::from("tmp/fetch_01.txt")).unwrap());
-        let contenido_mock = "000eversion 1 \
-        00887217a7c7e582c46cec22a130adf4b9d7d950fba0 HEAD\0multi_ack thin-pack \
-        side-band side-band-64k ofs-delta shallow no-progress include-tag \
-        00441d3fcd5ced445d1abc402225c0b8a1299641f497 refs/heads/integration \
-        003f7217a7c7e582c46cec22a130adf4b9d7d950fba0 refs/heads/master \
-        003cb88d2441cac0977faf98efc80305012112238d9d refs/tags/v0.9 \
-        003c525128480b96c89e6418b1e40909bf6c5b2d580f refs/tags/v1.0 \
-        003fe92df48743b7bc7d26bcaabfddde0a1e20cae47c refs/tags/v1.0^{} \
-        0000";
+    fn test_03_los_tags_se_gurdan_correctamtene() {
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/fetch_03.txt")).unwrap());
+        utils::testing::limpiar_archivo_gir(logger.clone());
+
+        let tag_1 = "v0.9".to_string();
+        let tag_1_contenido = "b88d2441cac0977faf98efc80305012112238d9d".to_string();
+        let tag_2 = "v1.0".to_string();
+        let tag_2_contenido = "525128480b96c89e6418b1e40909bf6c5b2d580f".to_string();
+
+        let commits_y_tags = vec![
+            (
+                tag_1_contenido.clone(),
+                PathBuf::from(format!("refs/tags/{}", tag_1)),
+            ),
+            (
+                tag_2_contenido.clone(),
+                PathBuf::from(format!("refs/tags/{}", tag_2)),
+            ),
+        ];
 
         let mock = MockTcpStream {
-            lectura_data: contenido_mock.as_bytes().to_vec(),
+            lectura_data: Vec::new(),
             escritura_data: Vec::new(),
         };
 
         let comunicacion = Comunicacion::new_para_testing(mock, logger.clone());
-        let (capacidades, commit_head, commits_y_ramas, commits_y_tags) =
-            Fetch::new_testing(logger, comunicacion.into())
-                .unwrap()
-                .fase_de_descubrimiento()
-                .unwrap();
+        Fetch::new_testing(vec![], logger, comunicacion.into())
+            .unwrap()
+            .guardar_los_tags(&commits_y_tags)
+            .unwrap();
 
-        let capacidades_esperadas =
-            "multi_ack thin-pack side-band side-band-64k ofs-delta shallow no-progress include-tag";
-        assert_eq!(capacidades_esperadas, capacidades.join(" "));
+        assert!(utils::tags::existe_tag(&tag_1));
+        let tag_1_contenido_obtenido =
+            utils::io::leer_a_string(format!("./.gir/refs/tags/{}", tag_1)).unwrap();
+        assert_eq!(tag_1_contenido_obtenido, tag_1_contenido);
 
-        let commit_head_esperado = "7217a7c7e582c46cec22a130adf4b9d7d950fba0";
-        assert_eq!(commit_head_esperado, commit_head.unwrap());
-
-        let commits_y_ramas_esperadas = vec![
-            (
-                "1d3fcd5ced445d1abc402225c0b8a1299641f497".to_string(),
-                PathBuf::from("refs/heads/integration"),
-            ),
-            (
-                "7217a7c7e582c46cec22a130adf4b9d7d950fba0".to_string(),
-                PathBuf::from("refs/heads/master"),
-            ),
-        ];
-        assert_eq!(commits_y_ramas_esperadas, commits_y_ramas);
-
-        let commits_y_tags_esperados = vec![
-            (
-                "b88d2441cac0977faf98efc80305012112238d9d".to_string(),
-                PathBuf::from("refs/tags/v0.9"),
-            ),
-            (
-                "525128480b96c89e6418b1e40909bf6c5b2d580f".to_string(),
-                PathBuf::from("refs/tags/v1.0"),
-            ),
-            (
-                "e92df48743b7bc7d26bcaabfddde0a1e20cae47c".to_string(),
-                PathBuf::from("refs/tags/v1.0^{}".to_string()),
-            ),
-        ];
-        assert_eq!(commits_y_tags_esperados, commits_y_tags)
+        assert!(utils::tags::existe_tag(&tag_2));
+        let tag_2_contenido_obtenido =
+            utils::io::leer_a_string(format!("./.gir/refs/tags/{}", tag_2)).unwrap();
+        assert_eq!(tag_2_contenido_obtenido, tag_2_contenido);
     }
 
     #[test]
-    fn test02_la_fase_de_descubrimiento_funcion_aun_si_no_hay_un_head() {
-        let contenido_mock = "000eversion 1 \
-        009a1d3fcd5ced445d1abc402225c0b8a1299641f497 refs/heads/integration\0multi_ack thin-pack \
-        side-band side-band-64k ofs-delta shallow no-progress include-tag \
-        003f7217a7c7e582c46cec22a130adf4b9d7d950fba0 refs/heads/master \
-        003cb88d2441cac0977faf98efc80305012112238d9d refs/tags/v0.9 \
-        003c525128480b96c89e6418b1e40909bf6c5b2d580f refs/tags/v1.0 \
-        003fe92df48743b7bc7d26bcaabfddde0a1e20cae47c refs/tags/v1.0^{} \
-        0000";
+    fn test_04_los_ramas_remotas_se_escriben_correctamente() {
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/fetch_04.txt")).unwrap());
+        utils::testing::limpiar_archivo_gir(logger.clone());
+
+        let remoto = "san-siro".to_string();
+        let rama_remota = "tomate".to_string();
+        let rama_contenido = "b88d2441cac0977faf98efc80305012112238d9d".to_string();
+
+        let commits_y_ramas = vec![(
+            rama_contenido.clone(),
+            PathBuf::from(format!("refs/heads/{}", rama_remota)),
+        )];
 
         let mock = MockTcpStream {
-            lectura_data: contenido_mock.as_bytes().to_vec(),
+            lectura_data: Vec::new(),
             escritura_data: Vec::new(),
         };
-        let logger = Arc::new(Logger::new(PathBuf::from("tmp/fetch_02.txt")).unwrap());
 
         let comunicacion = Comunicacion::new_para_testing(mock, logger.clone());
-        let logger = Arc::new(Logger::new(PathBuf::from(".log.txt")).unwrap());
-        let (capacidades, commit_head, commits_y_ramas, commits_y_tags) =
-            Fetch::new_testing(logger, comunicacion.into())
-                .unwrap()
-                .fase_de_descubrimiento()
+        Fetch::new_testing(vec![remoto.clone()], logger, comunicacion.into())
+            .unwrap()
+            .actualizar_ramas_locales_del_remoto(&commits_y_ramas)
+            .unwrap();
+
+        let rama_contendio_obtenido =
+            utils::io::leer_a_string(format!("./.gir/refs/remotes/{}/{}", remoto, rama_remota))
                 .unwrap();
-
-        let capacidades_esperadas =
-            "multi_ack thin-pack side-band side-band-64k ofs-delta shallow no-progress include-tag";
-        assert_eq!(capacidades_esperadas, capacidades.join(" "));
-
-        assert_eq!(Option::None, commit_head);
-
-        let commits_y_ramas_esperadas = vec![
-            (
-                "1d3fcd5ced445d1abc402225c0b8a1299641f497".to_string(),
-                PathBuf::from("refs/heads/integration"),
-            ),
-            (
-                "7217a7c7e582c46cec22a130adf4b9d7d950fba0".to_string(),
-                PathBuf::from("refs/heads/master"),
-            ),
-        ];
-        assert_eq!(commits_y_ramas_esperadas, commits_y_ramas);
-
-        let commits_y_tags_esperados = vec![
-            (
-                "b88d2441cac0977faf98efc80305012112238d9d".to_string(),
-                PathBuf::from("refs/tags/v0.9"),
-            ),
-            (
-                "525128480b96c89e6418b1e40909bf6c5b2d580f".to_string(),
-                PathBuf::from("refs/tags/v1.0"),
-            ),
-            (
-                "e92df48743b7bc7d26bcaabfddde0a1e20cae47c".to_string(),
-                PathBuf::from("refs/tags/v1.0^{}".to_string()),
-            ),
-        ];
-        assert_eq!(commits_y_tags_esperados, commits_y_tags)
+        assert_eq!(rama_contendio_obtenido, rama_contenido);
     }
 
+    #[test]
+    fn test_05_los_ramas_remotas_se_actualizan_correctamente() {
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/fetch_05.txt")).unwrap());
+        utils::testing::limpiar_archivo_gir(logger.clone());
+
+        let remoto = "san-siro".to_string();
+        let rama_remota = "tomate".to_string();
+        let rama_contenido_actualizar = "b88d2441cac0977faf98efc80305012112238d9d".to_string();
+        utils::testing::escribir_rama_remota(&remoto, &rama_remota);
+
+        let commits_y_ramas = vec![(
+            rama_contenido_actualizar.clone(),
+            PathBuf::from(format!("refs/heads/{}", rama_remota)),
+        )];
+
+        let mock = MockTcpStream {
+            lectura_data: Vec::new(),
+            escritura_data: Vec::new(),
+        };
+
+        let comunicacion = Comunicacion::new_para_testing(mock, logger.clone());
+        Fetch::new_testing(vec![remoto.clone()], logger, comunicacion.into())
+            .unwrap()
+            .actualizar_ramas_locales_del_remoto(&commits_y_ramas)
+            .unwrap();
+
+        let rama_contendio_obtenido =
+            utils::io::leer_a_string(format!("./.gir/refs/remotes/{}/{}", remoto, rama_remota))
+                .unwrap();
+        assert_eq!(rama_contendio_obtenido, rama_contenido_actualizar);
+    }
+
+    #[test]
+    fn test_05_los_ramas_remotas_se_escriben_correctamente() {
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/fetch_05.txt")).unwrap());
+        utils::testing::limpiar_archivo_gir(logger.clone());
+
+        let remoto = "san-siro".to_string();
+        let rama_remota = "tomate".to_string();
+        let rama_contenido = "b88d2441cac0977faf98efc80305012112238d9d".to_string();
+
+        let commits_y_ramas = vec![(
+            rama_contenido.clone(),
+            PathBuf::from(format!("refs/heads/{}", rama_remota)),
+        )];
+
+        let mock = MockTcpStream {
+            lectura_data: Vec::new(),
+            escritura_data: Vec::new(),
+        };
+
+        let comunicacion = Comunicacion::new_para_testing(mock, logger.clone());
+        Fetch::new_testing(vec![remoto.clone()], logger, comunicacion.into())
+            .unwrap()
+            .actualizar_ramas_locales_del_remoto(&commits_y_ramas)
+            .unwrap();
+
+        let rama_contendio_obtenido =
+            utils::io::leer_a_string(format!("./.gir/refs/remotes/{}/{}", remoto, rama_remota))
+                .unwrap();
+        assert_eq!(rama_contendio_obtenido, rama_contenido);
+    }
     // #[test]
     // fn test03_la_fase_de_negociacion_funciona(){
     //     let nuevo_dir = "test03_fetch";

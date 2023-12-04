@@ -8,7 +8,7 @@ const VERDE: &str = "\x1B[32m";
 const RESET: &str = "\x1B[0m";
 
 use crate::{
-    tipos_de_dato::{logger::Logger, objeto::Objeto, objetos::tree::Tree},
+    tipos_de_dato::{comando::Ejecutar, logger::Logger, objeto::Objeto, objetos::tree::Tree},
     utils::{
         index::{leer_index, ObjetoIndex},
         io, ramas,
@@ -219,10 +219,12 @@ impl Status {
 
         Ok(untrackeados)
     }
+}
 
+impl Ejecutar for Status {
     /// Ejecuta el comando status.
     /// Devuelve un string con los cambios a ser commiteados, los cambios no en zona de preparacion y los cambios no trackeados.
-    pub fn ejecutar(&mut self) -> Result<String, String> {
+    fn ejecutar(&mut self) -> Result<String, String> {
         let staging = self.obtener_staging()?;
         let unmergeados = self.obtener_archivos_unmergeados()?;
         let trackeados = self.obtener_trackeados()?;
@@ -256,6 +258,7 @@ mod tests {
 
     use crate::{
         tipos_de_dato::{
+            comando::Ejecutar,
             comandos::{add::Add, commit::Commit, init::Init, status::Status},
             logger::Logger,
         },
@@ -270,7 +273,7 @@ mod tests {
     fn addear_archivos_y_comittear(args: Vec<String>, logger: Arc<Logger>) {
         let mut add = Add::from(args, logger.clone()).unwrap();
         add.ejecutar().unwrap();
-        let commit =
+        let mut commit =
             Commit::from(&mut vec!["-m".to_string(), "mensaje".to_string()], logger).unwrap();
         commit.ejecutar().unwrap();
     }
@@ -278,7 +281,7 @@ mod tests {
     fn limpiar_archivo_gir() {
         io::rm_directorio(".gir").unwrap();
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/branch_init")).unwrap());
-        let init = Init {
+        let mut init = Init {
             path: "./.gir".to_string(),
             logger,
         };

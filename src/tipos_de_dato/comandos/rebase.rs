@@ -1,6 +1,7 @@
 use std::io::prelude::*;
 use std::{fs::OpenOptions, path::PathBuf, sync::Arc};
 
+use crate::tipos_de_dato::comando::Ejecutar;
 use crate::utils::index::{self, escribir_index};
 use crate::utils::ramas;
 use crate::{
@@ -241,7 +242,7 @@ impl Rebase {
 
             self.actualizar_lista_de_commits_aplicados(&commit.hash)?;
 
-            let comando_commit = Commit {
+            let mut comando_commit = Commit {
                 mensaje: commit.mensaje,
                 logger: self.logger.clone(),
             };
@@ -286,7 +287,7 @@ impl Rebase {
             return Err("No hay rebase en progreso".to_string());
         }
         let mensaje_commit = io::leer_a_string(".gir/rebase-merge/message")?;
-        let commit = Commit::from(
+        let mut commit = Commit::from(
             &mut vec!["-m".to_string(), mensaje_commit],
             self.logger.clone(),
         )?;

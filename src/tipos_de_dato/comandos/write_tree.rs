@@ -102,7 +102,9 @@ mod tests {
     use std::{path::PathBuf, sync::Arc};
 
     use crate::{
-        tipos_de_dato::{comandos::add::Add, comandos::init::Init, logger::Logger},
+        tipos_de_dato::{
+            comando::Ejecutar, comandos::add::Add, comandos::init::Init, logger::Logger,
+        },
         utils::{compresion::descomprimir_objeto_gir, io},
     };
 
@@ -111,7 +113,7 @@ mod tests {
     fn limpiar_archivo_gir() {
         io::rm_directorio(".gir").unwrap();
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/branch_init")).unwrap());
-        let init = Init {
+        let mut init = Init {
             path: "./.gir".to_string(),
             logger,
         };

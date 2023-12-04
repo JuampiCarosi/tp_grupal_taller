@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use crate::{
     tipos_de_dato::{
+        comando::Ejecutar,
         comandos::{add::Add, status::Status},
         logger::Logger,
     },

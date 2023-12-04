@@ -1,8 +1,9 @@
 use std::sync::Arc;
 
-use crate::utils::{io, path_buf, ramas};
-
-use super::logger::Logger;
+use crate::{
+    tipos_de_dato::logger::Logger,
+    utils::{self, io, ramas},
+};
 
 pub struct Tag {
     logger: Arc<Logger>,
@@ -34,30 +35,13 @@ impl Tag {
     /// Devuelve un vector con los nombres de los tags existentes dentro del repositorio.
     /// Si no hay tags, devuelve un vector vacio.
     fn obtener_tags(&self) -> Result<Vec<String>, String> {
-        let ubicacion = "./.gir/refs/tags";
-        let mut tags: Vec<String> = Vec::new();
-
-        let tags_entries = std::fs::read_dir(ubicacion)
-            .map_err(|e| format!("Error al leer el directorio de tags: {}", e))?;
-
-        for tag_entry in tags_entries {
-            let tag_dir = tag_entry
-                .map_err(|e| format!("Error al leer el directorio de tags: {}", e))?
-                .path();
-            let tag = path_buf::obtener_nombre(&tag_dir)?;
-
-            tags.push(tag);
-        }
-
-        Ok(tags)
+        utils::tags::obtener_tags()
     }
 
     /// Crea un tag con el nombre ingresado por el usuario.
     /// Si el tag ya existe, devuelve un error.
     fn crear_tag(&self, tag: &str) -> Result<(), String> {
-        let tags = self.obtener_tags()?;
-
-        if tags.contains(&tag.to_string()) {
+        if utils::tags::existe_tag(&tag.to_string()) {
             return Err(format!("El tag {} ya existe", tag));
         }
 

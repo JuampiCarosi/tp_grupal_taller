@@ -1,3 +1,4 @@
+use crate::tipos_de_dato::comando::Ejecutar;
 use crate::tipos_de_dato::logger::Logger;
 use crate::utils::compresion::comprimir_contenido_u8;
 use crate::utils::io;
@@ -70,11 +71,13 @@ impl HashObject {
         let hash = hasher.finalize();
         format!("{:x}", hash)
     }
+}
 
+impl Ejecutar for HashObject {
     /// Ejecuta el comando hash-object.
     /// Devuelve el hash del objeto creado.
     /// Si la opcion -w esta activada, escribe el objeto en el repositorio.
-    pub fn ejecutar(&self) -> Result<String, String> {
+    fn ejecutar(&mut self) -> Result<String, String> {
         let contenido = self.construir_contenido()?;
         let hash = Self::hashear_contenido_objeto(&contenido);
 
@@ -98,7 +101,7 @@ mod tests {
     use flate2::read::ZlibDecoder;
 
     use crate::{
-        tipos_de_dato::{comandos::hash_object::HashObject, logger::Logger},
+        tipos_de_dato::{comando::Ejecutar, comandos::hash_object::HashObject, logger::Logger},
         utils::io,
     };
 
@@ -106,7 +109,7 @@ mod tests {
     fn test01_hash_object_de_un_blob_devuelve_el_hash_correcto() {
         let mut args = vec!["test_dir/objetos/archivo.txt".to_string()];
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/hash_object_test01")).unwrap());
-        let hash_object = HashObject::from(&mut args, logger).unwrap();
+        let mut hash_object = HashObject::from(&mut args, logger).unwrap();
         let hash = hash_object.ejecutar().unwrap();
         assert_eq!(hash, "2b824e648965b94c6c6b3dd0702feb91f699ed62");
     }
@@ -115,7 +118,7 @@ mod tests {
     fn test02_hash_object_de_un_blob_con_opcion_w_devuelve_el_hash_correcto_y_lo_escribe() {
         let mut args = vec!["-w".to_string(), "test_dir/objetos/archivo.txt".to_string()];
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/hash_object_test01")).unwrap());
-        let hash_object = HashObject::from(&mut args, logger).unwrap();
+        let mut hash_object = HashObject::from(&mut args, logger).unwrap();
         let hash = hash_object.ejecutar().unwrap();
         assert_eq!(hash, "2b824e648965b94c6c6b3dd0702feb91f699ed62");
         let contenido_leido =

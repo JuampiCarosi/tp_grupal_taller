@@ -2,6 +2,8 @@ mod estrategias_conflictos;
 
 use crate::{
     tipos_de_dato::{
+        conflicto::Conflicto,
+        lado_conflicto::LadoConflicto,
         objeto::Objeto,
         region::{unificar_regiones, Region},
     },
@@ -14,9 +16,8 @@ use std::{
 
 use crate::{
     tipos_de_dato::{
+        comando::Ejecutar,
         comandos::merge::estrategias_conflictos::resolver_merge_len_2,
-        conflicto::Conflicto,
-        lado_conflicto::LadoConflicto,
         logger::Logger,
         objetos::{commit::CommitObj, tree::Tree},
         tipo_diff::TipoDiff,
@@ -457,7 +458,7 @@ impl Merge {
                 paths_con_conflictos
             ))
         } else {
-            let commit = Commit::from_merge(self.logger.clone())?;
+            let mut commit = Commit::from_merge(self.logger.clone())?;
             commit.ejecutar()?;
             Ok("Merge completado".to_string())
         }
@@ -579,10 +580,10 @@ impl Merge {
         }
         Ok(())
     }
+}
 
-    /// Ejecuta el comando merge, si hay un merge en curso devuelve un error.
-    /// Si no hay nada para mergear devuelve un mensaje indicandolo.
-    pub fn ejecutar(&self) -> Result<String, String> {
+impl Ejecutar for Merge {
+    fn ejecutar(&mut self) -> Result<String, String> {
         self.logger.log("Ejecutando comando merge");
 
         if Self::hay_merge_en_curso()? {

@@ -4,6 +4,7 @@ use gtk::prelude::*;
 
 use crate::{
     tipos_de_dato::{
+        comando::Ejecutar,
         comandos::{branch::Branch, checkout::Checkout},
         logger::Logger,
     },
@@ -48,7 +49,7 @@ pub fn render(builder: &gtk::Builder, window: &gtk::Window, logger: Arc<Logger>)
         log_list::render(&builder_clone, active.as_str(), logger.clone());
         log_seleccionado::render(&builder_clone, None);
 
-        let checkout = Checkout::from(vec![active.to_string()], logger.clone()).unwrap();
+        let mut checkout = Checkout::from(vec![active.to_string()], logger.clone()).unwrap();
 
         match checkout.ejecutar() {
             Ok(_) => {}

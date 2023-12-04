@@ -9,6 +9,12 @@ pub fn obtener_rama_actual() -> Result<String, String> {
     Ok(rama)
 }
 
+///obtiene el commit cabeza de rama de la rama actual
+pub fn obtner_commit_head_rama_acutual() -> Result<String, String> {
+    let dir = obtener_gir_dir_rama_actual()?;
+    io::leer_a_string(dir)
+}
+
 ///obtiene la ref de la rama actual
 pub fn obtener_ref_rama_actual() -> Result<PathBuf, String> {
     let contenido_head = io::leer_a_string("./.gir/HEAD")?;

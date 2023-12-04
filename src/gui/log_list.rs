@@ -1,15 +1,97 @@
-use std::{path::Path, sync::Arc};
+use std::{
+    collections::{HashMap, HashSet},
+    path::Path,
+    sync::Arc,
+};
 
-use gtk::prelude::*;
+use gtk::{prelude::*, Orientation};
 
 use crate::{
-    tipos_de_dato::{comandos::log::Log, logger::Logger, objetos::commit::CommitObj},
-    utils::{compresion::descomprimir_objeto_gir, io},
+    tipos_de_dato::{
+        comandos::{branch::Branch, log::Log},
+        logger::Logger,
+        objetos::commit::CommitObj,
+    },
+    utils::{
+        compresion::descomprimir_objeto_gir,
+        io::{self, leer_a_string},
+    },
 };
 
 use super::{error_dialog, log_seleccionado};
 
-fn obtener_listas_de_commits(branch: &str, logger: Arc<Logger>) -> Result<Vec<String>, String> {
+fn obtener_tronco_principal_padres(mut commit: CommitObj, logger: Arc<Logger>) -> HashSet<String> {
+    let mut commits: HashSet<String> = HashSet::new();
+    commits.insert(commit.hash.clone());
+
+    while let Some(padre) = commit.padres.get(0) {
+        let commit_padre = CommitObj::from_hash(padre.to_owned(), logger.clone()).unwrap();
+        commits.insert(commit_padre.hash.clone());
+        commit = commit_padre;
+    }
+
+    commits
+}
+
+fn obtener_commits_con_branches(
+    rama: &str,
+    logger: Arc<Logger>,
+) -> Result<Vec<(CommitObj, String)>, String> {
+    let ramas_largas = Branch::obtener_ramas()?;
+    let ramas: Vec<_> = ramas_largas
+        .iter()
+        .map(|rama| if rama.len() > 25 { &rama[..25] } else { rama })
+        .collect();
+
+    let mut commits_por_ramas = Vec::new();
+
+    for rama in ramas {
+        let commit_hash_rama = leer_a_string(".gir/refs/heads/".to_string() + &rama)?;
+        let commit_rama = CommitObj::from_hash(commit_hash_rama, logger.clone())?;
+        let commits_rama = obtener_tronco_principal_padres(commit_rama, logger.clone());
+        commits_por_ramas.push((rama.to_string(), commits_rama));
+    }
+
+    let mut commits_y_ramas: Vec<(CommitObj, String)> = Vec::new();
+
+    let commits = obtener_listas_de_commits(rama, logger.clone())?;
+
+    for commit in commits {
+        let mut encontrados = Vec::new();
+        for (rama, commits_rama) in commits_por_ramas.iter() {
+            if commits_rama.contains(&commit.hash) {
+                encontrados.push((commit.clone(), rama.to_owned()));
+            }
+        }
+        let commit_rama_actual = encontrados.iter().find(|(_, r)| rama == *r);
+        if let Some(commit_rama_actual) = commit_rama_actual {
+            commits_y_ramas.push(commit_rama_actual.clone());
+        } else {
+            commits_y_ramas.push(encontrados[0].clone());
+        }
+    }
+
+    Ok(commits_y_ramas)
+}
+
+fn generar_clases_por_rama() -> HashMap<String, String> {
+    let clases_posibles = vec!["green", "blue", "yellow", "red"];
+
+    let mut clases_por_rama = HashMap::new();
+    let mut i = 0;
+
+    for rama in Branch::obtener_ramas().unwrap() {
+        clases_por_rama.insert(rama, clases_posibles[i].to_string());
+        i += 1;
+        if i == clases_posibles.len() {
+            i = 0;
+        }
+    }
+
+    clases_por_rama
+}
+
+fn obtener_listas_de_commits(branch: &str, logger: Arc<Logger>) -> Result<Vec<CommitObj>, String> {
     let ruta = format!(".gir/refs/heads/{}", branch);
     let ultimo_commit = io::leer_a_string(Path::new(&ruta))?;
 
@@ -18,9 +100,7 @@ fn obtener_listas_de_commits(branch: &str, logger: Arc<Logger>) -> Result<Vec<St
     }
 
     let commit_obj = CommitObj::from_hash(ultimo_commit, logger.clone())?;
-    let historial = Log::obtener_listas_de_commits(commit_obj, logger.clone())?;
-
-    Ok(historial.iter().map(|commit| commit.hash.clone()).collect())
+    Log::obtener_listas_de_commits(commit_obj, logger.clone())
 }
 
 pub fn obtener_mensaje_commit(commit_hash: &str) -> Result<String, String> {
@@ -36,23 +116,40 @@ pub fn obtener_mensaje_commit(commit_hash: &str) -> Result<String, String> {
         .next()
         .ok_or("Error al obtener mensaje del commit")?;
 
-    if primera_linea.len() > 35 {
-        Ok(format!("{}...", &primera_linea[..35]))
+    if primera_linea.len() > 25 {
+        Ok(format!("{}...", &primera_linea[..25]))
     } else {
         Ok(primera_linea.to_string())
     }
 }
 
-fn crear_label(string: &str) -> gtk::EventBox {
+fn crear_label(string: &str, color: &str, branch: &str) -> gtk::EventBox {
     let event_box = gtk::EventBox::new();
 
-    let label = gtk::Label::new(Some(string));
-    event_box.add(&label);
-    label.set_xalign(0.0);
-    label.set_margin_start(6);
-    label.set_margin_top(3);
-    // label.set_margin_bottom(2);
-    event_box.style_context().add_class("commit-label");
+    let container = gtk::Box::new(Orientation::Horizontal, 0);
+    event_box.add(&container);
+    container.set_margin_start(6);
+    container.set_margin_top(2);
+    container.set_margin_bottom(1);
+    container.set_margin_end(18); // Set margin at the end
+
+    let label_message = gtk::Label::new(Some(string));
+    container.add(&label_message);
+
+    let spacer = gtk::Box::new(Orientation::Horizontal, 0);
+    spacer.set_hexpand(true);
+    container.pack_start(&spacer, true, true, 0);
+
+    let label_branch = gtk::Label::new(Some(branch));
+    label_branch
+        .style_context()
+        .add_class(&format!("label-{}", color));
+
+    container.add(&label_branch);
+
+    event_box
+        .style_context()
+        .add_class(&format!("commit-label-{}", color));
 
     event_box
 }
@@ -63,7 +160,7 @@ pub fn render(builder: &gtk::Builder, branch: &str, logger: Arc<Logger>) {
         container.remove(child);
     });
 
-    let commits = match obtener_listas_de_commits(branch, logger) {
+    let commits = match obtener_commits_con_branches(branch, logger.clone()) {
         Ok(commits) => commits,
         Err(err) => {
             error_dialog::mostrar_error(&err);
@@ -71,13 +168,18 @@ pub fn render(builder: &gtk::Builder, branch: &str, logger: Arc<Logger>) {
         }
     };
 
-    for commit in commits {
-        let commit_clone = commit.clone();
-        let event_box = crear_label(&obtener_mensaje_commit(&commit).unwrap());
+    let clases = generar_clases_por_rama();
+
+    for (commit, branch) in commits {
+        let event_box = crear_label(
+            &obtener_mensaje_commit(&commit.hash).unwrap(),
+            &clases.get(&branch).unwrap(),
+            &branch,
+        );
 
         let builder_clone = builder.clone();
         event_box.connect_button_press_event(move |_, _| {
-            log_seleccionado::render(&builder_clone, Some(&commit_clone));
+            log_seleccionado::render(&builder_clone, Some(&commit.hash));
             gtk::glib::Propagation::Stop
         });
         container.add(&event_box);

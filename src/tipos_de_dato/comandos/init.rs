@@ -1,6 +1,9 @@
 use std::{fs, path::Path, sync::Arc};
 
-use crate::{tipos_de_dato::logger::Logger, utils::io};
+use crate::{
+    tipos_de_dato::{comando::Ejecutar, logger::Logger},
+    utils::io,
+};
 
 pub struct Init {
     /// Path donde se creara el directorio .gir
@@ -37,21 +40,6 @@ impl Init {
             path: Self::obtener_path(args),
             logger,
         })
-    }
-
-    /// Ejecuta el comando init.
-    /// Crea el directorio en el lugar indicado por el path, caso contrario en el directorio actual.
-    /// Si el directorio ya existe devuelve un mensaje y cancela la ejecucion.
-    pub fn ejecutar(&self) -> Result<String, String> {
-        self.logger.log("Se ejecuta init");
-
-        self.crear_directorio_gir()?;
-
-        let mensaje = format!("Directorio gir creado en {}", self.path);
-
-        self.logger.log(&mensaje);
-
-        Ok(mensaje)
     }
 
     /// Obtiene desde los argumentos el path donde se creara el directorio .gir.
@@ -113,6 +101,23 @@ impl Init {
     /// Verifica si ya existe un directorio .gir en el lugar indicado por el path.
     fn verificar_si_ya_esta_creado_directorio_gir(&self) -> bool {
         Path::new(&self.path).exists()
+    }
+}
+
+impl Ejecutar for Init {
+    /// Ejecuta el comando init.
+    /// Crea el directorio en el lugar indicado por el path, caso contrario en el directorio actual.
+    /// Si el directorio ya existe devuelve un mensaje y cancela la ejecucion.
+    fn ejecutar(&mut self) -> Result<String, String> {
+        self.logger.log("Se ejecuta init");
+
+        self.crear_directorio_gir()?;
+
+        let mensaje = format!("Directorio gir creado en {}", self.path);
+
+        self.logger.log(&mensaje);
+
+        Ok(mensaje)
     }
 }
 

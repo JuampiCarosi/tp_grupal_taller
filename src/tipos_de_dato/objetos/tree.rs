@@ -11,15 +11,16 @@ use sha1::{Digest, Sha1};
 
 use crate::{
     tipos_de_dato::{
+        comando::Ejecutar,
         comandos::{cat_file, check_ignore::CheckIgnore, hash_object::HashObject, merge::Merge},
         logger::Logger,
         objeto::Objeto,
         tipo_diff::TipoDiff,
     },
+    utils::path_buf::{esta_directorio_habilitado, obtener_nombre},
     utils::{
         compresion::{comprimir_contenido_u8, descomprimir_objeto},
         io,
-        path_buf::{esta_directorio_habilitado, obtener_nombre},
     },
 };
 

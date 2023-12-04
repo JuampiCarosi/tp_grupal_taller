@@ -1,3 +1,4 @@
+use crate::tipos_de_dato::comando::Ejecutar;
 use crate::tipos_de_dato::logger::Logger;
 use crate::utils;
 
@@ -36,28 +37,6 @@ impl Clone {
         Ok(())
     }
 
-    pub fn ejecutar(&mut self) -> Result<String, String> {
-        let (_, mut repositorio) = utils::strings::obtener_ip_puerto_y_repositorio(&self.url)?;
-        repositorio = repositorio.replace('/', "");
-
-        self.verificar_si_ya_existe_repositorio(&repositorio)?;
-
-        utils::io::crear_carpeta(&repositorio)?;
-        utils::io::cambiar_directorio(&repositorio)?;
-
-        let resutado = self.crear_repositorio();
-        utils::io::cambiar_directorio("..")?;
-
-        if let Err(e) = resutado {
-            utils::io::rm_directorio(repositorio)?;
-            return Err(e);
-        }
-
-        let mensaje = "Clone ejecutado con exito".to_string();
-        self.logger.log(&mensaje);
-        Ok(mensaje)
-    }
-
     fn verificar_si_ya_existe_repositorio(&self, repositorio: &str) -> Result<(), String> {
         if PathBuf::from(repositorio).exists() {
             //me fijo si tiene contenido
@@ -77,5 +56,29 @@ impl Clone {
         let pull_args = vec!["-u".to_string(), "origin".to_string(), "master".to_string()];
         Pull::from(pull_args, self.logger.clone())?.ejecutar()?;
         Ok(())
+    }
+}
+
+impl Ejecutar for Clone {
+    fn ejecutar(&mut self) -> Result<String, String> {
+        let (_, mut repositorio) = utils::strings::obtener_ip_puerto_y_repositorio(&self.url)?;
+        repositorio = repositorio.replace('/', "");
+
+        self.verificar_si_ya_existe_repositorio(&repositorio)?;
+
+        utils::io::crear_carpeta(&repositorio)?;
+        utils::io::cambiar_directorio(&repositorio)?;
+
+        let resutado = self.crear_repositorio();
+        utils::io::cambiar_directorio("..")?;
+
+        if let Err(e) = resutado {
+            utils::io::rm_directorio(repositorio)?;
+            return Err(e);
+        }
+
+        let mensaje = "Clone ejecutado con exito".to_string();
+        self.logger.log(&mensaje);
+        Ok(mensaje)
     }
 }

@@ -4,6 +4,7 @@ use chrono::{FixedOffset, LocalResult, TimeZone};
 
 use crate::{
     tipos_de_dato::{
+        comando::Ejecutar,
         comandos::{add::Add, cat_file},
         logger::Logger,
         region::{unificar_regiones, Region},
