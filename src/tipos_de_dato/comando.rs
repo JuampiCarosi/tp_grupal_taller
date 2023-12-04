@@ -5,10 +5,9 @@ use super::{
         add::Add, branch::Branch, cat_file::CatFile, check_ignore::CheckIgnore, checkout::Checkout,
         clone::Clone, commit::Commit, fetch::Fetch, hash_object::HashObject, init::Init, log::Log,
         ls_files::LsFiles, ls_tree::LsTree, merge::Merge, pull::Pull, push::Push, rebase::Rebase,
-        remote::Remote, rm::Remove, show_ref::ShowRef, status::Status, version::Version,
+        remote::Remote, rm::Remove, show_ref::ShowRef, status::Status, tag::Tag, version::Version,
     },
     logger::Logger,
-    tag::Tag,
 };
 
 /// Enum que contiene los posibles comandos de nuestro programa.
