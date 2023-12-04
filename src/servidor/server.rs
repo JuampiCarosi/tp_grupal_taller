@@ -120,7 +120,7 @@ impl Servidor {
                     return Err("No existe el repositorio".to_string());
                 }
                 comunicacion.enviar(&utils::strings::obtener_linea_con_largo_hex(
-                    &(VERSION.to_string()),
+                    VERSION,
                 ))?;
                 println!("upload-pack recibido, ejecutando");
                 refs = server_utils::obtener_refs_de(PathBuf::from(&dir_repo))?;
@@ -141,7 +141,7 @@ impl Servidor {
                     gir_io::crear_directorio(path.join("refs/tags/"))?;
                 }
                 comunicacion.enviar(&utils::strings::obtener_linea_con_largo_hex(
-                    &(VERSION.to_string()),
+                    VERSION,
                 ))?;
                 refs = server_utils::obtener_refs_de(path)?;
                 comunicacion.responder(&refs)?;

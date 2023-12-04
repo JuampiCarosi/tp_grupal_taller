@@ -37,7 +37,7 @@ impl<T: Write + Read> Comunicacion<T> {
 
     pub fn new_para_server(flujo: TcpStream, logger: Arc<Logger>) -> Comunicacion<TcpStream> {
         Comunicacion {
-            flujo: flujo,
+            flujo,
             repositorio: None,
             logger,
         }
@@ -48,7 +48,7 @@ impl<T: Write + Read> Comunicacion<T> {
 
         Comunicacion {
             logger,
-            flujo: flujo,
+            flujo,
             repositorio: Some(repositorio),
         }
     }
@@ -211,7 +211,7 @@ impl<T: Write + Read> Comunicacion<T> {
             return Ok(());
         }
         for linea in lineas {
-            self.enviar(&linea)?;
+            self.enviar(linea)?;
         }
 
         if lineas[0].contains("ref") {

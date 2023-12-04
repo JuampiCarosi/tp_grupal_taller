@@ -84,7 +84,7 @@ fn init_addear_status() {
         .ejecutar()
         .unwrap();
 
-    let mensaje = status.split("\n").collect::<Vec<&str>>();
+    let mensaje = status.split('\n').collect::<Vec<&str>>();
 
     assert_eq!(mensaje[0], "Cambios a ser commiteados:");
     assert_eq!(

@@ -85,9 +85,7 @@ impl Clone {
 
         tree_branch_a_mergear.escribir_en_directorio()?;
 
-        self.logger.log(&format!(
-            "Fast forward ejucutado con exito en clone de la rama remota"
-        ));
+        self.logger.log("Fast forward ejucutado con exito en clone de la rama remota");
 
         Ok(true)
     }
