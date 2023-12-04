@@ -8,15 +8,22 @@ use crate::tipos_de_dato::{
 use super::cat_file::CatFile;
 
 pub struct LsTree {
+    /// Logger para imprimir los mensajes en el archivo log.
     logger: Arc<Logger>,
+    /// Indica si se debe mostrar el contenido de los subdirectorios.
     recursivo: bool,
+    /// Indica si se deben mostrar solo los arboles.
     solo_arboles: bool,
+    /// Indica si se debe mostrar el tamaño de los archivos.
     con_size: bool,
+    /// Hash del arbol a mostrar.
     arbol: String,
 }
 
 impl LsTree {
-    pub fn new(logger: Arc<Logger>, args: &mut Vec<String>) -> Result<LsTree, String> {
+    /// Devuelve un LsTree con los parametros ingresados por el usuario.
+    /// Si no se ingresa el hash del arbol correctamente, devuelve un error.
+    pub fn from(logger: Arc<Logger>, args: &mut Vec<String>) -> Result<LsTree, String> {
         let hash_arbol = args.pop().ok_or("No se pudo obtener el hash del arbol")?;
         if hash_arbol.len() != 40 {
             return Err(format!("El hash del arbol no es valido: {}", hash_arbol));
@@ -44,6 +51,7 @@ impl LsTree {
         })
     }
 
+    /// Dado un objeto blob, devuelve un string con el formato de salida de ls-tree.
     fn obtener_string_blob(blob: &Objeto) -> String {
         format!(
             "100644 blob {}    {}\n",
@@ -52,6 +60,10 @@ impl LsTree {
         )
     }
 
+    /// Dado un arbol, devuelve un vector con los objetos que se deben mostrar.
+    /// Si el arbol es recursivo, se muestran todos los objetos hoja.
+    /// Si el arbol es recursivo y solo_arboles es true, se muestran todos los arboles.
+    /// Si el arbol no es recursivo, se muestran todos los objetos en el segundo nivel del arbol.
     fn obtener_objetos_a_mostrar(&self, arbol: &Tree) -> Vec<Objeto> {
         let mut objetos_a_mostrar = Vec::new();
         if self.recursivo && self.solo_arboles {
@@ -78,6 +90,7 @@ impl LsTree {
 }
 
 impl Ejecutar for LsTree {
+    /// Ejecuta el comando ls-tree.
     fn ejecutar(&mut self) -> Result<String, String> {
         self.logger.log("Corriendo ls-tree");
         let arbol = Tree::from_hash(&self.arbol, PathBuf::from("."), self.logger.clone())?;

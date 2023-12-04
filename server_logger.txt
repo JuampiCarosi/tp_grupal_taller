@@ -1,0 +1,12 @@
+2023-12-04 13:15:58 | Servidor iniciado
+2023-12-04 13:15:58 | Se conecto un cliente desde 127.0.0.1:36614
+2023-12-04 13:15:58 | Iniciando upload pack
+2023-12-04 13:15:58 | Fallo en la conversion a entero
+invalid digit found in string
+
+2023-12-04 13:16:05 | Se conecto un cliente desde 127.0.0.1:60498
+2023-12-04 13:16:05 | ERR El repositorio /papota/ no existe
+
+2023-12-04 13:17:17 | Se conecto un cliente desde 127.0.0.1:54948
+2023-12-04 13:17:17 | ERR El repositorio /papota/ no existe
+

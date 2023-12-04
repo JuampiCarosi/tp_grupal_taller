@@ -61,6 +61,8 @@ impl ShowRef {
         })
     }
 
+    /// Dado un path, devuelve true si pertenece a los paths pedidos para mostrar.
+    /// Si no pertenece, devuelve false.
     fn hay_que_ver_path(&self, path: &Path) -> Result<bool, String> {
         let nombre = path_buf::obtener_nombre(path)?;
         let padre = path.ancestors().nth(1).ok_or("Error al obtener el padre")?;
@@ -77,6 +79,7 @@ impl ShowRef {
         }
     }
 
+    /// Agrega la referencia que esta apuntando HEAD actualmente al hashmap de refs.
     fn agregar_head(&self, refs: &mut HashMap<String, String>) -> Result<(), String> {
         let binding = io::leer_a_string(PathBuf::from(".gir/HEAD"))?;
         let head_dir = binding.split(' ').nth(1).ok_or("Error al parsear HEAD")?;
@@ -85,6 +88,9 @@ impl ShowRef {
         Ok(())
     }
 
+    /// Dado un path, devuelve un hashmap con las referencias que se encuentran en ese path.
+    /// Si el path es un directorio, se llama recursivamente a la funcion para obtener las referencias
+    /// de los hijos.
     pub fn obtener_referencias(&self, path: PathBuf) -> Result<HashMap<String, String>, String> {
         let mut refs: HashMap<String, String> = HashMap::new();
 
@@ -127,6 +133,7 @@ impl ShowRef {
 }
 
 impl Ejecutar for ShowRef {
+    /// Ejecuta el comando show-ref.
     fn ejecutar(&mut self) -> Result<String, String> {
         self.logger.log("Ejecutando comando show-ref");
         let mut refs = self.obtener_referencias(PathBuf::from(".gir/refs/"))?;

@@ -104,7 +104,10 @@ pub fn obtener_ref_head(path: PathBuf) -> Result<String, String> {
 }
 
 ///Lee un directorio. Devuelve su iterador. Falla si no existe o si no es un directoro
-pub fn leer_directorio<P: AsRef<Path> + Clone + Debug>(directorio: &P) -> Result<ReadDir, String> {
+pub fn leer_directorio<P>(directorio: &P) -> Result<ReadDir, String>
+where
+    P: AsRef<Path> + Debug + ?Sized,
+{
     let metadada_dir =
         fs::metadata(directorio).map_err(|_| format!("Error no existe el dir {:?}", directorio))?;
 
@@ -124,8 +127,11 @@ pub fn es_dir<P: AsRef<Path> + Clone + Debug>(entrada: P) -> bool {
 }
 
 ///Crea un directorio
-pub fn crear_directorio<P: AsRef<Path> + Clone>(directorio: P) -> Result<(), String> {
-    let dir = fs::metadata(directorio.clone());
+pub fn crear_directorio<P>(directorio: P) -> Result<(), String>
+where
+    P: AsRef<Path>,
+{
+    let dir = fs::metadata(&directorio);
     if dir.is_ok() {
         return Ok(());
     }

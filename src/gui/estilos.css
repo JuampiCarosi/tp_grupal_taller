@@ -9,12 +9,27 @@ button {
   border: 0.5px solid #cbd5e1;
 }
 
+scrolledwindow {
+  border: none;
+}
+
+.button-blue {
+  background-color: #2563eb;
+  color: #f1f5f9;
+  text-shadow: none;
+}
+
 combobox window menu {
   background-color: #f1f5f9;
 }
 
 .app {
   background-color: #f8fafc;
+}
+
+entry {
+  background-color: #f1f5f9;
+  border: 0.5px solid #cbd5e1;
 }
 
 .notebook tabs {
@@ -100,6 +115,11 @@ header > tabs > tab:checked label {
   color: #be123c;
 }
 
+.label-grey {
+  color: #6b7280;
+  font-size: medium;
+}
+
 .label-green {
   color: #15803d;
 }
@@ -149,4 +169,35 @@ popover {
 
 .border-b {
   border-bottom: 0.5px solid #cbd5e1;
+}
+
+treeview:selected {
+  background-color: #3b82f6;
+  border-radius: 0.375rem; /* 6px */
+}
+
+treeview {
+  background-color: transparent;
+}
+
+.treeview-container {
+  border: 0.5px solid #cbd5e1;
+  border-radius: 0.375rem; /* 6px */
+}
+
+.rojo {
+  font-size: 12px;
+  font-family: monospace;
+  color: rgb(240, 68, 56);
+}
+
+.verde {
+  font-size: 12px;
+  font-family: monospace;
+  color: rgb(3, 152, 85);
+}
+
+checkbutton check {
+  background-color: #f1f5f9;
+  border: 0.5px solid #94a3b8;
 }

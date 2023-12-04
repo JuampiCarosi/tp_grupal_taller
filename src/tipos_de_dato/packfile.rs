@@ -80,7 +80,6 @@ impl Packfile {
     /// Dado un directorio, arma el packfile en base a los objetos del mismo y lo devuelve
     pub fn obtener_pack_entero(dir: &str) -> Result<Vec<u8>, String> {
         println!("Despachando packfile");
-        println!("Directorio: {}", dir);
         let (objetos_packfile, cant_objetos) = Self::obtener_objetos_del_dir(dir)?;
 
         Ok(Self::armar_packfile(objetos_packfile, cant_objetos))
@@ -99,7 +98,7 @@ impl Packfile {
 
     // Dado un vector de bytes y el offset absoluto de un objeto junto a su tamanio descomprimido, devuelve el objeto descomprimido
     fn descomprimir_objeto(
-        bytes: &Vec<u8>,
+        bytes: &[u8],
         offset: &mut usize,
         tamanio_objeto_descomprimido: u32,
     ) -> Result<Vec<u8>, String> {
@@ -167,7 +166,7 @@ impl Packfile {
     }
 
     // Dado un vector de bytes y un offset absoluto del mismo, decodifica el tipo y el largo de un objeto
-    fn decodificar_bytes(bytes: &Vec<u8>, offset: &mut usize) -> (u8, u32) {
+    fn decodificar_bytes(bytes: &[u8], offset: &mut usize) -> (u8, u32) {
         let mut numero_decodificado: u32;
         let mut corrimiento: u32 = 0;
         let mut continua = false;
@@ -225,7 +224,7 @@ impl Packfile {
     }
 
     // Lee el header del packfile y devuelve la firma, la version y el largo
-    fn leer_header_packfile(packfile: &Vec<u8>) -> Result<(&[u8], &[u8], u32), String> {
+    fn leer_header_packfile(packfile: &[u8]) -> Result<(&[u8], &[u8], u32), String> {
         let firma = &packfile[0..4];
         let version = &packfile[4..8];
         let largo = &packfile[8..12];
@@ -234,7 +233,7 @@ impl Packfile {
     }
 
     /// Dado un packfile (en forma de Vec<u8>) y una ubicacion, decodifica los objetos dentro del mismo, y los escribe en la ubicacion dada
-    pub fn leer_packfile_y_escribir(bytes: &Vec<u8>, ubicacion: String) -> Result<(), String> {
+    pub fn leer_packfile_y_escribir(bytes: &[u8], ubicacion: String) -> Result<(), String> {
         let checksum = Self::verificar_checksum(bytes);
         match checksum {
             true => println!("Checksum correcto"),
@@ -264,7 +263,7 @@ impl Packfile {
 
     // Funcion para leer un varint de un vector de bytes en formato big endian, la forma en la que se procesa tiene que ver con su codificacion
     // ya que es de un objeto delta
-    fn leer_vli_be(bytes: &Vec<u8>, actual_offset: &mut usize, offset: bool) -> usize {
+    fn leer_vli_be(bytes: &[u8], actual_offset: &mut usize, offset: bool) -> usize {
         let mut val: usize = 0;
         loop {
             let byt = &bytes[*actual_offset];
@@ -281,11 +280,8 @@ impl Packfile {
     }
 
     // Funcion para leer un varint de un vector de bytes en formato little endian
-    fn leer_objeto_del_packfile(
-        bytes: &Vec<u8>,
-        offset: &mut usize,
-    ) -> Result<(u8, Vec<u8>), String> {
-        let offset_pre_varint = offset.clone();
+    fn leer_objeto_del_packfile(bytes: &[u8], offset: &mut usize) -> Result<(u8, Vec<u8>), String> {
+        let offset_pre_varint = *offset;
         let (tipo, tamanio) = Self::decodificar_bytes(bytes, offset);
         if tipo == 6 {
             Self::leer_ofs_delta_obj(bytes, tamanio, offset, offset_pre_varint)
@@ -297,7 +293,7 @@ impl Packfile {
 
     // Funcion para decodificar ofs delta. Devuelve el tipo y el objeto reconstruido y descomprimido
     fn leer_ofs_delta_obj(
-        bytes: &Vec<u8>,
+        bytes: &[u8],
         obj_size: u32,
         actual_offset: &mut usize,
         offset_pre_varint: usize,
@@ -307,7 +303,7 @@ impl Packfile {
         let base_obj_offset = offset_pre_varint - offset;
 
         let (base_obj_type, mut base_obj_data) =
-            Self::leer_objeto_del_packfile(bytes, &mut (base_obj_offset as usize))?;
+            Self::leer_objeto_del_packfile(bytes, &mut { base_obj_offset })?;
 
         Self::crear_delta_obj(
             bytes,
@@ -320,10 +316,10 @@ impl Packfile {
 
     // Funcion para procesar las instrucciones de reconstruccion de un objeto delta. Devuelve el tipo y el objeto reconstruido y descomprimido
     fn crear_delta_obj(
-        bytes: &Vec<u8>,
+        bytes: &[u8],
         actual_offset: &mut usize,
         tipo_de_objeto_base: u8,
-        data_objeto_base: &mut Vec<u8>,
+        data_objeto_base: &mut [u8],
         obj_size: u32,
     ) -> Result<(u8, Vec<u8>), String> {
         let objeto_descomprimido = Self::descomprimir_objeto(bytes, actual_offset, obj_size)?;
@@ -373,7 +369,7 @@ impl Packfile {
     }
 
     // Funcion que dado un vector de bytes y un offset absoluto del mismo, decodifica un variable length integer en formato little endian
-    fn leer_varint_le(input: &Vec<u8>, offset: &mut usize) -> u32 {
+    fn leer_varint_le(input: &[u8], offset: &mut usize) -> u32 {
         let mut result = 0u32;
         let mut shift = 0;
 
@@ -395,10 +391,10 @@ impl Packfile {
 mod test {
     use super::*;
 
-    fn leer_blob_de_packfile(packfile: &Vec<u8>, offset: &mut usize) -> (Vec<u8>, u8, u32) {
-        let (tipo, tamanio) = Packfile::decodificar_bytes(&packfile, offset);
+    fn leer_blob_de_packfile(packfile: &[u8], offset: &mut usize) -> (Vec<u8>, u8, u32) {
+        let (tipo, tamanio) = Packfile::decodificar_bytes(packfile, offset);
         let mut objeto_descomprimido =
-            Packfile::descomprimir_objeto(&packfile, offset, tamanio).unwrap();
+            Packfile::descomprimir_objeto(packfile, offset, tamanio).unwrap();
         let objeto = Packfile::obtener_objeto_con_header(
             tipo,
             objeto_descomprimido.len() as u32,
@@ -483,7 +479,7 @@ mod test {
         )
         .unwrap();
         assert_eq!(obj_leido, objeto.0);
-        assert_eq!(Packfile::verificar_checksum(packfile.as_slice()), true);
+        assert!(Packfile::verificar_checksum(packfile.as_slice()));
     }
 
     #[test]
@@ -503,7 +499,7 @@ mod test {
         .unwrap();
         assert_eq!(obj_leido, objeto.0);
         assert_eq!(offset, packfile.len() - 20); // para asertar que solo queda el checksum
-        assert_eq!(Packfile::verificar_checksum(packfile.as_slice()), true);
+        assert!(Packfile::verificar_checksum(packfile.as_slice()));
     }
     #[test]
     fn test08_leer_objeto_packfile() {
@@ -526,6 +522,20 @@ mod test {
         .unwrap();
         assert_eq!(obj_leido, objeto_con_header);
         assert_eq!(offset, packfile.len() - 20); // para asertar que solo queda el checksum
-        assert_eq!(Packfile::verificar_checksum(packfile.as_slice()), true);
+        assert!(Packfile::verificar_checksum(packfile.as_slice()));
+    }
+
+
+    #[test]
+    fn test09_delta_ref() {
+        let packfile = io::leer_bytes(env!("CARGO_MANIFEST_DIR").to_string() + "/packfile_test").unwrap();
+        let mut offset = 12;
+        let (_firma, _version, largo) = Packfile::leer_header_packfile(&packfile).unwrap();
+        let mut contador = 0;
+        while contador < largo {
+            let objeto = Packfile::leer_objeto_del_packfile(&packfile, &mut offset);
+            contador += 1;
+            assert!(objeto.is_ok());
+        }
     }
 }

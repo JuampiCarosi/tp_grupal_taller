@@ -3,6 +3,7 @@ use crate::tipos_de_dato::comunicacion::Comunicacion;
 use crate::tipos_de_dato::config::Config;
 use crate::tipos_de_dato::logger::Logger;
 use crate::tipos_de_dato::packfile::Packfile;
+use crate::tipos_de_dato::referencia_commit::ReferenciaCommit;
 use crate::utils::{self, io, objects};
 use std::io::{Read, Write};
 use std::net::TcpStream;
@@ -136,7 +137,6 @@ impl Fetch {
                 String::from_utf8_lossy(packfile.as_slice())
             ));
         }
-
         self.logger.log("Recepcion del pack file en fetch exitoso");
         Packfile::leer_packfile_y_escribir(&packfile, "./.gir/objects/".to_string()).unwrap();
         Ok(())
@@ -208,7 +208,6 @@ impl Fetch {
 
         let commits_de_cabeza_de_rama_faltantes =
             self.obtener_commits_cabeza_de_rama_faltantes(commits_cabezas_y_dir_rama_asosiado)?;
-
         let tags_faltantes = self.obtener_tags_faltantes(commit_y_tags_asosiado)?;
 
         let pedidos = [
@@ -344,15 +343,15 @@ impl Fetch {
         (
             Vec<String>,
             Option<String>,
-            Vec<(String, PathBuf)>,
-            Vec<(String, PathBuf)>,
+            ReferenciaCommit,
+            ReferenciaCommit,
         ),
         String,
     > {
         let resultado = utils::fase_descubrimiento::fase_de_descubrimiento(&comunicacion)?;
 
         self.logger.log(&format!(
-            "Se ejecuto correctamte la fase de decubrimiento en Fech: {:?}",
+            "Se ejecuto correctamte la fase de decubrimiento en Fetch: {:?}",
             resultado
         ));
 

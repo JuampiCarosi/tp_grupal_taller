@@ -1,29 +1,32 @@
 use crate::tipos_de_dato::comunicacion::Comunicacion;
+use crate::tipos_de_dato::logger::Logger;
 use crate::tipos_de_dato::packfile;
 use crate::utils::strings::eliminar_prefijos;
 use crate::utils::{self, io as gir_io, objects};
 use std::io::{Read, Write};
+use std::sync::Arc;
 
 /// Envia packfile al cliente,
 /// # Argumentos
 /// * `dir` - Direccion del repositorio
 /// * `comunicacion` - Comunicacion con el cliente
-/// # Errores
-///
+/// * `refs_enviadas` - Referencias enviadas al cliente previamente, se utilizan para comparar con los wants posteriormente
 pub fn upload_pack<T>(
     dir: String,
     comunicacion: &mut Comunicacion<T>,
     refs_enviadas: &Vec<String>,
+    logger: Arc<Logger>,
 ) -> Result<(), String>
 where
     T: Read + Write,
 {
+    logger.log("Iniciando upload pack");
     let wants = comunicacion.obtener_lineas()?; // obtengo los wants del cliente
     if wants.is_empty() {
         println!("Se termino la conexion");
         return Ok(()); // el cliente esta actualizado
     }
-    comprobar_wants(&wants, &refs_enviadas, comunicacion)?; // compruebo que los wants existan
+    comprobar_wants(&wants, refs_enviadas, comunicacion)?; // compruebo que los wants existan
 
     // ------- CLONE --------
     let lineas_siguientes = comunicacion.obtener_lineas()?;
@@ -33,21 +36,22 @@ where
         // -------- fetch ----------
         procesar_pedido_fetch(&dir, comunicacion, lineas_siguientes)?;
     }
-    println!("Upload pack ejecutado con exito");
+    logger.log("Upload pack ejecutado con exito");
     Ok(())
 }
 
+// Funcion que se encarga de seguir el protocolo en caso de clone
 fn procesar_pedido_clone<T: Read + Write>(
     dir: &str,
     comunicacion: &mut Comunicacion<T>,
 ) -> Result<(), String> {
     comunicacion.responder(&vec![utils::strings::obtener_linea_con_largo_hex("NAK\n")])?; // respondo NAK
-    let packfile =
-        packfile::Packfile::obtener_pack_entero(&(dir.clone().to_string() + "objects/"))?; // obtengo el packfile
+    let packfile = packfile::Packfile::obtener_pack_entero(&(dir.to_string() + "objects/"))?; // obtengo el packfile
     comunicacion.enviar_pack_file(packfile)?;
     Ok(())
 }
 
+// Funcion que se encarga de seguir el protocolo en caso de fetch
 fn procesar_pedido_fetch<T: Read + Write>(
     dir: &str,
     comunicacion: &mut Comunicacion<T>,
@@ -66,6 +70,7 @@ fn procesar_pedido_fetch<T: Read + Write>(
     Ok(())
 }
 
+// Funcion para comprobar si los wants enviados por el cliente son o no validos, en caso de que no lo sean se le envia un mensaje de error al cliente
 fn comprobar_wants<T: Read + Write>(
     wants: &Vec<String>,
     refs_enviadas: &Vec<String>,
@@ -73,8 +78,7 @@ fn comprobar_wants<T: Read + Write>(
 ) -> Result<(), String> {
     for want in wants {
         let want_split: Vec<&str> = want.split_whitespace().collect();
-        let mut want_hash = want_split[1].to_string();
-        want_hash.drain(..4);
+        let want_hash = want_split[1].to_string();
         let mut continua = false;
         for ref_enviada in refs_enviadas {
             let ref_enviada_split: Vec<&str> = ref_enviada.split_whitespace().collect();
@@ -84,7 +88,7 @@ fn comprobar_wants<T: Read + Write>(
                 continua = true;
             }
         }
-        if continua == false {
+        if !continua {
             comunicacion.responder(&vec![utils::strings::obtener_linea_con_largo_hex(
                 &format!(
                     "ERR La referencia {} no coincide con ninguna referencia enviada\n",
@@ -101,7 +105,7 @@ fn comprobar_wants<T: Read + Write>(
 mod test {
     use super::*;
     use crate::tipos_de_dato::{comunicacion::Comunicacion, logger::Logger};
-    use crate::utils::{self, strings};
+    use crate::utils::{self};
     use std::io::{Read, Write};
     use std::path::PathBuf;
     use std::sync::Arc;
@@ -131,9 +135,7 @@ mod test {
     }
     #[test]
     fn test01_clone() {
-        let wants = utils::strings::obtener_linea_con_largo_hex(
-            "4163eb28ec61fd1d0c17cf9b77f4c17e1e338b0\n",
-        );
+        let wants = "4163eb28ec61fd1d0c17cf9b77f4c17e1e338b0".to_string();
         let test_dir = env!("CARGO_MANIFEST_DIR").to_string() + "/server_test_dir/test03/.gir/";
 
         let mock: MockTcpStream = MockTcpStream {
@@ -156,6 +158,7 @@ mod test {
             &vec![utils::strings::obtener_linea_con_largo_hex(
                 "4163eb28ec61fd1d0c17cf9b77f4c17e1e338b0 refs/heads/master\n",
             )],
+            logger.clone(),
         )
         .unwrap();
         let respuesta = comunicacion.obtener_lineas().unwrap();
@@ -167,8 +170,7 @@ mod test {
 
     #[test]
     fn test02_fetch() {
-        let wants =
-            utils::strings::obtener_linea_con_largo_hex("4163eb28ec61fd1d0c17cf9b77f4c17e1e338b0");
+        let wants = "4163eb28ec61fd1d0c17cf9b77f4c17e1e338b0".to_string();
         let test_dir = env!("CARGO_MANIFEST_DIR").to_string() + "/server_test_dir/test03/.gir/";
 
         let mock: MockTcpStream = MockTcpStream {
@@ -193,6 +195,7 @@ mod test {
             &vec![utils::strings::obtener_linea_con_largo_hex(
                 "4163eb28ec61fd1d0c17cf9b77f4c17e1e338b0 refs/heads/master\n",
             )],
+            logger.clone(),
         )
         .unwrap();
         let respuesta = comunicacion.obtener_lineas().unwrap();
@@ -204,7 +207,7 @@ mod test {
 
     #[test]
     fn test03_want_con_referencia_invalida_produce_error() {
-        let wants = utils::strings::obtener_linea_con_largo_hex(&"1".repeat(40));
+        let wants = "1".repeat(40);
         let test_dir = env!("CARGO_MANIFEST_DIR").to_string() + "/server_test_dir/test03/.gir/";
 
         let mock: MockTcpStream = MockTcpStream {
@@ -221,6 +224,7 @@ mod test {
             &vec![utils::strings::obtener_linea_con_largo_hex(
                 &("4163eb28ec61fd1d0c17cf9b77f4c17e1e338b0".to_string() + " refs/heads/master\n"),
             )],
+            logger.clone(),
         );
         assert!(resultado_upload.is_err());
         let respuesta = comunicacion.obtener_lineas().unwrap();

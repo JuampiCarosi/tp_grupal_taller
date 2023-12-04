@@ -10,13 +10,7 @@ use std::{
 
 use crate::utils::io;
 
-/// Represents a log message or the end of the logger thread.
-pub enum Log {
-    /// Un mensaje de log.
-    Message(String),
-    /// El fin del logger.
-    End,
-}
+use super::mensajes_log::Log;
 
 #[derive(Debug)]
 /// Un logger que escribe mensajes en un archivo.

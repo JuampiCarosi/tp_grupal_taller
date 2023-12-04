@@ -2,10 +2,7 @@ use std::{path::PathBuf, sync::Arc};
 
 use crate::{
     tipos_de_dato::{comando::Ejecutar, logger::Logger, objeto::Objeto},
-    utils::{
-        self,
-        index::{crear_index, escribir_index, leer_index, ObjetoIndex},
-    },
+    utils::index::{crear_index, escribir_index, leer_index, ObjetoIndex},
 };
 
 use super::{check_ignore::CheckIgnore, status::obtener_arbol_del_commit_head};
@@ -21,6 +18,8 @@ pub struct Add {
 
 impl Add {
     /// Devuelve un vector con las ubicaciones de cada archivo dentro de las ubicaciones que se le pasaron.
+    /// Si se le pasa un archivo, devuelve el path de ese archivo.
+    /// Si se le pasa un directorio, devuelve el path de todos los archivos que se encuentran dentro de ese directorio.
     pub fn obtener_ubicaciones_hoja(ubicaciones: Vec<PathBuf>) -> Result<Vec<PathBuf>, String> {
         let mut ubicaciones_hoja: Vec<PathBuf> = Vec::new();
         for ubicacion in ubicaciones {
@@ -55,13 +54,56 @@ impl Add {
         })
     }
 
-    fn es_directorio_a_ignorar(&self, ubicacion: &PathBuf) -> Result<bool, String> {
-        let path = ubicacion.to_str().unwrap();
-        let log_dir = utils::gir_config::conseguir_ubicacion_log_config()?;
-        Ok(path.contains(".gir")
-            || path.contains(".git")
-            || path.contains(".log")
-            || path.contains(&format!("{}", log_dir.display())))
+    /// Crea un objeto index a partir de una ubicacion.
+    fn crear_objeto_index_from_ubicacion(
+        ubicacion: PathBuf,
+        logger: Arc<Logger>,
+    ) -> Result<ObjetoIndex, String> {
+        let nuevo_objeto = Objeto::from_directorio(ubicacion.clone(), None, logger.clone())?;
+
+        Ok(ObjetoIndex {
+            merge: false,
+            es_eliminado: false,
+            objeto: nuevo_objeto.clone(),
+        })
+    }
+
+    /// Dada una ubicacion, devuelve el indice del objeto index que contiene esa ubicacion.
+    /// Si no se encuentra, devuelve None.
+    fn obtener_indice_objeto_index(&self, ubicacion: PathBuf) -> Option<usize> {
+        self.index
+            .iter()
+            .position(|objeto_index| match objeto_index.objeto {
+                Objeto::Blob(ref blob) => blob.ubicacion == ubicacion,
+                Objeto::Tree(_) => false,
+            })
+    }
+
+    /// Agrega un objeto index al index.
+    /// Si el objeto ya se encuentra en el index, actualiza el objeto.
+    /// Si el objeto contiene la misma version que en el commit anterior, no lo agrega.
+    /// Si el objeto tiene modificaciones, lo agrega.
+    fn aniadir_ubicacion_pedida_al_index(&mut self, ubicacion: PathBuf) -> Result<(), String> {
+        let nuevo_objeto_index =
+            Self::crear_objeto_index_from_ubicacion(ubicacion.clone(), self.logger.clone())?;
+
+        let indice = self.obtener_indice_objeto_index(ubicacion);
+
+        if let Some(i) = indice {
+            self.index[i] = nuevo_objeto_index;
+        } else {
+            let tree_head = obtener_arbol_del_commit_head(self.logger.clone());
+            if let Some(tree_head) = tree_head {
+                if tree_head.contiene_misma_version_hijo(
+                    &nuevo_objeto_index.objeto.obtener_hash(),
+                    &nuevo_objeto_index.objeto.obtener_path(),
+                ) {
+                    return Ok(());
+                }
+            }
+            self.index.push(nuevo_objeto_index);
+        }
+        Ok(())
     }
 }
 
@@ -87,39 +129,8 @@ impl Ejecutar for Add {
             if ubicacion.is_dir() {
                 Err("No se puede agregar un directorio")?;
             }
-
-            let nuevo_objeto =
-                Objeto::from_directorio(ubicacion.clone(), None, self.logger.clone())?;
-            let nuevo_objeto_index = ObjetoIndex {
-                merge: false,
-                es_eliminado: false,
-                objeto: nuevo_objeto.clone(),
-            };
-
-            let indice = self
-                .index
-                .iter()
-                .position(|objeto_index| match objeto_index.objeto {
-                    Objeto::Blob(ref blob) => blob.ubicacion == ubicacion,
-                    Objeto::Tree(_) => false,
-                });
-
-            if let Some(i) = indice {
-                self.index[i] = nuevo_objeto_index;
-            } else {
-                let tree_head = obtener_arbol_del_commit_head(self.logger.clone());
-                if let Some(tree_head) = tree_head {
-                    if tree_head.contiene_misma_version_hijo(
-                        &nuevo_objeto_index.objeto.obtener_hash(),
-                        &nuevo_objeto_index.objeto.obtener_path(),
-                    ) {
-                        continue;
-                    }
-                }
-                self.index.push(nuevo_objeto_index);
-            }
+            self.aniadir_ubicacion_pedida_al_index(ubicacion)?;
         }
-
         escribir_index(self.logger.clone(), &mut self.index)?;
         Ok("".to_string())
     }
