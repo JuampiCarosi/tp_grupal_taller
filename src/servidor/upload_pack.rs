@@ -58,8 +58,10 @@ fn procesar_pedido_fetch<T: Read + Write>(
     lineas: Vec<String>,
 ) -> Result<(), String> {
     let have_objs_ids = eliminar_prefijos(&lineas);
-    let respuesta_acks_nak =
-        gir_io::obtener_ack(have_objs_ids.clone(), &(dir.to_string() + "objects/"));
+    let respuesta_acks_nak = utils::objects::obtener_objetos_en_comun(
+        have_objs_ids.clone(),
+        &(dir.to_string() + "objects/"),
+    );
     comunicacion.responder(&respuesta_acks_nak)?;
     let _ultimo_done = comunicacion.obtener_lineas()?;
     let faltantes = objects::obtener_archivos_faltantes(have_objs_ids, dir);

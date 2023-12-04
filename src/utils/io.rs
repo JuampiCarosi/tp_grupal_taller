@@ -1,64 +1,10 @@
 use std::fmt::Debug;
 use std::fs::{self, File, ReadDir};
 use std::io::BufRead;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::{env, str};
 
-use super::strings;
-
-pub fn obtener_refs_con_largo_hex(
-    refs: &mut Vec<String>,
-    refs_path: PathBuf,
-    dir: &str,
-) -> Result<(), String> {
-    if !refs_path.exists() {
-        return Ok(());
-    }
-    let head_dir = fs::read_dir(&refs_path).map_err(|e| e.to_string())?;
-    for archivo in head_dir {
-        match archivo {
-            Ok(archivo) => {
-                let mut path = archivo.path();
-
-                let referencia = obtener_referencia(&mut path, dir)?;
-                refs.push(strings::obtener_linea_con_largo_hex(&referencia));
-            }
-            Err(error) => {
-                eprintln!("Error leyendo directorio: {}", error);
-            }
-        }
-    }
-    Ok(())
-}
-
-pub fn obtener_refs(refs_path: PathBuf, dir: &str) -> Result<Vec<String>, String> {
-    let mut refs: Vec<String> = Vec::new();
-    if !refs_path.exists() {
-        return Ok(refs);
-        // io::Error::new(io::ErrorKind::NotFound, "No existe el repositorio");
-    }
-
-    if refs_path.ends_with("HEAD") {
-        refs.push(obtener_ref_head(refs_path.to_path_buf())?);
-    } else {
-        let head_dir = fs::read_dir(&refs_path).map_err(|e| e.to_string())?;
-        for archivo in head_dir {
-            match archivo {
-                Ok(archivo) => {
-                    let mut path = archivo.path();
-                    // let mut path = archivo.path().to_string_lossy().split("./.gir/").into_iter().next().unwrap().to_string();
-                    refs.push(obtener_referencia(&mut path, dir)?);
-                }
-                Err(error) => {
-                    eprintln!("Error leyendo directorio: {}", error);
-                }
-            }
-        }
-    }
-    Ok(refs)
-}
-
-fn leer_archivo(path: &mut Path) -> Result<String, String> {
+pub(crate) fn leer_archivo(path: &mut Path) -> Result<String, String> {
     let archivo = fs::File::open(path).map_err(|e| e.to_string())?;
     let mut contenido = String::new();
     std::io::BufReader::new(archivo)
@@ -66,40 +12,13 @@ fn leer_archivo(path: &mut Path) -> Result<String, String> {
         .map_err(|e| e.to_string())?;
     Ok(contenido.trim().to_string())
 }
+
 //Devuelve true si la ubicacion esta vacia y false en caso contrario.
 //Si falla se presupone que es porque no existe y por lo tanto esta vacio
 pub fn esta_vacio(ubicacion: &str) -> bool {
     match fs::metadata(ubicacion) {
         Ok(metadata) => metadata.len() == 0,
         Err(_) => false,
-    }
-}
-
-fn obtener_referencia(path: &mut Path, prefijo: &str) -> Result<String, String> {
-    let mut contenido = leer_archivo(path)?;
-    if contenido.is_empty() {
-        contenido = "0".repeat(40);
-    }
-    let directorio_sin_prefijo = path.strip_prefix(prefijo).unwrap().to_path_buf();
-    let referencia = format!(
-        "{} {}",
-        contenido.trim(),
-        directorio_sin_prefijo.to_str().ok_or("No existe HEAD")?
-    );
-    Ok(referencia)
-}
-
-pub fn obtener_ref_head(path: PathBuf) -> Result<String, String> {
-    if !path.exists() {
-        return Err("No existe HEAD".to_string());
-    }
-    let contenido = leer_archivo(&mut path.clone())?;
-    let head_ref = contenido.split_whitespace().collect::<Vec<&str>>()[1];
-    if let Some(ruta) = path.clone().parent() {
-        let cont = leer_archivo(&mut ruta.join(head_ref))? + " HEAD";
-        Ok(strings::obtener_linea_con_largo_hex(&cont))
-    } else {
-        Err("Error al leer HEAD, verifique la ruta".to_string())
     }
 }
 
@@ -248,24 +167,6 @@ where
         "No se pudo borrar el directorio {}",
         directorio.as_ref().display()
     ))
-}
-
-// aca depende de si esta multi_ack y esas cosas, esta es para cuando no hay multi_ack ni multi_ack_mode
-pub fn obtener_ack(nombres_archivos: Vec<String>, dir: &str) -> Vec<String> {
-    let mut ack = Vec::new();
-    for nombre in nombres_archivos {
-        let dir_archivo = format!("{}{}/{}", dir, &nombre[..2], &nombre[2..]);
-        if PathBuf::from(dir_archivo.clone()).exists() {
-            ack.push(strings::obtener_linea_con_largo_hex(
-                ("ACK ".to_string() + &nombre + "\n").as_str(),
-            ));
-            break;
-        }
-    }
-    if ack.is_empty() {
-        ack.push(strings::obtener_linea_con_largo_hex("NAK\n"));
-    }
-    ack
 }
 
 #[cfg(test)]

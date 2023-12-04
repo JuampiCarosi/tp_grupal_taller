@@ -170,7 +170,7 @@ mod server_utils {
     /// Funcion que busca y devuelve las referencias de una direccion dada en formato pkt de un directorio con el formato de git
     pub fn obtener_refs_de(dir: PathBuf) -> Result<Vec<String>, String> {
         let mut refs: Vec<String> = Vec::new();
-        let head_ref = gir_io::obtener_ref_head(dir.join("HEAD"));
+        let head_ref = utils::referencia::obtener_ref_head(dir.join("HEAD"));
         if let Ok(head) = head_ref {
             refs.push(head)
         }
@@ -178,8 +178,8 @@ mod server_utils {
             Some(s) => s,
             None => return Err("No se pudo convertir el path {dir} a str".to_string()),
         };
-        gir_io::obtener_refs_con_largo_hex(&mut refs, dir.join("refs/heads/"), dir_str)?;
-        gir_io::obtener_refs_con_largo_hex(&mut refs, dir.join("refs/tags/"), dir_str)?;
+        utils::referencia::obtener_refs_con_largo_hex(&mut refs, dir.join("refs/heads/"), dir_str)?;
+        utils::referencia::obtener_refs_con_largo_hex(&mut refs, dir.join("refs/tags/"), dir_str)?;
         if !refs.is_empty() {
             let ref_con_cap = agregar_capacidades(refs[0].clone());
             refs.remove(0);

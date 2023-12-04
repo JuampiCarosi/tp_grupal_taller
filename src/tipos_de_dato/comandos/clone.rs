@@ -8,7 +8,7 @@ use std::sync::Arc;
 
 use super::fetch::Fetch;
 use super::init::Init;
-use super::pull::Pull;
+
 use super::remote::Remote;
 use super::set_upstream::SetUpstream;
 use super::write_tree;

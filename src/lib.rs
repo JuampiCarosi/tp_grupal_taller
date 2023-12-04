@@ -15,6 +15,7 @@ pub mod tipos_de_dato {
     pub mod lado_conflicto;
     pub mod logger;
     pub mod mensajes_log;
+
     pub mod objeto;
     pub mod packfile;
     pub mod referencia;
@@ -69,6 +70,7 @@ pub mod utils {
     pub mod objects;
     pub mod path_buf;
     pub mod ramas;
+    pub mod referencia;
     pub mod strings;
     pub mod tags;
     pub mod testing;

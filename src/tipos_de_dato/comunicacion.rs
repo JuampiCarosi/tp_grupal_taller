@@ -114,31 +114,12 @@ impl<T: Write + Read> Comunicacion<T> {
 
     ///acepta a una sola linea de la comunicacion
     pub fn aceptar_pedido(&mut self) -> Result<RespuestaDePedido, String> {
-        // lee primera parte, 4 bytes en hexadecimal indican el largo del stream
-
-        let mut tamanio_bytes = [0; 4];
-        self.flujo
-            .read(&mut tamanio_bytes)
-            .map_err(|e| e.to_string())?;
-        // largo de bytes a str
-        if tamanio_bytes == [0, 0, 0, 0] {
+        let tamanio = self.obtener_largo_de_la_linea()?;
+        if tamanio == 0 {
             return Ok(RespuestaDePedido::Terminate);
         }
-
-        let tamanio_str = str::from_utf8(&tamanio_bytes).map_err(|e| e.to_string())?;
-        // transforma str a u32
-        let tamanio = u32::from_str_radix(tamanio_str, 16).map_err(|e| e.to_string())?;
-        if tamanio == 0 {
-            return Ok(RespuestaDePedido::Mensaje('\0'.to_string()));
-        }
-        // lee el resto del flujo
-        let mut data = vec![0; (tamanio - 4) as usize];
-        self.flujo
-            .read_exact(&mut data)
-            .map_err(|e| e.to_string())?;
-        let linea = str::from_utf8(&data).map_err(|e| e.to_string())?;
-
-        Ok(RespuestaDePedido::Mensaje(linea.to_string()))
+        let linea = self.obtener_contenido_linea(tamanio)?;
+        Ok(RespuestaDePedido::Mensaje(linea))
     }
 
     fn leer_del_flujo_tantos_bytes(
