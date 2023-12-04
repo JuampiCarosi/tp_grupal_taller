@@ -125,10 +125,12 @@ fn escribir_mensaje_en_archivo_log(
 #[cfg(test)]
 mod tests {
     use super::Logger;
+    use serial_test::serial;
     use std::{env, fs, path::PathBuf, sync::Arc, thread};
     extern crate serial_test;
 
     #[test]
+    #[serial]
     fn test01_al_iniciar_si_archivo_log_no_esta_creado_se_crea() {
         let ubicacion_archivo = PathBuf::from("test_dir/test01.txt");
         Logger::new(ubicacion_archivo.clone()).unwrap();
@@ -138,6 +140,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test02_se_escribe_correctamente_los_mensajes_archivo_log() {
         let ubicacion_archivo = PathBuf::from("test_dir/test02.txt");
         let logger = Logger::new(ubicacion_archivo.clone()).unwrap();
@@ -154,6 +157,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test03_si_se_crea_un_logger_no_se_pierden_los_mensajes_anterior() {
         let msg_test_01 = "sipiropo fapatapalapa";
         let ubicacion_archivo = PathBuf::from("test_dir/test03.txt");
@@ -171,6 +175,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test04_el_logger_puede_escribir_mensajes_de_varios_threads() {
         let ubicacion_archivo = PathBuf::from("test_dir/test04.txt");
         let logger = Arc::new(Logger::new(ubicacion_archivo.clone()).unwrap());

@@ -99,6 +99,7 @@ pub fn crear_arbol_commit(
 
 #[cfg(test)]
 mod tests {
+    use serial_test::serial;
     use std::{path::PathBuf, sync::Arc};
 
     use crate::{
@@ -121,6 +122,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
 
     fn test01_se_escribe_arbol_con_un_hijo() {
         limpiar_archivo_gir();
@@ -140,6 +142,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test02_se_escribe_arbol_con_carpeta() {
         limpiar_archivo_gir();
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/commit_test01")).unwrap());

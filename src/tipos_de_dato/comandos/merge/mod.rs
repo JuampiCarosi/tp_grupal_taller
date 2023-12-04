@@ -619,8 +619,10 @@ impl Ejecutar for Merge {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serial_test::serial;
 
     #[test]
+    #[serial]
     fn test01_mergear_archivos_sin_conflictos() {
         let base = "primera linea
         segunda linea
@@ -652,6 +654,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test02_mergear_archivos_con_cambios_cerca() {
         let base = "primera linea
         segunda linea
@@ -680,6 +683,7 @@ mod tests {
         )
     }
     #[test]
+    #[serial]
     fn test03_mergear_archivos_con_cambios_lejos() {
         let base = "primera linea
         segunda linea
@@ -710,6 +714,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test04_mergear_archivos_con_muchos_conflictos() {
         let base = "primera linea
         segunda linea
@@ -739,6 +744,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test05_mergear_archivos_con_conflictos_y_lineas_repetidas() {
         let base = "primera linea
         segunda linea

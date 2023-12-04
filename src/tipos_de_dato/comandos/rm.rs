@@ -163,6 +163,7 @@ impl Ejecutar for Remove {
 
 #[cfg(test)]
 mod tests {
+    use serial_test::serial;
 
     use crate::tipos_de_dato::{
         comando::Ejecutar,
@@ -196,6 +197,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test01_remove_ejecutar() {
         clear_index();
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/rm_test01")).unwrap());
@@ -223,6 +225,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test02_remove_recursivo() {
         clear_index();
         crear_archivo_en_dir("test02");
@@ -256,6 +259,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test03_remove_sin_cached() {
         clear_index();
         crear_test_file("test03");
@@ -287,6 +291,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test04_remove_recursivo_sin_cached() {
         clear_index();
         crear_archivo_en_dir("test04");
@@ -320,6 +325,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     #[should_panic(expected = "No se puede borrar un directorio sin la opcion -r")]
     fn test05_remove_directorio_no_recursivo_falla() {
         clear_index();

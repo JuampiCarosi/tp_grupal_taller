@@ -31,9 +31,10 @@ where
     Ok(())
 }
 #[cfg(test)]
-mod test {
+mod tests {
     use super::*;
     use crate::tipos_de_dato::{comunicacion::Comunicacion, logger::Logger, packfile};
+    use serial_test::serial;
     use std::io::{Read, Write};
     use std::path::PathBuf;
     use std::sync::Arc;
@@ -62,6 +63,7 @@ mod test {
         }
     }
     #[test]
+    #[serial]
     fn test01_refs_se_actualizan_correctamente() {
         let test_dir = env!("CARGO_MANIFEST_DIR").to_string() + "/server_test_dir/test03/.gir/";
         let mock: MockTcpStream = MockTcpStream {

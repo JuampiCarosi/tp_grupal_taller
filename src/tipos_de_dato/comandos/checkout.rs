@@ -268,6 +268,7 @@ impl Ejecutar for Checkout {
 
 #[cfg(test)]
 mod tests {
+    use serial_test::serial;
     use std::{path::PathBuf, sync::Arc};
 
     use crate::{
@@ -310,6 +311,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test01_checkout_cambia_de_rama() {
         limpiar_archivo_gir();
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/checkout_test02")).unwrap());
@@ -329,6 +331,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
 
     fn test02_checkout_crea_y_cambia_de_rama() {
         limpiar_archivo_gir();
@@ -348,6 +351,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test03_al_hacer_checkout_actualiza_contenido() {
         limpiar_archivo_gir();
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/checkout_test03")).unwrap());
@@ -375,6 +379,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test04_al_hacer_checkout_se_eliminan_no_trackeados() {
         limpiar_archivo_gir();
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/checkout_test03")).unwrap());
@@ -443,6 +448,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test05_obtener_objetos_eliminados() {
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/checkout_test04")).unwrap());
 

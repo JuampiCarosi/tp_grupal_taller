@@ -194,8 +194,10 @@ impl Drop for Servidor {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serial_test::serial;
 
     #[test]
+    #[serial]
     fn test01_agregar_capacidades() {
         let referencia = "0".repeat(40);
         let referencia_con_capacidades = server_utils::agregar_capacidades(referencia);
@@ -209,6 +211,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test02_obtener_refs_con_ref_vacia_devuelve_ref_nula() {
         let dir =
             PathBuf::from(env!("CARGO_MANIFEST_DIR").to_string() + "/server_test_dir/test02/.gir/");
@@ -223,6 +226,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test03_obtener_refs_con_ref_head_devuelve_ref_head() {
         let dir =
             PathBuf::from(env!("CARGO_MANIFEST_DIR").to_string() + "/server_test_dir/test03/.gir/");

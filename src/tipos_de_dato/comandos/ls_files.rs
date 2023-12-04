@@ -130,7 +130,8 @@ impl Ejecutar for LsFiles {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
+    use serial_test::serial;
     use std::{path::PathBuf, sync::Arc};
 
     use crate::{
@@ -163,6 +164,7 @@ mod test {
     }
 
     #[test]
+    #[serial]
     fn test01_ls_files_muestra_los_archivos_en_staging() {
         limpiar_archivo_index().unwrap();
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/ls_files_test01")).unwrap());
@@ -175,6 +177,7 @@ mod test {
     }
 
     #[test]
+    #[serial]
     fn test02_ls_files_muestra_los_archivos_trackeados() {
         limpiar_archivo_gir();
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/ls_files_test02")).unwrap());
@@ -186,6 +189,7 @@ mod test {
     }
 
     #[test]
+    #[serial]
     fn test03_ls_files_muestra_subdirectorios_pedidos() {
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/ls_files_test03")).unwrap());
         let mut args = vec!["test_dir/muchos_objetos".to_string()];
@@ -198,6 +202,7 @@ mod test {
     }
 
     #[test]
+    #[serial]
     fn test04_ls_files_con_archivo_inexistente_devuelve_string_vacio() {
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/ls_files_test04")).unwrap());
         let mut args = vec!["archivo_inexistente".to_string()];
@@ -207,6 +212,7 @@ mod test {
     }
 
     #[test]
+    #[serial]
     fn test05_ls_files_de_un_archivo_no_trackeado_devuelve_string_vacio() {
         limpiar_archivo_gir();
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/ls_files_test05")).unwrap());

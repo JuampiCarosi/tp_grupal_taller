@@ -102,11 +102,13 @@ impl Ejecutar for Log {
 
 #[cfg(test)]
 mod tests {
+    use serial_test::serial;
     use std::path::PathBuf;
 
     use super::*;
 
     #[test]
+    #[serial]
     fn test01_creacion_de_log_sin_branch() {
         let mut args = vec![];
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/log_test01")).unwrap());
@@ -115,6 +117,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test02_creacion_de_log_indicando_branch() {
         io::escribir_bytes(".gir/refs/heads/rama", "hash".as_bytes()).unwrap();
         let mut args = vec!["rama".to_string()];
@@ -124,6 +127,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test03_obtener_commit_branch() {
         io::escribir_bytes(".gir/refs/heads/rama", "hash".as_bytes()).unwrap();
         let hash = Log::obtener_commit_branch("rama").unwrap();
@@ -132,6 +136,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     #[should_panic(expected = "La rama rama no existe")]
     fn test04_error_al_usar_branch_inexistente() {
         let mut args = vec!["rama".to_string()];

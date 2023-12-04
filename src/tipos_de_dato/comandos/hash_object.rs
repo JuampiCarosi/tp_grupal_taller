@@ -96,6 +96,7 @@ impl Ejecutar for HashObject {
 
 #[cfg(test)]
 mod tests {
+    use serial_test::serial;
     use std::{io::Read, path::PathBuf, sync::Arc};
 
     use flate2::read::ZlibDecoder;
@@ -106,6 +107,7 @@ mod tests {
     };
 
     #[test]
+    #[serial]
     fn test01_hash_object_de_un_blob_devuelve_el_hash_correcto() {
         let mut args = vec!["test_dir/objetos/archivo.txt".to_string()];
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/hash_object_test01")).unwrap());
@@ -115,6 +117,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test02_hash_object_de_un_blob_con_opcion_w_devuelve_el_hash_correcto_y_lo_escribe() {
         let mut args = vec!["-w".to_string(), "test_dir/objetos/archivo.txt".to_string()];
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/hash_object_test01")).unwrap());

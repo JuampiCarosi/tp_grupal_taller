@@ -94,9 +94,10 @@ fn comprobar_wants<T: Read + Write>(
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::*;
     use crate::tipos_de_dato::{comunicacion::Comunicacion, logger::Logger};
+    use serial_test::serial;
     use std::io::{Read, Write};
     use std::path::PathBuf;
     use std::sync::Arc;
@@ -125,6 +126,7 @@ mod test {
         }
     }
     #[test]
+    #[serial]
     fn test01_clone() {
         let wants = "4163eb28ec61fd1d0c17cf9b77f4c17e1e338b0".to_string();
         let test_dir = env!("CARGO_MANIFEST_DIR").to_string() + "/server_test_dir/test03/.gir/";
@@ -156,6 +158,7 @@ mod test {
     }
 
     #[test]
+    #[serial]
     fn test02_fetch() {
         let wants = "4163eb28ec61fd1d0c17cf9b77f4c17e1e338b0".to_string();
         let test_dir = env!("CARGO_MANIFEST_DIR").to_string() + "/server_test_dir/test03/.gir/";
@@ -192,6 +195,7 @@ mod test {
     }
 
     #[test]
+    #[serial]
     fn test03_want_con_referencia_invalida_produce_error() {
         let wants = "1".repeat(40);
         let test_dir = env!("CARGO_MANIFEST_DIR").to_string() + "/server_test_dir/test03/.gir/";

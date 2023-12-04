@@ -416,7 +416,8 @@ impl Ejecutar for Push {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
+    use serial_test::serial;
     use std::{path::PathBuf, sync::Arc};
 
     use crate::{
@@ -427,6 +428,7 @@ mod test {
     use super::Push;
 
     #[test]
+    #[serial]
     fn test_01_se_crea_bien_la_referencia_actualizar_al_poner_rama_local_y_remota() {
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/push_01")).unwrap());
         utils::testing::limpiar_archivo_gir(logger.clone());
@@ -453,6 +455,7 @@ mod test {
     }
 
     #[test]
+    #[serial]
     fn test_02_se_crea_bien_la_referencia_actualizar_al_poner_remoto_y_tag() {
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/push_02")).unwrap());
         utils::testing::limpiar_archivo_gir(logger.clone());
@@ -477,6 +480,7 @@ mod test {
     }
 
     #[test]
+    #[serial]
     fn test_03_se_crea_bien_la_referencia_al_poner_solo_el_remoto() {
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/push_03")).unwrap());
         utils::testing::limpiar_archivo_gir(logger.clone());
@@ -501,6 +505,7 @@ mod test {
     }
 
     #[test]
+    #[serial]
     fn test_04_se_crea_bien_la_referencia_al_poner_el_remoto_rama_local_y_rama_remota() {
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/push_04")).unwrap());
         utils::testing::limpiar_archivo_gir(logger.clone());
@@ -530,6 +535,7 @@ mod test {
     }
 
     #[test]
+    #[serial]
     fn test_05_se_crea_bien_la_referencia_al_poner_el_tag_local_y_tag_remoto() {
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/push_05")).unwrap());
         utils::testing::limpiar_archivo_gir(logger.clone());
@@ -558,6 +564,7 @@ mod test {
     }
 
     #[test]
+    #[serial]
     fn test_06_se_crea_bien_la_referencia_al_no_poner_nada_si_esta_configurada_la_rama() {
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/push_06")).unwrap());
         utils::testing::limpiar_archivo_gir(logger.clone());
@@ -594,6 +601,7 @@ mod test {
     }
 
     #[test]
+    #[serial]
     fn test_07_se_crea_bien_la_referencia_a_la_rama_aun_con_el_flag_u() {
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/push_07")).unwrap());
         utils::testing::limpiar_archivo_gir(logger.clone());
@@ -640,6 +648,7 @@ mod test {
     }
 
     #[test]
+    #[serial]
     fn test_08_se_crea_bien_la_referencia_actualizar() {
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/push_01")).unwrap());
         utils::testing::limpiar_archivo_gir(logger.clone());

@@ -442,7 +442,8 @@ impl Ejecutar for Fetch<TcpStream> {
 
 #[cfg(test)]
 
-mod test {
+mod tests {
+    use serial_test::serial;
     use std::{path::PathBuf, sync::Arc};
 
     use crate::{
@@ -453,6 +454,7 @@ mod test {
     use super::Fetch;
 
     #[test]
+    #[serial]
     fn test_03_los_tags_se_gurdan_correctamtene() {
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/fetch_03.txt")).unwrap());
         utils::testing::limpiar_archivo_gir(logger.clone());
@@ -496,6 +498,7 @@ mod test {
     }
 
     #[test]
+    #[serial]
     fn test_04_los_ramas_remotas_se_escriben_correctamente() {
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/fetch_04.txt")).unwrap());
         utils::testing::limpiar_archivo_gir(logger.clone());
@@ -527,6 +530,7 @@ mod test {
     }
 
     #[test]
+    #[serial]
     fn test_05_los_ramas_remotas_se_actualizan_correctamente() {
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/fetch_05.txt")).unwrap());
         utils::testing::limpiar_archivo_gir(logger.clone());
@@ -559,6 +563,7 @@ mod test {
     }
 
     #[test]
+    #[serial]
     fn test_05_los_ramas_remotas_se_escriben_correctamente() {
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/fetch_05.txt")).unwrap());
         utils::testing::limpiar_archivo_gir(logger.clone());
@@ -588,37 +593,4 @@ mod test {
                 .unwrap();
         assert_eq!(rama_contendio_obtenido, rama_contenido);
     }
-    // #[test]
-    // fn test03_la_fase_de_negociacion_funciona(){
-    //     let nuevo_dir = "test03_fetch";
-    //     let viejo_dir = crear_y_cambiar_directorio(nuevo_dir);
-
-    //     let mock = MockTcpStream {
-    //         lectura_data: Vec::new(),
-    //         escritura_data: Vec::new(),
-    //     };
-
-    //     let comunicacion = Comunicacion::new_para_testing(mock);
-    //     let logger = Rc::new(Logger::new(PathBuf::from(".log.txt")).unwrap());
-    //     let capacidades_servidor = vec!["multi_ack".to_string(), "thin-pack".to_string(), "side-band".to_string(), "side-band-64k".to_string(), "ofs-delta".to_string(), "shallow".to_string(), "no-progress".to_string(),  "include-tag".to_string()];
-    //     let commits_y_ramas = vec![("1d3fcd5ced445d1abc402225c0b8a1299641f497".to_string(), PathBuf::from("refs/heads/integration")),("7217a7c7e582c46cec22a130adf4b9d7d950fba0".to_string(), PathBuf::from("refs/heads/master"))];
-
-    //     Fetch::new_testing(logger, comunicacion).unwrap().fase_de_negociacion(capacidades_servidor, &commits_y_ramas).unwrap();
-
-    //     volver_al_viejo_dir_y_borrar_el_nuevo(nuevo_dir, viejo_dir);
-    // }
-
-    // fn volver_al_viejo_dir_y_borrar_el_nuevo(nuevo_dir: &str, viejo_dir: PathBuf) {
-    //     std::env::set_current_dir(viejo_dir).unwrap();
-    //     std::fs::remove_dir_all(nuevo_dir).unwrap();
-    // }
-
-    // fn crear_y_cambiar_directorio(nombre: &str)-> PathBuf{
-    //     let viejo_dir = env::current_dir().unwrap();
-
-    //     fs::create_dir_all(nombre).unwrap();
-    //     std::env::set_current_dir(nombre).unwrap();
-
-    //     viejo_dir
-    // }
 }

@@ -270,10 +270,12 @@ fn aplicar_diff(texto: &str, diffs: Vec<(usize, TipoDiff)>) -> Vec<Region> {
 #[cfg(test)]
 
 mod tests {
+    use serial_test::serial;
 
     use super::*;
 
     #[test]
+    #[serial]
     fn test01_rearmar_timestamp_log() {
         let timestamp = 1234567890;
         let offset_horas = -03;
@@ -285,6 +287,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test02_formatear_log() {
         let hash_commit = "1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p7q8r9s0t".to_string();
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/commit_obj_test02")).unwrap());
@@ -308,6 +311,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test03_aplicar_diff_agregando_linea() {
         let texto = "primera linea\nsegunda linea\ntercera linea";
         let diff = vec![
@@ -329,6 +333,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test04_aplicar_diff_eliminando_linea() {
         let texto = "primera linea\nsegunda linea\ntercera linea";
         let diff = vec![
@@ -348,6 +353,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test05_aplicar_diff_modificando_linea() {
         let texto = "primera linea\nsegunda linea\ntercera linea";
         let diff = vec![
@@ -369,6 +375,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test06_aplicar_diff_conflicto() {
         let texto = "primera linea\nsegunda linea\ntercera linea";
         let diff = vec![
