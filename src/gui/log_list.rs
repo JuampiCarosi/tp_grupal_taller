@@ -4,10 +4,7 @@ use std::{
     sync::Arc,
 };
 
-use gtk::{
-    prelude::{ComponentExt, *},
-    BaselinePosition, Orientation,
-};
+use gtk::{prelude::*, Orientation};
 
 use crate::{
     tipos_de_dato::{

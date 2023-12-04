@@ -23,7 +23,6 @@ pub fn boton_conflictos(builder: &gtk::Builder, logger: Arc<Logger>) {
         modal(&builder, logger.clone());
     });
     boton.show_all();
-    println!("Boton conflictos mostrado");
 }
 
 fn resaltar_linea(buffer: &gtk::TextBuffer, numero_linea: i32, tag: &str) {

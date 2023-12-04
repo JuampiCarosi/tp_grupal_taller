@@ -49,8 +49,6 @@ impl Remote {
             });
         }
 
-        println!("{:?}", args);
-
         if args.len() == 2 {
             match args[0].as_str() {
                 "show-url" => {
