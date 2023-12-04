@@ -527,4 +527,18 @@ mod test {
         assert_eq!(offset, packfile.len() - 20); // para asertar que solo queda el checksum
         assert_eq!(Packfile::verificar_checksum(packfile.as_slice()), true);
     }
+
+
+    #[test]
+    fn test09_delta_ref() {
+        let packfile = io::leer_bytes(env!("CARGO_MANIFEST_DIR").to_string() + "/packfile_test").unwrap();
+        let mut offset = 12;
+        let (_firma, _version, largo) = Packfile::leer_header_packfile(&packfile).unwrap();
+        let mut contador = 0;
+        while contador < largo {
+            let objeto = Packfile::leer_objeto_del_packfile(&packfile, &mut offset);
+            contador += 1;
+            assert!(objeto.is_ok());
+        }
+    }
 }

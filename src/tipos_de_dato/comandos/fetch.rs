@@ -149,16 +149,11 @@ impl<T: Write + Read> Fetch<T> {
         let packfile = self.comunicacion.obtener_packfile()?;
         let primeros_bytes = &packfile[..4];
         if primeros_bytes != "PACK".as_bytes() {
-            println!(
-                "Se recibio: {}",
-                String::from_utf8_lossy(packfile.as_slice())
-            );
             return Err(format!(
                 "Error al recibir el packfile, se recibio: {}",
                 String::from_utf8_lossy(packfile.as_slice())
             ));
         }
-
         self.logger.log("Recepcion del pack file en fetch exitoso");
         Packfile::leer_packfile_y_escribir(&packfile, "./.gir/objects/".to_string()).unwrap();
         Ok(())

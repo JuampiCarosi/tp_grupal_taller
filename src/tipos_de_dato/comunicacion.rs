@@ -322,7 +322,7 @@ impl<T: Write + Read> Comunicacion<T> {
 
             // Copiar los bytes leídos al búfer principal
             buffer.extend_from_slice(&temp_buffer[0..bytes_read]);
-
+            io::escribir_bytes("/home/juani/pockfoil", buffer.clone())?;
             if buffer.len() > 20 && Packfile::verificar_checksum(&buffer) {
                 break;
             }
