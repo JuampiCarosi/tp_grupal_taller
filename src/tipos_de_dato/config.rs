@@ -102,14 +102,22 @@ impl Config {
         self.ramas.iter().any(|x| x.nombre == *rama)
     }
 
+    /// Devuelve true si la rama actual tiene un upstream asociado.
+    /// Osea si tiene un remote asociado.
+    pub fn hay_upstream(&self, rama: &str) -> bool {
+        self.ramas
+            .iter()
+            .any(|x| x.nombre == *rama && !x.remote.is_empty())
+    }
+
     ///en caso de existir un remoto asosiado a la rama actual, lo devuelve
     pub fn obtener_remoto_rama_actual(&self) -> Option<String> {
-        let rama_actual = utils::ramas::obtener_rama_actual().err()?;
+        let rama_actual = utils::ramas::obtener_rama_actual().ok()?;
 
         self.ramas
             .iter()
             .find(|&rama| rama.nombre == rama_actual)
-            .map(|rama| (*rama.remote).to_string())
+            .map(|rama| rama.remote.to_owned())
     }
 
     ///En caso de existir un remoto y un rama_merge (osea si la rama actual esta configurada)asosiado a la rama actual, lo devuelve
@@ -121,15 +129,14 @@ impl Config {
 
     ///En caso de existir un remoto y un rama_merge (osea si la rama actual esta configurada)asosiado a la rama actual, lo devuelve
     /// Ojo!! rama merge en formato dir como lo ve el server(Ej: refs/heads/master)
-    pub fn obtener_remoto_y_rama_merge_rama(&self, rama: &String) -> Option<(String, PathBuf)> {
-        match self
-            .ramas
+    pub fn obtener_remoto_y_rama_merge_rama(
+        &self,
+        rama_actual: &String,
+    ) -> Option<(String, PathBuf)> {
+        self.ramas
             .iter()
-            .find(|&rama_info| rama_info.nombre == *rama)
-        {
-            Some(rama) => Some(((*rama.remote).to_string(), (*rama.merge).to_path_buf())),
-            None => None,
-        }
+            .find(|&rama| rama.nombre == *rama_actual)
+            .map(|rama| (rama.remote.to_owned(), (*rama.merge).to_path_buf()))
     }
 
     ///Da el url asosiado al remoto

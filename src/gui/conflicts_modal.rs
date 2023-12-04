@@ -14,15 +14,15 @@ use crate::{
 
 pub fn boton_conflictos(builder: &gtk::Builder, logger: Arc<Logger>) {
     let boton: Button = builder.object("conflicts-button").unwrap();
-    if !Merge::hay_archivos_sin_mergear(logger.clone()).unwrap() {
-        boton.set_sensitive(false);
-    }
+
+    let deshabilidato = Merge::hay_archivos_sin_mergear(logger.clone()).unwrap();
+    boton.set_sensitive(deshabilidato);
 
     let builder = builder.clone();
     boton.connect_clicked(move |_| {
         modal(&builder, logger.clone());
     });
-    boton.show();
+    boton.show_all();
 }
 
 fn resaltar_linea(buffer: &gtk::TextBuffer, numero_linea: i32, tag: &str) {
