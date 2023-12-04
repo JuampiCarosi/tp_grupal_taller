@@ -38,6 +38,7 @@ fn obtener_commits_con_branches(
     logger: Arc<Logger>,
 ) -> Result<Vec<(CommitObj, String)>, String> {
     let ramas_largas = Branch::obtener_ramas()?;
+
     let ramas: Vec<_> = ramas_largas
         .iter()
         .map(|rama| if rama.len() > 25 { &rama[..25] } else { rama })
@@ -47,6 +48,9 @@ fn obtener_commits_con_branches(
 
     for rama in ramas {
         let commit_hash_rama = leer_a_string(".gir/refs/heads/".to_string() + &rama)?;
+        if commit_hash_rama.is_empty() {
+            continue;
+        }
         let commit_rama = CommitObj::from_hash(commit_hash_rama, logger.clone())?;
         let commits_rama = obtener_tronco_principal_padres(commit_rama, logger.clone());
         commits_por_ramas.push((rama.to_string(), commits_rama));
@@ -55,6 +59,10 @@ fn obtener_commits_con_branches(
     let mut commits_y_ramas: Vec<(CommitObj, String)> = Vec::new();
 
     let commits = obtener_listas_de_commits(rama, logger.clone())?;
+
+    if commits.is_empty() {
+        return Ok(Vec::new());
+    }
 
     for commit in commits {
         let mut encontrados = Vec::new();
@@ -167,6 +175,10 @@ pub fn render(builder: &gtk::Builder, branch: &str, logger: Arc<Logger>) {
             return;
         }
     };
+
+    if commits.is_empty() {
+        return;
+    }
 
     let clases = generar_clases_por_rama();
 
