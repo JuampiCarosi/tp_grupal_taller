@@ -351,8 +351,7 @@ fn obtener_commits_y_objetos_asociados(
             break;
         }
         objetos_a_agregar.insert(commit.hash.clone());
-        let hash_tree =
-            write_tree::conseguir_arbol_from_hash_commit(&commit.hash, "./.gir/objects/")?;
+        let hash_tree = write_tree::conseguir_arbol_en_directorio(&commit.hash, "./.gir/objects/")?;
         let tree = Tree::from_hash(&hash_tree, PathBuf::from("."), logger.clone())?;
         objetos_a_agregar.insert(hash_tree.clone());
         objetos_a_agregar.extend(

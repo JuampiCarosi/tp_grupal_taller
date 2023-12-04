@@ -8,7 +8,7 @@ use crate::{
     utils::{self, io},
 };
 
-use super::{show_ref::ShowRef, write_tree::conseguir_arbol_from_hash_commit};
+use super::{show_ref::ShowRef, write_tree::conseguir_arbol_en_directorio};
 
 const PATH_HEAD: &str = "./.gir/HEAD";
 
@@ -197,7 +197,7 @@ impl Checkout {
         let ref_actual = io::leer_a_string(PATH_HEAD)?;
         let rama_actual = Self::conseguir_rama_actual(&ref_actual)?;
         let head_commit = io::leer_a_string(format!(".gir/refs/heads/{}", rama_actual))?;
-        let hash_tree_padre = conseguir_arbol_from_hash_commit(&head_commit, ".gir/objects/")?;
+        let hash_tree_padre = conseguir_arbol_en_directorio(&head_commit, ".gir/objects/")?;
         Tree::from_hash(&hash_tree_padre, PathBuf::from("."), logger)
     }
 

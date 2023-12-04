@@ -12,7 +12,6 @@ fn limpiar_archivo_gir() {
     }
 }
 
-const ROJO: &str = "\x1B[31m";
 const VERDE: &str = "\x1B[32m";
 const RESET: &str = "\x1B[0m";
 

@@ -6,7 +6,7 @@ use crate::utils::index::{self, escribir_index};
 use crate::utils::ramas;
 use crate::{
     tipos_de_dato::{
-        comandos::write_tree::conseguir_arbol_from_hash_commit,
+        comandos::write_tree::conseguir_arbol_en_directorio,
         logger::Logger,
         objetos::{commit::CommitObj, tree::Tree},
     },
@@ -198,7 +198,7 @@ impl Rebase {
         let branch_actual = ramas::obtener_rama_actual()?;
         io::escribir_bytes(format!(".gir/refs/heads/{branch_actual}"), &tip_nuevo)?;
 
-        let hash_arbol_commit = conseguir_arbol_from_hash_commit(&tip_nuevo, ".gir/objects/")?;
+        let hash_arbol_commit = conseguir_arbol_en_directorio(&tip_nuevo, ".gir/objects/")?;
         let arbol = Tree::from_hash(&hash_arbol_commit, PathBuf::from("./"), self.logger.clone())?;
 
         arbol.escribir_en_directorio()?;
