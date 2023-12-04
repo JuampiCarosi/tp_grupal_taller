@@ -1,23 +1,26 @@
 use crate::tipos_de_dato::comunicacion::Comunicacion;
+use crate::tipos_de_dato::logger::Logger;
 use crate::tipos_de_dato::packfile;
 use crate::utils::strings::eliminar_prefijos;
 use crate::utils::{io as gir_io, objects};
 use std::io::{Read, Write};
+use std::sync::Arc;
 
 /// Envia packfile al cliente,
 /// # Argumentos
 /// * `dir` - Direccion del repositorio
 /// * `comunicacion` - Comunicacion con el cliente
-/// # Errores
-///
+/// * `refs_enviadas` - Referencias enviadas al cliente previamente, se utilizan para comparar con los wants posteriormente
 pub fn upload_pack<T>(
     dir: String,
     comunicacion: &mut Comunicacion<T>,
     refs_enviadas: &Vec<String>,
+    logger: Arc<Logger>,
 ) -> Result<(), String>
 where
     T: Read + Write,
 {
+    logger.log("Iniciando upload pack");
     let wants = comunicacion.obtener_lineas()?; // obtengo los wants del cliente
     if wants.is_empty() {
         println!("Se termino la conexion");
@@ -33,10 +36,11 @@ where
         // -------- fetch ----------
         procesar_pedido_fetch(&dir, comunicacion, lineas_siguientes)?;
     }
-    println!("Upload pack ejecutado con exito");
+    logger.log("Upload pack ejecutado con exito");
     Ok(())
 }
 
+// Funcion que se encarga de seguir el protocolo en caso de clone   
 fn procesar_pedido_clone<T: Read + Write>(
     dir: &str,
     comunicacion: &mut Comunicacion<T>,
@@ -47,6 +51,7 @@ fn procesar_pedido_clone<T: Read + Write>(
     Ok(())
 }
 
+// Funcion que se encarga de seguir el protocolo en caso de fetch   
 fn procesar_pedido_fetch<T: Read + Write>(
     dir: &str,
     comunicacion: &mut Comunicacion<T>,
@@ -65,6 +70,8 @@ fn procesar_pedido_fetch<T: Read + Write>(
     Ok(())
 }
 
+
+// Funcion para comprobar si los wants enviados por el cliente son o no validos, en caso de que no lo sean se le envia un mensaje de error al cliente
 fn comprobar_wants<T: Read + Write>(
     wants: &Vec<String>,
     refs_enviadas: &Vec<String>,
@@ -146,6 +153,7 @@ mod test {
             &vec![gir_io::obtener_linea_con_largo_hex(
                 "4163eb28ec61fd1d0c17cf9b77f4c17e1e338b0 refs/heads/master\n",
             )],
+            logger.clone(),
         )
         .unwrap();
         let respuesta = comunicacion.obtener_lineas().unwrap();
@@ -182,6 +190,7 @@ mod test {
             &vec![gir_io::obtener_linea_con_largo_hex(
                 "4163eb28ec61fd1d0c17cf9b77f4c17e1e338b0 refs/heads/master\n",
             )],
+            logger.clone(),
         )
         .unwrap();
         let respuesta = comunicacion.obtener_lineas().unwrap();
@@ -210,6 +219,7 @@ mod test {
             &vec![gir_io::obtener_linea_con_largo_hex(
                 &("4163eb28ec61fd1d0c17cf9b77f4c17e1e338b0".to_string() + " refs/heads/master\n"),
             )],
+            logger.clone(),
         );
         assert!(resultado_upload.is_err());
         let respuesta = comunicacion.obtener_lineas().unwrap();
