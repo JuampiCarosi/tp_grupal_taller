@@ -3,11 +3,11 @@ use std::sync::Arc;
 use gtk::prelude::*;
 
 use crate::{
-    tipos_de_dato::{comando::Ejecutar, comandos::commit::Commit, logger::Logger},
+    tipos_de_dato::{comandos::commit::Commit, logger::Logger},
     utils::ramas,
 };
 
-use super::{info_dialog, log_list, staging_area};
+use super::{comando_gui::ComandoGui, log_list, staging_area};
 
 fn run_dialog(builder: &gtk::Builder) {
     let commit_button: gtk::Button = builder.object("commit-button").unwrap();
@@ -41,23 +41,11 @@ fn boton_confimar_dialog(builder: &gtk::Builder, logger: Arc<Logger>) {
             input_str => vec!["-m".to_string(), input_str.to_string()],
         };
 
-        let mut commit = match Commit::from(&mut args, logger.clone()) {
-            Ok(commit) => commit,
-            Err(err) => {
-                info_dialog::mostrar_error(&err);
-                dialog.hide();
-                return;
-            }
-        };
+        let commit = Commit::from(&mut args, logger.clone()).ejecutar_gui();
 
-        match commit.ejecutar() {
-            Ok(_) => {}
-            Err(err) => {
-                info_dialog::mostrar_error(&err);
-                dialog.hide();
-                return;
-            }
-        };
+        if commit.is_none() {
+            return;
+        }
 
         let branch_actual = ramas::obtener_rama_actual().unwrap();
 
