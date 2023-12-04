@@ -375,9 +375,9 @@ impl<T: Write + Read> Fetch<T> {
         String,
     > {
         let resultado = utils::fase_descubrimiento::fase_de_descubrimiento(&self.comunicacion)?;
-
+        
         self.logger.log(&format!(
-            "Se ejecuto correctamte la fase de decubrimiento en Fech: {:?}",
+            "Se ejecuto correctamte la fase de decubrimiento en Fetch: {:?}",
             resultado
         ));
 
