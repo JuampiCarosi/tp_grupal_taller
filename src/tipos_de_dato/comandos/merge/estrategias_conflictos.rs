@@ -127,7 +127,7 @@ pub fn resolver_merge_len_3(
         let mut lineas = String::new();
         for (diff, _) in conflicto {
             if let TipoDiff::Added(linea) = diff {
-                lineas.push_str(&linea)
+                lineas.push_str(linea)
             }
         }
         Region::Normal(lineas)

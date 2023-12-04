@@ -36,7 +36,7 @@ impl Push {
 
         let mut set_upstream = false;
 
-        if Self::hay_flags(&args) {
+        if Self::hay_flags(args) {
             Self::parsear_flags(args, &mut set_upstream)?;
         }
 
@@ -101,7 +101,7 @@ impl Push {
             remoto = Self::verificar_remoto(&args[0])?;
             referencia =
                 Self::obtener_y_verificar_referencia(utils::ramas::obtener_rama_actual()?)?;
-        } else if args.len() == 0 && !set_upstream {
+        } else if args.is_empty() && !set_upstream {
             //si no hay argumentos ni flags, quiere decir que deberia
             //estar configurada la rama
             (remoto, referencia) = Self::obtener_remoto_y_rama_merge_de_rama_actual()?;
@@ -125,7 +125,7 @@ impl Push {
 
     fn parsear_flags(args: &mut Vec<String>, set_upstream: &mut bool) -> Result<(), String> {
         //busca en los argumentos si hay flag y devuelve el indice
-        if let Some(index_flag) = args.iter().position(|s| s.starts_with("-")) {
+        if let Some(index_flag) = args.iter().position(|s| s.starts_with('-')) {
             let flag = args.remove(index_flag);
 
             if flag == FLAG_U || flag == FLAG_SET_UPSTREAM {
@@ -153,7 +153,7 @@ impl Push {
 
     //Le pide al config el url asosiado a la rama
     fn obtener_url(&self, remoto: &String) -> Result<String, String> {
-        Config::leer_config()?.obtenet_url_asosiado_remoto(&remoto)
+        Config::leer_config()?.obtenet_url_asosiado_remoto(remoto)
     }
     ///Inica la comunicacion con el servidor y el protocolo git-recive-pack
     ///
@@ -201,7 +201,7 @@ impl Push {
             Err(msj_err) => {
                 //error
                 self.terminar_y_mandar_pack_file_vacio(comunicacion)?;
-                return Err(msj_err);
+                Err(msj_err)
             }
         }
     }
@@ -299,10 +299,10 @@ impl Push {
             _commit_head_remoto,
             commits_cabezas_y_ref_rama_asosiado,
             commits_y_tags_asosiados,
-        ) = utils::fase_descubrimiento::fase_de_descubrimiento(&comunicacion)?;
+        ) = utils::fase_descubrimiento::fase_de_descubrimiento(comunicacion)?;
 
         self.logger
-            .log(&"Fase de descubrimiento ejecuta con exito".to_string());
+            .log("Fase de descubrimiento ejecuta con exito");
 
         Ok([
             &commits_cabezas_y_ref_rama_asosiado[..],

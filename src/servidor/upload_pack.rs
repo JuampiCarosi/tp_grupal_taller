@@ -23,7 +23,7 @@ where
         println!("Se termino la conexion");
         return Ok(()); // el cliente esta actualizado
     }
-    comprobar_wants(&wants, &refs_enviadas, comunicacion)?; // compruebo que los wants existan
+    comprobar_wants(&wants, refs_enviadas, comunicacion)?; // compruebo que los wants existan
 
     // ------- CLONE --------
     let lineas_siguientes = comunicacion.obtener_lineas()?;
@@ -83,7 +83,7 @@ fn comprobar_wants<T: Read + Write>(
                 continua = true;
             }
         }
-        if continua == false {
+        if !continua {
             comunicacion.responder(&vec![gir_io::obtener_linea_con_largo_hex(&format!(
                 "ERR La referencia {} no coincide con ninguna referencia enviada\n",
                 want_hash

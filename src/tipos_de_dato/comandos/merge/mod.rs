@@ -430,8 +430,8 @@ impl Merge {
             {
                 let hubo_conflictos = self.obtener_conflictos_entre_archivos_a_mergear(
                     &objeto_base,
-                    &objeto_a_mergear,
-                    &objeto_actual,
+                    objeto_a_mergear,
+                    objeto_actual,
                     paths_con_conflictos,
                 )?;
 

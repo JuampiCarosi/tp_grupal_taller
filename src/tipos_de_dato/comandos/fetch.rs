@@ -2,7 +2,7 @@ use crate::tipos_de_dato::comando::Ejecutar;
 use crate::tipos_de_dato::comunicacion::Comunicacion;
 use crate::tipos_de_dato::config::Config;
 use crate::tipos_de_dato::logger::Logger;
-use crate::tipos_de_dato::packfile::{self, Packfile};
+use crate::tipos_de_dato::packfile::{Packfile};
 use crate::utils::{self, io, objects};
 use std::io::{Read, Write};
 use std::net::TcpStream;
@@ -47,7 +47,7 @@ impl<T: Write + Read> Fetch<T> {
         logger: Arc<Logger>,
         comunicacion: Comunicacion<T>,
     ) -> Result<Fetch<T>, String> {
-        let remoto = if arg.len() >= 1 {
+        let remoto = if !arg.is_empty() {
             arg.remove(0)
         } else {
             "origin".to_string()
@@ -478,7 +478,7 @@ mod test {
         };
 
         let comunicacion = Comunicacion::new_para_testing(mock, logger.clone());
-        Fetch::new_testing(vec![], logger, comunicacion.into())
+        Fetch::new_testing(vec![], logger, comunicacion)
             .unwrap()
             .guardar_los_tags(&commits_y_tags)
             .unwrap();
@@ -514,7 +514,7 @@ mod test {
         };
 
         let comunicacion = Comunicacion::new_para_testing(mock, logger.clone());
-        Fetch::new_testing(vec![remoto.clone()], logger, comunicacion.into())
+        Fetch::new_testing(vec![remoto.clone()], logger, comunicacion)
             .unwrap()
             .actualizar_ramas_locales_del_remoto(&commits_y_ramas)
             .unwrap();
@@ -546,7 +546,7 @@ mod test {
         };
 
         let comunicacion = Comunicacion::new_para_testing(mock, logger.clone());
-        Fetch::new_testing(vec![remoto.clone()], logger, comunicacion.into())
+        Fetch::new_testing(vec![remoto.clone()], logger, comunicacion)
             .unwrap()
             .actualizar_ramas_locales_del_remoto(&commits_y_ramas)
             .unwrap();
@@ -577,7 +577,7 @@ mod test {
         };
 
         let comunicacion = Comunicacion::new_para_testing(mock, logger.clone());
-        Fetch::new_testing(vec![remoto.clone()], logger, comunicacion.into())
+        Fetch::new_testing(vec![remoto.clone()], logger, comunicacion)
             .unwrap()
             .actualizar_ramas_locales_del_remoto(&commits_y_ramas)
             .unwrap();

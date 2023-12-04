@@ -79,12 +79,10 @@ impl Servidor {
     ) -> Result<(String, String, String), String> {
         let pedido: Vec<String> = linea_pedido
             .split_whitespace()
-            .into_iter()
             .map(|s| s.to_string())
             .collect();
         let args: Vec<String> = pedido[1]
             .split('\0')
-            .into_iter()
             .map(|s| s.to_string())
             .collect();
         let repo = args[0].clone();
@@ -123,9 +121,9 @@ impl Servidor {
                 let path = PathBuf::from(&dir_repo);
 
                 if !path.exists() {
-                    gir_io::crear_directorio(&path.join("refs/"))?;
-                    gir_io::crear_directorio(&path.join("refs/heads/"))?;
-                    gir_io::crear_directorio(&path.join("refs/tags/"))?;
+                    gir_io::crear_directorio(path.join("refs/"))?;
+                    gir_io::crear_directorio(path.join("refs/heads/"))?;
+                    gir_io::crear_directorio(path.join("refs/tags/"))?;
                 }
                 refs = server_utils::obtener_refs_de(path)?;
                 comunicacion.responder(&refs)?;

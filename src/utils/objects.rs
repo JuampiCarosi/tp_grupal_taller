@@ -16,12 +16,8 @@ pub fn obtener_objetos_del_dir(dir: &PathBuf) -> Result<Vec<String>, String> {
         match entrada {
             Ok(entrada) => {
                 if gir_io::es_dir(entrada.path())
-                    && entrada.file_name().to_string_lossy() != "info"
-                    && entrada.file_name().to_string_lossy() != "pack"
-                {
-                    if !entrada.path().to_string_lossy().contains("log.txt") {
-                        objetos.append(&mut obtener_objetos_con_nombre_carpeta(entrada.path())?);
-                    }
+                    && entrada.file_name().to_string_lossy() != "info" && entrada.file_name().to_string_lossy() != "pack" && !entrada.path().to_string_lossy().contains("log.txt") {
+                    objetos.append(&mut obtener_objetos_con_nombre_carpeta(entrada.path())?);
                 }
             }
             Err(error) => {

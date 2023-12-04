@@ -284,7 +284,7 @@ impl Packfile {
         bytes: &Vec<u8>,
         offset: &mut usize,
     ) -> Result<(u8, Vec<u8>), String> {
-        let offset_pre_varint = offset.clone();
+        let offset_pre_varint = *offset;
         let (tipo, tamanio) = Self::decodificar_bytes(bytes, offset);
         if tipo == 6 {
             Self::leer_ofs_delta_obj(bytes, tamanio, offset, offset_pre_varint)
@@ -306,7 +306,7 @@ impl Packfile {
         let base_obj_offset = offset_pre_varint - offset;
 
         let (base_obj_type, mut base_obj_data) =
-            Self::leer_objeto_del_packfile(bytes, &mut (base_obj_offset as usize))?;
+            Self::leer_objeto_del_packfile(bytes, &mut { base_obj_offset })?;
 
         Self::crear_delta_obj(
             bytes,
@@ -395,9 +395,9 @@ mod test {
     use super::*;
 
     fn leer_blob_de_packfile(packfile: &Vec<u8>, offset: &mut usize) -> (Vec<u8>, u8, u32) {
-        let (tipo, tamanio) = Packfile::decodificar_bytes(&packfile, offset);
+        let (tipo, tamanio) = Packfile::decodificar_bytes(packfile, offset);
         let mut objeto_descomprimido =
-            Packfile::descomprimir_objeto(&packfile, offset, tamanio).unwrap();
+            Packfile::descomprimir_objeto(packfile, offset, tamanio).unwrap();
         let objeto = Packfile::obtener_objeto_con_header(
             tipo,
             objeto_descomprimido.len() as u32,
@@ -482,7 +482,7 @@ mod test {
         )
         .unwrap();
         assert_eq!(obj_leido, objeto.0);
-        assert_eq!(Packfile::verificar_checksum(packfile.as_slice()), true);
+        assert!(Packfile::verificar_checksum(packfile.as_slice()));
     }
 
     #[test]
@@ -502,7 +502,7 @@ mod test {
         .unwrap();
         assert_eq!(obj_leido, objeto.0);
         assert_eq!(offset, packfile.len() - 20); // para asertar que solo queda el checksum
-        assert_eq!(Packfile::verificar_checksum(packfile.as_slice()), true);
+        assert!(Packfile::verificar_checksum(packfile.as_slice()));
     }
     #[test]
     fn test08_leer_objeto_packfile() {
@@ -525,6 +525,6 @@ mod test {
         .unwrap();
         assert_eq!(obj_leido, objeto_con_header);
         assert_eq!(offset, packfile.len() - 20); // para asertar que solo queda el checksum
-        assert_eq!(Packfile::verificar_checksum(packfile.as_slice()), true);
+        assert!(Packfile::verificar_checksum(packfile.as_slice()));
     }
 }

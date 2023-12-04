@@ -93,10 +93,7 @@ impl Ejecutar for Clone {
         let resutado = self.crear_repositorio();
         utils::io::cambiar_directorio("..")?;
 
-        if let Err(e) = resutado {
-            // utils::io::rm_directorio(repositorio)?;
-            return Err(e);
-        }
+        resutado?;
 
         let mensaje = "Clone ejecutado con exito".to_string();
         self.logger.log(&mensaje);

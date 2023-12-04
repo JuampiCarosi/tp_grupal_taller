@@ -23,7 +23,7 @@ impl Referencia {
     }
 
     fn divir_referencia(referencia: String) -> (String, String) {
-        match referencia.split_once(":") {
+        match referencia.split_once(':') {
             Some((ref_local, ref_remota)) => (ref_local.to_string(), ref_remota.to_string()),
             None => (referencia.clone(), referencia),
         }

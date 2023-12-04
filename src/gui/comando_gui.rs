@@ -23,7 +23,7 @@ where
             Ok(resultado) => Some(resultado),
             Err(err) => {
                 info_dialog::mostrar_error(&err);
-                return None;
+                None
             }
         }
     }

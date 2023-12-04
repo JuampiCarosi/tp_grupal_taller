@@ -47,7 +47,7 @@ fn obtener_commits_con_branches(
     let mut commits_por_ramas = Vec::new();
 
     for rama in ramas {
-        let commit_hash_rama = leer_a_string(".gir/refs/heads/".to_string() + &rama)?;
+        let commit_hash_rama = leer_a_string(".gir/refs/heads/".to_string() + rama)?;
         if commit_hash_rama.is_empty() {
             continue;
         }
@@ -83,7 +83,7 @@ fn obtener_commits_con_branches(
 }
 
 fn generar_clases_por_rama() -> HashMap<String, String> {
-    let clases_posibles = vec!["green", "blue", "yellow", "red"];
+    let clases_posibles = ["green", "blue", "yellow", "red"];
 
     let mut clases_por_rama = HashMap::new();
     let mut i = 0;
@@ -194,7 +194,7 @@ pub fn render(builder: &gtk::Builder, branch: &str, logger: Arc<Logger>) {
         let event_box = crear_label(
             &obtener_mensaje_commit(&commit.hash).unwrap(),
             &commit.hash,
-            &clases.get(&branch).unwrap(),
+            clases.get(&branch).unwrap(),
             &branch,
         );
 

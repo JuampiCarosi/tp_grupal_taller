@@ -247,7 +247,7 @@ mod tests {
         };
 
         //caso en el que config vacio, devulve false
-        assert!(!config.existe_remote(&"origin".to_string()));
+        assert!(!config.existe_remote("origin"));
 
         let remote = RemoteInfo {
             nombre: "config".to_string(),
@@ -257,7 +257,7 @@ mod tests {
         config.remotos.push(remote);
 
         //coso tiene algo pero no lo que se busca
-        assert!(!config.existe_remote(&"origin".to_string()));
+        assert!(!config.existe_remote("origin"));
 
         let remote = RemoteInfo {
             nombre: "origin".to_string(),
@@ -265,6 +265,6 @@ mod tests {
         };
 
         config.remotos.push(remote);
-        assert!(config.existe_remote(&"origin".to_string()));
+        assert!(config.existe_remote("origin"));
     }
 }

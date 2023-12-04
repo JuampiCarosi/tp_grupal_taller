@@ -19,7 +19,7 @@ impl CheckIgnore {
         ubicacion: &PathBuf,
         logger: Arc<Logger>,
     ) -> Result<bool, String> {
-        if esta_directorio_habilitado(&ubicacion, &vec![PathBuf::from(".gir")]) {
+        if esta_directorio_habilitado(ubicacion, &vec![PathBuf::from(".gir")]) {
             return Ok(true);
         }
 
@@ -60,10 +60,10 @@ impl Ejecutar for CheckIgnore {
             return Ok("".to_string());
         }
 
-        let archivos_ignorados_separados: Vec<PathBuf>;
-        archivos_ignorados_separados = archivos_ignorados
-            .split("\n")
-            .map(|x| PathBuf::from(x))
+        
+        let archivos_ignorados_separados: Vec<PathBuf> = archivos_ignorados
+            .split('\n')
+            .map(PathBuf::from)
             .collect();
 
         let mut archivos_encontrados: Vec<String> = Vec::new();
