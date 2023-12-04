@@ -439,7 +439,7 @@ mod test {
     fn test01_la_fase_de_descubrimiento_funcion() {
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/fetch_01.txt")).unwrap());
         utils::testing::limpiar_archivo_gir(logger.clone());
-        let contenido_mock = "000eversion 1 \
+        let contenido_mock = "000eversion 1\n\
         00887217a7c7e582c46cec22a130adf4b9d7d950fba0 HEAD\0multi_ack thin-pack \
         side-band side-band-64k ofs-delta shallow no-progress include-tag \
         00441d3fcd5ced445d1abc402225c0b8a1299641f497 refs/heads/integration \
@@ -504,7 +504,7 @@ mod test {
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/fetch_02.txt")).unwrap());
         utils::testing::limpiar_archivo_gir(logger.clone());
 
-        let contenido_mock = "000eversion 1 \
+        let contenido_mock = "000eversion 1\n\
         009a1d3fcd5ced445d1abc402225c0b8a1299641f497 refs/heads/integration\0multi_ack thin-pack \
         side-band side-band-64k ofs-delta shallow no-progress include-tag \
         003f7217a7c7e582c46cec22a130adf4b9d7d950fba0 refs/heads/master \
