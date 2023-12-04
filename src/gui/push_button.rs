@@ -3,11 +3,9 @@ use gtk::prelude::*;
 use gtk::{self};
 use std::sync::Arc;
 
-use crate::tipos_de_dato::comando::Ejecutar;
+use crate::gui::comando_gui::ComandoGui;
 use crate::tipos_de_dato::comandos::push::Push;
 use crate::tipos_de_dato::logger::Logger;
-
-use super::error_dialog;
 
 pub fn render(builder: &gtk::Builder, _window: &gtk::Window, logger: Arc<Logger>) {
     let push_button = builder.object::<gtk::Button>("push-button").unwrap();
@@ -21,27 +19,13 @@ pub fn render(builder: &gtk::Builder, _window: &gtk::Window, logger: Arc<Logger>
         fetching_dialog.set_position(gtk::WindowPosition::Center);
 
         let logger_clone = logger.clone();
-        fetching_dialog.connect_focus_in_event(move |dialog, _| {
-            let mut push = match Push::new(&mut Vec::new(), logger_clone.clone()) {
-                Ok(push) => push,
-                Err(err) => {
-                    error_dialog::mostrar_error(&err);
-                    return Propagation::Stop;
-                }
-            };
-
-            match push.ejecutar() {
-                Ok(_) => {}
-                Err(err) => {
-                    error_dialog::mostrar_error(&err);
-                    return Propagation::Stop;
-                }
-            };
+        let id = fetching_dialog.connect_focus_in_event(move |dialog, _| {
+            Push::new(&mut Vec::new(), logger_clone.clone()).ejecutar_gui();
             dialog.hide();
             Propagation::Stop
         });
 
         fetching_dialog.run();
-        println!("runned");
+        fetching_dialog.disconnect(id);
     });
 }

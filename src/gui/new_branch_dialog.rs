@@ -4,7 +4,7 @@ use gtk::prelude::*;
 
 use crate::tipos_de_dato::{comando::Ejecutar, comandos::branch::Branch, logger::Logger};
 
-use super::{branch_selector, error_dialog};
+use super::{branch_selector, info_dialog};
 
 fn run_dialog(builder: &gtk::Builder) {
     let branch_button: gtk::Button = builder.object("branch-button").unwrap();
@@ -44,7 +44,7 @@ fn boton_confimar_dialog(builder: &gtk::Builder, window: &gtk::Window, logger: A
         {
             Ok(_) => {}
             Err(err) => {
-                error_dialog::mostrar_error(&err);
+                info_dialog::mostrar_error(&err);
                 return;
             }
         };

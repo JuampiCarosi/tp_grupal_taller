@@ -1,6 +1,6 @@
 use crate::tipos_de_dato::comando::Ejecutar;
 
-use super::error_dialog;
+use super::info_dialog;
 
 pub trait ComandoGui {
     fn ejecutar_gui(&mut self) -> Option<String>;
@@ -14,7 +14,7 @@ where
         let comando_unwrappeado = match self {
             Ok(comando) => comando,
             Err(mensaje) => {
-                error_dialog::mostrar_error(mensaje);
+                info_dialog::mostrar_error(mensaje);
                 return None;
             }
         };
@@ -22,7 +22,7 @@ where
         match comando_unwrappeado.ejecutar() {
             Ok(resultado) => Some(resultado),
             Err(err) => {
-                error_dialog::mostrar_error(&err);
+                info_dialog::mostrar_error(&err);
                 return None;
             }
         }
