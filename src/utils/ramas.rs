@@ -26,10 +26,7 @@ pub fn obtener_ref_rama_actual() -> Result<PathBuf, String> {
 
 pub fn obtener_gir_dir_rama_actual() -> Result<PathBuf, String> {
     let ref_rama_actual = obtener_ref_rama_actual()?;
-    print!("{}", ref_rama_actual.display());
-
     let dir_rama = PathBuf::from("./.gir").join(ref_rama_actual);
-    // print!("{}", dir_rama.display());
     Ok(dir_rama)
 }
 
