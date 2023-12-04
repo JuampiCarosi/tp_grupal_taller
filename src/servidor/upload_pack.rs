@@ -72,11 +72,9 @@ fn comprobar_wants<T: Read + Write>(
     comunicacion: &mut Comunicacion<T>,
 ) -> Result<(), String> {
     for want in wants {
-        println!("want: {}", want);
         let want_split: Vec<&str> = want.split_whitespace().collect();
         let want_hash = want_split[1].to_string();
         let mut continua = false;
-        println!("want_hash: {}", want_hash);
         for ref_enviada in refs_enviadas {
             let ref_enviada_split: Vec<&str> = ref_enviada.split_whitespace().collect();
             let mut ref_enviada_hash = ref_enviada_split[0].to_string();
