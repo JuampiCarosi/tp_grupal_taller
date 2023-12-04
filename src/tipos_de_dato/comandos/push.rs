@@ -77,7 +77,7 @@ impl Push {
     fn obtener_remoto_y_rama_merge_de_rama_actual() -> Result<(String, String), String> {
         let (remoto, rama_merge) = Config::leer_config()?
             .obtener_remoto_y_rama_merge_rama_actual()
-            .ok_or("La rama actual no se encuentra asosiado a ningun remoto\nUtilice: gir push --set-upstream/-u nombre-remoto nombre-rama-local".to_string())?;
+            .ok_or("AAAAAA La rama actual no se encuentra asosiado a ningun remoto\nUtilice: gir push --set-upstream/-u nombre-remoto nombre-rama-local".to_string())?;
         //CORREGIR MENSAJE DE ERROR DEBERIA SER QUE USE SET BRANCH
 
         Ok((remoto, obtener_nombre(&rama_merge)?))
@@ -250,9 +250,8 @@ impl Push {
     fn obtener_commits_y_objetos_asociados(
         referencia: &str,
         commit_limite: &str,
-        _logger: Arc<Logger>,
+        logger: Arc<Logger>,
     ) -> Result<HashSet<String>, String> {
-        let logger = Arc::new(Logger::new(PathBuf::from("./tmp/aa"))?);
         let ruta = format!(".gir/{}", referencia);
         let ultimo_commit = io::leer_a_string(Path::new(&ruta))?;
         if ultimo_commit.is_empty() {

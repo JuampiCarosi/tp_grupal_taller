@@ -10,6 +10,8 @@ use crate::{
 };
 use gtk::prelude::*;
 
+use super::refresh;
+
 fn crear_label(string: &str) -> gtk::EventBox {
     let event_box = gtk::EventBox::new();
     let label = gtk::Label::new(Some(string));
@@ -133,5 +135,10 @@ pub fn render(builder: &gtk::Builder, logger: Arc<Logger>) {
     escribir_archivos_index(builder, logger.clone());
     escribir_archivos_modificados(builder, logger.clone());
     escribir_archivos_untrackeados(builder, logger);
+    container.show_all();
+}
+
+pub fn refresh(builder: &gtk::Builder) {
+    let container: gtk::Box = builder.object("staging").unwrap();
     container.show_all();
 }

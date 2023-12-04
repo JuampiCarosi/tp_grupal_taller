@@ -191,3 +191,8 @@ pub fn render(builder: &gtk::Builder, branch: &str, logger: Arc<Logger>) {
     }
     container.show_all();
 }
+
+pub fn refresh(builder: &gtk::Builder) {
+    let container: gtk::Box = builder.object("log-container").unwrap();
+    container.show_all();
+}

@@ -91,4 +91,5 @@ pub fn render(builder: &gtk::Builder, logger: Arc<Logger>, accion: AccionBranchD
     });
 
     dibujar_dialog(&dialog);
+    conflicts_modal::boton_conflictos(builder, logger)
 }

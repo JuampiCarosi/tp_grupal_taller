@@ -8,9 +8,9 @@ use crate::tipos_de_dato::{
     logger::Logger,
 };
 
-use super::{info_dialog, log_list, log_seleccionado};
+use super::{info_dialog, log_list, log_seleccionado, staging_area};
 
-pub fn render(builder: &gtk::Builder, window: &gtk::Window, logger: Arc<Logger>) {
+pub fn render(builder: &gtk::Builder, logger: Arc<Logger>) {
     let select: gtk::ComboBoxText = builder.object("select-branch").unwrap();
     let branch_actual = Commit::obtener_branch_actual().unwrap();
     select.remove_all();
@@ -36,7 +36,6 @@ pub fn render(builder: &gtk::Builder, window: &gtk::Window, logger: Arc<Logger>)
     });
 
     let builder_clone = builder.clone();
-    let window_clone = window.clone();
     select.connect_changed(move |a| {
         let active = match a.active_text() {
             Some(text) => text,
@@ -55,6 +54,7 @@ pub fn render(builder: &gtk::Builder, window: &gtk::Window, logger: Arc<Logger>)
             }
         }
 
-        window_clone.show_all();
+        log_list::refresh(&builder_clone);
+        staging_area::refresh(&builder_clone);
     });
 }

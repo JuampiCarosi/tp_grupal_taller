@@ -41,25 +41,20 @@ pub fn dibujar_dialog(dialog: &gtk::Dialog) {
     dialog.run();
 }
 
-fn hidratar_componentes(
-    builder: &gtk::Builder,
-    window: &gtk::Window,
-    logger: Arc<Logger>,
-    branch_actual: &str,
-) {
+fn hidratar_componentes(builder: &gtk::Builder, logger: Arc<Logger>, branch_actual: &str) {
     let screen = gdk::Screen::default().unwrap();
     estilos(screen);
-    new_branch_dialog::render(builder, window, logger.clone());
-    branch_selector::render(builder, window, logger.clone());
+    new_branch_dialog::render(builder, logger.clone());
+    branch_selector::render(builder, logger.clone());
     log_list::render(builder, branch_actual, logger.clone());
     log_seleccionado::render(builder, None);
     staging_area::render(builder, logger.clone());
     new_commit_dialog::render(builder, logger.clone());
-    push_button::render(builder, window, logger.clone());
+    push_button::render(builder, logger.clone());
     info_dialog::setup(builder);
-    pull_button::render(builder, window, logger.clone(), branch_actual.to_string());
+    pull_button::render(builder, logger.clone(), branch_actual.to_string());
     conflicts_modal::render(builder, logger.clone());
-    refresh::render(builder, window, logger.clone());
+    refresh::render(builder, logger.clone());
     merge_button::render(builder, logger.clone());
     rebase_button::render(builder, logger.clone());
     hash_object_button::render(builder, logger.clone());
@@ -104,7 +99,7 @@ pub fn ejecutar(logger: Arc<Logger>) {
 
     let branch_actual = Commit::obtener_branch_actual().unwrap();
 
-    hidratar_componentes(&builder, &window, logger.clone(), &branch_actual);
+    hidratar_componentes(&builder, logger.clone(), &branch_actual);
 
     window.show_all();
 
