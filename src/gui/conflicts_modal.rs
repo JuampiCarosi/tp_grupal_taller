@@ -12,7 +12,7 @@ use crate::{
     utils::{index::leer_index, io::leer_a_string},
 };
 
-fn boton_conflictos(builder: &gtk::Builder, logger: Arc<Logger>) {
+pub fn boton_conflictos(builder: &gtk::Builder, logger: Arc<Logger>) {
     let boton: Button = builder.object("conflicts-button").unwrap();
     if !Merge::hay_archivos_sin_mergear(logger.clone()).unwrap() {
         boton.set_sensitive(false);
@@ -22,6 +22,7 @@ fn boton_conflictos(builder: &gtk::Builder, logger: Arc<Logger>) {
     boton.connect_clicked(move |_| {
         modal(&builder, logger.clone());
     });
+    boton.show();
 }
 
 fn resaltar_linea(buffer: &gtk::TextBuffer, numero_linea: i32, tag: &str) {
@@ -68,19 +69,19 @@ fn resaltar_conflictos(buffer: &gtk::TextBuffer) {
     let mut estado = Estado::None;
     for (i, linea) in lineas.iter().enumerate() {
         match *linea {
-            l if l.starts_with("<<<<<<<") => {
+            l if l.starts_with("<<<<<<") => {
                 resaltar_linea(buffer, i as i32, "head_titulo");
                 estado = Estado::Head;
                 continue;
             }
-            l if l.starts_with(">>>>>>>") => {
+            l if l.starts_with(">>>>>>") => {
                 if estado != Estado::None {
                     resaltar_linea(buffer, i as i32, "incoming_titulo");
                     estado = Estado::None;
                     continue;
                 }
             }
-            "=======" => {
+            "======" => {
                 if estado != Estado::None {
                     estado = Estado::Incoming;
                     continue;
@@ -132,7 +133,10 @@ fn crear_text_area_de_objeto(objeto: &Objeto) -> gtk::ScrolledWindow {
 
 fn guardar_y_addear_archivo_activo(builder: &gtk::Builder, logger: Arc<Logger>) {
     let notebook: gtk::Notebook = builder.object("conflicts-notebook").unwrap();
-    let tab_indice = notebook.current_page().unwrap();
+    let tab_indice = match notebook.current_page() {
+        Some(tab_indice) => tab_indice,
+        None => return,
+    };
     let tab_activa = notebook.nth_page(Some(tab_indice)).unwrap();
     let nombre_archivo = notebook.tab_label_text(&tab_activa).unwrap();
     let scrolled_window: gtk::ScrolledWindow = tab_activa.downcast().unwrap();

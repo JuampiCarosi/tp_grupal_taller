@@ -1,7 +1,7 @@
 use std::{path::PathBuf, sync::Arc};
 
 use crate::{
-    tipos_de_dato::logger::Logger,
+    tipos_de_dato::{comando::Ejecutar, logger::Logger},
     utils::{self, io, path_buf::esta_directorio_habilitado},
 };
 
@@ -28,7 +28,7 @@ impl CheckIgnore {
             .ok_or_else(|| "Path invalido".to_string())?;
 
         let path_a_verificar = vec![path.to_string()];
-        let check_ignore = CheckIgnore::from(path_a_verificar, logger)?;
+        let mut check_ignore = CheckIgnore::from(path_a_verificar, logger)?;
         let archivos_ignorados = check_ignore.ejecutar()?;
         if !archivos_ignorados.is_empty() {
             return Ok(true);
@@ -44,11 +44,13 @@ impl CheckIgnore {
         let paths = args;
         Ok(CheckIgnore { logger, paths })
     }
+}
 
-    /// Ejecuta el comando check-ignore.
-    /// Devuelve un string con todos los archivos consultados que resultaron estar ignorados.
-    /// Si no hay archivos ignorados, devuelve un string vacio.
-    pub fn ejecutar(&self) -> Result<String, String> {
+/// Ejecuta el comando check-ignore.
+/// Devuelve un string con todos los archivos consultados que resultaron estar ignorados.
+/// Si no hay archivos ignorados, devuelve un string vacio.
+impl Ejecutar for CheckIgnore {
+    fn ejecutar(&mut self) -> Result<String, String> {
         self.logger.log("Buscando archivos ignorados");
         let archivos_ignorados = match io::leer_a_string(".girignore") {
             Ok(archivos_ignorados) => archivos_ignorados,
@@ -121,7 +123,7 @@ mod test {
     fn test01_check_ignore_ignora_un_solo_archivo() {
         settupear_girignore_para_tests();
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/check_ignore_test01")).unwrap());
-        let check_ignore = CheckIgnore::from(vec![".log".to_string()], logger).unwrap();
+        let mut check_ignore = CheckIgnore::from(vec![".log".to_string()], logger).unwrap();
         let resultado = check_ignore.ejecutar().unwrap();
         assert_eq!(resultado, ".log");
     }
@@ -129,7 +131,7 @@ mod test {
     #[test]
     fn test02_check_ignore_ignora_varios_archivos() {
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/check_ignore_test02")).unwrap());
-        let check_ignore = CheckIgnore::from(
+        let mut check_ignore = CheckIgnore::from(
             vec![
                 ".log".to_string(),
                 ".girignore".to_string(),
@@ -174,7 +176,7 @@ mod test {
     #[test]
     fn test05_ignora_files_dentro_de_directorios_ignorados() {
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/check_ignore_test05")).unwrap());
-        let check_ignore =
+        let mut check_ignore =
             CheckIgnore::from(vec!["tes_dir/archivo_dir.txt".to_string()], logger).unwrap();
         let resultado = check_ignore.ejecutar().unwrap();
         assert_eq!(resultado, "tes_dir/archivo_dir.txt");
@@ -184,7 +186,8 @@ mod test {
     fn test06_si_tengo_un_archivo_y_directorio_con_nombres_parecidos_solo_ignora_al_indicado() {
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/check_ignore_test06")).unwrap());
         io::escribir_bytes(".girignore", "test_file/").unwrap();
-        let check_ignore = CheckIgnore::from(vec!["test_file.txt".to_string()], logger).unwrap();
+        let mut check_ignore =
+            CheckIgnore::from(vec!["test_file.txt".to_string()], logger).unwrap();
         io::crear_directorio("test_file").unwrap();
         let resultado = check_ignore.ejecutar().unwrap();
         io::rm_directorio("test_file").unwrap();

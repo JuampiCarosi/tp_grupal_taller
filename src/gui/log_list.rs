@@ -18,7 +18,7 @@ use crate::{
     },
 };
 
-use super::{error_dialog, log_seleccionado};
+use super::{info_dialog, log_seleccionado};
 
 fn obtener_tronco_principal_padres(mut commit: CommitObj, logger: Arc<Logger>) -> HashSet<String> {
     let mut commits: HashSet<String> = HashSet::new();
@@ -66,7 +66,7 @@ fn obtener_commits_con_branches(
         let commit_rama_actual = encontrados.iter().find(|(_, r)| rama == *r);
         if let Some(commit_rama_actual) = commit_rama_actual {
             commits_y_ramas.push(commit_rama_actual.clone());
-        } else {
+        } else if !encontrados.is_empty() {
             commits_y_ramas.push(encontrados[0].clone());
         }
     }
@@ -163,7 +163,7 @@ pub fn render(builder: &gtk::Builder, branch: &str, logger: Arc<Logger>) {
     let commits = match obtener_commits_con_branches(branch, logger.clone()) {
         Ok(commits) => commits,
         Err(err) => {
-            error_dialog::mostrar_error(&err);
+            info_dialog::mostrar_error(&err);
             return;
         }
     };
@@ -189,4 +189,5 @@ pub fn render(builder: &gtk::Builder, branch: &str, logger: Arc<Logger>) {
         let ultimo = children.last().unwrap();
         ultimo.style_context().add_class("last-commit-label");
     }
+    container.show_all();
 }

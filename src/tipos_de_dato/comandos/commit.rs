@@ -58,7 +58,7 @@ impl Commit {
         }
 
         if args.len() != 2 {
-            return Err("La cantidad de argumentos es invalida".to_string());
+            return Err("La cantidad de argumentos es invalida, -m esperado".to_string());
         }
         let mensaje = args
             .pop()
@@ -163,11 +163,11 @@ impl Ejecutar for Commit {
         match self.ejecutar_wrapper(&contenido_total) {
             Ok(_) => (),
             Err(_) => {
-                let _ = std::fs::remove_file(format!(
+                io::rm_directorio(format!(
                     ".gir/objects/{}/{}",
                     &hash_arbol[..2],
                     &hash_arbol[2..]
-                ));
+                ))?;
                 return Err("No se pudo ejecutar el commit".to_string());
             }
         };

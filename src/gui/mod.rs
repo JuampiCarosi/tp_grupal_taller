@@ -1,16 +1,25 @@
 pub mod branch_dialog;
 mod branch_selector;
+mod cat_file_button;
+mod check_ignore_button;
 mod clone_dialog;
 mod comando_gui;
 mod conflicts_modal;
-mod error_dialog;
+mod hash_object_button;
+mod info_dialog;
 mod log_list;
 mod log_seleccionado;
+mod ls_files_button;
+mod ls_tree_button;
+mod merge_button;
 mod new_branch_dialog;
 mod new_commit_dialog;
 mod pull_button;
 mod push_button;
+mod rebase_button;
 mod refresh;
+mod rm_button;
+mod show_ref_button;
 mod staging_area;
 
 use std::path::PathBuf;
@@ -20,6 +29,17 @@ use crate::tipos_de_dato::logger::Logger;
 use crate::utils::ramas;
 use gtk::{self, StyleContext};
 use gtk::{gdk, prelude::*};
+
+/// Dibuja el dialogo 3 veces para que se vea bien, de forma contraria
+/// en ocasiones no se dibujan los bordes del mismo
+/// esto es por un bug en la propiedad "Transient for" de gtk
+pub fn dibujar_dialog(dialog: &gtk::Dialog) {
+    dialog.show_all();
+    dialog.hide();
+    dialog.show_all();
+    dialog.hide();
+    dialog.run();
+}
 
 fn hidratar_componentes(
     builder: &gtk::Builder,
@@ -33,13 +53,22 @@ fn hidratar_componentes(
     branch_selector::render(builder, window, logger.clone());
     log_list::render(builder, branch_actual, logger.clone());
     log_seleccionado::render(builder, None);
-    staging_area::render(builder, window, logger.clone());
-    new_commit_dialog::render(builder, window, logger.clone());
+    staging_area::render(builder, logger.clone());
+    new_commit_dialog::render(builder, logger.clone());
     push_button::render(builder, window, logger.clone());
-    error_dialog::setup(builder);
+    info_dialog::setup(builder);
     pull_button::render(builder, window, logger.clone(), branch_actual.to_string());
     conflicts_modal::render(builder, logger.clone());
-    refresh::render(builder, window, logger.clone(), branch_actual.to_string());
+    refresh::render(builder, window, logger.clone());
+    merge_button::render(builder, logger.clone());
+    rebase_button::render(builder, logger.clone());
+    hash_object_button::render(builder, logger.clone());
+    cat_file_button::render(builder, logger.clone());
+    check_ignore_button::render(builder, logger.clone());
+    show_ref_button::render(builder, logger.clone());
+    ls_tree_button::render(builder, logger.clone());
+    ls_files_button::render(builder, logger.clone());
+    rm_button::render(builder, logger.clone());
 }
 
 pub fn estilos(screen: gdk::Screen) {

@@ -317,9 +317,11 @@ impl Rebase {
         }
         Ok("Rebase terminado con extito".to_string())
     }
+}
 
+impl Ejecutar for Rebase {
     /// Ejecuta el comando rebase.
-    pub fn ejecutar(&self) -> Result<String, String> {
+    fn ejecutar(&mut self) -> Result<String, String> {
         if self.abort {
             return self.abortar();
         }

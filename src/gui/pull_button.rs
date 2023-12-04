@@ -25,6 +25,7 @@ pub fn render(
         fetching_dialog.show_all();
 
         if let None = Pull::from(Vec::new(), logger.clone()).ejecutar_gui() {
+            fetching_dialog.close();
             return;
         }
 
