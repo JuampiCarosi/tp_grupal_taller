@@ -4,7 +4,10 @@ use std::{
     sync::Arc,
 };
 
-use gtk::{prelude::*, Orientation};
+use gtk::{
+    prelude::{ComponentExt, *},
+    BaselinePosition, Orientation,
+};
 
 use crate::{
     tipos_de_dato::{
@@ -131,7 +134,7 @@ pub fn obtener_mensaje_commit(commit_hash: &str) -> Result<String, String> {
     }
 }
 
-fn crear_label(string: &str, color: &str, branch: &str) -> gtk::EventBox {
+fn crear_label(mensaje: &str, hash: &str, color: &str, branch: &str) -> gtk::EventBox {
     let event_box = gtk::EventBox::new();
 
     let container = gtk::Box::new(Orientation::Horizontal, 0);
@@ -141,8 +144,16 @@ fn crear_label(string: &str, color: &str, branch: &str) -> gtk::EventBox {
     container.set_margin_bottom(1);
     container.set_margin_end(18); // Set margin at the end
 
-    let label_message = gtk::Label::new(Some(string));
-    container.add(&label_message);
+    let commit_y_hash = gtk::Box::new(Orientation::Horizontal, 8);
+    let label_message = gtk::Label::new(Some(mensaje));
+    let label_hash = gtk::Label::new(Some(&hash[0..10]));
+
+    label_hash.style_context().add_class("label-grey");
+
+    commit_y_hash.add(&label_message);
+    commit_y_hash.add(&label_hash);
+
+    container.add(&commit_y_hash);
 
     let spacer = gtk::Box::new(Orientation::Horizontal, 0);
     spacer.set_hexpand(true);
@@ -185,6 +196,7 @@ pub fn render(builder: &gtk::Builder, branch: &str, logger: Arc<Logger>) {
     for (commit, branch) in commits {
         let event_box = crear_label(
             &obtener_mensaje_commit(&commit.hash).unwrap(),
+            &commit.hash,
             &clases.get(&branch).unwrap(),
             &branch,
         );

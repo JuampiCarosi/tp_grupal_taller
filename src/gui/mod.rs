@@ -18,9 +18,12 @@ mod pull_button;
 mod push_button;
 mod rebase_button;
 mod refresh;
+mod remote_button;
 mod rm_button;
 mod show_ref_button;
 mod staging_area;
+mod tag_button;
+mod tag_list;
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -33,7 +36,11 @@ use gtk::{gdk, prelude::*};
 /// Dibuja el dialogo 3 veces para que se vea bien, de forma contraria
 /// en ocasiones no se dibujan los bordes del mismo
 /// esto es por un bug en la propiedad "Transient for" de gtk
-pub fn dibujar_dialog(dialog: &gtk::Dialog) {
+pub fn dibujar_dialog<T>(dialog: &T)
+where
+    T: IsA<gtk::Dialog>,
+    T: gtk::prelude::IsA<gtk::Widget>,
+{
     dialog.show_all();
     dialog.hide();
     dialog.show_all();
@@ -64,6 +71,9 @@ fn hidratar_componentes(builder: &gtk::Builder, logger: Arc<Logger>, branch_actu
     ls_tree_button::render(builder, logger.clone());
     ls_files_button::render(builder, logger.clone());
     rm_button::render(builder, logger.clone());
+    tag_list::render(builder, logger.clone());
+    tag_button::render(builder, logger.clone());
+    remote_button::render(builder, logger.clone());
 }
 
 pub fn estilos(screen: gdk::Screen) {
@@ -102,6 +112,7 @@ pub fn ejecutar(logger: Arc<Logger>) {
     hidratar_componentes(&builder, logger.clone(), &branch_actual);
 
     window.show_all();
+    tag_list::render(&builder, logger.clone());
 
     window.connect_delete_event(|_, _| {
         gtk::main_quit();

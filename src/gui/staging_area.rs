@@ -10,8 +10,6 @@ use crate::{
 };
 use gtk::prelude::*;
 
-use super::refresh;
-
 fn crear_label(string: &str) -> gtk::EventBox {
     let event_box = gtk::EventBox::new();
     let label = gtk::Label::new(Some(string));
