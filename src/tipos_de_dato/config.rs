@@ -2,19 +2,12 @@ use std::path::PathBuf;
 
 use crate::utils::{self, io};
 
+use super::info_ramas::RamasInfo;
+
 #[derive(Debug, Clone)]
 pub struct RemoteInfo {
     pub nombre: String,
     pub url: String,
-}
-
-#[derive(Debug, Clone)]
-
-pub struct RamasInfo {
-    pub nombre: String,
-    pub remote: String,
-    ///ojo!! es como lo ve el server la rama, por eso PathBuf(Ej: refs/heads/master)
-    pub merge: PathBuf,
 }
 
 pub struct Config {
@@ -247,7 +240,7 @@ mod tests {
         };
 
         //caso en el que config vacio, devulve false
-        assert!(!config.existe_remote(&"origin".to_string()));
+        assert!(!config.existe_remote("origin"));
 
         let remote = RemoteInfo {
             nombre: "config".to_string(),
@@ -257,7 +250,7 @@ mod tests {
         config.remotos.push(remote);
 
         //coso tiene algo pero no lo que se busca
-        assert!(!config.existe_remote(&"origin".to_string()));
+        assert!(!config.existe_remote("origin"));
 
         let remote = RemoteInfo {
             nombre: "origin".to_string(),
@@ -265,6 +258,6 @@ mod tests {
         };
 
         config.remotos.push(remote);
-        assert!(config.existe_remote(&"origin".to_string()));
+        assert!(config.existe_remote("origin"));
     }
 }

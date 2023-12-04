@@ -9,7 +9,7 @@ use std::io::{Read, Write};
 /// * `dir` - Direccion del repositorio
 /// * `comunicacion` - Comunicacion con el cliente
 /// # Errores
-/// 
+///
 pub fn upload_pack<T>(
     dir: String,
     comunicacion: &mut Comunicacion<T>,
@@ -23,7 +23,7 @@ where
         println!("Se termino la conexion");
         return Ok(()); // el cliente esta actualizado
     }
-    comprobar_wants(&wants, &refs_enviadas, comunicacion)?; // compruebo que los wants existan
+    comprobar_wants(&wants, refs_enviadas, comunicacion)?; // compruebo que los wants existan
 
     // ------- CLONE --------
     let lineas_siguientes = comunicacion.obtener_lineas()?;
@@ -42,8 +42,7 @@ fn procesar_pedido_clone<T: Read + Write>(
     comunicacion: &mut Comunicacion<T>,
 ) -> Result<(), String> {
     comunicacion.responder(&vec![gir_io::obtener_linea_con_largo_hex("NAK\n")])?; // respondo NAK
-    let packfile =
-        packfile::Packfile::obtener_pack_entero(&(dir.clone().to_string() + "objects/"))?; // obtengo el packfile
+    let packfile = packfile::Packfile::obtener_pack_entero(&(dir.to_string() + "objects/"))?; // obtengo el packfile
     comunicacion.enviar_pack_file(packfile)?;
     Ok(())
 }
@@ -83,7 +82,7 @@ fn comprobar_wants<T: Read + Write>(
                 continua = true;
             }
         }
-        if continua == false {
+        if !continua {
             comunicacion.responder(&vec![gir_io::obtener_linea_con_largo_hex(&format!(
                 "ERR La referencia {} no coincide con ninguna referencia enviada\n",
                 want_hash

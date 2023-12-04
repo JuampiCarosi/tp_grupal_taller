@@ -1,8 +1,7 @@
 use crate::err_comunicacion::ErrorDeComunicacion;
 use crate::servidor::{receive_pack::receive_pack, upload_pack::upload_pack};
-use crate::tipos_de_dato::{
-    comunicacion::Comunicacion, comunicacion::RespuestaDePedido, logger::Logger,
-};
+use crate::tipos_de_dato::respuesta_pedido::RespuestaDePedido;
+use crate::tipos_de_dato::{comunicacion::Comunicacion, logger::Logger};
 use crate::utils::io as gir_io;
 use std::{
     env,
@@ -79,14 +78,9 @@ impl Servidor {
     ) -> Result<(String, String, String), String> {
         let pedido: Vec<String> = linea_pedido
             .split_whitespace()
-            .into_iter()
             .map(|s| s.to_string())
             .collect();
-        let args: Vec<String> = pedido[1]
-            .split('\0')
-            .into_iter()
-            .map(|s| s.to_string())
-            .collect();
+        let args: Vec<String> = pedido[1].split('\0').map(|s| s.to_string()).collect();
         let repo = args[0].clone();
         let dir_repo = dir.to_string() + &args[0];
         comunicacion.enviar(&gir_io::obtener_linea_con_largo_hex(
@@ -123,9 +117,9 @@ impl Servidor {
                 let path = PathBuf::from(&dir_repo);
 
                 if !path.exists() {
-                    gir_io::crear_directorio(&path.join("refs/"))?;
-                    gir_io::crear_directorio(&path.join("refs/heads/"))?;
-                    gir_io::crear_directorio(&path.join("refs/tags/"))?;
+                    gir_io::crear_directorio(path.join("refs/"))?;
+                    gir_io::crear_directorio(path.join("refs/heads/"))?;
+                    gir_io::crear_directorio(path.join("refs/tags/"))?;
                 }
                 refs = server_utils::obtener_refs_de(path)?;
                 comunicacion.responder(&refs)?;
@@ -188,11 +182,9 @@ mod server_utils {
 
 impl Drop for Servidor {
     fn drop(&mut self) {
-        for thread in self.threads.drain(..) {
-            if let Some(thread) = thread {
-                if let Err(e) = thread.join() {
-                    println!("Error en el thread: {:?}", e);
-                }
+        for thread in self.threads.drain(..).flatten() {
+            if let Err(e) = thread.join() {
+                println!("Error en el thread: {:?}", e);
             }
         }
         println!("Servidor cerrado");

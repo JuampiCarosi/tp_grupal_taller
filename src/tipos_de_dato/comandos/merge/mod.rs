@@ -3,6 +3,7 @@ mod estrategias_conflictos;
 use crate::{
     tipos_de_dato::{
         conflicto::Conflicto,
+        diffgrid::DiffGrid,
         lado_conflicto::LadoConflicto,
         objeto::Objeto,
         region::{unificar_regiones, Region},
@@ -43,8 +44,6 @@ pub struct Merge {
     pub branch_actual: String,
     pub branch_a_mergear: String,
 }
-
-type DiffGrid = Vec<Vec<usize>>;
 
 impl Merge {
     pub fn from(args: &mut Vec<String>, logger: Arc<Logger>) -> Result<Merge, String> {
@@ -197,6 +196,10 @@ impl Merge {
         }
     }
 
+    /// Dados dos vectores de diffs, uno de la rama actual y otro de la rama a mergear,
+    /// junta los dos diffs en un solo vector de posibles conflictos. Cada posicion del
+    /// vector representa una linea del archivo, y en cada posicion hay un vector de
+    /// conflictos posibles para esa linea.
     fn obtener_posibles_conflictos(
         diff_actual: Vec<(usize, TipoDiff)>,
         diff_a_mergear: Vec<(usize, TipoDiff)>,
@@ -220,6 +223,9 @@ impl Merge {
         posibles_conflictos
     }
 
+    /// Dado un vector de posibles conflictos, resuelve todos los conflictos
+    /// y devuelve el contenido de cada region y un booleano que indica si hubo
+    /// conflictos
     fn resolver_conflictos_totales(
         posibles_conflictos: Vec<Conflicto>,
         lineas_archivo_base: Vec<&str>,
@@ -430,8 +436,8 @@ impl Merge {
             {
                 let hubo_conflictos = self.obtener_conflictos_entre_archivos_a_mergear(
                     &objeto_base,
-                    &objeto_a_mergear,
-                    &objeto_actual,
+                    objeto_a_mergear,
+                    objeto_actual,
                     paths_con_conflictos,
                 )?;
 

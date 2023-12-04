@@ -2,12 +2,8 @@ use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
 use crate::{
     tipos_de_dato::{
-        comando::Ejecutar,
-        comandos::branch::Branch,
-        config::{Config, RamasInfo},
-        logger::Logger,
-        objeto::Objeto,
-        objetos::tree::Tree,
+        comando::Ejecutar, comandos::branch::Branch, config::Config, info_ramas::RamasInfo,
+        logger::Logger, objeto::Objeto, objetos::tree::Tree, tipo_de_rama::TipoRama,
     },
     utils::{self, io},
 };
@@ -23,15 +19,6 @@ pub struct Checkout {
     rama_a_cambiar: String,
     /// Logger para imprimir mensajes en un archivo log.
     logger: Arc<Logger>,
-}
-
-/// Tipo de rama que se puede cambiar
-
-enum TipoRama {
-    Local,
-    /// El primer string representa la ruta del remote
-    /// El segundo string representa el hash del commit al que apunta
-    Remota(String, String),
 }
 
 impl Checkout {
@@ -97,6 +84,7 @@ impl Checkout {
         Ok(output)
     }
 
+    /// Devuelve un hashmap con las ramas remotas.
     pub fn obtener_ramas_remotas(&self) -> Result<HashMap<String, String>, String> {
         let show_ref = ShowRef::from(vec![], self.logger.clone())?;
         let ramas = show_ref.obtener_referencias(PathBuf::from(".gir/refs/remotes"))?;
@@ -147,10 +135,13 @@ impl Checkout {
         Ok(())
     }
 
+    /// Crea una nueva rama desde el remote.
     fn crear_rama_desde_remote(&self, commit: &str) -> Result<(), String> {
         io::escribir_bytes(format!(".gir/refs/heads/{}", self.rama_a_cambiar), commit)
     }
 
+    /// Configura el remote para la rama actual.
+    /// O sea, agrega la rama actual al archivo de configuracion.
     fn configurar_remoto_para_rama_actual(&self, ruta_remoto: &str) -> Result<(), String> {
         let mut config = Config::leer_config()?;
         let rama = RamasInfo {
@@ -165,6 +156,9 @@ impl Checkout {
         Ok(())
     }
 
+    /// Cambia la rama actual.
+    /// Si la rama es remota, se crea una nueva rama local y se configura el remote.
+    /// Si la rama es local, se cambia la referencia en el archivo HEAD.
     fn cambiar_rama(&self) -> Result<String, String> {
         match self.verificar_si_la_rama_existe()? {
             TipoRama::Remota(ruta, commit) => {

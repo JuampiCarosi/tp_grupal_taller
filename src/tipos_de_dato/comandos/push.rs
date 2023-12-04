@@ -36,7 +36,7 @@ impl Push {
 
         let mut set_upstream = false;
 
-        if Self::hay_flags(&args) {
+        if Self::hay_flags(args) {
             Self::parsear_flags(args, &mut set_upstream)?;
         }
 
@@ -101,7 +101,7 @@ impl Push {
             remoto = Self::verificar_remoto(&args[0])?;
             referencia =
                 Self::obtener_y_verificar_referencia(utils::ramas::obtener_rama_actual()?)?;
-        } else if args.len() == 0 && !set_upstream {
+        } else if args.is_empty() && !set_upstream {
             //si no hay argumentos ni flags, quiere decir que deberia
             //estar configurada la rama
             (remoto, referencia) = Self::obtener_remoto_y_rama_merge_de_rama_actual()?;
@@ -125,7 +125,7 @@ impl Push {
 
     fn parsear_flags(args: &mut Vec<String>, set_upstream: &mut bool) -> Result<(), String> {
         //busca en los argumentos si hay flag y devuelve el indice
-        if let Some(index_flag) = args.iter().position(|s| s.starts_with("-")) {
+        if let Some(index_flag) = args.iter().position(|s| s.starts_with('-')) {
             let flag = args.remove(index_flag);
 
             if flag == FLAG_U || flag == FLAG_SET_UPSTREAM {
@@ -148,12 +148,12 @@ impl Push {
             return  Err(format!("Remoto desconocido{}\nSi quiere añadir un nuevo remoto:\n\ngir remote add [<nombre-remote>] [<url-remote>]\n\n", remoto));
         };
 
-        Ok(remoto.clone().to_owned())
+        Ok(remoto.to_owned())
     }
 
     //Le pide al config el url asosiado a la rama
-    fn obtener_url(&self, remoto: &String) -> Result<String, String> {
-        Config::leer_config()?.obtenet_url_asosiado_remoto(&remoto)
+    fn obtener_url(&self, remoto: &str) -> Result<String, String> {
+        Config::leer_config()?.obtenet_url_asosiado_remoto(remoto)
     }
     ///Inica la comunicacion con el servidor y el protocolo git-recive-pack
     ///
@@ -189,8 +189,8 @@ impl Push {
     //y envia un pack file vacio
     fn obtener_objetos_a_enviar(
         &self,
-        referencia: &PathBuf,
-        viejo_commit: &String,
+        referencia: &Path,
+        viejo_commit: &str,
         comunicacion: &Comunicacion<TcpStream>,
     ) -> Result<HashSet<String>, String> {
         let objetos_a_enviar =
@@ -201,7 +201,7 @@ impl Push {
             Err(msj_err) => {
                 //error
                 self.terminar_y_mandar_pack_file_vacio(comunicacion)?;
-                return Err(msj_err);
+                Err(msj_err)
             }
         }
     }
@@ -299,10 +299,9 @@ impl Push {
             _commit_head_remoto,
             commits_cabezas_y_ref_rama_asosiado,
             commits_y_tags_asosiados,
-        ) = utils::fase_descubrimiento::fase_de_descubrimiento(&comunicacion)?;
+        ) = utils::fase_descubrimiento::fase_de_descubrimiento(comunicacion)?;
 
-        self.logger
-            .log(&"Fase de descubrimiento ejecuta con exito".to_string());
+        self.logger.log("Fase de descubrimiento ejecuta con exito");
 
         Ok([
             &commits_cabezas_y_ref_rama_asosiado[..],
@@ -315,8 +314,8 @@ impl Push {
 // en caso de que sea una referencia nula, se enviara todo. En caso de que el commit limite no sea una referencia nula
 // y no se encuentre al final de la cadena de commits, se enviara un error, ya que el servidor tiene cambios que el cliente no tiene
 fn obtener_commits_y_objetos_asociados(
-    referencia: &PathBuf,
-    commit_limite: &String,
+    referencia: &Path,
+    commit_limite: &str,
     logger: Arc<Logger>,
 ) -> Result<HashSet<String>, String> {
     //let ruta = format!(".gir/{}", referencia);
@@ -347,7 +346,7 @@ fn obtener_commits_y_objetos_asociados(
         if objetos_a_agregar.contains(&commit.hash) {
             continue;
         }
-        if commit.hash == commit_limite.clone() {
+        if commit.hash == commit_limite {
             objetos_a_agregar.insert(commit.hash.clone());
             break;
         }
@@ -367,11 +366,9 @@ fn obtener_commits_y_objetos_asociados(
             commits_a_revisar.push(commit_padre);
         }
     }
-    if (commit_limite != &"0".repeat(40)) && !objetos_a_agregar.contains(&commit_limite.clone()) {
+    if ("0".repeat(40) != *commit_limite) && !objetos_a_agregar.contains(commit_limite) {
         return Err("El servidor tiene cambios, por favor, actualice su repositorio".to_string());
-    } else if (commit_limite != &"0".repeat(40))
-        && objetos_a_agregar.contains(&commit_limite.clone())
-    {
+    } else if ("0".repeat(40) != *commit_limite) && objetos_a_agregar.contains(commit_limite) {
         objetos_a_agregar.remove(commit_limite);
     }
     Ok(objetos_a_agregar)
@@ -379,14 +376,13 @@ fn obtener_commits_y_objetos_asociados(
 
 impl Ejecutar for Push {
     fn ejecutar(&mut self) -> Result<String, String> {
-        let mensaje;
         let comunicacion = self.iniciar_git_recive_pack_con_servidor()?;
 
         let commits_y_refs_asosiado = self.fase_de_descubrimiento(&comunicacion)?;
 
         let referencia_acualizar = self.obtener_referencia_acualizar(&commits_y_refs_asosiado)?;
 
-        if self.es_necesario_actualizar(&referencia_acualizar) {
+        let mensaje = if self.es_necesario_actualizar(&referencia_acualizar) {
             let objetos_a_enviar = self.obtener_objetos_a_enviar(
                 &self.referencia.dar_ref_local(),
                 &referencia_acualizar.0,
@@ -398,11 +394,11 @@ impl Ejecutar for Push {
                 objetos_a_enviar,
                 &comunicacion,
             )?;
-            mensaje = "Push ejecutado con exito".to_string();
+            "Push ejecutado con exito".to_string()
         } else {
             self.terminar_y_mandar_pack_file_vacio(&comunicacion)?;
-            mensaje = "Nada que actualizar".to_string();
-        }
+            "Nada que actualizar".to_string()
+        };
 
         if self.set_upstream && !self.referencia.es_tag() {
             SetUpstream::new(

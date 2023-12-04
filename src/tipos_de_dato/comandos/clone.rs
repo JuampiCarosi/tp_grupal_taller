@@ -18,6 +18,7 @@ pub struct Clone {
 }
 
 impl Clone {
+    /// Crea un nueva instancia de clone
     pub fn from(args: &mut Vec<String>, logger: Arc<Logger>) -> Result<Clone, String> {
         Self::verificar_argumentos(args)?;
 
@@ -39,6 +40,8 @@ impl Clone {
         Ok(())
     }
 
+    /// Verifica si el repositorio ya existe en el sistema
+    /// Si existe verifica que este vacio
     fn verificar_si_ya_existe_repositorio(&self, repositorio: &str) -> Result<(), String> {
         if PathBuf::from(repositorio).exists() {
             //me fijo si tiene contenido
@@ -50,6 +53,8 @@ impl Clone {
         Ok(())
     }
 
+    /// Obtiene la rama predeterminada del repositorio
+    /// Si no existe la rama master, devuelve la ultima rama que se creo
     pub fn obtener_rama_predeterminada() -> Result<String, String> {
         let ramas = utils::io::leer_directorio(".gir/refs/remotes/origin")?;
         let mut rama_predeterminada = String::new();
@@ -66,6 +71,7 @@ impl Clone {
         Ok(rama_predeterminada)
     }
 
+    /// Crea el repositorio en el sistema
     fn crear_repositorio(&mut self) -> Result<(), String> {
         Init::from(Vec::new(), self.logger.clone())?.ejecutar()?;
 
@@ -81,6 +87,7 @@ impl Clone {
 }
 
 impl Ejecutar for Clone {
+    /// Ejecuta el comando clone.
     fn ejecutar(&mut self) -> Result<String, String> {
         let (_, mut repositorio) = utils::strings::obtener_ip_puerto_y_repositorio(&self.url)?;
         repositorio = repositorio.replace('/', "");
@@ -93,10 +100,7 @@ impl Ejecutar for Clone {
         let resutado = self.crear_repositorio();
         utils::io::cambiar_directorio("..")?;
 
-        if let Err(e) = resutado {
-            // utils::io::rm_directorio(repositorio)?;
-            return Err(e);
-        }
+        resutado?;
 
         let mensaje = "Clone ejecutado con exito".to_string();
         self.logger.log(&mensaje);

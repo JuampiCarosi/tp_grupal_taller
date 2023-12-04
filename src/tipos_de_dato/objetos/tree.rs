@@ -76,6 +76,9 @@ impl Tree {
         objetos
     }
 
+    /// Devuelve un hashmap con todos los elementos que difieren.
+    /// La key del hasmap es el nombre del archivo.
+    /// El value es un vector de tuplas con el numero de linea y el tipo de diff.
     pub fn deep_changes(
         &self,
         arbol_a_comparar: &Tree,
@@ -585,7 +588,7 @@ mod tests {
                 "100644 archivo.txt    2b824e648965b94c6c6b3dd0702feb91f699ed62\n"
             );
         } else {
-            assert!(false)
+            unreachable!()
         }
     }
 
@@ -602,7 +605,7 @@ mod tests {
                 "40000 muchos_objetos    896ca4eb090e033d16d4e9b1027216572ac3eaae\n40000 objetos    1442e275fd3a2e743f6bccf3b11ab27862157179\n"
             );
         } else {
-            assert!(false)
+            unreachable!()
         }
     }
 
@@ -630,8 +633,7 @@ mod tests {
 
             Ok(())
         } else {
-            assert!(false);
-            Err("No se pudo leer el directorio".to_string())
+            unreachable!();
         }
     }
 
@@ -659,8 +661,7 @@ mod tests {
 
             Ok(())
         } else {
-            assert!(false);
-            Err("No se pudo leer el directorio".to_string())
+            unreachable!();
         }
     }
 

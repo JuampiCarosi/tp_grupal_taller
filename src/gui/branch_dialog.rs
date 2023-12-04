@@ -27,7 +27,7 @@ fn obtener_ramas_disponibles() -> Vec<String> {
     return todas
         .lines()
         .filter_map(|rama| {
-            if rama.starts_with("*") {
+            if rama.starts_with('*') {
                 None
             } else {
                 Some(rama.trim().to_string())

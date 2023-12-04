@@ -5,17 +5,10 @@ use crate::{
         comando::Ejecutar,
         config::{Config, RemoteInfo},
         logger::Logger,
+        variante_comando_remote::ComandoRemote,
     },
     utils::ramas,
 };
-
-enum ComandoRemote {
-    Mostrar,
-    Agregar,
-    Eliminar,
-    CambiarUrl,
-    MostrarUrl,
-}
 
 pub struct Remote {
     /// Comando a ejecutar.
@@ -36,6 +29,7 @@ impl Remote {
     /// Si la cantidad de argumentos es 0 devuelve una instancia de Remote con el comando Mostrar.
     /// Si la cantidad de argumentos es 2 devuelve una instancia de Remote con el comando Eliminar o MostrarUrl.
     /// Si la cantidad de argumentos es 3 devuelve una instancia de Remote con el comando Agregar o CambiarUrl.
+    /// Quedo muy largo debido a que son muchas variantes del mismo comando y cargo fmt agrega muchas lineas innecesarias
     pub fn from(args: &mut Vec<String>, logger: Arc<Logger>) -> Result<Remote, String> {
         if args.len() > 3 {
             return Err(format!("Demasiados argumentos\n{}", INPUT_ERROR));

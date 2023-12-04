@@ -143,6 +143,9 @@ impl Pull {
         }
     }
 
+    /// Realiza un fast forward de la rama master local a la rama master remota. Para ello
+    /// se obtiene el arbol del commit de la rama master remota y se lo escribe en el directorio
+    /// de trabajo.
     fn fast_forward_de_cero(&self, commit_head_remoto: &str) -> Result<bool, String> {
         io::escribir_bytes(UBICACION_RAMA_MASTER, commit_head_remoto)?;
         let hash_tree_padre =
@@ -159,6 +162,7 @@ impl Pull {
         Ok(true)
     }
 
+    /// Realiza un merge de la rama remota a la rama local.
     fn mergear_rama(&self) -> Result<(), String> {
         let rama_a_mergear = format!("{}/{}", &self.remoto, &self.rama_merge);
         self.verificar_rama_mergear(&rama_a_mergear)?;
@@ -174,6 +178,7 @@ impl Pull {
         Ok(())
     }
 
+    /// Verifica que la rama a mergear exista en el remoto
     fn verificar_rama_mergear(&self, rama_a_mergar: &str) -> Result<(), String> {
         if !utils::ramas::existe_la_rama_remota(rama_a_mergar) {
             return Err(format!(

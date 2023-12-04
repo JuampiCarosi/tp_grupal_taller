@@ -66,7 +66,7 @@ pub fn render(builder: &gtk::Builder, logger: Arc<Logger>) {
     }
 
     tags.sort_by_key(|tag| {
-        let hash = io::leer_a_string(".gir/refs/tags/".to_string() + &tag).unwrap();
+        let hash = io::leer_a_string(".gir/refs/tags/".to_string() + tag).unwrap();
         let commit = CommitObj::from_hash(hash, logger.clone()).unwrap();
         commit.date.tiempo.clone()
     });

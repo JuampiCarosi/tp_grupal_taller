@@ -41,7 +41,7 @@ impl Tag {
     /// Crea un tag con el nombre ingresado por el usuario.
     /// Si el tag ya existe, devuelve un error.
     fn crear_tag(&self, tag: &str) -> Result<(), String> {
-        if utils::tags::existe_tag(&tag.to_string()) {
+        if utils::tags::existe_tag(tag) {
             return Err(format!("El tag {} ya existe", tag));
         }
 

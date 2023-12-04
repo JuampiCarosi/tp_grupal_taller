@@ -23,17 +23,14 @@ impl Referencia {
     }
 
     fn divir_referencia(referencia: String) -> (String, String) {
-        match referencia.split_once(":") {
+        match referencia.split_once(':') {
             Some((ref_local, ref_remota)) => (ref_local.to_string(), ref_remota.to_string()),
             None => (referencia.clone(), referencia),
         }
     }
 
     pub fn es_tag(&self) -> bool {
-        match self {
-            Referencia::Tag(_, _) => true,
-            _ => false,
-        }
+        matches!(self, Referencia::Tag(_, _))
     }
 
     pub fn dar_nombre_local(&self) -> String {

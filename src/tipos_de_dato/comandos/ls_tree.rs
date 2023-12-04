@@ -90,6 +90,7 @@ impl LsTree {
 }
 
 impl Ejecutar for LsTree {
+    /// Ejecuta el comando ls-tree.
     fn ejecutar(&mut self) -> Result<String, String> {
         self.logger.log("Corriendo ls-tree");
         let arbol = Tree::from_hash(&self.arbol, PathBuf::from("."), self.logger.clone())?;

@@ -155,7 +155,7 @@ pub fn obtener_contenido_comprimido_sin_header(hash: &str) -> Result<Vec<u8>, St
     let vec: Vec<&[u8]> = cont_descomprimido.splitn(2, |&x| x == 0).collect();
 
     let contenido = vec[1];
-    let contenido_comprimido = comprimir_contenido_u8(&contenido.to_vec())?;
+    let contenido_comprimido = comprimir_contenido_u8(contenido)?;
     Ok(contenido_comprimido)
 }
 
@@ -169,6 +169,6 @@ pub fn obtener_contenido_comprimido_sin_header_de(
     let vec: Vec<&[u8]> = cont_descomprimido.splitn(2, |&x| x == 0).collect();
 
     let contenido = vec[1];
-    let contenido_comprimido = comprimir_contenido_u8(&contenido.to_vec())?;
+    let contenido_comprimido = comprimir_contenido_u8(contenido)?;
     Ok(contenido_comprimido)
 }
