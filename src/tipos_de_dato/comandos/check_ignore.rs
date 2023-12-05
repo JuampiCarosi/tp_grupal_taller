@@ -53,7 +53,7 @@ impl Ejecutar for CheckIgnore {
     fn ejecutar(&mut self) -> Result<String, String> {
         self.logger.log("Buscando archivos ignorados");
         let archivos_ignorados = match io::leer_a_string(".girignore") {
-            Ok(archivos_ignorados) => archivos_ignorados,
+            Ok(archivos_ignorados) => archivos_ignorados.trim().to_string(),
             Err(_) => return Ok("".to_string()),
         };
         if archivos_ignorados.is_empty() {

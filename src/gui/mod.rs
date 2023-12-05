@@ -24,6 +24,7 @@ mod show_ref_button;
 mod staging_area;
 mod tag_button;
 mod tag_list;
+mod upstream_dialog;
 
 use std::path::PathBuf;
 use std::sync::Arc;

@@ -18,18 +18,27 @@ const GIR_CLONE: &str = "gir clone <ip:puerto/repositorio/>";
 pub struct Clone {
     logger: Arc<Logger>,
     url: String,
+    clonar_en_dir_actual: bool,
 }
 
 impl Clone {
     /// Crea un nueva instancia de clone
-    pub fn from(args: &mut Vec<String>, logger: Arc<Logger>) -> Result<Clone, String> {
+    pub fn from(
+        args: &mut Vec<String>,
+        logger: Arc<Logger>,
+        clonar_en_dir_actual: bool,
+    ) -> Result<Clone, String> {
         Self::verificar_argumentos(args)?;
 
         let url = args.remove(0);
 
         logger.log(&format!("Se creo clone con exito - url: {}", url));
 
-        Ok(Clone { logger, url })
+        Ok(Clone {
+            logger,
+            url,
+            clonar_en_dir_actual,
+        })
     }
 
     fn verificar_argumentos(args: &Vec<String>) -> Result<(), String> {
@@ -85,7 +94,8 @@ impl Clone {
 
         tree_branch_a_mergear.escribir_en_directorio()?;
 
-        self.logger.log("Fast forward ejucutado con exito en clone de la rama remota");
+        self.logger
+            .log("Fast forward ejucutado con exito en clone de la rama remota");
 
         Ok(true)
     }
@@ -137,11 +147,16 @@ impl Ejecutar for Clone {
 
         self.verificar_si_ya_existe_repositorio(&repositorio)?;
 
-        utils::io::crear_carpeta(&repositorio)?;
-        utils::io::cambiar_directorio(&repositorio)?;
+        if !self.clonar_en_dir_actual {
+            utils::io::crear_carpeta(&repositorio)?;
+            utils::io::cambiar_directorio(&repositorio)?;
+        }
 
         let resutado = self.crear_repositorio();
-        utils::io::cambiar_directorio("..")?;
+
+        if !self.clonar_en_dir_actual {
+            utils::io::cambiar_directorio("..")?;
+        }
 
         resutado?;
 

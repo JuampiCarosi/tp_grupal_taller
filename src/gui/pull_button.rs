@@ -1,5 +1,5 @@
 use super::comando_gui::ComandoGui;
-use super::{info_dialog, log_list};
+use super::{info_dialog, log_list, upstream_dialog};
 use crate::tipos_de_dato::comandos::pull::Pull;
 use gtk::prelude::*;
 use gtk::{self};
@@ -14,6 +14,7 @@ pub fn render(
 
     let builder_clone = builder.clone();
     pull_button.connect_clicked(move |_| {
+        upstream_dialog::render(&builder_clone, logger.clone());
         let resultado = Pull::from(Vec::new(), logger.clone()).ejecutar_gui();
 
         if let Some(resultado) = resultado {

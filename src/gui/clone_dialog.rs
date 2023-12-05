@@ -19,7 +19,7 @@ fn clonar_dialog(builder: &gtk::Builder, logger: Arc<Logger>) {
     dialog.set_position(gtk::WindowPosition::Center);
 
     confirm.connect_clicked(move |_| {
-        Clone::from(&mut vec![input.text().to_string()], logger.clone()).ejecutar_gui();
+        Clone::from(&mut vec![input.text().to_string()], logger.clone(), true).ejecutar_gui();
         input.set_text("");
         dialog.hide();
     });

@@ -620,7 +620,7 @@
               <placeholder/>
             </child>
             <child>
-              <object class="GtkButton" id="no-repo-close1">
+              <object class="GtkButton" id="no-repo-close">
                 <property name="label" translatable="yes">Cerrar</property>
                 <property name="visible">True</property>
                 <property name="can-focus">True</property>
