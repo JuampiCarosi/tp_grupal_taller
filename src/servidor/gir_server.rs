@@ -49,7 +49,7 @@ impl ServidorGir {
     pub fn iniciar_servidor(&mut self) -> Result<(), String> {
         while let Ok((stream, socket)) = self.listener.accept() {
             self.logger
-                .log(&format!("Se conecto un cliente desde {}", socket));
+                .log(&format!("Se conecto un cliente a gir desde {}", socket));
             let logge_clone = self.logger.clone();
             let logger = self.logger.clone();
             let handle = thread::spawn(move || -> Result<(), String> {

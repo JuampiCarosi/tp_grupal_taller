@@ -1,12 +1,12 @@
 use std::{
-    io::Read,
+    io::BufReader,
     net::{TcpListener, TcpStream},
     sync::Arc,
     thread,
 };
 
 use crate::tipos_de_dato::{
-    comunicacion::Comunicacion, logger::Logger, respuesta_pedido::RespuestaDePedido,
+    http_request::HttpRequest, http_response::HttpResponse, logger::Logger,
 };
 
 pub struct ServidorHttp {
@@ -55,10 +55,24 @@ impl ServidorHttp {
     }
 
     fn manejar_cliente(logger: Arc<Logger>, stream: &mut TcpStream) -> Result<(), String> {
-        let mut buf: [u8; 1024] = [0; 1024];
-        let _req = stream.read(&mut buf).map_err(|e| e.to_string())?;
+        // Read headers
+        let mut stream_clone = stream.try_clone().map_err(|e| e.to_string())?;
+        let mut reader = BufReader::new(&mut stream_clone);
 
-        println!("Request: {:?}", String::from_utf8_lossy(&buf[..]));
+        let request = HttpRequest::from(&mut reader, logger.clone());
+
+        match request {
+            Ok(request) => {
+                logger.log(&format!("Request: {:?}", request));
+                let response = HttpResponse::new_ok(logger.clone(), Some(request.body.clone()));
+                response.enviar(stream)?;
+            }
+            Err(err) => {
+                logger.log(&format!("Error: {}", err));
+                let response = HttpResponse::new_not_found(logger.clone());
+                response.enviar(stream)?;
+            }
+        }
 
         Ok(())
     }

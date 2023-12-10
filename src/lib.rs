@@ -17,6 +17,8 @@ pub mod tipos_de_dato {
     pub mod logger;
     pub mod mensajes_log;
 
+    pub mod http_request;
+    pub mod http_response;
     pub mod objeto;
     pub mod packfile;
     pub mod referencia;
