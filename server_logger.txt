@@ -10,3 +10,5 @@ invalid digit found in string
 2023-12-04 13:17:17 | Se conecto un cliente desde 127.0.0.1:54948
 2023-12-04 13:17:17 | ERR El repositorio /papota/ no existe
 
+2023-12-10 12:17:58 | Servidor iniciado
+2023-12-10 12:27:54 | Servidor iniciado

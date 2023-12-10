@@ -1,7 +1,8 @@
 pub mod err_comunicacion;
 pub mod servidor {
+    pub mod gir_server;
+    pub mod http_server;
     pub mod receive_pack;
-    pub mod server;
     pub mod upload_pack;
 }
 pub mod tipos_de_dato {

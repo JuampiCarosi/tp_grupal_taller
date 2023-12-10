@@ -17,7 +17,7 @@ const CAPABILITIES: &str = "ofs-delta symref=HEAD:refs/heads/master agent=git/2.
 const DIR: &str = "/srv"; // direccion relativa
 
 ///
-pub struct Servidor {
+pub struct ServidorGir {
     /// Canal para escuchar las conexiones de clientes
     listener: TcpListener,
 
@@ -28,16 +28,16 @@ pub struct Servidor {
     logger: Arc<Logger>,
 }
 
-impl Servidor {
+impl ServidorGir {
     /// # Argumentos:
     /// * `address` - Direccion en la que se va a escuchar las conexiones de los clientes
     /// * `logger` - Logger para registrar los eventos del servidor
-    pub fn new(address: &str, logger: Arc<Logger>) -> std::io::Result<Servidor> {
+    pub fn new(address: &str, logger: Arc<Logger>) -> std::io::Result<ServidorGir> {
         let listener = TcpListener::bind(address)?;
-        println!("Escuchando en {}", address);
+        println!("Escuchando servidor gir en {}", address);
         logger.log("Servidor iniciado");
 
-        Ok(Servidor {
+        Ok(ServidorGir {
             listener,
             threads: Vec::new(),
             logger,
@@ -119,9 +119,7 @@ impl Servidor {
                     logger.log(&error);
                     return Err("No existe el repositorio".to_string());
                 }
-                comunicacion.enviar(&utils::strings::obtener_linea_con_largo_hex(
-                    VERSION,
-                ))?;
+                comunicacion.enviar(&utils::strings::obtener_linea_con_largo_hex(VERSION))?;
                 println!("upload-pack recibido, ejecutando");
                 refs = server_utils::obtener_refs_de(PathBuf::from(&dir_repo))?;
                 comunicacion.responder(&refs)?;
@@ -140,9 +138,7 @@ impl Servidor {
                     gir_io::crear_directorio(path.join("refs/heads/"))?;
                     gir_io::crear_directorio(path.join("refs/tags/"))?;
                 }
-                comunicacion.enviar(&utils::strings::obtener_linea_con_largo_hex(
-                    VERSION,
-                ))?;
+                comunicacion.enviar(&utils::strings::obtener_linea_con_largo_hex(VERSION))?;
                 refs = server_utils::obtener_refs_de(path)?;
                 comunicacion.responder(&refs)?;
                 resultado_de_ejecucion =
@@ -208,7 +204,7 @@ mod server_utils {
     }
 }
 
-impl Drop for Servidor {
+impl Drop for ServidorGir {
     fn drop(&mut self) {
         for thread in self.threads.drain(..).flatten() {
             if let Err(e) = thread.join() {
