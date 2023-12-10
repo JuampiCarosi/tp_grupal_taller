@@ -39,14 +39,13 @@ impl ServidorHttp {
     /// Pone en funcionamiento el servidor, spawneando un thread por cada cliente que se conecte al mismo.
     /// Procesa el pedido del cliente y responde en consecuencia.
     pub fn iniciar_servidor(&mut self) -> Result<(), String> {
-        while let Ok((stream, socket)) = self.listener.accept() {
+        while let Ok((mut stream, socket)) = self.listener.accept() {
             self.logger
                 .log(&format!("Se conecto un cliente por http desde {}", socket));
+
             let logge_clone = self.logger.clone();
             let handle = thread::spawn(move || -> Result<(), String> {
-                let mut stream_clonado = stream.try_clone().map_err(|e| e.to_string())?;
-
-                Self::manejar_cliente(logge_clone.clone(), &mut stream_clonado)?;
+                Self::manejar_cliente(logge_clone.clone(), &mut stream)?;
                 Ok(())
             });
             self.threads.push(Some(handle));
@@ -56,13 +55,10 @@ impl ServidorHttp {
     }
 
     fn manejar_cliente(logger: Arc<Logger>, stream: &mut TcpStream) -> Result<(), String> {
-        stream
-            .set_nonblocking(true)
-            .expect("set_nonblocking call failed");
-        let buf = [0; 1024];
-        let req = stream.read_to_end(&mut buf).map_err(|e| e.to_string())?;
+        let mut buf: [u8; 1024] = [0; 1024];
+        let _req = stream.read(&mut buf).map_err(|e| e.to_string())?;
 
-        println!("Request: {:?}", req);
+        println!("Request: {:?}", String::from_utf8_lossy(&buf[..]));
 
         Ok(())
     }

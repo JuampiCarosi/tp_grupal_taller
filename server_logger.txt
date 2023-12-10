@@ -12,3 +12,75 @@ invalid digit found in string
 
 2023-12-10 12:17:58 | Servidor iniciado
 2023-12-10 12:27:54 | Servidor iniciado
+2023-12-10 15:36:08 | Servidor iniciado
+2023-12-10 15:36:30 | Se conecto un cliente por http desde 127.0.0.1:35648
+2023-12-10 15:36:30 | Se conecto un cliente por http desde 127.0.0.1:35650
+2023-12-10 15:36:31 | Se conecto un cliente por http desde 127.0.0.1:35662
+2023-12-10 15:36:32 | Se conecto un cliente por http desde 127.0.0.1:35668
+2023-12-10 15:36:32 | Se conecto un cliente por http desde 127.0.0.1:35678
+2023-12-10 15:36:32 | Se conecto un cliente por http desde 127.0.0.1:35692
+2023-12-10 15:36:37 | Se conecto un cliente por http desde 127.0.0.1:35694
+2023-12-10 15:36:37 | Se conecto un cliente por http desde 127.0.0.1:35696
+2023-12-10 15:36:37 | Se conecto un cliente por http desde 127.0.0.1:35700
+2023-12-10 15:36:47 | Se conecto un cliente por http desde 127.0.0.1:37622
+2023-12-10 15:36:47 | Se conecto un cliente por http desde 127.0.0.1:37638
+2023-12-10 15:36:47 | Se conecto un cliente por http desde 127.0.0.1:37648
+2023-12-10 15:36:48 | Se conecto un cliente por http desde 127.0.0.1:37650
+2023-12-10 15:36:48 | Se conecto un cliente por http desde 127.0.0.1:37656
+2023-12-10 15:36:48 | Se conecto un cliente por http desde 127.0.0.1:37668
+2023-12-10 15:36:49 | Se conecto un cliente por http desde 127.0.0.1:37684
+2023-12-10 15:36:49 | Se conecto un cliente por http desde 127.0.0.1:37696
+2023-12-10 15:36:49 | Se conecto un cliente por http desde 127.0.0.1:37712
+2023-12-10 15:36:54 | Se conecto un cliente por http desde 127.0.0.1:50594
+2023-12-10 15:36:54 | Se conecto un cliente por http desde 127.0.0.1:50604
+2023-12-10 15:36:54 | Se conecto un cliente por http desde 127.0.0.1:50618
+2023-12-10 15:37:07 | Se conecto un cliente por http desde 127.0.0.1:44634
+2023-12-10 15:37:07 | Se conecto un cliente por http desde 127.0.0.1:44648
+2023-12-10 15:37:07 | Se conecto un cliente por http desde 127.0.0.1:44654
+2023-12-10 15:37:08 | Se conecto un cliente por http desde 127.0.0.1:44670
+2023-12-10 15:37:08 | Se conecto un cliente por http desde 127.0.0.1:44686
+2023-12-10 15:37:08 | Se conecto un cliente por http desde 127.0.0.1:44692
+2023-12-10 15:37:13 | Se conecto un cliente por http desde 127.0.0.1:35878
+2023-12-10 15:37:13 | Se conecto un cliente por http desde 127.0.0.1:35882
+2023-12-10 15:37:13 | Se conecto un cliente por http desde 127.0.0.1:35890
+2023-12-10 15:37:24 | Se conecto un cliente por http desde 127.0.0.1:59134
+2023-12-10 15:37:24 | Se conecto un cliente por http desde 127.0.0.1:59138
+2023-12-10 15:37:24 | Se conecto un cliente por http desde 127.0.0.1:59144
+2023-12-10 15:37:43 | Se conecto un cliente por http desde 127.0.0.1:48834
+2023-12-10 15:37:43 | Se conecto un cliente por http desde 127.0.0.1:48850
+2023-12-10 15:37:43 | Se conecto un cliente por http desde 127.0.0.1:48858
+2023-12-10 15:38:43 | Se conecto un cliente por http desde 127.0.0.1:55756
+2023-12-10 15:38:43 | Se conecto un cliente por http desde 127.0.0.1:55770
+2023-12-10 15:38:43 | Se conecto un cliente por http desde 127.0.0.1:55776
+2023-12-10 15:40:50 | Se conecto un cliente por http desde 127.0.0.1:43458
+2023-12-10 15:40:50 | Se conecto un cliente por http desde 127.0.0.1:43462
+2023-12-10 15:40:50 | Se conecto un cliente por http desde 127.0.0.1:43470
+2023-12-10 15:40:51 | Se conecto un cliente por http desde 127.0.0.1:38308
+2023-12-10 15:40:51 | Se conecto un cliente por http desde 127.0.0.1:38318
+2023-12-10 15:40:51 | Se conecto un cliente por http desde 127.0.0.1:38322
+2023-12-10 15:40:53 | Se conecto un cliente por http desde 127.0.0.1:38328
+2023-12-10 15:40:53 | Se conecto un cliente por http desde 127.0.0.1:38342
+2023-12-10 15:40:53 | Se conecto un cliente por http desde 127.0.0.1:38356
+2023-12-10 15:40:53 | Se conecto un cliente por http desde 127.0.0.1:38362
+2023-12-10 15:40:53 | Se conecto un cliente por http desde 127.0.0.1:38366
+2023-12-10 15:40:53 | Se conecto un cliente por http desde 127.0.0.1:38382
+2023-12-10 15:40:54 | Se conecto un cliente por http desde 127.0.0.1:38390
+2023-12-10 15:40:54 | Se conecto un cliente por http desde 127.0.0.1:38404
+2023-12-10 15:40:54 | Se conecto un cliente por http desde 127.0.0.1:38406
+2023-12-10 15:43:43 | Se conecto un cliente por http desde 127.0.0.1:34062
+2023-12-10 15:43:43 | Se conecto un cliente por http desde 127.0.0.1:34076
+2023-12-10 15:43:43 | Se conecto un cliente por http desde 127.0.0.1:34082
+2023-12-10 15:44:26 | Servidor iniciado
+2023-12-10 15:44:29 | Se conecto un cliente por http desde 127.0.0.1:43128
+2023-12-10 15:44:29 | Se conecto un cliente por http desde 127.0.0.1:43142
+2023-12-10 15:44:29 | Se conecto un cliente por http desde 127.0.0.1:43152
+2023-12-10 15:44:31 | Se conecto un cliente por http desde 127.0.0.1:34068
+2023-12-10 15:44:31 | Se conecto un cliente por http desde 127.0.0.1:34070
+2023-12-10 15:44:31 | Se conecto un cliente por http desde 127.0.0.1:34084
+2023-12-10 15:46:21 | Servidor iniciado
+2023-12-10 15:46:30 | Se conecto un cliente por http desde 127.0.0.1:58890
+2023-12-10 15:46:30 | Se conecto un cliente por http desde 127.0.0.1:58904
+2023-12-10 15:46:30 | Se conecto un cliente por http desde 127.0.0.1:58914
+2023-12-10 15:48:10 | Se conecto un cliente por http desde 127.0.0.1:39036
+2023-12-10 15:48:10 | Se conecto un cliente por http desde 127.0.0.1:39042
+2023-12-10 15:48:10 | Se conecto un cliente por http desde 127.0.0.1:39054
