@@ -63,6 +63,10 @@ pub fn conseguir_direccion_nombre_remoto() -> Option<String> {
     buscar_en_config_el_valor_de("remoto")
 }
 
+pub fn conseguir_puerto_http() -> Option<String> {
+    buscar_en_config_el_valor_de("puerto_http")
+}
+
 ///extrae el repositorio seteada en el archivo config.
 ///Busca una entrada que sea 'repositorio='
 pub fn conseguir_direccion_nombre_repositorio() -> Option<String> {
