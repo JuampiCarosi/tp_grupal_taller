@@ -27,6 +27,7 @@ pub mod tipos_de_dato {
     pub mod referencia_commit;
     pub mod region;
     pub mod respuesta_pedido;
+    pub mod ruta;
     pub mod tipo_contenido_http;
     pub mod tipo_de_rama;
     pub mod tipo_diff;

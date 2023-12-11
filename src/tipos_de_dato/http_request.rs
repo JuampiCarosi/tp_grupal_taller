@@ -72,7 +72,7 @@ impl HttpRequest {
     ) -> Result<Self, ErrorHttp> {
         let (metodo, ruta, version) = Self::obtener_primera_linea(reader)?;
 
-        let metodo = MetodoHttp::from_string(&metodo, &ruta)?;
+        let metodo = MetodoHttp::from_string(&metodo)?;
 
         let headers = Self::obtener_headers(reader)?;
         let body = Self::obtener_body(reader, &headers)?;
