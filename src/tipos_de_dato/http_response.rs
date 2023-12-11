@@ -1,6 +1,6 @@
 use std::{collections::HashMap, io::Write, net::TcpStream, sync::Arc};
 
-use super::logger::Logger;
+use super::{estado_http::EstadoHttp, logger::Logger};
 
 pub struct HttpResponse {
     pub estado: usize,
@@ -12,29 +12,20 @@ pub struct HttpResponse {
 }
 
 impl HttpResponse {
-    pub fn new_ok(logger: Arc<Logger>, body: Option<String>) -> Self {
+    pub fn new(logger: Arc<Logger>, estado: EstadoHttp, body: Option<&str>) -> Self {
         let mut headers: HashMap<String, String> = HashMap::new();
         if let Some(body) = &body {
             headers.insert("Content-lenght".to_string(), body.len().to_string());
         }
 
-        Self {
-            estado: 200,
-            mensaje_estado: "OK".to_string(),
-            version: "HTTP/1.1".to_string(),
-            headers: HashMap::new(),
-            body,
-            logger,
-        }
-    }
+        let (estado, mensaje_estado) = estado.obtener_estado_y_mensaje();
 
-    pub fn new_not_found(logger: Arc<Logger>) -> Self {
         Self {
-            estado: 404,
-            mensaje_estado: "Not Found".to_string(),
+            estado,
+            mensaje_estado,
             version: "HTTP/1.1".to_string(),
             headers: HashMap::new(),
-            body: None,
+            body: body.map(|s| s.to_string()),
             logger,
         }
     }

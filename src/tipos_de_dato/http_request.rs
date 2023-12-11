@@ -6,51 +6,46 @@ use std::{
     sync::Arc,
 };
 
-use super::logger::Logger;
+use super::{estado_http::EstadoHttp, logger::Logger};
 
 pub struct HttpRequest {
-    pub method: String,
-    pub path: String,
+    pub metodo: String,
+    pub ruta: String,
     pub version: String,
     pub headers: HashMap<String, String>,
-    pub body: String,
+    pub body: Option<String>,
     pub logger: Arc<Logger>,
 }
 
 impl HttpRequest {
+    fn obtener_content_length(
+        headers: &HashMap<String, String>,
+    ) -> Result<Option<usize>, EstadoHttp> {
+        let raw = headers.get("Content-Length");
+
+        if let Some(raw) = raw {
+            match raw.parse::<usize>() {
+                Ok(largo) => return Ok(Some(largo)),
+                Err(_) => return Err(EstadoHttp::BadRequest),
+            };
+        }
+
+        Ok(None)
+    }
+
     pub fn from(
         reader: &mut BufReader<&mut TcpStream>,
         logger: Arc<Logger>,
-    ) -> Result<Self, String> {
-        let start_line = Self::obtener_primera_linea(reader)?;
+    ) -> Result<Self, EstadoHttp> {
+        let (metodo, ruta, version) = Self::obtener_primera_linea(reader)?;
 
         let headers = Self::obtener_headers(reader)?;
-
-        let content_length = headers
-            .get("Content-Length")
-            .ok_or("No Content-Length header")?
-            .parse::<usize>()
-            .unwrap_or(0);
-
+        let content_length = Self::obtener_content_length(&headers)?;
         let body = Self::obtener_body(reader, content_length)?;
 
-        let splitted = start_line.split_whitespace().collect::<Vec<&str>>();
-        if splitted.len() != 3 {
-            return Err("Invalid start line".to_string());
-        }
-
-        let method = splitted[0].to_string();
-        let path = splitted[1].to_string();
-
-        if &path != "/" {
-            return Err("not found".to_string());
-        }
-
-        let version = splitted[2].to_string();
-
         Ok(Self {
-            method,
-            path,
+            metodo,
+            ruta,
             version,
             headers,
             body,
@@ -60,7 +55,7 @@ impl HttpRequest {
 
     fn obtener_headers(
         reader: &mut BufReader<&mut TcpStream>,
-    ) -> Result<HashMap<String, String>, String> {
+    ) -> Result<HashMap<String, String>, EstadoHttp> {
         let mut headers = HashMap::new();
 
         loop {
@@ -71,7 +66,7 @@ impl HttpRequest {
             }
             let splitted = line.splitn(2, ":").collect::<Vec<&str>>();
             if splitted.len() != 2 {
-                return Err("Invalid header".to_string());
+                return Err(EstadoHttp::BadRequest);
             }
 
             let key = splitted[0].trim().to_string();
@@ -83,29 +78,48 @@ impl HttpRequest {
         Ok(headers)
     }
 
-    fn obtener_primera_linea(reader: &mut BufReader<&mut TcpStream>) -> Result<String, String> {
+    fn obtener_primera_linea(
+        reader: &mut BufReader<&mut TcpStream>,
+    ) -> Result<(String, String, String), EstadoHttp> {
         let mut line = String::new();
         reader.read_line(&mut line).unwrap();
-        Ok(line.trim().to_string())
+
+        let splitted = line.split_whitespace().collect::<Vec<&str>>();
+        if splitted.len() != 3 {
+            return Err(EstadoHttp::BadRequest);
+        }
+
+        let metodo = splitted[0].to_string();
+        let ruta = splitted[1].to_string();
+        let version = splitted[2].to_string();
+
+        Ok((metodo, ruta, version))
     }
 
     fn obtener_body(
         reader: &mut BufReader<&mut TcpStream>,
-        largo: usize,
-    ) -> Result<String, String> {
+        largo: Option<usize>,
+    ) -> Result<Option<String>, EstadoHttp> {
+        let largo = match largo {
+            Some(largo) => largo,
+            None => return Ok(None),
+        };
+
         let mut body_buf = vec![0; largo];
-        reader.read_exact(&mut body_buf).unwrap();
+        reader
+            .read_exact(&mut body_buf)
+            .map_err(|_| EstadoHttp::BadRequest)?;
         let body = String::from_utf8_lossy(&body_buf);
 
-        Ok(body.to_string())
+        Ok(Some(body.to_string()))
     }
 }
 
 impl Debug for HttpRequest {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("HttpRequest")
-            .field("method", &self.method)
-            .field("path", &self.path)
+            .field("metodo", &self.metodo)
+            .field("ruta", &self.ruta)
             .field("version", &self.version)
             .field("headers", &self.headers)
             .field("body", &self.body)

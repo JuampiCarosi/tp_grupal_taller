@@ -12,6 +12,7 @@ pub mod tipos_de_dato {
     pub mod conflicto;
     pub mod date;
     pub mod diffgrid;
+    pub mod estado_http;
     pub mod info_ramas;
     pub mod lado_conflicto;
     pub mod logger;

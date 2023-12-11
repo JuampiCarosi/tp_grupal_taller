@@ -6,7 +6,7 @@ use std::{
 };
 
 use crate::tipos_de_dato::{
-    http_request::HttpRequest, http_response::HttpResponse, logger::Logger,
+    estado_http::EstadoHttp, http_request::HttpRequest, http_response::HttpResponse, logger::Logger,
 };
 
 pub struct ServidorHttp {
@@ -55,24 +55,24 @@ impl ServidorHttp {
     }
 
     fn manejar_cliente(logger: Arc<Logger>, stream: &mut TcpStream) -> Result<(), String> {
-        // Read headers
         let mut stream_clone = stream.try_clone().map_err(|e| e.to_string())?;
         let mut reader = BufReader::new(&mut stream_clone);
 
-        let request = HttpRequest::from(&mut reader, logger.clone());
+        let raw_request = HttpRequest::from(&mut reader, logger.clone());
 
-        match request {
-            Ok(request) => {
-                logger.log(&format!("Request: {:?}", request));
-                let response = HttpResponse::new_ok(logger.clone(), Some(request.body.clone()));
+        let request = match raw_request {
+            Ok(request) => request,
+            Err(estado) => {
+                logger.log(&format!("Error procesando request: {}", estado));
+                let response = HttpResponse::new(logger.clone(), estado, None);
                 response.enviar(stream)?;
+                return Ok(());
             }
-            Err(err) => {
-                logger.log(&format!("Error: {}", err));
-                let response = HttpResponse::new_not_found(logger.clone());
-                response.enviar(stream)?;
-            }
-        }
+        };
+
+        logger.log(&format!("Request recibida: {:?}", request));
+        let response = HttpResponse::new(logger.clone(), EstadoHttp::Ok, Some("Respuesta"));
+        response.enviar(stream)?;
 
         Ok(())
     }
