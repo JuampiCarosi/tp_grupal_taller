@@ -6,10 +6,13 @@ use std::{
     sync::Arc,
 };
 
-use super::{error_http::ErrorHttp, logger::Logger, tipo_contenido_http::TipoContenidoHttp};
+use super::{
+    error_http::ErrorHttp, logger::Logger, metodos_http::MetodoHttp,
+    tipo_contenido_http::TipoContenidoHttp,
+};
 
 pub struct HttpRequest {
-    pub metodo: String,
+    pub metodo: MetodoHttp,
     pub ruta: String,
     pub version: String,
     pub headers: HashMap<String, String>,
@@ -68,6 +71,8 @@ impl HttpRequest {
         logger: Arc<Logger>,
     ) -> Result<Self, ErrorHttp> {
         let (metodo, ruta, version) = Self::obtener_primera_linea(reader)?;
+
+        let metodo = MetodoHttp::from_string(&metodo, &ruta)?;
 
         let headers = Self::obtener_headers(reader)?;
         let body = Self::obtener_body(reader, &headers)?;

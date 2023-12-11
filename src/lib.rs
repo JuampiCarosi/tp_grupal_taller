@@ -12,15 +12,15 @@ pub mod tipos_de_dato {
     pub mod conflicto;
     pub mod date;
     pub mod diffgrid;
+    pub mod error_http;
     pub mod estado_http;
+    pub mod http_request;
+    pub mod http_response;
     pub mod info_ramas;
     pub mod lado_conflicto;
     pub mod logger;
     pub mod mensajes_log;
-
-    pub mod error_http;
-    pub mod http_request;
-    pub mod http_response;
+    pub mod metodos_http;
     pub mod objeto;
     pub mod packfile;
     pub mod referencia;
