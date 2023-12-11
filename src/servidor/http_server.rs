@@ -62,9 +62,13 @@ impl ServidorHttp {
 
         let request = match raw_request {
             Ok(request) => request,
-            Err(estado) => {
-                logger.log(&format!("Error procesando request: {}", estado));
-                let response = HttpResponse::new(logger.clone(), estado, None);
+            Err(error_http) => {
+                logger.log(&format!("Error procesando request: {:?}", error_http));
+                let response = HttpResponse::new(
+                    logger.clone(),
+                    error_http.obtener_estado(),
+                    Some(&error_http.obtener_mensaje()),
+                );
                 response.enviar(stream)?;
                 return Ok(());
             }

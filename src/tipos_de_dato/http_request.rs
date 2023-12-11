@@ -6,42 +6,71 @@ use std::{
     sync::Arc,
 };
 
-use super::{estado_http::EstadoHttp, logger::Logger};
+use super::{error_http::ErrorHttp, logger::Logger, tipo_contenido_http::TipoContenidoHttp};
 
 pub struct HttpRequest {
     pub metodo: String,
     pub ruta: String,
     pub version: String,
     pub headers: HashMap<String, String>,
-    pub body: Option<String>,
+    pub body: Option<HashMap<String, String>>,
     pub logger: Arc<Logger>,
 }
 
 impl HttpRequest {
-    fn obtener_content_length(
-        headers: &HashMap<String, String>,
-    ) -> Result<Option<usize>, EstadoHttp> {
-        let raw = headers.get("Content-Length");
+    fn parsear_header_largo(option_largo: Option<&String>) -> Result<usize, ErrorHttp> {
+        match option_largo {
+            Some(largo_raw) => match largo_raw.parse::<usize>() {
+                Ok(largo) => Ok(largo),
+                Err(e) => Err(ErrorHttp::BadRequest(e.to_string())),
+            },
+            None => Err(ErrorHttp::BadRequest(
+                "No se encontro el header Content-Length".to_string(),
+            )),
+        }
+    }
 
-        if let Some(raw) = raw {
-            match raw.parse::<usize>() {
-                Ok(largo) => return Ok(Some(largo)),
-                Err(_) => return Err(EstadoHttp::BadRequest),
-            };
+    fn parsear_header_tipo(option_tipo: Option<&String>) -> Result<TipoContenidoHttp, ErrorHttp> {
+        match option_tipo {
+            Some(tipo_raw) => {
+                let tipo = TipoContenidoHttp::from_string(tipo_raw)
+                    .map_err(|e| ErrorHttp::BadRequest(e.to_string()))?;
+                Ok(tipo)
+            }
+            None => Err(ErrorHttp::BadRequest(
+                "No se encontro el header Content-Type".to_string(),
+            )),
+        }
+    }
+
+    fn obtener_headers_contenido(
+        headers: &HashMap<String, String>,
+    ) -> Result<Option<(usize, TipoContenidoHttp)>, ErrorHttp> {
+        let option_largo = headers.get("Content-Length");
+        let option_tipo = headers.get("Content-Type");
+
+        if option_largo.is_none() && option_tipo.is_none() {
+            return Ok(None);
         }
 
-        Ok(None)
+        let largo = Self::parsear_header_largo(option_largo)?;
+        if largo == 0 {
+            return Ok(None);
+        }
+
+        let tipo = Self::parsear_header_tipo(option_tipo)?;
+
+        Ok(Some((largo, tipo)))
     }
 
     pub fn from(
         reader: &mut BufReader<&mut TcpStream>,
         logger: Arc<Logger>,
-    ) -> Result<Self, EstadoHttp> {
+    ) -> Result<Self, ErrorHttp> {
         let (metodo, ruta, version) = Self::obtener_primera_linea(reader)?;
 
         let headers = Self::obtener_headers(reader)?;
-        let content_length = Self::obtener_content_length(&headers)?;
-        let body = Self::obtener_body(reader, content_length)?;
+        let body = Self::obtener_body(reader, &headers)?;
 
         Ok(Self {
             metodo,
@@ -55,7 +84,7 @@ impl HttpRequest {
 
     fn obtener_headers(
         reader: &mut BufReader<&mut TcpStream>,
-    ) -> Result<HashMap<String, String>, EstadoHttp> {
+    ) -> Result<HashMap<String, String>, ErrorHttp> {
         let mut headers = HashMap::new();
 
         loop {
@@ -66,7 +95,7 @@ impl HttpRequest {
             }
             let splitted = line.splitn(2, ":").collect::<Vec<&str>>();
             if splitted.len() != 2 {
-                return Err(EstadoHttp::BadRequest);
+                return Err(ErrorHttp::BadRequest("Error parseando headers".to_string()));
             }
 
             let key = splitted[0].trim().to_string();
@@ -80,13 +109,15 @@ impl HttpRequest {
 
     fn obtener_primera_linea(
         reader: &mut BufReader<&mut TcpStream>,
-    ) -> Result<(String, String, String), EstadoHttp> {
+    ) -> Result<(String, String, String), ErrorHttp> {
         let mut line = String::new();
         reader.read_line(&mut line).unwrap();
 
         let splitted = line.split_whitespace().collect::<Vec<&str>>();
         if splitted.len() != 3 {
-            return Err(EstadoHttp::BadRequest);
+            return Err(ErrorHttp::BadRequest(
+                "Error parseando primera linea".to_string(),
+            ));
         }
 
         let metodo = splitted[0].to_string();
@@ -98,20 +129,23 @@ impl HttpRequest {
 
     fn obtener_body(
         reader: &mut BufReader<&mut TcpStream>,
-        largo: Option<usize>,
-    ) -> Result<Option<String>, EstadoHttp> {
-        let largo = match largo {
-            Some(largo) => largo,
+        headers: &HashMap<String, String>,
+    ) -> Result<Option<HashMap<String, String>>, ErrorHttp> {
+        let headers = Self::obtener_headers_contenido(&headers)?;
+
+        let (largo, tipo) = match headers {
+            Some((largo, tipo)) => (largo, tipo),
             None => return Ok(None),
         };
 
         let mut body_buf = vec![0; largo];
         reader
             .read_exact(&mut body_buf)
-            .map_err(|_| EstadoHttp::BadRequest)?;
-        let body = String::from_utf8_lossy(&body_buf);
+            .map_err(|e| ErrorHttp::BadRequest(e.to_string()))?;
 
-        Ok(Some(body.to_string()))
+        let body = tipo.parsear_contenido(&body_buf)?;
+
+        Ok(Some(body))
     }
 }
 

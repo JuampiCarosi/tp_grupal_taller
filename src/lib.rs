@@ -18,6 +18,7 @@ pub mod tipos_de_dato {
     pub mod logger;
     pub mod mensajes_log;
 
+    pub mod error_http;
     pub mod http_request;
     pub mod http_response;
     pub mod objeto;
@@ -26,6 +27,7 @@ pub mod tipos_de_dato {
     pub mod referencia_commit;
     pub mod region;
     pub mod respuesta_pedido;
+    pub mod tipo_contenido_http;
     pub mod tipo_de_rama;
     pub mod tipo_diff;
     pub mod variante_comando_remote;
