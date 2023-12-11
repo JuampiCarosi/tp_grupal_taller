@@ -6,7 +6,8 @@ use std::{
 };
 
 use crate::tipos_de_dato::{
-    estado_http::EstadoHttp, http_request::HttpRequest, http_response::HttpResponse, logger::Logger,
+    http::{estado::Estado, request::Request, response::Response},
+    logger::Logger,
 };
 
 pub struct ServidorHttp {
@@ -58,13 +59,13 @@ impl ServidorHttp {
         let mut stream_clone = stream.try_clone().map_err(|e| e.to_string())?;
         let mut reader = BufReader::new(&mut stream_clone);
 
-        let raw_request = HttpRequest::from(&mut reader, logger.clone());
+        let raw_request = Request::from(&mut reader, logger.clone());
 
         let request = match raw_request {
             Ok(request) => request,
             Err(error_http) => {
                 logger.log(&format!("Error procesando request: {:?}", error_http));
-                let response = HttpResponse::new(
+                let response = Response::new(
                     logger.clone(),
                     error_http.obtener_estado(),
                     Some(&error_http.obtener_mensaje()),
@@ -75,7 +76,7 @@ impl ServidorHttp {
         };
 
         logger.log(&format!("Request recibida: {:?}", request));
-        let response = HttpResponse::new(logger.clone(), EstadoHttp::Ok, Some("Respuesta"));
+        let response = Response::new(logger.clone(), Estado::Ok, Some("Respuesta"));
         response.enviar(stream)?;
 
         Ok(())

@@ -1,8 +1,9 @@
 use std::{collections::HashMap, io::Write, net::TcpStream, sync::Arc};
 
-use super::{estado_http::EstadoHttp, logger::Logger};
+use super::estado::Estado;
+use crate::tipos_de_dato::logger::Logger;
 
-pub struct HttpResponse {
+pub struct Response {
     pub estado: usize,
     pub mensaje_estado: String,
     pub version: String,
@@ -11,8 +12,8 @@ pub struct HttpResponse {
     pub logger: Arc<Logger>,
 }
 
-impl HttpResponse {
-    pub fn new(logger: Arc<Logger>, estado: EstadoHttp, body: Option<&str>) -> Self {
+impl Response {
+    pub fn new(logger: Arc<Logger>, estado: Estado, body: Option<&str>) -> Self {
         let mut headers: HashMap<String, String> = HashMap::new();
         if let Some(body) = &body {
             headers.insert("Content-lenght".to_string(), body.len().to_string());

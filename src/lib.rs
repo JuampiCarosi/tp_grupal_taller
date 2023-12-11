@@ -12,23 +12,16 @@ pub mod tipos_de_dato {
     pub mod conflicto;
     pub mod date;
     pub mod diffgrid;
-    pub mod error_http;
-    pub mod estado_http;
-    pub mod http_request;
-    pub mod http_response;
     pub mod info_ramas;
     pub mod lado_conflicto;
     pub mod logger;
     pub mod mensajes_log;
-    pub mod metodos_http;
     pub mod objeto;
     pub mod packfile;
     pub mod referencia;
     pub mod referencia_commit;
     pub mod region;
     pub mod respuesta_pedido;
-    pub mod ruta;
-    pub mod tipo_contenido_http;
     pub mod tipo_de_rama;
     pub mod tipo_diff;
     pub mod variante_comando_remote;
@@ -37,6 +30,16 @@ pub mod tipos_de_dato {
         pub mod blob;
         pub mod commit;
         pub mod tree;
+    }
+
+    pub mod http {
+        pub mod endpoint;
+        pub mod error;
+        pub mod estado;
+        pub mod metodos;
+        pub mod request;
+        pub mod response;
+        pub mod tipo_contenido;
     }
     pub mod comandos {
         pub mod add;
