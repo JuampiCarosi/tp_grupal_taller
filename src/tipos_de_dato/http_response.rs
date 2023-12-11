@@ -16,6 +16,7 @@ impl HttpResponse {
         let mut headers: HashMap<String, String> = HashMap::new();
         if let Some(body) = &body {
             headers.insert("Content-lenght".to_string(), body.len().to_string());
+            headers.insert("Content-Type".to_string(), "application/json".to_string());
         }
 
         let (estado, mensaje_estado) = estado.obtener_estado_y_mensaje();
