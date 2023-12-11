@@ -1,4 +1,4 @@
-use std::{env::args, path::PathBuf, sync::Arc};
+use std::{env::args, path::PathBuf, sync::Arc, thread};
 
 use gir::{
     servidor::{gir_server::ServidorGir, http_server::ServidorHttp},
@@ -37,8 +37,15 @@ fn servidor_http(logger: Arc<Logger>) -> Result<(), String> {
 
 fn main() -> Result<(), String> {
     let logger = Arc::new(Logger::new(PathBuf::from("server_logger.txt"))?);
-    // servidor_gir(logger.clone())?;
-    servidor_http(logger.clone())?;
+
+    let logger_clone = logger.clone();
+    let gir_handle = thread::spawn(move || servidor_gir(logger_clone));
+
+    let logger_clone = logger.clone();
+    let http_handle = thread::spawn(move || servidor_http(logger_clone));
+
+    gir_handle.join().expect("Gir thread panicked")?;
+    http_handle.join().expect("HTTP thread panicked")?;
 
     Ok(())
 }
