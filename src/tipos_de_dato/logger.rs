@@ -1,6 +1,7 @@
 use chrono::Local;
 use std::io::prelude::*;
 use std::path::PathBuf;
+use std::default::Default;
 use std::{
     env,
     fs::{File, OpenOptions},
@@ -9,11 +10,10 @@ use std::{
 };
 
 use crate::utils::io;
-
 use super::mensajes_log::Log;
 
-#[derive(Debug)]
 /// Un logger que escribe mensajes en un archivo.
+#[derive(Debug)]
 pub struct Logger {
     tx: Sender<Log>,
     handle: Option<JoinHandle<()>>,
@@ -106,6 +106,16 @@ impl Drop for Logger {
 
         if let Some(handle) = self.handle.take() {
             let _ = handle.join();
+        }
+    }
+}
+
+impl Default for Logger {
+    fn default() -> Self {
+        let (tx, _) = mpsc::channel();
+        Self {
+            tx: tx,
+            handle: None,
         }
     }
 }

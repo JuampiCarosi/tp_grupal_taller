@@ -77,6 +77,6 @@ pub fn escribir_rama_local(rama: &str, logger: Arc<Logger>) {
 
 pub fn elimar_archivo_gir() {
     if PathBuf::from("./.gir").exists() {
-        io::rm_directorio(".gir").unwrap();
+        io::rm_directorio("./.gir").unwrap();
     }
 }

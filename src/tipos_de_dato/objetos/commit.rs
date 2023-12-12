@@ -1,6 +1,7 @@
 use std::{path::PathBuf, sync::Arc};
 
 use chrono::{FixedOffset, LocalResult, TimeZone};
+use serde::{Deserialize, Serialize};
 
 use crate::{
     tipos_de_dato::{
@@ -19,7 +20,7 @@ use super::tree::Tree;
 const AMARILLO: &str = "\x1B[33m";
 const RESET: &str = "\x1B[0m";
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CommitObj {
     /// Hash del objeto commit.
     pub hash: String,
@@ -35,6 +36,7 @@ pub struct CommitObj {
     pub mensaje: String,
     /// Hash de los commits padres del commit.
     pub padres: Vec<String>,
+    #[serde(skip)]
     pub logger: Arc<Logger>,
 }
 

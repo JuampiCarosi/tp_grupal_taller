@@ -1,4 +1,7 @@
-#[derive(Clone, Debug)]
+use serde::{Serialize, Deserialize};
+
+
+#[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
 
 /// Estructura que representa una fecha de un commit.
 pub struct Date {

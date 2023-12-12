@@ -4,6 +4,7 @@ pub mod servidor {
     pub mod http_server;
     pub mod receive_pack;
     pub mod upload_pack;
+    pub mod pull_request;
 }
 pub mod tipos_de_dato {
     pub mod comando;
