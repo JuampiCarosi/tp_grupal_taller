@@ -1,10 +1,20 @@
-use super::estado_http::EstadoHttp;
+use super::estado::EstadoHttp;
 
 #[derive(Debug)]
 pub enum ErrorHttp {
     BadRequest(String),
     NotFound(String),
     InternalServerError(String),
+}
+
+impl ToString for ErrorHttp {
+    fn to_string(&self) -> String {
+        match self {
+            Self::BadRequest(mensaje) => format!("400 Bad Request: {}", mensaje),
+            Self::NotFound(mensaje) => format!("404 Not Found: {}", mensaje),
+            Self::InternalServerError(mensaje) => format!("500 Internal Server Error: {}", mensaje),
+        }
+    }
 }
 
 impl ErrorHttp {

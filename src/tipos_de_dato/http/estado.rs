@@ -5,6 +5,7 @@ pub enum EstadoHttp {
     NotFound,
     InternalServerError,
     BadRequest,
+    Created,
 }
 
 impl EstadoHttp {
@@ -14,6 +15,7 @@ impl EstadoHttp {
             EstadoHttp::NotFound => (404, "Not Found".to_string()),
             EstadoHttp::InternalServerError => (500, "Internal Server Error".to_string()),
             EstadoHttp::BadRequest => (400, "Bad Request".to_string()),
+            EstadoHttp::Created => (201, "Created".to_string()),
         }
     }
 }

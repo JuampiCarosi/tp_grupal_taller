@@ -1,12 +1,12 @@
 use std::collections::HashMap;
 
-use super::error_http::ErrorHttp;
+use super::error::ErrorHttp;
 
-pub enum TipoContenidoHttp {
+pub enum TipoContenido {
     Json,
 }
 
-impl TipoContenidoHttp {
+impl TipoContenido {
     pub fn from_string(string: &str) -> Result<Self, String> {
         match string {
             "application/json" => Ok(Self::Json),

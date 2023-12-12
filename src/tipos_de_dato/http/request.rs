@@ -6,10 +6,11 @@ use std::{
     sync::Arc,
 };
 
-use super::{error_http::ErrorHttp, logger::Logger, tipo_contenido_http::TipoContenidoHttp};
+use super::{error::ErrorHttp, metodos::MetodoHttp, tipo_contenido::TipoContenido};
+use crate::tipos_de_dato::logger::Logger;
 
-pub struct HttpRequest {
-    pub metodo: String,
+pub struct Request {
+    pub metodo: MetodoHttp,
     pub ruta: String,
     pub version: String,
     pub headers: HashMap<String, String>,
@@ -17,7 +18,7 @@ pub struct HttpRequest {
     pub logger: Arc<Logger>,
 }
 
-impl HttpRequest {
+impl Request {
     fn parsear_header_largo(option_largo: Option<&String>) -> Result<usize, ErrorHttp> {
         match option_largo {
             Some(largo_raw) => match largo_raw.parse::<usize>() {
@@ -30,10 +31,10 @@ impl HttpRequest {
         }
     }
 
-    fn parsear_header_tipo(option_tipo: Option<&String>) -> Result<TipoContenidoHttp, ErrorHttp> {
+    fn parsear_header_tipo(option_tipo: Option<&String>) -> Result<TipoContenido, ErrorHttp> {
         match option_tipo {
             Some(tipo_raw) => {
-                let tipo = TipoContenidoHttp::from_string(tipo_raw)
+                let tipo = TipoContenido::from_string(tipo_raw)
                     .map_err(|e| ErrorHttp::BadRequest(e.to_string()))?;
                 Ok(tipo)
             }
@@ -45,7 +46,7 @@ impl HttpRequest {
 
     fn obtener_headers_contenido(
         headers: &HashMap<String, String>,
-    ) -> Result<Option<(usize, TipoContenidoHttp)>, ErrorHttp> {
+    ) -> Result<Option<(usize, TipoContenido)>, ErrorHttp> {
         let option_largo = headers.get("Content-Length");
         let option_tipo = headers.get("Content-Type");
 
@@ -68,6 +69,8 @@ impl HttpRequest {
         logger: Arc<Logger>,
     ) -> Result<Self, ErrorHttp> {
         let (metodo, ruta, version) = Self::obtener_primera_linea(reader)?;
+
+        let metodo = MetodoHttp::from_string(&metodo)?;
 
         let headers = Self::obtener_headers(reader)?;
         let body = Self::obtener_body(reader, &headers)?;
@@ -149,7 +152,7 @@ impl HttpRequest {
     }
 }
 
-impl Debug for HttpRequest {
+impl Debug for Request {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("HttpRequest")
             .field("metodo", &self.metodo)

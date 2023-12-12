@@ -1,5 +1,6 @@
 {
-    "explorer.decorations.badges": true,
-    "explorer.decorations.colors": true,
-    "git.decorations.enabled": true,
+  "explorer.decorations.badges": true,
+  "explorer.decorations.colors": true,
+  "git.decorations.enabled": true,
+  "rust-analyzer.linkedProjects": ["./Cargo.toml"]
 }
