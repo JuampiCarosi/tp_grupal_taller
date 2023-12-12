@@ -22,17 +22,18 @@ fn crear_pull_request(
     params: HashMap<String, String>,
     logger: Arc<Logger>,
 ) -> Result<Response, ErrorHttp> {
-    let repo = params.get("repo").unwrap();
+    let repo = params.get("repo").ok_or_else(|| {
+        ErrorHttp::InternalServerError("No se ha encontrado el nombre del repositorio".to_string())
+    })?;
     let body = request.body.clone().unwrap();
 
     let mut pull_request = HashMap::new();
 
     pull_request.insert("repo".to_string(), repo.to_string());
 
-    let response = Response::new(
-        logger,
-        EstadoHttp::Created,
-        Some(&serde_json::to_string(&pull_request).unwrap()),
-    );
+    let body_response = serde_json::to_string(&pull_request).map_err(|e| {
+        ErrorHttp::InternalServerError(format!("No se ha podido serializar el pull request: {}", e))
+    })?;
+    let response = Response::new(logger, EstadoHttp::Created, Some(&body_response));
     Ok(response)
 }

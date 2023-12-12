@@ -57,15 +57,15 @@ impl ServidorHttp {
             self.logger
                 .log(&format!("Se conecto un cliente por http desde {}", socket));
 
-            let logge_clone = self.logger.clone();
+            let logger_clone = self.logger.clone();
             let endpoints = endpoints.clone();
             let handle = thread::spawn(move || -> Result<(), String> {
-                let response = Self::manejar_cliente(logge_clone.clone(), &mut stream, &endpoints);
+                let response = Self::manejar_cliente(logger_clone.clone(), &mut stream, &endpoints);
                 match response {
                     Ok(response) => response.enviar(&mut stream).map_err(|e| e.to_string()),
                     Err(error_http) => {
-                        logge_clone.log(&format!("Error procesando request: {:?}", error_http));
-                        let response = Response::from_error(logge_clone.clone(), error_http);
+                        logger_clone.log(&format!("Error procesando request: {:?}", error_http));
+                        let response = Response::from_error(logger_clone.clone(), error_http);
                         response.enviar(&mut stream).map_err(|e| e.to_string())
                     }
                 }?;
@@ -74,7 +74,6 @@ impl ServidorHttp {
             });
             self.threads.push(Some(handle));
         }
-        self.logger.log("Se cerro el servidor");
         Ok(())
     }
 
@@ -106,5 +105,19 @@ impl ServidorHttp {
 
         let response = Response::new(logger, EstadoHttp::NotFound, None);
         Ok(response)
+    }
+}
+
+impl Drop for ServidorHttp {
+    fn drop(&mut self) {
+        for handle in self.threads.iter_mut() {
+            if let Some(handle) = handle.take() {
+                match handle.join() {
+                    Ok(_) => (),
+                    Err(_) => self.logger.log("Error en un thread"),
+                };
+            }
+        }
+        self.logger.log("Cerrando servidor");
     }
 }
