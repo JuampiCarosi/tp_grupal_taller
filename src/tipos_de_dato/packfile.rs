@@ -534,10 +534,10 @@ mod tests {
         assert!(Packfile::verificar_checksum(packfile.as_slice()));
     }
 
-
     #[test]
     fn test09_delta_ref() {
-        let packfile = io::leer_bytes(env!("CARGO_MANIFEST_DIR").to_string() + "/packfile_test").unwrap();
+        let packfile =
+            io::leer_bytes(env!("CARGO_MANIFEST_DIR").to_string() + "/packfile_test").unwrap();
         let mut offset = 12;
         let (_firma, _version, largo) = Packfile::leer_header_packfile(&packfile).unwrap();
         let mut contador = 0;

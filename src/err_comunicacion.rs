@@ -1,4 +1,4 @@
-use std::{io, str::Utf8Error, fmt, error::Error};
+use std::{error::Error, fmt, io, str::Utf8Error};
 
 #[derive(Debug)]
 pub enum ErrorDeComunicacion {
@@ -12,7 +12,9 @@ impl fmt::Display for ErrorDeComunicacion {
         match self {
             ErrorDeComunicacion::Utf8Error(e) => write!(f, "UTF-8 error: {}", e),
             ErrorDeComunicacion::IoError(e) => write!(f, "IO error: {}", e),
-            ErrorDeComunicacion::ErrorRepositorioNoExiste(e) => writeln!(f, "ERR El repositorio {} no existe", e),
+            ErrorDeComunicacion::ErrorRepositorioNoExiste(e) => {
+                writeln!(f, "ERR El repositorio {} no existe", e)
+            }
         }
     }
 }
