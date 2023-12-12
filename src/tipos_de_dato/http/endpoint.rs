@@ -31,7 +31,11 @@ impl Endpoint {
             return None;
         }
 
-        if ruta_request.last().unwrap().is_empty() {
+        let ultimo_ruta_request = match ruta_request.last() {
+            Some(ruta) => ruta,
+            None => return None,
+        };
+        if ultimo_ruta_request.is_empty() {
             return None;
         }
 
