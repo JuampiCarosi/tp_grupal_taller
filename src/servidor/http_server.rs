@@ -74,8 +74,6 @@ impl ServidorHttp {
             });
             self.threads.push(Some(handle));
         }
-
-        self.logger.log("Se cerro el servidor");
         Ok(())
     }
 
@@ -107,5 +105,19 @@ impl ServidorHttp {
 
         let response = Response::new(logger, EstadoHttp::NotFound, None);
         Ok(response)
+    }
+}
+
+impl Drop for ServidorHttp {
+    fn drop(&mut self) {
+        for handle in self.threads.iter_mut() {
+            if let Some(handle) = handle.take() {
+                match handle.join() {
+                    Ok(_) => (),
+                    Err(_) => self.logger.log("Error en un thread"),
+                };
+            }
+        }
+        self.logger.log("Cerrando servidor");
     }
 }
