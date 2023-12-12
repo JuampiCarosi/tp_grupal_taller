@@ -140,7 +140,8 @@ where
     let metadata = fs::metadata(&directorio).map_err(|e| {
         format!(
             "No se pudo obtener la metadata del directorio {}. {}",
-            directorio.as_ref().display(), e
+            directorio.as_ref().display(),
+            e
         )
     })?;
 
@@ -149,7 +150,8 @@ where
             Ok(_) => Ok(()),
             Err(e) => Err(format!(
                 "No se pudo borrar el archivo {}. {}",
-                directorio.as_ref().display(), e
+                directorio.as_ref().display(),
+                e
             )),
         };
     }
@@ -159,7 +161,8 @@ where
             Ok(_) => Ok(()),
             Err(e) => Err(format!(
                 "No se pudo borrar la carpeta {}. {}",
-                directorio.as_ref().display(), e
+                directorio.as_ref().display(),
+                e
             )),
         };
     }

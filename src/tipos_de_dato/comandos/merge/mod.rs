@@ -51,7 +51,9 @@ impl Merge {
             return Err("Cantidad de argumentos invalida".to_string());
         }
         let branch_a_mergear = args.pop().unwrap();
-        if !ramas::existe_la_rama(&branch_a_mergear) && !ramas::existe_la_rama_remota(&branch_a_mergear) {
+        if !ramas::existe_la_rama(&branch_a_mergear)
+            && !ramas::existe_la_rama_remota(&branch_a_mergear)
+        {
             return Err("La rama a mergear no existe".to_string());
         }
         let branch_actual = ramas::obtener_rama_actual()?;

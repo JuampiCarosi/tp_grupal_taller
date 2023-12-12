@@ -27,7 +27,7 @@ pub fn calcular_largo_hex(line: &str) -> String {
     format!("{:0>4}", largo_hex)
 }
 
-///le agrega a la linea al principio el largo en hexa 
+///le agrega a la linea al principio el largo en hexa
 pub fn obtener_linea_con_largo_hex(line: &str) -> String {
     let largo_hex = calcular_largo_hex(line);
     format!("{}{}", largo_hex, line)

@@ -1,7 +1,7 @@
 use chrono::Local;
+use std::default::Default;
 use std::io::prelude::*;
 use std::path::PathBuf;
-use std::default::Default;
 use std::{
     env,
     fs::{File, OpenOptions},
@@ -9,8 +9,8 @@ use std::{
     thread::{self, JoinHandle},
 };
 
-use crate::utils::io;
 use super::mensajes_log::Log;
+use crate::utils::io;
 
 /// Un logger que escribe mensajes en un archivo.
 #[derive(Debug)]

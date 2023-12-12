@@ -2,9 +2,9 @@ pub mod err_comunicacion;
 pub mod servidor {
     pub mod gir_server;
     pub mod http_server;
+    pub mod pull_request;
     pub mod receive_pack;
     pub mod upload_pack;
-    pub mod pull_request;
 }
 pub mod tipos_de_dato {
     pub mod comando;

@@ -1,6 +1,6 @@
-use std::path::PathBuf;
 use crate::{tipos_de_dato::objetos::commit::CommitObj, utils::io};
 use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 
 #[derive(Serialize, Deserialize)]
 pub struct PullRequest {
@@ -8,7 +8,7 @@ pub struct PullRequest {
     pub titulo: String,
     pub descripcion: String,
     pub esta_abierto: bool,
-    pub autor: String, 
+    pub autor: String,
     pub fecha_creacion: String,
     pub fecha_modificacion: String,
     pub commits: Vec<CommitObj>,
@@ -46,10 +46,8 @@ impl PullRequest {
         let contenido = io::leer_a_string(direccion)?;
         let pr: PullRequest = serde_json::from_str(&contenido).unwrap();
         Ok(pr)
-    } 
+    }
 }
-
-
 
 #[cfg(test)]
 mod test {
@@ -68,8 +66,9 @@ mod test {
             String::from("Fecha modificacion"),
             Vec::new(),
         );
-        pr.guardar_pr(PathBuf::from("test_dir/test01.json")).unwrap();
-        let pr_cargado = PullRequest::cargar_pr("test_dir/test01.json").unwrap( );
+        pr.guardar_pr(PathBuf::from("test_dir/test01.json"))
+            .unwrap();
+        let pr_cargado = PullRequest::cargar_pr("test_dir/test01.json").unwrap();
         assert_eq!(pr.numero, pr_cargado.numero);
         assert_eq!(pr.titulo, pr_cargado.titulo);
         assert_eq!(pr.descripcion, pr_cargado.descripcion);
@@ -80,5 +79,4 @@ mod test {
         assert_eq!(pr.commits.len(), pr_cargado.commits.len());
         remove_file("test_dir/test01.json").unwrap();
     }
-
 }
