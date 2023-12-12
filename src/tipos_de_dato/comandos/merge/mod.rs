@@ -72,7 +72,7 @@ impl Merge {
 
     /// Devuelve el commit base mas cercano entre dos ramas
     /// Por ejemplo en el arbol a-b-c vs d-b-e, el commit base es b
-    fn obtener_commit_base_entre_dos_branches(&self) -> Result<String, String> {
+    pub fn obtener_commit_base_entre_dos_branches(&self) -> Result<String, String> {
         let hash_commit_actual = ramas::obtener_hash_commit_asociado_rama_actual()?;
         let hash_commit_a_mergear = Self::obtener_commit_de_branch(&self.branch_a_mergear)?;
 
