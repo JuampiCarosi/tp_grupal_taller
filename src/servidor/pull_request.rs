@@ -1,14 +1,19 @@
 use crate::{tipos_de_dato::objetos::commit::CommitObj, utils::io};
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
+use std::{collections::HashMap, path::PathBuf};
+
+const TITULO_PORDEFECTO: String = "".to_string();
+const DESCRIPCION_PORDEFECTO: String = "".to_string();
 
 #[derive(Serialize, Deserialize)]
 pub struct PullRequest {
     pub numero: u64,
-    pub titulo: String,
+    pub titulo: String, // es un campo opcional - pensar en el opcion
     pub descripcion: String,
     pub esta_abierto: bool,
     pub autor: String,
+    pub rama_head: String,
+    pub rama_base: String,
     pub fecha_creacion: String,
     pub fecha_modificacion: String,
     pub commits: Vec<CommitObj>,
@@ -21,6 +26,8 @@ impl PullRequest {
         descripcion: String,
         esta_abierto: bool,
         autor: String,
+        rama_head: String,
+        rama_base: String,
         fecha_creacion: String,
         fecha_modificacion: String,
         commits: Vec<CommitObj>,
@@ -31,11 +38,42 @@ impl PullRequest {
             descripcion,
             esta_abierto,
             autor,
+            rama_head,
+            rama_base,
             fecha_creacion,
             fecha_modificacion,
             commits,
         }
     }
+
+    pub fn crear_pr(repositorio: &str, parametros: HashMap<String, String>) -> PullRequest {
+        let titulo = Self::obtener_titulo(parametros);
+        let descripcion = Self::obtener_descripcion(parametros);
+        let (autor, rama_head) = Self::obtener_autor_y_rama_head(repositorio, parametros);
+    }
+
+    fn obtener_autor_y_rama_head(
+        repositorio: &str,
+        parametros: HashMap<String, String>,
+    ) -> (String, String) {
+        let direccion = PathBuf::from(format!("./srv/{repositorio}/refs/heads"));
+    }
+    fn obtener_titulo(parametros: HashMap<String, String>) -> String {
+        if let Some(titulo) = parametros.get("title") {
+            titulo.to_owned()
+        } else {
+            TITULO_PORDEFECTO
+        }
+    }
+
+    fn obtener_descripcion(parametros: HashMap<String, String>) -> String {
+        if let Some(descripcion) = parametros.get("body") {
+            descripcion.to_owned()
+        } else {
+            DESCRIPCION_PORDEFECTO
+        }
+    }
+
     pub fn guardar_pr(&self, direccion: PathBuf) -> Result<(), String> {
         let pr_serializado = serde_json::to_string(&self).map_err(|e| e.to_string())?;
         io::escribir_bytes(direccion, pr_serializado.as_bytes())?;
@@ -62,6 +100,8 @@ mod test {
             String::from("Descripcion"),
             true,
             String::from("Autor"),
+            String::from("Rama head"),
+            String::from("Rama base"),
             String::from("Fecha creacion"),
             String::from("Fecha modificacion"),
             Vec::new(),
