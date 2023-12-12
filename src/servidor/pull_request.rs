@@ -1,5 +1,5 @@
-use std::{fs::File, io::{Write, Read}};
-use crate::tipos_de_dato::objetos::commit::CommitObj;
+use std::path::PathBuf;
+use crate::{tipos_de_dato::objetos::commit::CommitObj, utils::io};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
@@ -36,19 +36,16 @@ impl PullRequest {
             commits,
         }
     }
-
-    pub fn guardar_pr(&self, direccion: &str) {
-        let mut archivo = File::create(direccion).unwrap();
-        let pr_serializado = serde_json::to_string(&self).unwrap();
-        archivo.write_all(pr_serializado.as_bytes()).unwrap();
+    pub fn guardar_pr(&self, direccion: PathBuf) -> Result<(), String> {
+        let pr_serializado = serde_json::to_string(&self).map_err(|e| e.to_string())?;
+        io::escribir_bytes(direccion, pr_serializado.as_bytes())?;
+        Ok(())
     }
 
-    pub fn cargar_pr(direccion: &str) -> PullRequest {
-        let mut archivo = File::open(direccion).unwrap();
-        let mut contenido = String::new();
-        archivo.read_to_string(&mut contenido).unwrap();
+    pub fn cargar_pr(direccion: &str) -> Result<PullRequest, String> {
+        let contenido = io::leer_a_string(direccion)?;
         let pr: PullRequest = serde_json::from_str(&contenido).unwrap();
-        pr
+        Ok(pr)
     } 
 }
 
@@ -71,8 +68,8 @@ mod test {
             String::from("Fecha modificacion"),
             Vec::new(),
         );
-        pr.guardar_pr("test_dir/test01.json");
-        let pr_cargado = PullRequest::cargar_pr("test_dir/test01.json");
+        pr.guardar_pr(PathBuf::from("test_dir/test01.json")).unwrap();
+        let pr_cargado = PullRequest::cargar_pr("test_dir/test01.json").unwrap( );
         assert_eq!(pr.numero, pr_cargado.numero);
         assert_eq!(pr.titulo, pr_cargado.titulo);
         assert_eq!(pr.descripcion, pr_cargado.descripcion);
