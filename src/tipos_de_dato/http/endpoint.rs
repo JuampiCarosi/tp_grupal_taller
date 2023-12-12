@@ -53,29 +53,6 @@ impl Endpoint {
     }
 }
 
-// fn obtener_pull_request(
-//     req: HttpRequest,
-//     params: HashMap<String, String>,
-//     logger: Arc<Logger>,
-// ) -> Result<HttpResponse, ErrorHttp> {
-//     let repo = params.get("repo").ok_or(ErrorHttp::InternalServerError(
-//         "No se encontro el parametro repo".to_string(),
-//     ))?;
-
-//     // ...
-
-//     Ok(HttpResponse::new(logger, EstadoHttp::Ok, None))
-// }
-
-// fn agregar_a_router(rutas: &mut Vec<Endpoint>) {
-//     let ruta_obtener_pr = Endpoint::new(
-//         Metodo::Get,
-//         "/repos/{repo}/pulls".to_string(),
-//         obtener_pull_request,
-//     );
-//     rutas.push(ruta_obtener_pr);
-// }
-
 #[cfg(test)]
 
 mod tests {

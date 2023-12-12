@@ -9,11 +9,12 @@ use crate::tipos_de_dato::{
 };
 
 pub fn agregar_a_router(rutas: &mut Vec<Endpoint>) {
-    rutas.push(Endpoint::new(
+    let endpoint = Endpoint::new(
         MetodoHttp::Post,
         "/repos/{repo}/pulls".to_string(),
         crear_pull_request,
-    ));
+    );
+    rutas.push(endpoint)
 }
 
 fn crear_pull_request(
