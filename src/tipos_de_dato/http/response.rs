@@ -1,6 +1,6 @@
 use std::{collections::HashMap, io::Write, net::TcpStream, sync::Arc};
 
-use super::estado::Estado;
+use super::{error::ErrorHttp, estado::EstadoHttp};
 use crate::tipos_de_dato::logger::Logger;
 
 pub struct Response {
@@ -13,7 +13,11 @@ pub struct Response {
 }
 
 impl Response {
-    pub fn new(logger: Arc<Logger>, estado: Estado, body: Option<&str>) -> Self {
+    pub fn from_error(logger: Arc<Logger>, error: ErrorHttp) -> Self {
+        Response::new(logger.clone(), error.obtener_estado(), None)
+    }
+
+    pub fn new(logger: Arc<Logger>, estado: EstadoHttp, body: Option<&str>) -> Self {
         let mut headers: HashMap<String, String> = HashMap::new();
         if let Some(body) = &body {
             headers.insert("Content-lenght".to_string(), body.len().to_string());
@@ -32,7 +36,7 @@ impl Response {
         }
     }
 
-    pub fn enviar(&self, stream: &mut TcpStream) -> Result<(), String> {
+    pub fn enviar(&self, stream: &mut TcpStream) -> Result<(), ErrorHttp> {
         let mut response = format!(
             "{version} {estado} {mensaje_estado}\r\n",
             version = self.version,
@@ -49,7 +53,9 @@ impl Response {
             response.push_str(body);
         }
 
-        stream.write_all(response.as_bytes()).unwrap();
+        stream.write_all(response.as_bytes()).map_err(|e| {
+            ErrorHttp::InternalServerError(format!("Error al enviar la respuesta: {}", e))
+        })?;
 
         Ok(())
     }

@@ -1,21 +1,24 @@
-use super::error::Http;
+use super::error::ErrorHttp;
 
 #[derive(Debug, PartialEq)]
-pub enum Metodo {
+pub enum MetodoHttp {
     Get,
     Post,
     Put,
     Patch,
 }
 
-impl Metodo {
-    pub fn from_string(metodo: &str) -> Result<Metodo, Http> {
+impl MetodoHttp {
+    pub fn from_string(metodo: &str) -> Result<MetodoHttp, ErrorHttp> {
         match metodo {
-            "GET" => Ok(Metodo::Get),
-            "POST" => Ok(Metodo::Post),
-            "PUT" => Ok(Metodo::Put),
-            "PATCH" => Ok(Metodo::Patch),
-            _ => Err(Http::BadRequest(format!("Metodo {} no soportado", metodo))),
+            "GET" => Ok(MetodoHttp::Get),
+            "POST" => Ok(MetodoHttp::Post),
+            "PUT" => Ok(MetodoHttp::Put),
+            "PATCH" => Ok(MetodoHttp::Patch),
+            _ => Err(ErrorHttp::BadRequest(format!(
+                "Metodo {} no soportado",
+                metodo
+            ))),
         }
     }
 }

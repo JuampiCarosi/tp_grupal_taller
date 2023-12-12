@@ -1,24 +1,26 @@
 use std::fmt::Display;
 
-pub enum Estado {
+pub enum EstadoHttp {
     Ok,
     NotFound,
     InternalServerError,
     BadRequest,
+    Created,
 }
 
-impl Estado {
+impl EstadoHttp {
     pub fn obtener_estado_y_mensaje(&self) -> (usize, String) {
         match self {
-            Estado::Ok => (200, "OK".to_string()),
-            Estado::NotFound => (404, "Not Found".to_string()),
-            Estado::InternalServerError => (500, "Internal Server Error".to_string()),
-            Estado::BadRequest => (400, "Bad Request".to_string()),
+            EstadoHttp::Ok => (200, "OK".to_string()),
+            EstadoHttp::NotFound => (404, "Not Found".to_string()),
+            EstadoHttp::InternalServerError => (500, "Internal Server Error".to_string()),
+            EstadoHttp::BadRequest => (400, "Bad Request".to_string()),
+            EstadoHttp::Created => (201, "Created".to_string()),
         }
     }
 }
 
-impl Display for Estado {
+impl Display for EstadoHttp {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let (estado, mensaje) = self.obtener_estado_y_mensaje();
         write!(f, "{} {}", estado, mensaje)

@@ -6,9 +6,14 @@ use std::{
 };
 
 use crate::tipos_de_dato::{
-    http::{estado::Estado, request::Request, response::Response},
+    http::{
+        endpoint::Endpoint, error::ErrorHttp, estado::EstadoHttp, request::Request,
+        response::Response,
+    },
     logger::Logger,
 };
+
+use super::rutas::crear_pull_request;
 
 pub struct ServidorHttp {
     /// Canal para escuchar las conexiones de clientes
@@ -37,16 +42,34 @@ impl ServidorHttp {
         })
     }
 
+    fn agregar_endpoints(endpoints: &mut Vec<Endpoint>) {
+        crear_pull_request::agregar_a_router(endpoints);
+    }
+
     /// Pone en funcionamiento el servidor, spawneando un thread por cada cliente que se conecte al mismo.
     /// Procesa el pedido del cliente y responde en consecuencia.
     pub fn iniciar_servidor(&mut self) -> Result<(), String> {
+        let mut endpoints = Vec::new();
+        Self::agregar_endpoints(&mut endpoints);
+        let endpoints = Arc::new(endpoints);
+
         while let Ok((mut stream, socket)) = self.listener.accept() {
             self.logger
                 .log(&format!("Se conecto un cliente por http desde {}", socket));
 
             let logge_clone = self.logger.clone();
+            let endpoints = endpoints.clone();
             let handle = thread::spawn(move || -> Result<(), String> {
-                Self::manejar_cliente(logge_clone.clone(), &mut stream)?;
+                let response = Self::manejar_cliente(logge_clone.clone(), &mut stream, &endpoints);
+                match response {
+                    Ok(response) => response.enviar(&mut stream).map_err(|e| e.to_string()),
+                    Err(error_http) => {
+                        logge_clone.log(&format!("Error procesando request: {:?}", error_http));
+                        let response = Response::from_error(logge_clone.clone(), error_http);
+                        response.enviar(&mut stream).map_err(|e| e.to_string())
+                    }
+                }?;
+
                 Ok(())
             });
             self.threads.push(Some(handle));
@@ -55,30 +78,33 @@ impl ServidorHttp {
         Ok(())
     }
 
-    fn manejar_cliente(logger: Arc<Logger>, stream: &mut TcpStream) -> Result<(), String> {
-        let mut stream_clone = stream.try_clone().map_err(|e| e.to_string())?;
+    fn manejar_cliente(
+        logger: Arc<Logger>,
+        stream: &mut TcpStream,
+        endpoints: &Vec<Endpoint>,
+    ) -> Result<Response, ErrorHttp> {
+        let mut stream_clone = stream
+            .try_clone()
+            .map_err(|e| ErrorHttp::InternalServerError(e.to_string()))?;
+
         let mut reader = BufReader::new(&mut stream_clone);
+        let request = Request::from(&mut reader, logger.clone())?;
 
-        let raw_request = Request::from(&mut reader, logger.clone());
-
-        let request = match raw_request {
-            Ok(request) => request,
-            Err(error_http) => {
-                logger.log(&format!("Error procesando request: {:?}", error_http));
-                let response = Response::new(
-                    logger.clone(),
-                    error_http.obtener_estado(),
-                    Some(&error_http.obtener_mensaje()),
-                );
-                response.enviar(stream)?;
-                return Ok(());
+        for endpoint in endpoints {
+            if endpoint.metodo != request.metodo {
+                continue;
             }
-        };
 
-        logger.log(&format!("Request recibida: {:?}", request));
-        let response = Response::new(logger.clone(), Estado::Ok, Some("Respuesta"));
-        response.enviar(stream)?;
+            let params = match endpoint.extraer_parametros_de_ruta(&request.ruta) {
+                Some(params) => params,
+                None => continue,
+            };
 
-        Ok(())
+            let response = (endpoint.handler)(request, params, logger.clone())?;
+            return Ok(response);
+        }
+
+        let response = Response::new(logger, EstadoHttp::NotFound, None);
+        Ok(response)
     }
 }

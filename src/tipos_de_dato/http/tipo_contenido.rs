@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use super::error::Http;
+use super::error::ErrorHttp;
 
 pub enum TipoContenido {
     Json,
@@ -14,11 +14,14 @@ impl TipoContenido {
         }
     }
 
-    pub fn parsear_contenido(&self, contenido: &[u8]) -> Result<HashMap<String, String>, Http> {
+    pub fn parsear_contenido(
+        &self,
+        contenido: &[u8],
+    ) -> Result<HashMap<String, String>, ErrorHttp> {
         match self {
             Self::Json => {
                 let comando: HashMap<String, String> = serde_json::from_slice(contenido)
-                    .map_err(|e| Http::BadRequest(e.to_string()))?;
+                    .map_err(|e| ErrorHttp::BadRequest(e.to_string()))?;
                 Ok(comando)
             }
         }

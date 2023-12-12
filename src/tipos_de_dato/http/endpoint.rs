@@ -2,19 +2,19 @@ use std::{collections::HashMap, sync::Arc};
 
 use crate::tipos_de_dato::logger::Logger;
 
-use super::{error::Http, metodos::Metodo, request::Request, response::Response};
+use super::{error::ErrorHttp, metodos::MetodoHttp, request::Request, response::Response};
 
 pub struct Endpoint {
-    pub metodo: Metodo,
+    pub metodo: MetodoHttp,
     pub path: String,
-    pub handler: fn(Request, HashMap<String, String>, Arc<Logger>) -> Result<Response, Http>,
+    pub handler: fn(Request, HashMap<String, String>, Arc<Logger>) -> Result<Response, ErrorHttp>,
 }
 
 impl Endpoint {
     pub fn new(
-        metodo: Metodo,
+        metodo: MetodoHttp,
         path: String,
-        handler: fn(Request, HashMap<String, String>, Arc<Logger>) -> Result<Response, Http>,
+        handler: fn(Request, HashMap<String, String>, Arc<Logger>) -> Result<Response, ErrorHttp>,
     ) -> Self {
         Self {
             metodo,
@@ -28,6 +28,10 @@ impl Endpoint {
         let ruta_request = ruta.split("/").collect::<Vec<&str>>();
 
         if ruta_endpoint.len() != ruta_request.len() {
+            return None;
+        }
+
+        if ruta_request.last().unwrap().is_empty() {
             return None;
         }
 
@@ -63,20 +67,6 @@ impl Endpoint {
 //     Ok(HttpResponse::new(logger, EstadoHttp::Ok, None))
 // }
 
-// fn crear_pull_request(
-//     req: Request,
-//     params: HashMap<String, String>,
-//     logger: Arc<Logger>,
-// ) -> Result<Response, Error> {
-//     let repo = params.get("repo").ok_or(Error::InternalServerError(
-//         "No se encontro el parametro repo".to_string(),
-//     ))?;
-
-//     // ...
-
-//     Ok(Response::new(logger, Estado::Ok, None))
-// }
-
 // fn agregar_a_router(rutas: &mut Vec<Endpoint>) {
 //     let ruta_obtener_pr = Endpoint::new(
 //         Metodo::Get,
@@ -86,45 +76,69 @@ impl Endpoint {
 //     rutas.push(ruta_obtener_pr);
 // }
 
-// pub fn main() {
-//     let logger = Arc::new(Logger::new(PathBuf::from("server_logger.txt")).unwrap());
-//     let req = Request {
-//         metodo: Metodo::Get,
-//         ruta: "/repos/messi/pulls".to_string(),
-//         version: "HTTP/1.1".to_string(),
-//         headers: HashMap::new(),
-//         body: None,
-//         logger: logger.clone(),
-//     };
+#[cfg(test)]
 
-// let ruta_crear_pr = Endpoint::new(
-//     Metodo::Post,
-//     "/repos/{repo}/pulls".to_string(),
-//     crear_pull_request,
-// );
+mod tests {
+    use crate::tipos_de_dato::http::estado::EstadoHttp;
 
-// let rutas = vec![ruta_obtener_pr, ruta_crear_pr];
-// let mut endpoints: Vec<Endpoint> = Vec::new();
+    use super::*;
 
-// let endpoint = endpoints
-//     .iter()
-//     .find(|endpoint| endpoint.metodo == req.metodo && ruta.es_ruta_correcta(&req.ruta));
+    #[test]
+    fn extraer_parametros_de_ruta_con_un_param() {
+        let endpoint = Endpoint::new(
+            MetodoHttp::Get,
+            "/repos/{repo}/pulls".to_string(),
+            |_, _, _| {
+                Ok(Response::new(
+                    Arc::new(Logger::new(std::path::PathBuf::from("server_logger.txt")).unwrap()),
+                    EstadoHttp::Ok,
+                    None,
+                ))
+            },
+        );
 
-//     for endpoint in endpoints {
-//         if endpoint.metodo != req.metodo {
-//             continue;
-//         }
+        let params = endpoint
+            .extraer_parametros_de_ruta("/repos/messi/pulls")
+            .unwrap();
+        assert_eq!(params.get("repo").unwrap(), "messi");
 
-//         let params = match endpoint.extraer_parametros_de_ruta(&req.ruta) {
-//             Some(params) => params,
-//             None => continue,
-//         };
+        let params = endpoint.extraer_parametros_de_ruta("/repos/messi/");
+        assert!(params.is_none());
 
-//         let response = (endpoint.handler)(req, params, logger.clone()).unwrap();
-//         response.enviar(stream).unwrap();
-//         return;
-//     }
+        let params = endpoint.extraer_parametros_de_ruta("/typo/messi/pulls");
+        assert!(params.is_none());
 
-//     let response = Response::new(logger, Estado::NotFound, None);
-//     response.enviar(stream).unwrap();
-// }
+        let params = endpoint.extraer_parametros_de_ruta("/repos/messi/typo");
+        assert!(params.is_none());
+    }
+
+    #[test]
+    fn extraer_parametros_de_ruta_con_dos_param() {
+        let endpoint = Endpoint::new(
+            MetodoHttp::Get,
+            "/repos/{repo}/pulls/{pull}".to_string(),
+            |_, _, _| {
+                Ok(Response::new(
+                    Arc::new(Logger::new(std::path::PathBuf::from("server_logger.txt")).unwrap()),
+                    EstadoHttp::Ok,
+                    None,
+                ))
+            },
+        );
+
+        let params = endpoint
+            .extraer_parametros_de_ruta("/repos/messi/pulls/1")
+            .unwrap();
+        assert_eq!(params.get("repo").unwrap(), "messi");
+        assert_eq!(params.get("pull").unwrap(), "1");
+
+        let params = endpoint.extraer_parametros_de_ruta("/repos/messi/pulls/");
+        assert!(params.is_none());
+
+        let params = endpoint.extraer_parametros_de_ruta("/typo/messi/pulls/1");
+        assert!(params.is_none());
+
+        let params = endpoint.extraer_parametros_de_ruta("/repos/messi/typo/1");
+        assert!(params.is_none());
+    }
+}
