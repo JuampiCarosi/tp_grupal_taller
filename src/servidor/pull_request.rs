@@ -104,6 +104,8 @@ impl PullRequest {
         let ultimo_commit = CommitObj::from_hash(hash_ultimo_commit, logger.clone())?;
         let commits = Log::obtener_listas_de_commits(ultimo_commit, logger.clone())?;
         let hash_commit_base = merge.obtener_commit_base_entre_dos_branches()?;
+        utils::io::cambiar_directorio(format!("../../"))?;
+
         let commits_spliteados: Vec<&[CommitObj]> = commits
             .split(|commit| commit.hash == hash_commit_base)
             .collect();
