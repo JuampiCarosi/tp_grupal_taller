@@ -1,9 +1,13 @@
-use crate::{tipos_de_dato::objetos::commit::CommitObj, utils::io};
+use crate::{
+    tipos_de_dato::{http::error::ErrorHttp, objetos::commit::CommitObj},
+    utils::{self, io},
+};
+
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, path::PathBuf};
 
-const TITULO_PORDEFECTO: String = "".to_string();
-const DESCRIPCION_PORDEFECTO: String = "".to_string();
+const TITULO_PORDEFECTO: &str = "";
+const DESCRIPCION_PORDEFECTO: &str = "";
 
 #[derive(Serialize, Deserialize)]
 pub struct PullRequest {
@@ -46,31 +50,117 @@ impl PullRequest {
         }
     }
 
-    pub fn crear_pr(repositorio: &str, parametros: HashMap<String, String>) -> PullRequest {
-        let titulo = Self::obtener_titulo(parametros);
-        let descripcion = Self::obtener_descripcion(parametros);
-        let (autor, rama_head) = Self::obtener_autor_y_rama_head(repositorio, parametros);
-    }
-
-    fn obtener_autor_y_rama_head(
+    pub fn crear_pr(
         repositorio: &str,
         parametros: HashMap<String, String>,
-    ) -> (String, String) {
-        let direccion = PathBuf::from(format!("./srv/{repositorio}/refs/heads"));
+    ) -> Result<PullRequest, ErrorHttp> {
+        let numero = Self::obtener_numero(repositorio)?;
+        let titulo = Self::obtener_titulo(&parametros);
+        let descripcion = Self::obtener_descripcion(&parametros);
+        let (autor, rama_head) = Self::obtener_autor_y_rama_head(repositorio, &parametros)?;
+        let rama_base = Self::obtener_rama_base(repositorio, &parametros)?;
+        let fecha_actual = Self::obtener_fecha_actual();
+        let commits = Self::obtener_commits(repositorio, &rama_head, &rama_head);
+
+        Ok(PullRequest {
+            numero,
+            titulo,
+            descripcion,
+            esta_abierto: true,
+            autor,
+            rama_head,
+            rama_base,
+            fecha_creacion: fecha_actual.clone(),
+            fecha_modificacion: fecha_actual,
+            commits,
+        })
     }
-    fn obtener_titulo(parametros: HashMap<String, String>) -> String {
-        if let Some(titulo) = parametros.get("title") {
-            titulo.to_owned()
+
+    fn obtener_fecha_actual() -> String {
+        //despues completar
+        "fecha actual".to_string()
+    }
+    fn obtener_commits(repositorio: &str, rama_base: &str, rama_head: &str) -> Vec<CommitObj> {
+        //por ahora no hace nada, no se me ocurre de forma facil como sacar el historial de
+        //commits
+
+        Vec::new()
+    }
+
+    fn obtener_numero(repositorio: &str) -> Result<u64, ErrorHttp> {
+        let direccion = PathBuf::from(format!("./srv/{repositorio}/pulls"));
+        if !direccion.exists() {
+            return Ok(0);
+        }
+
+        utils::io::cantidad_entradas_dir(&direccion).map_err(|_| {
+            ErrorHttp::InternalServerError("Fallo al obtener el numero del pr".to_string())
+        })
+    }
+
+    fn obtener_rama_base(
+        repositorio: &str,
+        parametros: &HashMap<String, String>,
+    ) -> Result<String, ErrorHttp> {
+        if let Some(rama_base) = parametros.get("base") {
+            Self::validar_rama(rama_base, repositorio)?;
+            Ok(rama_base.to_string())
         } else {
-            TITULO_PORDEFECTO
+            Err(ErrorHttp::ValidationFailed(
+                "Falta el parametro 'head' en el body de la request".to_string(),
+            ))
+        }
+    }
+    fn obtener_autor_y_rama_head(
+        repositorio: &str,
+        parametros: &HashMap<String, String>,
+    ) -> Result<(String, String), ErrorHttp> {
+        if let Some(autor_y_rama_head) = parametros.get("head") {
+            let (autor, rama_head) = Self::separara_autor_y_rama_head(autor_y_rama_head)?;
+            Self::validar_rama(&rama_head, repositorio)?;
+            Ok((autor, rama_head))
+        } else {
+            Err(ErrorHttp::ValidationFailed(
+                "Falta el parametro 'head' en el body de la request".to_string(),
+            ))
+        }
+    }
+    //Comprueba si existe en
+    fn validar_rama(rama: &str, repositorio: &str) -> Result<(), ErrorHttp> {
+        let direccion = PathBuf::from(format!("./srv/{repositorio}/refs/heads/{rama}"));
+
+        if !direccion.exists() {
+            Err(ErrorHttp::ValidationFailed(format!(
+                "No existe la rama {rama} en el repositorio {repositorio}"
+            )))
+        } else {
+            Ok(())
         }
     }
 
-    fn obtener_descripcion(parametros: HashMap<String, String>) -> String {
+    fn separara_autor_y_rama_head(autor_y_rama_head: &str) -> Result<(String, String), ErrorHttp> {
+        if let Some((autor, rama_head)) = autor_y_rama_head.split_once(':') {
+            Ok((autor.to_string(), rama_head.to_string()))
+        } else {
+            Err(ErrorHttp::ValidationFailed(format!(
+                "Fallo al separar el autor de rama head: {autor_y_rama_head}"
+            )))
+        }
+    }
+
+    fn obtener_titulo(parametros: &HashMap<String, String>) -> String {
+        if let Some(titulo) = parametros.get("title") {
+            titulo.to_owned()
+        } else {
+            TITULO_PORDEFECTO.to_owned()
+        }
+    }
+
+    fn obtener_descripcion(parametros: &HashMap<String, String>) -> String {
         if let Some(descripcion) = parametros.get("body") {
             descripcion.to_owned()
         } else {
-            DESCRIPCION_PORDEFECTO
+            DESCRIPCION_PORDEFECTO.to_owned()
         }
     }
 
