@@ -1,11 +1,14 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
-use crate::tipos_de_dato::{
-    http::{
-        endpoint::Endpoint, error::ErrorHttp, estado::EstadoHttp, metodos::MetodoHttp,
-        request::Request, response::Response,
+use crate::{
+    servidor::pull_request::PullRequest,
+    tipos_de_dato::{
+        http::{
+            endpoint::Endpoint, error::ErrorHttp, estado::EstadoHttp, metodos::MetodoHttp,
+            request::Request, response::Response,
+        },
+        logger::Logger,
     },
-    logger::Logger,
 };
 
 pub fn agregar_a_router(rutas: &mut Vec<Endpoint>) {
@@ -25,11 +28,21 @@ fn crear_pull_request(
     let repo = params.get("repo").ok_or_else(|| {
         ErrorHttp::InternalServerError("No se ha encontrado el nombre del repositorio".to_string())
     })?;
-    let body = request.body.clone().unwrap();
 
-    let mut pull_request = HashMap::new();
+    let body = match request.body {
+        Some(body) => body,
+        None => {
+            return Err(ErrorHttp::BadRequest(
+                "No se ha encontrado el cuerpo de la solicitud".to_string(),
+            ))
+        }
+    };
 
-    pull_request.insert("repo".to_string(), repo.to_string());
+    let pull_request = PullRequest::crear_pr(repo, body, logger.clone())?;
+    pull_request.guardar_pr(PathBuf::from(format!(
+        "srv/{repo}/pulls/{numero}",
+        numero = pull_request.numero
+    )))?;
 
     let body_response = serde_json::to_string(&pull_request).map_err(|e| {
         ErrorHttp::InternalServerError(format!("No se ha podido serializar el pull request: {}", e))

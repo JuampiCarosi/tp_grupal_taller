@@ -57,14 +57,14 @@ impl PullRequest {
 
     pub fn crear_pr(
         repositorio: &str,
-        parametros: HashMap<String, String>,
+        body: HashMap<String, String>,
         logger: Arc<Logger>,
     ) -> Result<PullRequest, ErrorHttp> {
         let numero = Self::obtener_numero(repositorio)?;
-        let titulo = Self::obtener_titulo(&parametros);
-        let descripcion = Self::obtener_descripcion(&parametros);
-        let (autor, rama_head) = Self::obtener_autor_y_rama_head(repositorio, &parametros)?;
-        let rama_base = Self::obtener_rama_base(repositorio, &parametros)?;
+        let titulo = Self::obtener_titulo(&body);
+        let descripcion = Self::obtener_descripcion(&body);
+        let (autor, rama_head) = Self::obtener_autor_y_rama_head(repositorio, &body)?;
+        let rama_base = Self::obtener_rama_base(repositorio, &body)?;
         let fecha_actual = Self::obtener_fecha_actual();
         let commits = Self::obtener_commits(repositorio, &rama_head, &rama_head, logger)
             .map_err(|e| ErrorHttp::InternalServerError(e))?;
@@ -129,9 +129,9 @@ impl PullRequest {
 
     fn obtener_rama_base(
         repositorio: &str,
-        parametros: &HashMap<String, String>,
+        body: &HashMap<String, String>,
     ) -> Result<String, ErrorHttp> {
-        if let Some(rama_base) = parametros.get("base") {
+        if let Some(rama_base) = body.get("base") {
             Self::validar_rama(rama_base, repositorio)?;
             Ok(rama_base.to_string())
         } else {
@@ -142,9 +142,9 @@ impl PullRequest {
     }
     fn obtener_autor_y_rama_head(
         repositorio: &str,
-        parametros: &HashMap<String, String>,
+        body: &HashMap<String, String>,
     ) -> Result<(String, String), ErrorHttp> {
-        if let Some(autor_y_rama_head) = parametros.get("head") {
+        if let Some(autor_y_rama_head) = body.get("head") {
             let (autor, rama_head) = Self::separara_autor_y_rama_head(autor_y_rama_head)?;
             Self::validar_rama(&rama_head, repositorio)?;
             Ok((autor, rama_head))
@@ -177,25 +177,35 @@ impl PullRequest {
         }
     }
 
-    fn obtener_titulo(parametros: &HashMap<String, String>) -> String {
-        if let Some(titulo) = parametros.get("title") {
+    fn obtener_titulo(body: &HashMap<String, String>) -> String {
+        if let Some(titulo) = body.get("title") {
             titulo.to_owned()
         } else {
             TITULO_PORDEFECTO.to_owned()
         }
     }
 
-    fn obtener_descripcion(parametros: &HashMap<String, String>) -> String {
-        if let Some(descripcion) = parametros.get("body") {
+    fn obtener_descripcion(body: &HashMap<String, String>) -> String {
+        if let Some(descripcion) = body.get("body") {
             descripcion.to_owned()
         } else {
             DESCRIPCION_PORDEFECTO.to_owned()
         }
     }
 
-    pub fn guardar_pr(&self, direccion: PathBuf) -> Result<(), String> {
-        let pr_serializado = serde_json::to_string(&self).map_err(|e| e.to_string())?;
-        io::escribir_bytes(direccion, pr_serializado.as_bytes())?;
+    pub fn guardar_pr(&self, direccion: PathBuf) -> Result<(), ErrorHttp> {
+        let pr_serializado = serde_json::to_string(&self).map_err(|e| {
+            ErrorHttp::InternalServerError(format!(
+                "No se ha podido serializar el pull request: {}",
+                e
+            ))
+        })?;
+        io::escribir_bytes(direccion, pr_serializado.as_bytes()).map_err(|e| {
+            ErrorHttp::InternalServerError(format!(
+                "No se ha podido guardar el pull request: {}",
+                e
+            ))
+        })?;
         Ok(())
     }
 
