@@ -114,7 +114,11 @@ impl Request {
         reader: &mut BufReader<&mut TcpStream>,
     ) -> Result<(String, String, String), ErrorHttp> {
         let mut line = String::new();
-        reader.read_line(&mut line).unwrap();
+        reader.read_line(&mut line).map_err(|e| {
+            ErrorHttp::InternalServerError(format!(
+                "No se pudo leer las lineas envias al server {e}"
+            ))
+        })?;
 
         let splitted = line.split_whitespace().collect::<Vec<&str>>();
         if splitted.len() != 3 {
