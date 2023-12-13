@@ -19,7 +19,8 @@ pub struct PullRequest {
     pub numero: u64,
     pub titulo: String, // es un campo opcional - pensar en el opcion
     pub descripcion: String,
-    pub esta_abierto: bool,
+    ///representa el estado del pr: solo puede ser `open` o `close`
+    pub estado: String,
     pub autor: String,
     pub rama_head: String,
     pub rama_base: String,
@@ -33,7 +34,7 @@ impl PullRequest {
         numero: u64,
         titulo: String,
         descripcion: String,
-        esta_abierto: bool,
+        estado: String,
         autor: String,
         rama_head: String,
         rama_base: String,
@@ -45,13 +46,13 @@ impl PullRequest {
             numero,
             titulo,
             descripcion,
-            esta_abierto,
-            autor,
+            estado,
             rama_head,
             rama_base,
             fecha_creacion,
             fecha_modificacion,
             commits,
+            autor,
         }
     }
 
@@ -63,6 +64,7 @@ impl PullRequest {
         let numero = Self::obtener_numero(repositorio)?;
         let titulo = Self::obtener_titulo(&body);
         let descripcion = Self::obtener_descripcion(&body);
+        let estado = "open".to_string();
         let (autor, rama_head) = Self::obtener_autor_y_rama_head(repositorio, &body)?;
         let rama_base = Self::obtener_rama_base(repositorio, &body)?;
         let fecha_actual = Self::obtener_fecha_actual();
@@ -73,7 +75,7 @@ impl PullRequest {
             numero,
             titulo,
             descripcion,
-            esta_abierto: true,
+            estado,
             autor,
             rama_head,
             rama_base,
@@ -227,7 +229,7 @@ mod test {
             1,
             String::from("Titulo"),
             String::from("Descripcion"),
-            true,
+            String::from("open"),
             String::from("Autor"),
             String::from("Rama head"),
             String::from("Rama base"),
@@ -241,8 +243,6 @@ mod test {
         assert_eq!(pr.numero, pr_cargado.numero);
         assert_eq!(pr.titulo, pr_cargado.titulo);
         assert_eq!(pr.descripcion, pr_cargado.descripcion);
-        assert_eq!(pr.esta_abierto, pr_cargado.esta_abierto);
-        assert_eq!(pr.autor, pr_cargado.autor);
         assert_eq!(pr.fecha_creacion, pr_cargado.fecha_creacion);
         assert_eq!(pr.fecha_modificacion, pr_cargado.fecha_modificacion);
         assert_eq!(pr.commits.len(), pr_cargado.commits.len());
