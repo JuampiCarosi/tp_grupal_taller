@@ -13,7 +13,7 @@ use crate::tipos_de_dato::{
     logger::Logger,
 };
 
-use super::rutas::{crear_pull_request, listar_pull_request};
+use super::rutas::{crear_pull_request, listar_pull_request, obtener_pull_request};
 
 pub struct ServidorHttp {
     /// Canal para escuchar las conexiones de clientes
@@ -45,6 +45,7 @@ impl ServidorHttp {
     fn agregar_endpoints(endpoints: &mut Vec<Endpoint>) {
         crear_pull_request::agregar_a_router(endpoints);
         listar_pull_request::agregar_a_router(endpoints);
+        obtener_pull_request::agregar_a_router(endpoints);
     }
 
     /// Pone en funcionamiento el servidor, spawneando un thread por cada cliente que se conecte al mismo.
