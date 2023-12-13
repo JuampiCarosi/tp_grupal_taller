@@ -25,14 +25,33 @@ fn obtener_pull_request(
     params: HashMap<String, String>,
     logger: Arc<Logger>,
 ) -> Result<Response, ErrorHttp> {
-    let dir_pull_request = obtener_dir_pull_request(&params)?;
-    let pull_request = PullRequest::cargar_pr(&dir_pull_request)?;
+    let pull_request = obtener_pull_request_de_params(params)?;
+
     let body_response = serde_json::to_string(&pull_request).map_err(|e| {
         ErrorHttp::InternalServerError(format!("No se ha podido serializar el pull request: {}", e))
     })?;
 
     let response = Response::new(logger, EstadoHttp::Created, Some(&body_response));
     Ok(response)
+}
+
+///Obtiene el objeto pull request desde los parametros. Para ello en los paramtros tiene que estar
+/// el `repo` y `pull_number`
+///
+/// ## Argumuntos
+/// - params: los parametros obtenidos de la ruta del pedido. Debe contener `repo` y `pull_number`   
+///
+/// ## Reusultado
+/// - el pull request guardado en el directorio `./srv/{repo}/pulls/{pull_number}`
+///
+/// ## Errores
+/// - Si no existe la carpeta `./srv/{repo}/pulls/{pull_number}`
+pub fn obtener_pull_request_de_params(
+    params: HashMap<String, String>,
+) -> Result<PullRequest, ErrorHttp> {
+    let dir_pull_request = obtener_dir_pull_request(&params)?;
+    let pull_request = PullRequest::cargar_pr(&dir_pull_request)?;
+    Ok(pull_request)
 }
 
 fn obtener_dir_pull_request(params: &HashMap<String, String>) -> Result<PathBuf, ErrorHttp> {
