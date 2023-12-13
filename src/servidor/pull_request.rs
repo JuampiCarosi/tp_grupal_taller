@@ -220,7 +220,7 @@ impl PullRequest {
         }
     }
 
-    pub fn guardar_pr(&self, direccion: PathBuf) -> Result<(), ErrorHttp> {
+    pub fn guardar_pr(&self, direccion: &PathBuf) -> Result<(), ErrorHttp> {
         let pr_serializado = serde_json::to_string(&self).map_err(|e| {
             ErrorHttp::InternalServerError(format!(
                 "No se ha podido serializar el pull request: {}",
@@ -236,10 +236,17 @@ impl PullRequest {
         Ok(())
     }
 
-    pub fn cargar_pr(direccion: &str) -> Result<PullRequest, String> {
-        let contenido = io::leer_a_string(direccion)?;
-        let pr: PullRequest = serde_json::from_str(&contenido).unwrap();
-        Ok(pr)
+    pub fn cargar_pr(direccion: &PathBuf) -> Result<PullRequest, ErrorHttp> {
+        let contenido_pull_request = utils::io::leer_a_string(direccion).map_err(|e| {
+            ErrorHttp::InternalServerError(format!("Fallo al leer la entrada {:?}: {e}", direccion))
+        })?;
+        let pull_request =
+            serde_json::from_str::<PullRequest>(&contenido_pull_request).map_err(|e| {
+                ErrorHttp::InternalServerError(format!(
+                    "Fallo al serealizar {contenido_pull_request}: {e}"
+                ))
+            })?;
+        Ok(pull_request)
     }
 }
 
@@ -262,9 +269,9 @@ mod test {
             String::from("Fecha modificacion"),
             Vec::new(),
         );
-        pr.guardar_pr(PathBuf::from("test_dir/test01.json"))
-            .unwrap();
-        let pr_cargado = PullRequest::cargar_pr("test_dir/test01.json").unwrap();
+        let direccion = PathBuf::from("test_dir/test01.json");
+        pr.guardar_pr(&direccion).unwrap();
+        let pr_cargado = PullRequest::cargar_pr(&direccion).unwrap();
         assert_eq!(pr.numero, pr_cargado.numero);
         assert_eq!(pr.titulo, pr_cargado.titulo);
         assert_eq!(pr.descripcion, pr_cargado.descripcion);
@@ -288,9 +295,9 @@ mod test {
             String::from("Fecha modificacion"),
             Vec::new(),
         );
-        pr.guardar_pr(PathBuf::from("test_dir/test02.json"))
-            .unwrap();
-        let pr_cargado = PullRequest::cargar_pr("test_dir/test02.json").unwrap();
+        let direccion = PathBuf::from("test_dir/test02.json");
+        pr.guardar_pr(&direccion).unwrap();
+        let pr_cargado = PullRequest::cargar_pr(&direccion).unwrap();
         assert_eq!(pr.numero, pr_cargado.numero);
         assert_eq!(pr.titulo, pr_cargado.titulo);
         assert_eq!(pr.descripcion, pr_cargado.descripcion);

@@ -137,6 +137,7 @@ impl ServidorGir {
                     gir_io::crear_directorio(path.join("refs/"))?;
                     gir_io::crear_directorio(path.join("refs/heads/"))?;
                     gir_io::crear_directorio(path.join("refs/tags/"))?;
+                    gir_io::crear_directorio(path.join("pulls"))?;
                 }
                 comunicacion.enviar(&utils::strings::obtener_linea_con_largo_hex(VERSION))?;
                 refs = server_utils::obtener_refs_de(path)?;
