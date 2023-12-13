@@ -61,6 +61,8 @@ impl PullRequest {
         body: HashMap<String, String>,
         logger: Arc<Logger>,
     ) -> Result<PullRequest, ErrorHttp> {
+        Self::verificar_repositorio(repositorio)?;
+
         let numero = Self::obtener_numero(repositorio)?;
         let titulo = Self::obtener_titulo(&body);
         let descripcion = Self::obtener_descripcion(&body);
@@ -90,6 +92,17 @@ impl PullRequest {
         "fecha actual".to_string()
     }
 
+    fn verificar_repositorio(repositorio: &str) -> Result<(), ErrorHttp> {
+        let dir_repositorio = PathBuf::from(format!("./srv/{repositorio}"));
+
+        if dir_repositorio.exists() {
+            Ok(())
+        } else {
+            Err(ErrorHttp::ValidationFailed(format!(
+                "No existe en el server el repositorio {repositorio}"
+            )))
+        }
+    }
     fn obtener_commits(
         repositorio: &str,
         rama_base: &str,
