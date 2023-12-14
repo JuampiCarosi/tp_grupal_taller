@@ -24,13 +24,18 @@ fn obtener_commits_pull_request(
     params: HashMap<String, String>,
     logger: Arc<Logger>,
 ) -> Result<Response, ErrorHttp> {
-    let pull_request_commits = obtener_pull_request_de_params(params)?.commits;
+    let repo = params.get("repo").ok_or_else(|| {
+        ErrorHttp::InternalServerError("No se ha encontrado el nombre del repositorio".to_string())
+    })?;
+    let pull_request = obtener_pull_request_de_params(&params)?;
+    let commits = pull_request.obtener_commits(repo, logger.clone())?;
 
-    if pull_request_commits.is_empty() {
-        //evaluar que hacer en este caso
+    if commits.is_empty() {
+        let response = Response::new(logger, EstadoHttp::NoContent, None);
+        return Ok(response);
     }
 
-    let body_response = serde_json::to_string(&pull_request_commits).map_err(|e| {
+    let body_response = serde_json::to_string(&pull_request).map_err(|e| {
         ErrorHttp::InternalServerError(format!("No se ha podido serializar el pull request: {}", e))
     })?;
 

@@ -38,6 +38,15 @@ pub fn obtener_hash_commit_asociado_rama_actual() -> Result<String, String> {
     Ok(hash_commit)
 }
 
+pub fn obtener_hash_commit_asociado_rama(rama: &str) -> Result<String, String> {
+    if !existe_la_rama(&rama) {
+        return Err(format!("No existe la rama {}", rama));
+    }
+    let ruta = format!("./.gir/refs/heads/{}", rama);
+    let hash_commit = io::leer_a_string(path::Path::new(&ruta)).unwrap_or_else(|_| "".to_string());
+    Ok(hash_commit)
+}
+
 ///Comprueba si dir es el la ruta a una carpeta que corresponde a una rama o a una
 /// tag.
 ///

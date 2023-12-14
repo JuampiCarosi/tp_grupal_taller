@@ -6,25 +6,25 @@ use super::{error::ErrorHttp, metodos::MetodoHttp, request::Request, response::R
 
 pub struct Endpoint {
     pub metodo: MetodoHttp,
-    pub path: String,
+    pub patron: String,
     pub handler: fn(Request, HashMap<String, String>, Arc<Logger>) -> Result<Response, ErrorHttp>,
 }
 
 impl Endpoint {
     pub fn new(
         metodo: MetodoHttp,
-        path: String,
+        patron: String,
         handler: fn(Request, HashMap<String, String>, Arc<Logger>) -> Result<Response, ErrorHttp>,
     ) -> Self {
         Self {
             metodo,
-            path,
+            patron: patron,
             handler,
         }
     }
 
-    pub fn extraer_parametros_de_ruta(&self, ruta: &str) -> Option<HashMap<String, String>> {
-        let ruta_endpoint = self.path.split("/").collect::<Vec<&str>>();
+    pub fn matchea_con_patron(&self, ruta: &str) -> Option<HashMap<String, String>> {
+        let ruta_endpoint = self.patron.split("/").collect::<Vec<&str>>();
         let ruta_request = ruta.split("/").collect::<Vec<&str>>();
 
         if ruta_endpoint.len() != ruta_request.len() {
@@ -78,18 +78,16 @@ mod tests {
             },
         );
 
-        let params = endpoint
-            .extraer_parametros_de_ruta("/repos/messi/pulls")
-            .unwrap();
+        let params = endpoint.matchea_con_patron("/repos/messi/pulls").unwrap();
         assert_eq!(params.get("repo").unwrap(), "messi");
 
-        let params = endpoint.extraer_parametros_de_ruta("/repos/messi/");
+        let params = endpoint.matchea_con_patron("/repos/messi/");
         assert!(params.is_none());
 
-        let params = endpoint.extraer_parametros_de_ruta("/typo/messi/pulls");
+        let params = endpoint.matchea_con_patron("/typo/messi/pulls");
         assert!(params.is_none());
 
-        let params = endpoint.extraer_parametros_de_ruta("/repos/messi/typo");
+        let params = endpoint.matchea_con_patron("/repos/messi/typo");
         assert!(params.is_none());
     }
 
@@ -107,19 +105,17 @@ mod tests {
             },
         );
 
-        let params = endpoint
-            .extraer_parametros_de_ruta("/repos/messi/pulls/1")
-            .unwrap();
+        let params = endpoint.matchea_con_patron("/repos/messi/pulls/1").unwrap();
         assert_eq!(params.get("repo").unwrap(), "messi");
         assert_eq!(params.get("pull").unwrap(), "1");
 
-        let params = endpoint.extraer_parametros_de_ruta("/repos/messi/pulls/");
+        let params = endpoint.matchea_con_patron("/repos/messi/pulls/");
         assert!(params.is_none());
 
-        let params = endpoint.extraer_parametros_de_ruta("/typo/messi/pulls/1");
+        let params = endpoint.matchea_con_patron("/typo/messi/pulls/1");
         assert!(params.is_none());
 
-        let params = endpoint.extraer_parametros_de_ruta("/repos/messi/typo/1");
+        let params = endpoint.matchea_con_patron("/repos/messi/typo/1");
         assert!(params.is_none());
     }
 }

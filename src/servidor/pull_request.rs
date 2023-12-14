@@ -9,10 +9,7 @@ use crate::{
 };
 
 use chrono::{DateTime, Utc};
-
-use gtk::gdk::SELECTION_CLIPBOARD;
 use serde::{Deserialize, Serialize};
-
 use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
 const OPEN: &str = "open";
@@ -38,7 +35,6 @@ pub struct PullRequest {
     pub rama_base: String,
     pub fecha_creacion: String,
     pub fecha_modificacion: String,
-    pub commits: Vec<CommitObj>,
 }
 
 fn default_valor_opcional() -> Option<String> {
@@ -56,7 +52,6 @@ impl PullRequest {
         rama_base: String,
         fecha_creacion: String,
         fecha_modificacion: String,
-        commits: Vec<CommitObj>,
     ) -> Self {
         Self {
             numero,
@@ -67,7 +62,6 @@ impl PullRequest {
             rama_base,
             fecha_creacion,
             fecha_modificacion,
-            commits,
             autor,
         }
     }
@@ -75,7 +69,6 @@ impl PullRequest {
     pub fn crear_pr(
         repositorio: &str,
         body: HashMap<String, String>,
-        logger: Arc<Logger>,
     ) -> Result<PullRequest, ErrorHttp> {
         Self::verificar_repositorio(repositorio)?;
 
@@ -86,8 +79,6 @@ impl PullRequest {
         let (autor, rama_head) = Self::obtener_autor_y_rama_head(repositorio, &body)?;
         let rama_base = Self::obtener_rama_base(repositorio, &body)?;
         let fecha_actual = Self::obtener_fecha_actual();
-        let commits = Self::obtener_commits(repositorio, &rama_base, &rama_head, logger)
-            .map_err(|e| ErrorHttp::InternalServerError(e))?;
 
         Ok(PullRequest {
             numero,
@@ -99,7 +90,6 @@ impl PullRequest {
             rama_base,
             fecha_creacion: fecha_actual.clone(),
             fecha_modificacion: fecha_actual,
-            commits,
         })
     }
 
@@ -209,19 +199,31 @@ impl PullRequest {
             )))
         }
     }
-    fn obtener_commits(
+
+    pub fn obtener_commits(
+        &self,
         repositorio: &str,
-        rama_base: &str,
-        rama_head: &str,
+        logger: Arc<Logger>,
+    ) -> Result<Vec<CommitObj>, ErrorHttp> {
+        self._obtener_commits(repositorio, logger)
+            .map_err(|e| ErrorHttp::InternalServerError(e))
+    }
+
+    fn _obtener_commits(
+        &self,
+        repositorio: &str,
         logger: Arc<Logger>,
     ) -> Result<Vec<CommitObj>, String> {
         utils::io::cambiar_directorio(format!("srv/{repositorio}"))?;
 
-        let hash_ultimo_commit = Merge::obtener_commit_de_branch(rama_head)?;
+        let hash_ultimo_commit = Merge::obtener_commit_de_branch(&self.rama_head)?;
         let ultimo_commit = CommitObj::from_hash(hash_ultimo_commit, logger.clone())?;
         let commits = Log::obtener_listas_de_commits(ultimo_commit, logger.clone())?;
-        let hash_commit_base =
-            Merge::obtener_commit_base_entre_dos_branches(rama_base, rama_head, logger.clone())?;
+        let hash_commit_base = Merge::obtener_commit_base_entre_dos_branches(
+            &self.rama_base,
+            &self.rama_head,
+            logger.clone(),
+        )?;
         utils::io::cambiar_directorio(format!("../../"))?;
 
         let commits_spliteados: Vec<&[CommitObj]> = commits
@@ -254,10 +256,11 @@ impl PullRequest {
             Ok(rama_base.to_string())
         } else {
             Err(ErrorHttp::ValidationFailed(
-                "Falta el parametro 'head' en el body de la request".to_string(),
+                "Falta el parametro 'base' en el body de la request".to_string(),
             ))
         }
     }
+
     fn obtener_autor_y_rama_head(
         repositorio: &str,
         body: &HashMap<String, String>,
@@ -272,6 +275,7 @@ impl PullRequest {
             ))
         }
     }
+
     //Comprueba si existe en
     fn validar_rama(rama: &str, repositorio: &str) -> Result<(), ErrorHttp> {
         let direccion = PathBuf::from(format!("./srv/{repositorio}/.gir/refs/heads/{rama}"));
@@ -333,7 +337,7 @@ impl PullRequest {
         let pull_request =
             serde_json::from_str::<PullRequest>(&contenido_pull_request).map_err(|e| {
                 ErrorHttp::InternalServerError(format!(
-                    "Fallo al serealizar {contenido_pull_request}: {e}"
+                    "Fallo al serializar el contenido {contenido_pull_request}: {e}"
                 ))
             })?;
         Ok(pull_request)
@@ -342,6 +346,7 @@ impl PullRequest {
 
 #[cfg(test)]
 mod test {
+
     use super::*;
     use std::fs::remove_file;
 
@@ -357,9 +362,8 @@ mod test {
             String::from("Rama base"),
             String::from("Fecha creacion"),
             String::from("Fecha modificacion"),
-            Vec::new(),
         );
-        let direccion = PathBuf::from("test_dir/test01.json");
+        let direccion = PathBuf::from("tmp/test01.json");
         pr.guardar_pr(&direccion).unwrap();
         let pr_cargado = PullRequest::cargar_pr(&direccion).unwrap();
         assert_eq!(pr.numero, pr_cargado.numero);
@@ -367,8 +371,7 @@ mod test {
         assert_eq!(pr.descripcion, pr_cargado.descripcion);
         assert_eq!(pr.fecha_creacion, pr_cargado.fecha_creacion);
         assert_eq!(pr.fecha_modificacion, pr_cargado.fecha_modificacion);
-        assert_eq!(pr.commits.len(), pr_cargado.commits.len());
-        remove_file("test_dir/test01.json").unwrap();
+        remove_file("tmp/test01.json").unwrap();
     }
 
     #[test]
@@ -383,7 +386,6 @@ mod test {
             String::from("Rama base"),
             String::from("Fecha creacion"),
             String::from("Fecha modificacion"),
-            Vec::new(),
         );
         let direccion = PathBuf::from("test_dir/test02.json");
         pr.guardar_pr(&direccion).unwrap();
@@ -393,7 +395,6 @@ mod test {
         assert_eq!(pr.descripcion, pr_cargado.descripcion);
         assert_eq!(pr.fecha_creacion, pr_cargado.fecha_creacion);
         assert_eq!(pr.fecha_modificacion, pr_cargado.fecha_modificacion);
-        assert_eq!(pr.commits.len(), pr_cargado.commits.len());
         remove_file("test_dir/test02.json").unwrap();
     }
 
@@ -409,7 +410,6 @@ mod test {
             String::from("Rama base"),
             String::from("Fecha creacion"),
             String::from("Fecha modificacion"),
-            Vec::new(),
         );
 
         let titulo_a_cambiar = "Si ves esto funciona".to_string();

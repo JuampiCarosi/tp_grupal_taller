@@ -29,7 +29,8 @@ fn listar_pull_request(
     let lista_pull_request = obtener_pull_request_del_repositorio(params)?;
 
     if lista_pull_request.is_empty() {
-        //evaluar que hacer en este caso: error o o no mandar nada?
+        let response = Response::new(logger, EstadoHttp::NoContent, None);
+        return Ok(response);
     }
 
     let body_respuesta = serde_json::to_string(&lista_pull_request).map_err(|e| {
@@ -39,8 +40,8 @@ fn listar_pull_request(
         ))
     })?;
 
-    let respuesta = Response::new(logger, EstadoHttp::Ok, Some(&body_respuesta));
-    Ok(respuesta)
+    let response = Response::new(logger, EstadoHttp::Ok, Some(&body_respuesta));
+    Ok(response)
 }
 
 fn obtener_pull_request_del_repositorio(
