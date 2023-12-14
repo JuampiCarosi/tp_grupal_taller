@@ -11,6 +11,8 @@ use crate::{
     },
 };
 
+use super::crear_pull_request::responder_pull_request_en_formato_json;
+
 pub fn agregar_a_router(rutas: &mut Vec<Endpoint>) {
     let endpoint = Endpoint::new(
         MetodoHttp::Get,
@@ -27,12 +29,7 @@ fn obtener_pull_request(
 ) -> Result<Response, ErrorHttp> {
     let pull_request = obtener_pull_request_de_params(params)?;
 
-    let body_response = serde_json::to_string(&pull_request).map_err(|e| {
-        ErrorHttp::InternalServerError(format!("No se ha podido serializar el pull request: {}", e))
-    })?;
-
-    let response = Response::new(logger, EstadoHttp::Created, Some(&body_response));
-    Ok(response)
+    responder_pull_request_en_formato_json(pull_request, logger)
 }
 
 ///Obtiene el objeto pull request desde los parametros. Para ello en los paramtros tiene que estar

@@ -39,14 +39,29 @@ fn crear_pull_request(
     };
 
     let pull_request = PullRequest::crear_pr(repo, body, logger.clone())?;
+    guadar_pull_request_acorde_al_numero(&pull_request, &repo)?;
+
+    responder_pull_request_en_formato_json(pull_request, logger)
+}
+
+pub fn guadar_pull_request_acorde_al_numero(
+    pull_request: &PullRequest,
+    repo: &str,
+) -> Result<(), ErrorHttp> {
     pull_request.guardar_pr(&PathBuf::from(format!(
         "srv/{repo}/pulls/{numero}",
         numero = pull_request.numero
     )))?;
+    Ok(())
+}
 
-    let body_response = serde_json::to_string(&pull_request).map_err(|e| {
+pub fn responder_pull_request_en_formato_json(
+    pull_request: PullRequest,
+    logger: Arc<Logger>,
+) -> Result<Response, ErrorHttp> {
+    let body_respuesta = serde_json::to_string(&pull_request).map_err(|e| {
         ErrorHttp::InternalServerError(format!("No se ha podido serializar el pull request: {}", e))
     })?;
-    let response = Response::new(logger, EstadoHttp::Created, Some(&body_response));
-    Ok(response)
+    let respuesta = Response::new(logger, EstadoHttp::Created, Some(&body_respuesta));
+    Ok(respuesta)
 }

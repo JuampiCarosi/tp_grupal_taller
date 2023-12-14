@@ -9,10 +9,16 @@ use crate::{
 };
 
 use chrono::{DateTime, Utc};
-use serde::{de::value::Error, Deserialize, Serialize};
+
+use gtk::gdk::SELECTION_CLIPBOARD;
+use serde::{Deserialize, Serialize};
+
 use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
-#[derive(Serialize, Deserialize)]
+const OPEN: &str = "open";
+const CLOSE: &str = "close";
+
+#[derive(Serialize, Deserialize, Debug)]
 pub struct PullRequest {
     pub numero: u64,
     #[serde(
@@ -76,7 +82,7 @@ impl PullRequest {
         let numero = Self::obtener_numero(repositorio)?;
         let titulo = Self::obtener_titulo(&body);
         let descripcion = Self::obtener_descripcion(&body);
-        let estado = "open".to_string();
+        let estado = OPEN.to_string();
         let (autor, rama_head) = Self::obtener_autor_y_rama_head(repositorio, &body)?;
         let rama_base = Self::obtener_rama_base(repositorio, &body)?;
         let fecha_actual = Self::obtener_fecha_actual();
@@ -95,6 +101,96 @@ impl PullRequest {
             fecha_modificacion: fecha_actual,
             commits,
         })
+    }
+
+    pub fn actualizar(
+        &mut self,
+        body: HashMap<String, String>,
+        repositorio: &str,
+    ) -> Result<bool, ErrorHttp> {
+        if self.estado == CLOSE.to_string() {
+            return Ok(false);
+        }
+
+        let se_actualizo_titulo = self.actualizar_titulo(&body);
+        let se_actualizo_descripcion = self.actualizar_descripcion(&body);
+        let se_actulizo_estado = self.actulizar_estado(&body)?;
+        let se_actualiza_rama_base = self.actualizar_rama_base(&body, repositorio)?;
+
+        let se_actualizo_el_pull_request = se_actualiza_rama_base
+            || se_actualizo_descripcion
+            || se_actulizo_estado
+            || se_actualizo_titulo;
+
+        if se_actualizo_el_pull_request {
+            self.fecha_modificacion = Self::obtener_fecha_actual();
+        }
+
+        Ok(se_actualizo_el_pull_request)
+    }
+
+    fn actualizar_rama_base(
+        &mut self,
+        body: &HashMap<String, String>,
+        repositorio: &str,
+    ) -> Result<bool, ErrorHttp> {
+        if let Some(nueva_rama_base) = body.get("base") {
+            Self::validar_rama(nueva_rama_base, repositorio)?;
+            Self::verificar_rama_base_distinta_de_head(&self.rama_head, nueva_rama_base)?;
+
+            let se_actualizo_rama_base = self.rama_base != *nueva_rama_base;
+            self.rama_base = nueva_rama_base.to_owned();
+            Ok(se_actualizo_rama_base)
+        } else {
+            Ok(false)
+        }
+    }
+
+    fn verificar_rama_base_distinta_de_head(
+        rama_head: &str,
+        rama_base: &str,
+    ) -> Result<(), ErrorHttp> {
+        if *rama_base == *rama_head {
+            return Err(ErrorHttp::ValidationFailed(format!(
+                "Rama base ({rama_base}) y rama head ({rama_head}) no puede ser iguales"
+            )));
+        }
+
+        Ok(())
+    }
+
+    fn actulizar_estado(&mut self, body: &HashMap<String, String>) -> Result<bool, ErrorHttp> {
+        if let Some(estado) = body.get("status") {
+            if estado != OPEN && estado != CLOSE {
+                return Err(ErrorHttp::ValidationFailed(format!(
+                    "El status {estado} no coincide con ninguno de los posibles: `open` o `close`"
+                )));
+            }
+
+            let se_cambio_estado = self.estado != *estado;
+            self.estado = estado.to_owned();
+            Ok(se_cambio_estado)
+        } else {
+            Ok(false)
+        }
+    }
+
+    fn actualizar_descripcion(&mut self, body: &HashMap<String, String>) -> bool {
+        let descripcion_nueva = Self::obtener_descripcion(body);
+
+        let se_actualizo_descripcion = self.descripcion != descripcion_nueva;
+
+        self.descripcion = descripcion_nueva;
+        se_actualizo_descripcion
+    }
+
+    fn actualizar_titulo(&mut self, body: &HashMap<String, String>) -> bool {
+        let titulo_nuevo = Self::obtener_titulo(body);
+
+        let se_actualizo_titulo = self.titulo != titulo_nuevo;
+
+        self.titulo = titulo_nuevo;
+        se_actualizo_titulo
     }
 
     fn obtener_fecha_actual() -> String {
@@ -289,7 +385,7 @@ mod test {
             String::from("Fecha modificacion"),
             Vec::new(),
         );
-        let direccion = PathBuf::from("test_dir/test01.json");
+        let direccion = PathBuf::from("test_dir/test02.json");
         pr.guardar_pr(&direccion).unwrap();
         let pr_cargado = PullRequest::cargar_pr(&direccion).unwrap();
         assert_eq!(pr.numero, pr_cargado.numero);
@@ -298,6 +394,29 @@ mod test {
         assert_eq!(pr.fecha_creacion, pr_cargado.fecha_creacion);
         assert_eq!(pr.fecha_modificacion, pr_cargado.fecha_modificacion);
         assert_eq!(pr.commits.len(), pr_cargado.commits.len());
-        remove_file("test_dir/test01.json").unwrap();
+        remove_file("test_dir/test02.json").unwrap();
+    }
+
+    #[test]
+    fn test03_se_puede_actualizar_el_titulo() {
+        let mut pr = PullRequest::new(
+            1,
+            None,
+            None,
+            String::from("open"),
+            String::from("Autor"),
+            String::from("Rama head"),
+            String::from("Rama base"),
+            String::from("Fecha creacion"),
+            String::from("Fecha modificacion"),
+            Vec::new(),
+        );
+
+        let titulo_a_cambiar = "Si ves esto funciona".to_string();
+        let mut body = HashMap::new();
+        body.insert("title".to_string(), titulo_a_cambiar.clone());
+        pr.actualizar_titulo(&body);
+
+        assert_eq!(pr.titulo, Some(titulo_a_cambiar));
     }
 }
