@@ -28,7 +28,7 @@ pub struct PullRequest {
         default = "default_valor_opcional"
     )]
     pub descripcion: Option<String>,
-    ///representa el estado del pr: solo puede ser `open` o `close`
+    ///representa el estado del pr: solo puede ser `open` o `closed`
     pub estado: String,
     pub autor: String,
     pub rama_head: String,
