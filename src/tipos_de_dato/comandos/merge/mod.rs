@@ -8,7 +8,7 @@ use crate::{
         objeto::Objeto,
         region::{unificar_regiones, Region},
     },
-    utils::ramas,
+    utils::{index, ramas},
 };
 use std::{
     path::{self, Path, PathBuf},
@@ -43,6 +43,7 @@ pub struct Merge {
     pub logger: Arc<Logger>,
     pub branch_actual: String,
     pub branch_a_mergear: String,
+    pub abort: bool,
 }
 
 impl Merge {
@@ -50,6 +51,16 @@ impl Merge {
         if args.len() != 1 {
             return Err("Cantidad de argumentos invalida".to_string());
         }
+
+        if args[0] == "--abort" {
+            return Ok(Merge {
+                logger,
+                branch_actual: "".to_string(),
+                branch_a_mergear: "".to_string(),
+                abort: true,
+            });
+        }
+
         let branch_a_mergear = args.pop().unwrap();
         if !ramas::existe_la_rama(&branch_a_mergear)
             && !ramas::existe_la_rama_remota(&branch_a_mergear)
@@ -61,6 +72,7 @@ impl Merge {
             logger,
             branch_actual,
             branch_a_mergear,
+            abort: false,
         })
     }
 
@@ -600,6 +612,12 @@ impl Ejecutar for Merge {
         if Self::hay_merge_en_curso()? {
             return Err("Ya hay un merge en curso".to_string());
         }
+
+        if self.abort {
+            io::rm_directorio(".gir/MERGE_HEAD")?;
+            index::limpiar_archivo_index()?;
+        }
+
         let commit_actual = ramas::obtener_hash_commit_asociado_rama_actual()?;
         let commit_a_mergear = Self::obtener_commit_de_branch(&self.branch_a_mergear)?;
         let commit_base = Self::obtener_commit_base_entre_dos_branches(
