@@ -4,6 +4,7 @@ pub enum EstadoHttp {
     Ok,
     NotFound,
     NoContent,
+    MergeNotAllowed,
     InternalServerError,
     BadRequest,
     Created,
@@ -15,6 +16,7 @@ impl EstadoHttp {
         match self {
             EstadoHttp::Ok => (200, "OK".to_string()),
             EstadoHttp::NoContent => (204, "No Content".to_string()),
+            EstadoHttp::MergeNotAllowed => (205, "Merge Not Allowed".to_string()),
             EstadoHttp::NotFound => (404, "Not Found".to_string()),
             EstadoHttp::InternalServerError => (500, "Internal Server Error".to_string()),
             EstadoHttp::BadRequest => (400, "Bad Request".to_string()),
