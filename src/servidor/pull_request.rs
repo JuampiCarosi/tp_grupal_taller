@@ -8,6 +8,7 @@ use crate::{
     utils::{self, io},
 };
 
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
@@ -98,8 +99,8 @@ impl PullRequest {
     }
 
     fn obtener_fecha_actual() -> String {
-        //despues completar
-        "fecha actual".to_string()
+        let ahora: DateTime<Utc> = Utc::now();
+        ahora.to_rfc3339()
     }
 
     fn verificar_repositorio(repositorio: &str) -> Result<(), ErrorHttp> {
