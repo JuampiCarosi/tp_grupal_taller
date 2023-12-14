@@ -9,7 +9,7 @@ use crate::{
 };
 
 use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
+use serde::{de::value::Error, Deserialize, Serialize};
 use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
 #[derive(Serialize, Deserialize)]
@@ -80,9 +80,8 @@ impl PullRequest {
         let (autor, rama_head) = Self::obtener_autor_y_rama_head(repositorio, &body)?;
         let rama_base = Self::obtener_rama_base(repositorio, &body)?;
         let fecha_actual = Self::obtener_fecha_actual();
-        let commits = Self::obtener_commits(repositorio, &rama_base, &rama_head, logger);
-        // let commits = Self::obtener_commits(repositorio, &rama_head, &rama_head, logger)
-        //     .map_err(|e| ErrorHttp::InternalServerError(e))?;
+        let commits = Self::obtener_commits(repositorio, &rama_head, &rama_head, logger)
+            .map_err(|e| ErrorHttp::InternalServerError(e))?;
 
         Ok(PullRequest {
             numero,
@@ -119,29 +118,27 @@ impl PullRequest {
         rama_base: &str,
         rama_head: &str,
         logger: Arc<Logger>,
-    ) -> Vec<CommitObj> {
-        //utils::io::cambiar_directorio(format!("srv/{repositorio}"))?;
-        // let merge = Merge {
-        //     logger: logger.clone(),
-        //     branch_actual: rama_base.to_string(),
-        //     branch_a_mergear: rama_head.to_string(),
-        // };
-        // let hash_ultimo_commit = Merge::obtener_commit_de_branch(rama_head)?;
-        // let ultimo_commit = CommitObj::from_hash(hash_ultimo_commit, logger.clone())?;
-        // let commits = Log::obtener_listas_de_commits(ultimo_commit, logger.clone())?;
-        // let hash_commit_base = merge.obtener_commit_base_entre_dos_branches()?;
-        // utils::io::cambiar_directorio(format!("../../"))?;
+    ) -> Result<Vec<CommitObj>, String> {
+        utils::io::cambiar_directorio(format!("srv/{repositorio}"))?;
+        let merge = Merge {
+            logger: logger.clone(),
+            branch_actual: rama_base.to_string(),
+            branch_a_mergear: rama_head.to_string(),
+        };
+        let hash_ultimo_commit = Merge::obtener_commit_de_branch(rama_head)?;
+        let ultimo_commit = CommitObj::from_hash(hash_ultimo_commit, logger.clone())?;
+        let commits = Log::obtener_listas_de_commits(ultimo_commit, logger.clone())?;
+        let hash_commit_base = merge.obtener_commit_base_entre_dos_branches()?;
+        utils::io::cambiar_directorio(format!("../../"))?;
 
-        // let commits_spliteados: Vec<&[CommitObj]> = commits
-        //     .split(|commit| commit.hash == hash_commit_base)
-        //     .collect();
+        let commits_spliteados: Vec<&[CommitObj]> = commits
+            .split(|commit| commit.hash == hash_commit_base)
+            .collect();
 
-        // commits_spliteados
-        //     .get(0)
-        //     .ok_or("No se encontro el commit base".to_string())
-        //     .map(|commits| commits.to_vec())
-
-        Vec::new()
+        commits_spliteados
+            .get(0)
+            .ok_or("No se encontro el commit base".to_string())
+            .map(|commits| commits.to_vec())
     }
 
     fn obtener_numero(repositorio: &str) -> Result<u64, ErrorHttp> {
