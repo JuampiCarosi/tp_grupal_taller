@@ -54,7 +54,7 @@ pub fn obtener_pull_request_de_params(
     Ok(pull_request)
 }
 
-fn obtener_dir_pull_request(params: &HashMap<String, String>) -> Result<PathBuf, ErrorHttp> {
+pub fn obtener_dir_pull_request(params: &HashMap<String, String>) -> Result<PathBuf, ErrorHttp> {
     let repo = params.get("repo").ok_or_else(|| {
         ErrorHttp::InternalServerError("No se ha encontrado el nombre del repositorio".to_string())
     })?;
