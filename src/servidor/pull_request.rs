@@ -46,32 +46,24 @@ fn default_valor_opcional() -> Option<String> {
 }
 
 impl PullRequest {
-    pub fn new(
-        numero: u64,
-        titulo: Option<String>,
-        descripcion: Option<String>,
-        estado: String,
-        autor: String,
-        rama_head: String,
-        rama_base: String,
-        fecha_creacion: String,
-        fecha_modificacion: String,
-        commits: Vec<CommitObj>,
-    ) -> Self {
-        Self {
-            numero,
-            titulo,
-            descripcion,
-            estado,
-            rama_head,
-            rama_base,
-            fecha_creacion,
-            fecha_modificacion,
-            commits,
-            autor,
-        }
-    }
-
+    ///Crea un pull request apartir del body de la request.
+    ///
+    /// ## Argumentos
+    /// - repositorio: el repositorio para el cual se va a crear el pr.
+    ///                 Tiene que existir `./srv/{repositorio}`
+    /// -body: el cuerpo de la request recibida. El body tiene que contener
+    ///         los campos: `head` y `base`. Puede tener como opcionales:
+    ///         `title` y `body`.
+    ///
+    /// ## Resultado
+    /// - El pr creados con los campos obligatorios y opcionales. El numero del
+    ///     pr depende de la cantidad de prs que ya tenga el repostiorio. El estado
+    ///     inicial siempre es `open`     
+    ///
+    /// ## Errores
+    /// - Si falta algun campo obligatorio
+    /// - Si no exite repositorio
+    /// - Si no existe `rama_head`, `rama_base` en el repositorio
     pub fn crear_pr(
         repositorio: &str,
         body: HashMap<String, String>,
@@ -103,6 +95,58 @@ impl PullRequest {
         })
     }
 
+    ///Valida que el pr cumple todo los filtros recibidos en el body. Si no pasa alguno de
+    /// los filtros se devuelve false. Si pasa todos true   
+    ///
+    /// ## Argumetos
+    /// - body: el body de la request, desde donde se sacan los filtros
+    ///         a aplicar al pr. Los filtros que se aceptan son `state`,
+    ///         `head` y `base`
+    /// ## Resultado
+    /// - si pasa o no todo los filtros recibidos en el body
+    pub fn filtrar(&self, body: &HashMap<String, String>) -> bool {
+        let mut pasa_el_filtro_del_estado = true;
+        let mut pasa_el_filtro_de_rama_base = true;
+        let mut pasa_el_filtro_de_autor_y_rama_head = true;
+
+        //si esta el parametro `state`, valida que sea el mismo al del pr
+        if let Some(estado) = body.get("state") {
+            pasa_el_filtro_del_estado = self.estado == *estado;
+        }
+
+        //si esta el parametro `base`, valida que sea el mismo al del pr
+        if let Some(rama_base) = body.get("base") {
+            pasa_el_filtro_de_rama_base = self.rama_base == *rama_base;
+        }
+
+        //si esta el parametro `head`, valida que sea el mismo el autor y rama head
+        //al del pr
+        if let Some(usuario_y_rama_head) = body.get("head") {
+            let autor_y_rama_base_actual = format!("{}:{}", self.autor, self.rama_head);
+            pasa_el_filtro_de_autor_y_rama_head = autor_y_rama_base_actual == *usuario_y_rama_head;
+        }
+
+        pasa_el_filtro_de_rama_base
+            && pasa_el_filtro_del_estado
+            && pasa_el_filtro_de_autor_y_rama_head
+    }
+
+    ///Actualiza los campos de un pull request con los parametros del body recibido
+    /// Si el pr ya esta cerrado(`estado = "close"`) no se puede actualizar. Devuelve
+    /// si algun campo fue actualizado
+    ///
+    /// ## Argumentos
+    /// - body: el cuerpo del request recivido. Los campos a actualizar pueden ser:
+    ///     `state`, `title`, `body` o `base`. En caso de ser `base`, tiene que existir la
+    ///     rama base. En caso de ser `state`, tiene ser `"open"` o `"close"`.
+    /// - repositorio: el repositorio al cual pertenece el pr. Tiene que existir
+    ///
+    /// ## Resultado
+    /// - devuelve si se actualizo algun apartado
+    ///
+    /// ## Errores
+    /// - Si no existe la rama base de `base`
+    /// - Si `state` no es `"open"` o `"close"`    
     pub fn actualizar(
         &mut self,
         body: HashMap<String, String>,
@@ -114,7 +158,7 @@ impl PullRequest {
 
         let se_actualizo_titulo = self.actualizar_titulo(&body);
         let se_actualizo_descripcion = self.actualizar_descripcion(&body);
-        let se_actulizo_estado = self.actulizar_estado(&body)?;
+        let se_actulizo_estado = self.actualizar_estado(&body)?;
         let se_actualiza_rama_base = self.actualizar_rama_base(&body, repositorio)?;
 
         let se_actualizo_el_pull_request = se_actualiza_rama_base
@@ -159,17 +203,18 @@ impl PullRequest {
         Ok(())
     }
 
-    fn actulizar_estado(&mut self, body: &HashMap<String, String>) -> Result<bool, ErrorHttp> {
-        if let Some(estado) = body.get("status") {
-            if estado != OPEN && estado != CLOSE {
-                return Err(ErrorHttp::ValidationFailed(format!(
-                    "El status {estado} no coincide con ninguno de los posibles: `open` o `close`"
-                )));
+    fn actualizar_estado(&mut self, body: &HashMap<String, String>) -> Result<bool, ErrorHttp> {
+        if let Some(estado) = body.get("state") {
+            //verifico que el estado solo pueda ser de los posibles
+            if estado == OPEN || estado == CLOSE {
+                let se_cambio_estado = self.estado != *estado;
+                self.estado = estado.to_owned();
+                return Ok(se_cambio_estado);
             }
 
-            let se_cambio_estado = self.estado != *estado;
-            self.estado = estado.to_owned();
-            Ok(se_cambio_estado)
+            Err(ErrorHttp::ValidationFailed(format!(
+                "El status {estado} no coincide con ninguno de los posibles: `open` o `close`"
+            )))
         } else {
             Ok(false)
         }
@@ -258,6 +303,7 @@ impl PullRequest {
             ))
         }
     }
+
     fn obtener_autor_y_rama_head(
         repositorio: &str,
         body: &HashMap<String, String>,
@@ -342,23 +388,37 @@ impl PullRequest {
 
 #[cfg(test)]
 mod test {
+    use crate::tipos_de_dato::http::estado;
+
     use super::*;
     use std::fs::remove_file;
 
     #[test]
     fn test01_guardar_pr() {
-        let pr = PullRequest::new(
-            1,
-            Option::Some(String::from("Titulazo")),
-            Option::Some(String::from("Descripcion")),
-            String::from("open"),
-            String::from("Autor"),
-            String::from("Rama head"),
-            String::from("Rama base"),
-            String::from("Fecha creacion"),
-            String::from("Fecha modificacion"),
-            Vec::new(),
-        );
+        let pr = {
+            let numero = 1;
+            let titulo = Option::Some(String::from("Titulazo"));
+            let descripcion = Option::Some(String::from("Descripcion"));
+            let estado = String::from("open");
+            let autor = String::from("Autor");
+            let rama_head = String::from("Rama head");
+            let rama_base = String::from("Rama base");
+            let fecha_creacion = String::from("Fecha creacion");
+            let fecha_modificacion = String::from("Fecha modificacion");
+            let commits = Vec::new();
+            PullRequest {
+                numero,
+                titulo,
+                descripcion,
+                estado,
+                rama_head,
+                rama_base,
+                fecha_creacion,
+                fecha_modificacion,
+                commits,
+                autor,
+            }
+        };
         let direccion = PathBuf::from("test_dir/test01.json");
         pr.guardar_pr(&direccion).unwrap();
         let pr_cargado = PullRequest::cargar_pr(&direccion).unwrap();
@@ -373,18 +433,30 @@ mod test {
 
     #[test]
     fn test02_se_puede_guardar_y_cargar_un_pr_con_un_campo_que_no_se_seriliza() {
-        let pr = PullRequest::new(
-            1,
-            None,
-            None,
-            String::from("open"),
-            String::from("Autor"),
-            String::from("Rama head"),
-            String::from("Rama base"),
-            String::from("Fecha creacion"),
-            String::from("Fecha modificacion"),
-            Vec::new(),
-        );
+        let pr = {
+            let numero = 1;
+            let titulo = None;
+            let descripcion = None;
+            let estado = String::from("open");
+            let autor = String::from("Autor");
+            let rama_head = String::from("Rama head");
+            let rama_base = String::from("Rama base");
+            let fecha_creacion = String::from("Fecha creacion");
+            let fecha_modificacion = String::from("Fecha modificacion");
+            let commits = Vec::new();
+            PullRequest {
+                numero,
+                titulo,
+                descripcion,
+                estado,
+                rama_head,
+                rama_base,
+                fecha_creacion,
+                fecha_modificacion,
+                commits,
+                autor,
+            }
+        };
         let direccion = PathBuf::from("test_dir/test02.json");
         pr.guardar_pr(&direccion).unwrap();
         let pr_cargado = PullRequest::cargar_pr(&direccion).unwrap();
@@ -399,18 +471,30 @@ mod test {
 
     #[test]
     fn test03_se_puede_actualizar_el_titulo() {
-        let mut pr = PullRequest::new(
-            1,
-            None,
-            None,
-            String::from("open"),
-            String::from("Autor"),
-            String::from("Rama head"),
-            String::from("Rama base"),
-            String::from("Fecha creacion"),
-            String::from("Fecha modificacion"),
-            Vec::new(),
-        );
+        let mut pr = {
+            let numero = 1;
+            let titulo = None;
+            let descripcion = None;
+            let estado = String::from("open");
+            let autor = String::from("Autor");
+            let rama_head = String::from("Rama head");
+            let rama_base = String::from("Rama base");
+            let fecha_creacion = String::from("Fecha creacion");
+            let fecha_modificacion = String::from("Fecha modificacion");
+            let commits = Vec::new();
+            PullRequest {
+                numero,
+                titulo,
+                descripcion,
+                estado,
+                rama_head,
+                rama_base,
+                fecha_creacion,
+                fecha_modificacion,
+                commits,
+                autor,
+            }
+        };
 
         let titulo_a_cambiar = "Si ves esto funciona".to_string();
         let mut body = HashMap::new();
@@ -418,5 +502,552 @@ mod test {
         pr.actualizar_titulo(&body);
 
         assert_eq!(pr.titulo, Some(titulo_a_cambiar));
+    }
+
+    #[test]
+    fn test04_se_puede_actualizar_la_descripcion() {
+        let mut pr = {
+            let numero = 1;
+            let titulo = None;
+            let descripcion = Some(String::from("Muahahah"));
+            let estado = String::from("open");
+            let autor = String::from("Autor");
+            let rama_head = String::from("Rama head");
+            let rama_base = String::from("Rama base");
+            let fecha_creacion = String::from("Fecha creacion");
+            let fecha_modificacion = String::from("Fecha modificacion");
+            let commits = Vec::new();
+            PullRequest {
+                numero,
+                titulo,
+                descripcion,
+                estado,
+                rama_head,
+                rama_base,
+                fecha_creacion,
+                fecha_modificacion,
+                commits,
+                autor,
+            }
+        };
+
+        let descripcion_a_actualizar = "Si ves esto funciona".to_string();
+        let mut body = HashMap::new();
+        body.insert("body".to_string(), descripcion_a_actualizar.clone());
+        pr.actualizar_descripcion(&body);
+
+        assert_eq!(pr.descripcion, Some(descripcion_a_actualizar));
+    }
+
+    #[test]
+    fn test05_se_puede_actualizar_el_estado() {
+        let mut pr = {
+            let numero = 1;
+            let titulo = None;
+            let descripcion = None;
+            let estado = String::from("open");
+            let autor = String::from("Autor");
+            let rama_head = String::from("Rama head");
+            let rama_base = String::from("Rama base");
+            let fecha_creacion = String::from("Fecha creacion");
+            let fecha_modificacion = String::from("Fecha modificacion");
+            let commits = Vec::new();
+            PullRequest {
+                numero,
+                titulo,
+                descripcion,
+                estado,
+                rama_head,
+                rama_base,
+                fecha_creacion,
+                fecha_modificacion,
+                commits,
+                autor,
+            }
+        };
+
+        let estado_actulizar = "close".to_string();
+        let mut body = HashMap::new();
+        body.insert("state".to_string(), estado_actulizar.clone());
+        pr.actualizar_estado(&body).unwrap();
+
+        assert_eq!(pr.estado, estado_actulizar);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test06_se_el_estado_no_puede_cambiar_a_algo_que_no_se_open_o_close() {
+        let mut pr = {
+            let numero = 1;
+            let titulo = None;
+            let descripcion = None;
+            let estado = String::from("open");
+            let autor = String::from("Autor");
+            let rama_head = String::from("Rama head");
+            let rama_base = String::from("Rama base");
+            let fecha_creacion = String::from("Fecha creacion");
+            let fecha_modificacion = String::from("Fecha modificacion");
+            let commits = Vec::new();
+            PullRequest {
+                numero,
+                titulo,
+                descripcion,
+                estado,
+                rama_head,
+                rama_base,
+                fecha_creacion,
+                fecha_modificacion,
+                commits,
+                autor,
+            }
+        };
+
+        let estado_actulizar = "modo diablo".to_string();
+        let mut body = HashMap::new();
+        body.insert("state".to_string(), estado_actulizar.clone());
+        pr.actualizar_estado(&body).unwrap();
+    }
+
+    #[test]
+    fn test07_se_puede_actualizar_la_rama_base() {
+        let mut pr = {
+            let numero = 1;
+            let titulo = None;
+            let descripcion = None;
+            let estado = String::from("open");
+            let autor = String::from("Autor");
+            let rama_head = String::from("trabajo");
+            let rama_base = String::from("master");
+            let fecha_creacion = String::from("Fecha creacion");
+            let fecha_modificacion = String::from("Fecha modificacion");
+            let commits = Vec::new();
+            PullRequest {
+                numero,
+                titulo,
+                descripcion,
+                estado,
+                rama_head,
+                rama_base,
+                fecha_creacion,
+                fecha_modificacion,
+                commits,
+                autor,
+            }
+        };
+
+        let rama_base_actualizar = "bombastic_fantastic".to_string();
+        let repositorio = "repo_test_07_pull_request";
+        let test_repo = format!("./srv/{repositorio}/.gir/refs/heads/{rama_base_actualizar}");
+
+        utils::io::crear_archivo(&test_repo).unwrap();
+        let mut body = HashMap::new();
+        body.insert("base".to_string(), rama_base_actualizar.clone());
+        pr.actualizar_rama_base(&body, repositorio).unwrap();
+
+        assert_eq!(pr.rama_base, rama_base_actualizar);
+
+        remove_file(test_repo).unwrap();
+    }
+
+    #[test]
+    #[should_panic]
+    fn test08_no_se_puede_actualizar_la_rama_base_con_una_rama_inexistente() {
+        let mut pr = {
+            let numero = 1;
+            let titulo = None;
+            let descripcion = None;
+            let estado = String::from("open");
+            let autor = String::from("Autor");
+            let rama_head = String::from("trabajo");
+            let rama_base = String::from("master");
+            let fecha_creacion = String::from("Fecha creacion");
+            let fecha_modificacion = String::from("Fecha modificacion");
+            let commits = Vec::new();
+            PullRequest {
+                numero,
+                titulo,
+                descripcion,
+                estado,
+                rama_head,
+                rama_base,
+                fecha_creacion,
+                fecha_modificacion,
+                commits,
+                autor,
+            }
+        };
+
+        let rama_base_actualizar = "bombastic_fantastic".to_string();
+        let repositorio = "repo_test_08_pull_request";
+        //creo el repositorio pero no la rama
+        let test_repo = format!("./srv/{repositorio}/.gir/refs/heads");
+        utils::io::crear_directorio(&test_repo).unwrap();
+
+        let mut body = HashMap::new();
+        body.insert("base".to_string(), rama_base_actualizar.clone());
+
+        pr.actualizar_rama_base(&body, repositorio).unwrap();
+        remove_file(test_repo).unwrap();
+    }
+
+    #[test]
+    #[should_panic]
+    fn test09_no_se_puede_actualizar_la_rama_base_a_la_rama_head() {
+        let mut pr = {
+            let numero = 1;
+            let titulo = None;
+            let descripcion = None;
+            let estado = String::from("open");
+            let autor = String::from("Autor");
+            let rama_head = String::from("trabajo");
+            let rama_base = String::from("master");
+            let fecha_creacion = String::from("Fecha creacion");
+            let fecha_modificacion = String::from("Fecha modificacion");
+            let commits = Vec::new();
+            PullRequest {
+                numero,
+                titulo,
+                descripcion,
+                estado,
+                rama_head,
+                rama_base,
+                fecha_creacion,
+                fecha_modificacion,
+                commits,
+                autor,
+            }
+        };
+
+        let rama_base_actualizar = "master".to_string();
+        let repositorio = "repo_test_09_pull_request";
+
+        let test_repo = format!("./srv/{repositorio}/.gir/refs/heads/{rama_base_actualizar}");
+        utils::io::crear_directorio(&test_repo).unwrap();
+
+        let mut body = HashMap::new();
+        body.insert("base".to_string(), rama_base_actualizar.clone());
+
+        pr.actualizar_rama_base(&body, repositorio).unwrap();
+        remove_file(test_repo).unwrap();
+    }
+
+    #[test]
+    fn test_10_se_puede_filtrar_el_pr_acorde_a_su_estado() {
+        let pr_1 = {
+            let numero = 1;
+            let titulo = None;
+            let descripcion = None;
+            let estado = String::from("open");
+            let autor = String::from("Autor");
+            let rama_head = String::from("trabajo");
+            let rama_base = String::from("master");
+            let fecha_creacion = String::from("Fecha creacion");
+            let fecha_modificacion = String::from("Fecha modificacion");
+            let commits = Vec::new();
+            PullRequest {
+                numero,
+                titulo,
+                descripcion,
+                estado,
+                rama_head,
+                rama_base,
+                fecha_creacion,
+                fecha_modificacion,
+                commits,
+                autor,
+            }
+        };
+
+        let pr_2 = {
+            let numero = 1;
+            let titulo = None;
+            let descripcion = None;
+            let estado = String::from("close");
+            let autor = String::from("Autor");
+            let rama_head = String::from("trabajo");
+            let rama_base = String::from("master");
+            let fecha_creacion = String::from("Fecha creacion");
+            let fecha_modificacion = String::from("Fecha modificacion");
+            let commits = Vec::new();
+            PullRequest {
+                numero,
+                titulo,
+                descripcion,
+                estado,
+                rama_head,
+                rama_base,
+                fecha_creacion,
+                fecha_modificacion,
+                commits,
+                autor,
+            }
+        };
+
+        let mut body = HashMap::new();
+        body.insert("state".to_string(), "close".to_string());
+
+        assert!(!pr_1.filtrar(&body));
+        assert!(pr_2.filtrar(&body));
+
+        body.insert("state".to_string(), "open".to_string());
+
+        assert!(pr_1.filtrar(&body));
+        assert!(!pr_2.filtrar(&body));
+    }
+
+    #[test]
+    fn test_11_se_puede_filtrar_el_pr_acorde_a_su_rama_base() {
+        let pr_1 = {
+            let numero = 1;
+            let titulo = None;
+            let descripcion = None;
+            let estado = String::from("open");
+            let autor = String::from("Autor");
+            let rama_head = String::from("trabajo");
+            let rama_base = String::from("master");
+            let fecha_creacion = String::from("Fecha creacion");
+            let fecha_modificacion = String::from("Fecha modificacion");
+            let commits = Vec::new();
+            PullRequest {
+                numero,
+                titulo,
+                descripcion,
+                estado,
+                rama_head,
+                rama_base,
+                fecha_creacion,
+                fecha_modificacion,
+                commits,
+                autor,
+            }
+        };
+
+        let pr_2 = {
+            let numero = 1;
+            let titulo = None;
+            let descripcion = None;
+            let estado = String::from("close");
+            let autor = String::from("Autor");
+            let rama_head = String::from("trabajo");
+            let rama_base = String::from("Motomami");
+            let fecha_creacion = String::from("Fecha creacion");
+            let fecha_modificacion = String::from("Fecha modificacion");
+            let commits = Vec::new();
+            PullRequest {
+                numero,
+                titulo,
+                descripcion,
+                estado,
+                rama_head,
+                rama_base,
+                fecha_creacion,
+                fecha_modificacion,
+                commits,
+                autor,
+            }
+        };
+
+        let mut body = HashMap::new();
+        body.insert("base".to_string(), "master".to_string());
+
+        assert!(pr_1.filtrar(&body));
+        assert!(!pr_2.filtrar(&body));
+    }
+
+    #[test]
+    fn test_12_se_puede_filtrar_el_pr_acorde_a_su_autor_y_rama_head() {
+        let pr_1 = {
+            let numero = 1;
+            let titulo = None;
+            let descripcion = None;
+            let estado = String::from("open");
+            let autor = String::from("siro");
+            let rama_head = String::from("trabajo");
+            let rama_base = String::from("master");
+            let fecha_creacion = String::from("Fecha creacion");
+            let fecha_modificacion = String::from("Fecha modificacion");
+            let commits = Vec::new();
+            PullRequest {
+                numero,
+                titulo,
+                descripcion,
+                estado,
+                rama_head,
+                rama_base,
+                fecha_creacion,
+                fecha_modificacion,
+                commits,
+                autor,
+            }
+        };
+
+        let pr_2 = {
+            let numero = 1;
+            let titulo = None;
+            let descripcion = None;
+            let estado = String::from("close");
+            let autor = String::from("siro");
+            let rama_head = String::from("server");
+            let rama_base = String::from("master");
+            let fecha_creacion = String::from("Fecha creacion");
+            let fecha_modificacion = String::from("Fecha modificacion");
+            let commits = Vec::new();
+            PullRequest {
+                numero,
+                titulo,
+                descripcion,
+                estado,
+                rama_head,
+                rama_base,
+                fecha_creacion,
+                fecha_modificacion,
+                commits,
+                autor,
+            }
+        };
+
+        let pr_4 = {
+            let numero = 1;
+            let titulo = None;
+            let descripcion = None;
+            let estado = String::from("close");
+            let autor = String::from("Juapi");
+            let rama_head = String::from("trabajo");
+            let rama_base = String::from("master");
+            let fecha_creacion = String::from("Fecha creacion");
+            let fecha_modificacion = String::from("Fecha modificacion");
+            let commits = Vec::new();
+            PullRequest {
+                numero,
+                titulo,
+                descripcion,
+                estado,
+                rama_head,
+                rama_base,
+                fecha_creacion,
+                fecha_modificacion,
+                commits,
+                autor,
+            }
+        };
+
+        let pr_3 = {
+            let numero = 1;
+            let titulo = None;
+            let descripcion = None;
+            let estado = String::from("close");
+            let autor = String::from("Mateo");
+            let rama_head = String::from("GUI");
+            let rama_base = String::from("master");
+            let fecha_creacion = String::from("Fecha creacion");
+            let fecha_modificacion = String::from("Fecha modificacion");
+            let commits = Vec::new();
+            PullRequest {
+                numero,
+                titulo,
+                descripcion,
+                estado,
+                rama_head,
+                rama_base,
+                fecha_creacion,
+                fecha_modificacion,
+                commits,
+                autor,
+            }
+        };
+
+        let mut body = HashMap::new();
+        body.insert("head".to_string(), "siro:trabajo".to_string());
+
+        assert!(pr_1.filtrar(&body));
+        assert!(!pr_2.filtrar(&body));
+        assert!(!pr_3.filtrar(&body));
+        assert!(!pr_4.filtrar(&body));
+    }
+
+    #[test]
+    fn test_13_se_puede_filtrar_el_pr_con_varios_filtros() {
+        let pr_1 = {
+            let numero = 1;
+            let titulo = None;
+            let descripcion = None;
+            let estado = String::from("open");
+            let autor = String::from("siro");
+            let rama_head = String::from("trabajo");
+            let rama_base = String::from("master");
+            let fecha_creacion = String::from("Fecha creacion");
+            let fecha_modificacion = String::from("Fecha modificacion");
+            let commits = Vec::new();
+            PullRequest {
+                numero,
+                titulo,
+                descripcion,
+                estado,
+                rama_head,
+                rama_base,
+                fecha_creacion,
+                fecha_modificacion,
+                commits,
+                autor,
+            }
+        };
+
+        let pr_2 = {
+            let numero = 1;
+            let titulo = None;
+            let descripcion = None;
+            let estado = String::from("close");
+            let autor = String::from("siro");
+            let rama_head = String::from("server");
+            let rama_base = String::from("master");
+            let fecha_creacion = String::from("Fecha creacion");
+            let fecha_modificacion = String::from("Fecha modificacion");
+            let commits = Vec::new();
+            PullRequest {
+                numero,
+                titulo,
+                descripcion,
+                estado,
+                rama_head,
+                rama_base,
+                fecha_creacion,
+                fecha_modificacion,
+                commits,
+                autor,
+            }
+        };
+
+        let pr_3 = {
+            let numero = 1;
+            let titulo = None;
+            let descripcion = None;
+            let estado = String::from("close");
+            let autor = String::from("Juapi");
+            let rama_head = String::from("trabajo");
+            let rama_base = String::from("GUI");
+            let fecha_creacion = String::from("Fecha creacion");
+            let fecha_modificacion = String::from("Fecha modificacion");
+            let commits = Vec::new();
+            PullRequest {
+                numero,
+                titulo,
+                descripcion,
+                estado,
+                rama_head,
+                rama_base,
+                fecha_creacion,
+                fecha_modificacion,
+                commits,
+                autor,
+            }
+        };
+
+        let mut body = HashMap::new();
+        body.insert("state".to_string(), "open".to_string());
+        body.insert("base".to_string(), "master".to_string());
+
+        assert!(pr_1.filtrar(&body));
+        assert!(!pr_2.filtrar(&body));
+        assert!(!pr_3.filtrar(&body));
     }
 }

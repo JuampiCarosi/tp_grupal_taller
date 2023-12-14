@@ -1,7 +1,7 @@
 use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
 use crate::{
-    servidor::pull_request::PullRequest,
+    servidor::pull_request::{self, PullRequest},
     tipos_de_dato::{
         http::{
             endpoint::Endpoint, error::ErrorHttp, estado::EstadoHttp, metodos::MetodoHttp,
@@ -22,11 +22,13 @@ pub fn agregar_a_router(rutas: &mut Vec<Endpoint>) {
 }
 
 fn listar_pull_request(
-    _request: Request,
+    request: Request,
     params: HashMap<String, String>,
     logger: Arc<Logger>,
 ) -> Result<Response, ErrorHttp> {
-    let lista_pull_request = obtener_pull_request_del_repositorio(params)?;
+    let mut lista_pull_request = obtener_pull_request_del_repositorio(params)?;
+
+    lista_pull_request = filtrar_pull_requests(request, lista_pull_request);
 
     if lista_pull_request.is_empty() {
         //evaluar que hacer en este caso: error o o no mandar nada?
@@ -41,6 +43,27 @@ fn listar_pull_request(
 
     let respuesta = Response::new(logger, EstadoHttp::Ok, Some(&body_respuesta));
     Ok(respuesta)
+}
+
+fn filtrar_pull_requests(
+    request: Request,
+    lista_pull_request: Vec<PullRequest>,
+) -> Vec<PullRequest> {
+    let mut lista_filtrada_pull_request = Vec::new();
+
+    //si no hay body, no hay filtros
+    let body = match request.body {
+        Some(body) => body,
+        None => return lista_pull_request,
+    };
+
+    for pull_request in lista_pull_request {
+        if pull_request.filtrar(&body) {
+            lista_filtrada_pull_request.push(pull_request);
+        }
+    }
+
+    lista_filtrada_pull_request
 }
 
 fn obtener_pull_request_del_repositorio(
