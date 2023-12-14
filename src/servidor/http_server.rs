@@ -101,7 +101,7 @@ impl ServidorHttp {
                 continue;
             }
 
-            let params = match endpoint.extraer_parametros_de_ruta(&request.ruta) {
+            let params = match endpoint.matchea_con_patron(&request.ruta) {
                 Some(params) => params,
                 None => continue,
             };
