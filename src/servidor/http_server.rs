@@ -14,8 +14,8 @@ use crate::tipos_de_dato::{
 };
 
 use super::rutas::{
-    actualizar_pull_request, crear_pull_request, listar_pull_request, obtener_commits_pull_request,
-    obtener_pull_request,
+    actualizar_pull_request, crear_pull_request, listar_pull_request, mergear_pull_request,
+    obtener_commits_pull_request, obtener_pull_request,
 };
 
 pub struct ServidorHttp {
@@ -51,6 +51,7 @@ impl ServidorHttp {
         obtener_pull_request::agregar_a_router(endpoints);
         obtener_commits_pull_request::agregar_a_router(endpoints);
         actualizar_pull_request::agregar_a_router(endpoints);
+        mergear_pull_request::agregar_a_router(endpoints);
     }
 
     /// Pone en funcionamiento el servidor, spawneando un thread por cada cliente que se conecte al mismo.
@@ -101,7 +102,7 @@ impl ServidorHttp {
                 continue;
             }
 
-            let params = match endpoint.extraer_parametros_de_ruta(&request.ruta) {
+            let params = match endpoint.matchea_con_patron(&request.ruta) {
                 Some(params) => params,
                 None => continue,
             };

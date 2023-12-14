@@ -27,12 +27,12 @@ fn obtener_pull_request(
     params: HashMap<String, String>,
     logger: Arc<Logger>,
 ) -> Result<Response, ErrorHttp> {
-    let pull_request = obtener_pull_request_de_params(params)?;
+    let pull_request = obtener_pull_request_de_params(&params)?;
 
     responder_pull_request_en_formato_json(pull_request, logger)
 }
 
-///Obtiene el objeto pull request desde los parametros. Para ello en los paramtros tiene que estar
+///Obtiene el objeto pull request desde los parametros. Para ello en los parametros tiene que estar
 /// el `repo` y `pull_number`
 ///
 /// ## Argumuntos
@@ -44,19 +44,21 @@ fn obtener_pull_request(
 /// ## Errores
 /// - Si no existe la carpeta `./srv/{repo}/pulls/{pull_number}`
 pub fn obtener_pull_request_de_params(
-    params: HashMap<String, String>,
+    params: &HashMap<String, String>,
 ) -> Result<PullRequest, ErrorHttp> {
     let dir_pull_request = obtener_dir_pull_request(&params)?;
     let pull_request = PullRequest::cargar_pr(&dir_pull_request)?;
     Ok(pull_request)
 }
 
-fn obtener_dir_pull_request(params: &HashMap<String, String>) -> Result<PathBuf, ErrorHttp> {
+pub fn obtener_dir_pull_request(params: &HashMap<String, String>) -> Result<PathBuf, ErrorHttp> {
     let repo = params.get("repo").ok_or_else(|| {
         ErrorHttp::InternalServerError("No se ha encontrado el nombre del repositorio".to_string())
     })?;
     let pull_number = params.get("pull_number").ok_or_else(|| {
-        ErrorHttp::InternalServerError("No se ha encontrado el nombre del repositorio".to_string())
+        ErrorHttp::InternalServerError(
+            "No se ha encontrado el pull number del repositorio".to_string(),
+        )
     })?;
     let dir_pull_request = PathBuf::from(format!("./srv/{repo}/pulls/{pull_number}"));
 

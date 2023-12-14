@@ -163,3 +163,16 @@ pub fn limpiar_archivo_index() -> Result<(), String> {
     };
     Ok(())
 }
+
+pub fn hay_archivos_con_conflictos(logger: Arc<Logger>) -> bool {
+    let objetos_index = match leer_index(logger.clone()) {
+        Ok(objetos_index) => objetos_index,
+        Err(_) => return false,
+    };
+    for objeto_index in objetos_index {
+        if objeto_index.merge {
+            return true;
+        }
+    }
+    false
+}
