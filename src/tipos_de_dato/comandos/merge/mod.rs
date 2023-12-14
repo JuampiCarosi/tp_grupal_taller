@@ -253,7 +253,6 @@ impl Merge {
 
         for i in 0..posibles_conflictos.len() {
             let posible_conflicto = &posibles_conflictos[i];
-            println!("{:?}", posible_conflicto);
 
             let region = if Self::hay_conflicto(posible_conflicto) {
                 hubo_conflictos = true;
