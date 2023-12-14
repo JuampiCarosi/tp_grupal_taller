@@ -65,9 +65,8 @@ fn obtener_params_body(
 
     if let Some(merge_method) = body.get("merge_method") {
         match merge_method.as_str() {
-            "squash" => return Ok((true, Some("merge"))),
+            "squash" | "merge" => return Ok((true, Some("merge"))),
             "rebase" => return Ok((true, Some("rebase"))),
-            "merge" => return Ok((true, Some("merge"))),
             _ => return Ok((false, None)),
         }
     };
@@ -123,6 +122,31 @@ fn merge_ejecutado_con_fallos(logger: Arc<Logger>, error: String) -> Result<Resp
     }
 }
 
+fn mergear_pull_request_utilizando_merge(
+    pull_request: &mut PullRequest,
+    logger: Arc<Logger>,
+    dir_pull_request: &PathBuf,
+) -> Result<Response, ErrorHttp> {
+    let rama_base = pull_request.rama_base.clone();
+    let rama_head = pull_request.rama_head.clone();
+
+    let mut merge = Merge {
+        logger: logger.clone(),
+        branch_actual: rama_base.clone(),
+        branch_a_mergear: rama_head,
+        abort: false,
+    };
+
+    match merge.ejecutar() {
+        Ok(_) => merge_ejecutado_con_exito(&rama_base, pull_request, logger, &dir_pull_request),
+        Err(error) => merge_ejecutado_con_fallos(logger, error.to_string()),
+    }
+}
+
+fn mergear_pull_request_utilizando_rebase() -> Result<Response, ErrorHttp> {
+    unimplemented!()
+}
+
 fn mergear_pull_request(
     request: Request,
     params: HashMap<String, String>,
@@ -136,27 +160,20 @@ fn mergear_pull_request(
         return Ok(response);
     }
 
-    let (sha_correcto, merge_method) = obtener_params_body(request, &pull_request.rama_base)?;
+    let (es_posible_mergear, merge_method) = obtener_params_body(request, &pull_request.rama_base)?;
 
-    if !sha_correcto {
+    if !es_posible_mergear {
         let response = Response::new(logger, EstadoHttp::Conflict, None);
         return Ok(response);
     }
 
-    let rama_base = pull_request.rama_base.clone();
-    let rama_head = pull_request.rama_head.clone();
-
-    let mut merge = Merge {
-        logger: logger.clone(),
-        branch_actual: rama_base.clone(),
-        branch_a_mergear: rama_head,
-        abort: false,
-    };
-
-    match merge.ejecutar() {
-        Ok(_) => {
-            merge_ejecutado_con_exito(&rama_base, &mut pull_request, logger, &dir_pull_request)
+    match merge_method {
+        Some("merge") | Some("squash") => {
+            mergear_pull_request_utilizando_merge(&mut pull_request, logger, &dir_pull_request)
         }
-        Err(error) => merge_ejecutado_con_fallos(logger, error.to_string()),
+        Some("rebase") => mergear_pull_request_utilizando_rebase(),
+        _ => Err(ErrorHttp::InternalServerError(
+            "No se ha podido mergear el pull request".to_string(),
+        )),
     }
 }

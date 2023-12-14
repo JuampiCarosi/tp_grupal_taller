@@ -4,8 +4,8 @@ use crate::{
     servidor::pull_request::PullRequest,
     tipos_de_dato::{
         http::{
-            endpoint::Endpoint, error::ErrorHttp, estado::EstadoHttp, metodos::MetodoHttp,
-            request::Request, response::Response,
+            endpoint::Endpoint, error::ErrorHttp, metodos::MetodoHttp, request::Request,
+            response::Response,
         },
         logger::Logger,
     },
