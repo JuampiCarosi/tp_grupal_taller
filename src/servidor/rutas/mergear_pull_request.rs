@@ -84,7 +84,7 @@ fn mergear_pull_request(
     // };
 
     let dir_pull_request = obtener_pull_request::obtener_dir_pull_request(&params)?;
-    let mut pull_request = obtener_pull_request_de_params(params)?;
+    let mut pull_request = obtener_pull_request_de_params(&params)?;
 
     let rama_base = pull_request.rama_base.clone();
     let rama_head = pull_request.rama_head.clone();

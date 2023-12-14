@@ -25,7 +25,7 @@ fn obtener_pull_request(
     params: HashMap<String, String>,
     logger: Arc<Logger>,
 ) -> Result<Response, ErrorHttp> {
-    let pull_request = obtener_pull_request_de_params(params)?;
+    let pull_request = obtener_pull_request_de_params(&params)?;
 
     let body_response = serde_json::to_string(&pull_request).map_err(|e| {
         ErrorHttp::InternalServerError(format!("No se ha podido serializar el pull request: {}", e))
@@ -47,7 +47,7 @@ fn obtener_pull_request(
 /// ## Errores
 /// - Si no existe la carpeta `./srv/{repo}/pulls/{pull_number}`
 pub fn obtener_pull_request_de_params(
-    params: HashMap<String, String>,
+    params: &HashMap<String, String>,
 ) -> Result<PullRequest, ErrorHttp> {
     let dir_pull_request = obtener_dir_pull_request(&params)?;
     let pull_request = PullRequest::cargar_pr(&dir_pull_request)?;

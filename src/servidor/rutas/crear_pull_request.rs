@@ -38,7 +38,7 @@ fn crear_pull_request(
         }
     };
 
-    let pull_request = PullRequest::crear_pr(repo, body, logger.clone())?;
+    let pull_request = PullRequest::crear_pr(repo, body)?;
     pull_request.guardar_pr(&PathBuf::from(format!(
         "srv/{repo}/pulls/{numero}",
         numero = pull_request.numero

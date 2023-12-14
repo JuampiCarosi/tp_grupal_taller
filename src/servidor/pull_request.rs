@@ -32,7 +32,6 @@ pub struct PullRequest {
     pub rama_base: String,
     pub fecha_creacion: String,
     pub fecha_modificacion: String,
-    pub commits: Vec<CommitObj>,
 }
 
 fn default_valor_opcional() -> Option<String> {
@@ -50,7 +49,6 @@ impl PullRequest {
         rama_base: String,
         fecha_creacion: String,
         fecha_modificacion: String,
-        commits: Vec<CommitObj>,
     ) -> Self {
         Self {
             numero,
@@ -61,7 +59,6 @@ impl PullRequest {
             rama_base,
             fecha_creacion,
             fecha_modificacion,
-            commits,
             autor,
         }
     }
@@ -69,7 +66,6 @@ impl PullRequest {
     pub fn crear_pr(
         repositorio: &str,
         body: HashMap<String, String>,
-        logger: Arc<Logger>,
     ) -> Result<PullRequest, ErrorHttp> {
         Self::verificar_repositorio(repositorio)?;
 
@@ -80,8 +76,6 @@ impl PullRequest {
         let (autor, rama_head) = Self::obtener_autor_y_rama_head(repositorio, &body)?;
         let rama_base = Self::obtener_rama_base(repositorio, &body)?;
         let fecha_actual = Self::obtener_fecha_actual();
-        let commits = Self::obtener_commits(repositorio, &rama_base, &rama_head, logger)
-            .map_err(|e| ErrorHttp::InternalServerError(e))?;
 
         Ok(PullRequest {
             numero,
@@ -93,7 +87,6 @@ impl PullRequest {
             rama_base,
             fecha_creacion: fecha_actual.clone(),
             fecha_modificacion: fecha_actual,
-            commits,
         })
     }
 
@@ -114,19 +107,30 @@ impl PullRequest {
         }
     }
 
-    fn obtener_commits(
+    pub fn obtener_commits(
+        &self,
         repositorio: &str,
-        rama_base: &str,
-        rama_head: &str,
+        logger: Arc<Logger>,
+    ) -> Result<Vec<CommitObj>, ErrorHttp> {
+        self._obtener_commits(repositorio, logger)
+            .map_err(|e| ErrorHttp::InternalServerError(e))
+    }
+
+    fn _obtener_commits(
+        &self,
+        repositorio: &str,
         logger: Arc<Logger>,
     ) -> Result<Vec<CommitObj>, String> {
         utils::io::cambiar_directorio(format!("srv/{repositorio}"))?;
 
-        let hash_ultimo_commit = Merge::obtener_commit_de_branch(rama_head)?;
+        let hash_ultimo_commit = Merge::obtener_commit_de_branch(&self.rama_head)?;
         let ultimo_commit = CommitObj::from_hash(hash_ultimo_commit, logger.clone())?;
         let commits = Log::obtener_listas_de_commits(ultimo_commit, logger.clone())?;
-        let hash_commit_base =
-            Merge::obtener_commit_base_entre_dos_branches(rama_base, rama_head, logger.clone())?;
+        let hash_commit_base = Merge::obtener_commit_base_entre_dos_branches(
+            &self.rama_base,
+            &self.rama_head,
+            logger.clone(),
+        )?;
         utils::io::cambiar_directorio(format!("../../"))?;
 
         let commits_spliteados: Vec<&[CommitObj]> = commits
@@ -249,6 +253,18 @@ impl PullRequest {
 
 #[cfg(test)]
 mod test {
+    use serial_test::serial;
+
+    use crate::{
+        servidor::gir_server::ServidorGir,
+        tipos_de_dato::{
+            comando::Ejecutar,
+            comandos::{
+                add::Add, branch::Branch, commit::Commit, init::Init, push::Push, remote::Remote,
+            },
+        },
+    };
+
     use super::*;
     use std::fs::remove_file;
 
@@ -264,9 +280,8 @@ mod test {
             String::from("Rama base"),
             String::from("Fecha creacion"),
             String::from("Fecha modificacion"),
-            Vec::new(),
         );
-        let direccion = PathBuf::from("test_dir/test01.json");
+        let direccion = PathBuf::from("tmp/test01.json");
         pr.guardar_pr(&direccion).unwrap();
         let pr_cargado = PullRequest::cargar_pr(&direccion).unwrap();
         assert_eq!(pr.numero, pr_cargado.numero);
@@ -274,8 +289,7 @@ mod test {
         assert_eq!(pr.descripcion, pr_cargado.descripcion);
         assert_eq!(pr.fecha_creacion, pr_cargado.fecha_creacion);
         assert_eq!(pr.fecha_modificacion, pr_cargado.fecha_modificacion);
-        assert_eq!(pr.commits.len(), pr_cargado.commits.len());
-        remove_file("test_dir/test01.json").unwrap();
+        remove_file("tmp/test01.json").unwrap();
     }
 
     #[test]
@@ -290,9 +304,8 @@ mod test {
             String::from("Rama base"),
             String::from("Fecha creacion"),
             String::from("Fecha modificacion"),
-            Vec::new(),
         );
-        let direccion = PathBuf::from("test_dir/test01.json");
+        let direccion = PathBuf::from("tmp/test01.json");
         pr.guardar_pr(&direccion).unwrap();
         let pr_cargado = PullRequest::cargar_pr(&direccion).unwrap();
         assert_eq!(pr.numero, pr_cargado.numero);
@@ -300,7 +313,104 @@ mod test {
         assert_eq!(pr.descripcion, pr_cargado.descripcion);
         assert_eq!(pr.fecha_creacion, pr_cargado.fecha_creacion);
         assert_eq!(pr.fecha_modificacion, pr_cargado.fecha_modificacion);
-        assert_eq!(pr.commits.len(), pr_cargado.commits.len());
-        remove_file("test_dir/test01.json").unwrap();
+        remove_file("tmp/test01.json").unwrap();
+    }
+
+    fn crear_repo_para_pr(logger: Arc<Logger>) {
+        let mut init = Init::from(vec![], logger.clone()).unwrap();
+        init.ejecutar().unwrap();
+
+        io::escribir_bytes("archivo", "contenido").unwrap();
+        let mut add = Add::from(vec!["archivo".to_string()], logger.clone()).unwrap();
+        add.ejecutar().unwrap();
+
+        let mut commit = Commit::from(
+            &mut ["-m".to_string(), "commit".to_string()].to_vec(),
+            logger.clone(),
+        )
+        .unwrap();
+        commit.ejecutar().unwrap();
+
+        let mut branch = Branch::from(&mut ["rama".to_string()].to_vec(), logger.clone()).unwrap();
+        branch.ejecutar().unwrap();
+
+        io::escribir_bytes("archivo", "contenido2").unwrap();
+        let mut add = Add::from(vec!["archivo".to_string()], logger.clone()).unwrap();
+        add.ejecutar().unwrap();
+
+        let mut commit = Commit::from(
+            &mut ["-m".to_string(), "commit".to_string()].to_vec(),
+            logger.clone(),
+        )
+        .unwrap();
+        commit.ejecutar().unwrap();
+
+        let mut remote = Remote::from(
+            &mut vec![
+                "add".to_string(),
+                "origin".to_string(),
+                "localhost:9933/repo/".to_string(),
+            ],
+            logger.clone(),
+        )
+        .unwrap();
+
+        remote.ejecutar().unwrap();
+
+        let mut push = Push::new(
+            &mut vec!["-u".to_string(), "origin".to_string(), "rama".to_string()],
+            logger.clone(),
+        )
+        .unwrap();
+
+        push.ejecutar().unwrap();
+
+        let mut push = Push::new(
+            &mut vec!["-u".to_string(), "origin".to_string(), "master".to_string()],
+            logger.clone(),
+        )
+        .unwrap();
+
+        push.ejecutar().unwrap();
+    }
+
+    #[test]
+    #[serial]
+    fn test03_crear_un_pull_request_y_pushear_commits_cambia_los_commits() {
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/pr_test03")).unwrap());
+
+        let logger_clone = logger.clone();
+        std::thread::spawn(move || {
+            let mut servidor_gir = ServidorGir::new("localhost:9933", logger_clone).unwrap();
+            servidor_gir.iniciar_servidor().unwrap();
+        });
+
+        std::thread::sleep(std::time::Duration::from_secs(2));
+
+        let _ = io::rm_directorio("tmp/pr_test03_dir");
+        let _ = io::rm_directorio("srv/repo/");
+        io::crear_directorio("tmp/pr_test03_dir").unwrap();
+        io::cambiar_directorio("tmp/pr_test03_dir").unwrap();
+
+        crear_repo_para_pr(logger.clone());
+        std::thread::sleep(std::time::Duration::from_secs(3));
+
+        let pr = PullRequest::new(
+            1,
+            None,
+            None,
+            String::from("open"),
+            String::from("Autor"),
+            String::from("master"),
+            String::from("rama"),
+            String::from("Fecha creacion"),
+            String::from("Fecha modificacion"),
+        );
+
+        io::cambiar_directorio("../../").unwrap();
+
+        let commits = pr.obtener_commits("repo", logger.clone()).unwrap();
+        assert!(commits.len() == 1);
+        io::rm_directorio("tmp/pr_test03_dir").unwrap();
     }
 }
