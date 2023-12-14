@@ -272,7 +272,7 @@ mod test {
         assert_eq!(pr.fecha_creacion, pr_cargado.fecha_creacion);
         assert_eq!(pr.fecha_modificacion, pr_cargado.fecha_modificacion);
         assert_eq!(pr.commits.len(), pr_cargado.commits.len());
-        remove_file("test_dir/test02.json").unwrap();
+        remove_file("test_dir/test01.json").unwrap();
     }
 
     #[test]
@@ -289,7 +289,7 @@ mod test {
             String::from("Fecha modificacion"),
             Vec::new(),
         );
-        let direccion = PathBuf::from("test_dir/test02.json");
+        let direccion = PathBuf::from("test_dir/test01.json");
         pr.guardar_pr(&direccion).unwrap();
         let pr_cargado = PullRequest::cargar_pr(&direccion).unwrap();
         assert_eq!(pr.numero, pr_cargado.numero);
@@ -298,6 +298,6 @@ mod test {
         assert_eq!(pr.fecha_creacion, pr_cargado.fecha_creacion);
         assert_eq!(pr.fecha_modificacion, pr_cargado.fecha_modificacion);
         assert_eq!(pr.commits.len(), pr_cargado.commits.len());
-        remove_file("test_dir/test02.json").unwrap();
+        remove_file("test_dir/test01.json").unwrap();
     }
 }
