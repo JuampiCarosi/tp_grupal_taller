@@ -80,7 +80,7 @@ impl PullRequest {
         let (autor, rama_head) = Self::obtener_autor_y_rama_head(repositorio, &body)?;
         let rama_base = Self::obtener_rama_base(repositorio, &body)?;
         let fecha_actual = Self::obtener_fecha_actual();
-        let commits = Self::obtener_commits(repositorio, &rama_head, &rama_head, logger)
+        let commits = Self::obtener_commits(repositorio, &rama_base, &rama_head, logger)
             .map_err(|e| ErrorHttp::InternalServerError(e))?;
 
         Ok(PullRequest {
@@ -129,7 +129,7 @@ impl PullRequest {
         utils::io::cambiar_directorio(format!("../../"))?;
 
         let commits_spliteados: Vec<&[CommitObj]> = commits
-            .split_inclusive(|commit| commit.hash == hash_commit_base)
+            .split(|commit| commit.hash == hash_commit_base)
             .collect();
 
         commits_spliteados

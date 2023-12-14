@@ -90,7 +90,7 @@ impl Rebase {
         let commits = Log::obtener_listas_de_commits(ultimo_commit, self.logger.clone())?;
         let hash_commit_base = self.obtener_commit_base_entre_dos_branches(rama)?;
         let commits_spliteados: Vec<&[CommitObj]> = commits
-            .split_inclusive(|commit| commit.hash == hash_commit_base)
+            .split(|commit| commit.hash == hash_commit_base)
             .collect();
 
         commits_spliteados
