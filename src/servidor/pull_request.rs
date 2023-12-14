@@ -9,7 +9,7 @@ use crate::{
 };
 
 use chrono::{DateTime, Utc};
-use serde::{de::value::Error, Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
 #[derive(Serialize, Deserialize)]
@@ -113,6 +113,7 @@ impl PullRequest {
             )))
         }
     }
+
     fn obtener_commits(
         repositorio: &str,
         rama_base: &str,
@@ -158,10 +159,11 @@ impl PullRequest {
             Ok(rama_base.to_string())
         } else {
             Err(ErrorHttp::ValidationFailed(
-                "Falta el parametro 'head' en el body de la request".to_string(),
+                "Falta el parametro 'base' en el body de la request".to_string(),
             ))
         }
     }
+
     fn obtener_autor_y_rama_head(
         repositorio: &str,
         body: &HashMap<String, String>,
@@ -176,6 +178,7 @@ impl PullRequest {
             ))
         }
     }
+
     //Comprueba si existe en
     fn validar_rama(rama: &str, repositorio: &str) -> Result<(), ErrorHttp> {
         let direccion = PathBuf::from(format!("./srv/{repositorio}/.gir/refs/heads/{rama}"));
@@ -237,7 +240,7 @@ impl PullRequest {
         let pull_request =
             serde_json::from_str::<PullRequest>(&contenido_pull_request).map_err(|e| {
                 ErrorHttp::InternalServerError(format!(
-                    "Fallo al serealizar {contenido_pull_request}: {e}"
+                    "Fallo al serializar el contenido {contenido_pull_request}: {e}"
                 ))
             })?;
         Ok(pull_request)

@@ -35,7 +35,7 @@ fn obtener_pull_request(
     Ok(response)
 }
 
-///Obtiene el objeto pull request desde los parametros. Para ello en los paramtros tiene que estar
+///Obtiene el objeto pull request desde los parametros. Para ello en los parametros tiene que estar
 /// el `repo` y `pull_number`
 ///
 /// ## Argumuntos
@@ -59,7 +59,9 @@ fn obtener_dir_pull_request(params: &HashMap<String, String>) -> Result<PathBuf,
         ErrorHttp::InternalServerError("No se ha encontrado el nombre del repositorio".to_string())
     })?;
     let pull_number = params.get("pull_number").ok_or_else(|| {
-        ErrorHttp::InternalServerError("No se ha encontrado el nombre del repositorio".to_string())
+        ErrorHttp::InternalServerError(
+            "No se ha encontrado el pull number del repositorio".to_string(),
+        )
     })?;
     let dir_pull_request = PathBuf::from(format!("./srv/{repo}/pulls/{pull_number}"));
 

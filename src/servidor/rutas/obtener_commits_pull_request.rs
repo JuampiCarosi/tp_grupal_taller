@@ -27,7 +27,8 @@ fn obtener_commits_pull_request(
     let pull_request_commits = obtener_pull_request_de_params(params)?.commits;
 
     if pull_request_commits.is_empty() {
-        //evaluar que hacer en este caso
+        let response = Response::new(logger, EstadoHttp::NoContent, None);
+        return Ok(response);
     }
 
     let body_response = serde_json::to_string(&pull_request_commits).map_err(|e| {
