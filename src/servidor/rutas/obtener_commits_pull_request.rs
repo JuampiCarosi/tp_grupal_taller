@@ -20,7 +20,7 @@ pub fn agregar_a_router(rutas: &mut Vec<Endpoint>) {
 }
 
 fn obtener_commits_pull_request(
-    request: Request,
+    _request: Request,
     params: HashMap<String, String>,
     logger: Arc<Logger>,
 ) -> Result<Response, ErrorHttp> {
