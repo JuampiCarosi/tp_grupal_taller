@@ -120,19 +120,16 @@ impl PullRequest {
         logger: Arc<Logger>,
     ) -> Result<Vec<CommitObj>, String> {
         utils::io::cambiar_directorio(format!("srv/{repositorio}"))?;
-        let merge = Merge {
-            logger: logger.clone(),
-            branch_actual: rama_base.to_string(),
-            branch_a_mergear: rama_head.to_string(),
-        };
+
         let hash_ultimo_commit = Merge::obtener_commit_de_branch(rama_head)?;
         let ultimo_commit = CommitObj::from_hash(hash_ultimo_commit, logger.clone())?;
         let commits = Log::obtener_listas_de_commits(ultimo_commit, logger.clone())?;
-        let hash_commit_base = merge.obtener_commit_base_entre_dos_branches()?;
+        let hash_commit_base =
+            Merge::obtener_commit_base_entre_dos_branches(rama_base, rama_head, logger.clone())?;
         utils::io::cambiar_directorio(format!("../../"))?;
 
         let commits_spliteados: Vec<&[CommitObj]> = commits
-            .split(|commit| commit.hash == hash_commit_base)
+            .split_inclusive(|commit| commit.hash == hash_commit_base)
             .collect();
 
         commits_spliteados
@@ -181,8 +178,7 @@ impl PullRequest {
     }
     //Comprueba si existe en
     fn validar_rama(rama: &str, repositorio: &str) -> Result<(), ErrorHttp> {
-        let direccion = PathBuf::from(format!("./srv/{repositorio}/refs/heads/{rama}"));
-
+        let direccion = PathBuf::from(format!("./srv/{repositorio}/.gir/refs/heads/{rama}"));
         if !direccion.exists() {
             Err(ErrorHttp::ValidationFailed(format!(
                 "No existe la rama {rama} en el repositorio {repositorio}"

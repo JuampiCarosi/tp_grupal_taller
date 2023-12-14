@@ -72,18 +72,21 @@ impl Merge {
 
     /// Devuelve el commit base mas cercano entre dos ramas
     /// Por ejemplo en el arbol a-b-c vs d-b-e, el commit base es b
-    pub fn obtener_commit_base_entre_dos_branches(&self) -> Result<String, String> {
-        let hash_commit_actual = ramas::obtener_hash_commit_asociado_rama_actual()?;
-        let hash_commit_a_mergear = Self::obtener_commit_de_branch(&self.branch_a_mergear)?;
+    pub fn obtener_commit_base_entre_dos_branches(
+        branch_1: &str,
+        branch_2: &str,
+        logger: Arc<Logger>,
+    ) -> Result<String, String> {
+        let hash_commit_actual = Self::obtener_commit_de_branch(branch_1)?;
+        let hash_commit_a_mergear = Self::obtener_commit_de_branch(branch_2)?;
 
-        let commit_obj_actual = CommitObj::from_hash(hash_commit_actual, self.logger.clone())?;
-        let commit_obj_a_mergear =
-            CommitObj::from_hash(hash_commit_a_mergear, self.logger.clone())?;
+        let commit_obj_actual = CommitObj::from_hash(hash_commit_actual, logger.clone())?;
+        let commit_obj_a_mergear = CommitObj::from_hash(hash_commit_a_mergear, logger.clone())?;
 
         let commits_branch_actual =
-            Log::obtener_listas_de_commits(commit_obj_actual, self.logger.clone())?;
+            Log::obtener_listas_de_commits(commit_obj_actual, logger.clone())?;
         let commits_branch_a_mergear =
-            Log::obtener_listas_de_commits(commit_obj_a_mergear, self.logger.clone())?;
+            Log::obtener_listas_de_commits(commit_obj_a_mergear, logger.clone())?;
 
         for commit_actual in commits_branch_actual {
             for commit_branch_merge in commits_branch_a_mergear.clone() {
@@ -599,7 +602,11 @@ impl Ejecutar for Merge {
         }
         let commit_actual = ramas::obtener_hash_commit_asociado_rama_actual()?;
         let commit_a_mergear = Self::obtener_commit_de_branch(&self.branch_a_mergear)?;
-        let commit_base = self.obtener_commit_base_entre_dos_branches()?;
+        let commit_base = Self::obtener_commit_base_entre_dos_branches(
+            &self.branch_actual,
+            &self.branch_a_mergear,
+            self.logger.clone(),
+        )?;
 
         if commit_actual == commit_a_mergear {
             return Ok("No hay nada para mergear".to_string());
