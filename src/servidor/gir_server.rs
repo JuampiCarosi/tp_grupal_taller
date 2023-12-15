@@ -3,6 +3,8 @@ use crate::servidor::{receive_pack::receive_pack, upload_pack::upload_pack};
 use crate::tipos_de_dato::respuesta_pedido::RespuestaDePedido;
 use crate::tipos_de_dato::{comunicacion::Comunicacion, logger::Logger};
 use crate::utils::{self, io as gir_io};
+use std::env::args;
+use std::sync::Mutex;
 use std::{
     env,
     net::{TcpListener, TcpStream},
@@ -15,6 +17,7 @@ use std::{
 const VERSION: &str = "version 1\n";
 const CAPABILITIES: &str = "ofs-delta symref=HEAD:refs/heads/master agent=git/2.17.1";
 const DIR: &str = "/srv"; // direccion relativa
+static SERVER_ARGS: usize = 2;
 
 ///
 pub struct ServidorGir {
@@ -22,36 +25,53 @@ pub struct ServidorGir {
     listener: TcpListener,
 
     /// Threads que se spawnean para atender a los clientes
-    threads: Vec<Option<thread::JoinHandle<Result<(), String>>>>,
+    threads: Arc<Mutex<Vec<thread::JoinHandle<Result<(), String>>>>>,
 
     /// Logger para registrar los eventos del servidor
     logger: Arc<Logger>,
+
+    main: Option<thread::JoinHandle<()>>,
 }
 
 impl ServidorGir {
     /// # Argumentos:
     /// * `address` - Direccion en la que se va a escuchar las conexiones de los clientes
     /// * `logger` - Logger para registrar los eventos del servidor
-    pub fn new(address: &str, logger: Arc<Logger>) -> std::io::Result<ServidorGir> {
-        let listener = TcpListener::bind(address)?;
+    pub fn new(
+        logger: Arc<Logger>,
+        threads: Arc<Mutex<Vec<thread::JoinHandle<Result<(), String>>>>>,
+    ) -> Result<ServidorGir, String> {
+        let argv = args().collect::<Vec<String>>();
+        if argv.len() != SERVER_ARGS {
+            println!("Cantidad de argumentos inválido");
+            let app_name = &argv[0];
+            println!("Usage:\n{:?} <puerto>", app_name);
+            return Err("Cantidad de argumentos inválido".to_string());
+        }
+
+        let address = "127.0.0.1:".to_owned() + &argv[1];
+
+        let listener = TcpListener::bind(&address).map_err(|e| e.to_string())?;
         println!("Escuchando servidor gir en {}", address);
         logger.log("Servidor iniciado");
 
         Ok(ServidorGir {
             listener,
-            threads: Vec::new(),
+            threads,
             logger,
+            main: None,
         })
     }
 
-    /// Pone en funcionamiento el servidor, spawneando un thread por cada cliente que se conecte al mismo.
-    /// Procesa el pedido del cliente y responde en consecuencia.
-    pub fn iniciar_servidor(&mut self) -> Result<(), String> {
-        while let Ok((stream, socket)) = self.listener.accept() {
-            self.logger
-                .log(&format!("Se conecto un cliente a gir desde {}", socket));
-            let logge_clone = self.logger.clone();
-            let logger = self.logger.clone();
+    fn aceptar_conexiones(
+        listener: Arc<TcpListener>,
+        threads: Arc<Mutex<Vec<thread::JoinHandle<Result<(), String>>>>>,
+        logger: Arc<Logger>,
+    ) {
+        while let Ok((stream, socket)) = listener.accept() {
+            logger.log(&format!("Se conecto un cliente a gir desde {}", socket));
+            let logge_clone = logger.clone();
+            let logger = logger.clone();
             let handle = thread::spawn(move || -> Result<(), String> {
                 let stream_clonado = stream.try_clone().map_err(|e| e.to_string())?;
                 let mut comunicacion =
@@ -63,9 +83,22 @@ impl ServidorGir {
                 )?;
                 Ok(())
             });
-            self.threads.push(Some(handle));
+            let mut threads = threads.lock().unwrap();
+            threads.push(handle);
         }
-        self.logger.log("Se cerro el servidor");
+        logger.log("Se cerro el servidor");
+    }
+
+    /// Pone en funcionamiento el servidor, spawneando un thread por cada cliente que se conecte al mismo.
+    /// Procesa el pedido del cliente y responde en consecuencia.
+    pub fn iniciar_servidor(&mut self) -> Result<(), String> {
+        let listener = Arc::new(self.listener.try_clone().map_err(|e| e.to_string())?);
+        let threads = self.threads.clone();
+        let logger = self.logger.clone();
+        let handle = thread::spawn(move || {
+            Self::aceptar_conexiones(listener, threads, logger);
+        });
+        self.main = Some(handle);
         Ok(())
     }
 
@@ -202,17 +235,6 @@ mod server_utils {
         let mut referencia_con_capacidades = referencia_con_capacidades.trim_end().to_string();
         referencia_con_capacidades.push('\n');
         utils::strings::obtener_linea_con_largo_hex(&referencia_con_capacidades)
-    }
-}
-
-impl Drop for ServidorGir {
-    fn drop(&mut self) {
-        for thread in self.threads.drain(..).flatten() {
-            if let Err(e) = thread.join() {
-                println!("Error en el thread: {:?}", e);
-            }
-        }
-        println!("Servidor cerrado");
     }
 }
 
