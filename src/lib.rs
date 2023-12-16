@@ -6,7 +6,12 @@ pub mod servidor {
     pub mod receive_pack;
     pub mod upload_pack;
     pub mod rutas {
+        pub mod actualizar_pull_request;
         pub mod crear_pull_request;
+        pub mod listar_pull_request;
+        pub mod mergear_pull_request;
+        pub mod obtener_commits_pull_request;
+        pub mod obtener_pull_request;
     }
 }
 pub mod tipos_de_dato {

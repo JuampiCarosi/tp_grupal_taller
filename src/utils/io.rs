@@ -37,6 +37,16 @@ where
     fs::read_dir(directorio).map_err(|e| format!("Error al leer {:?}: {}", directorio, e))
 }
 
+pub fn cantidad_entradas_dir<P>(directorio: &P) -> Result<u64, String>
+where
+    P: AsRef<Path> + Debug + ?Sized,
+{
+    leer_directorio(directorio)?
+        .count()
+        .try_into()
+        .map_err(|e| format!("Error al tratar de pasar de usize a u64: {e}"))
+}
+
 ///Devuelve True si el directororio es un directorio o false en caso contrario o si no existe
 pub fn es_dir<P: AsRef<Path> + Clone + Debug>(entrada: P) -> bool {
     match fs::metadata(entrada) {

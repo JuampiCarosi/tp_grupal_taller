@@ -95,7 +95,7 @@ impl ServidorGir {
 
         let args: Vec<String> = pedido[1].split('\0').map(|s| s.to_string()).collect();
         let repositorio = args[0].clone();
-        let dir_repositorio = dir.to_string() + &args[0];
+        let dir_repositorio = dir.to_string() + &args[0] + "/.gir/";
         let pedido = &pedido[0];
         Ok((pedido.to_owned(), repositorio, dir_repositorio))
     }
@@ -137,6 +137,7 @@ impl ServidorGir {
                     gir_io::crear_directorio(path.join("refs/"))?;
                     gir_io::crear_directorio(path.join("refs/heads/"))?;
                     gir_io::crear_directorio(path.join("refs/tags/"))?;
+                    gir_io::crear_directorio(path.join("pulls"))?;
                 }
                 comunicacion.enviar(&utils::strings::obtener_linea_con_largo_hex(VERSION))?;
                 refs = server_utils::obtener_refs_de(path)?;
