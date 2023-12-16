@@ -14,7 +14,7 @@ use gir::{
     tipos_de_dato::logger::Logger,
 };
 
-const INTENTOS_REINICIO: u8 = 3;
+const MAX_INTENTOS_REINICIO: u8 = 3;
 
 fn correr_servidor(
     logger: Arc<Logger>,
@@ -23,8 +23,8 @@ fn correr_servidor(
 ) -> Result<(), String> {
     let (tx, rx) = channel;
 
-    let mut intentos_restantes_gir = INTENTOS_REINICIO;
-    let mut intentos_restantes_http = INTENTOS_REINICIO;
+    let mut intentos_gir = 0;
+    let mut intentos_http = 0;
 
     let mut servidor_http = ServidorHttp::new(logger.clone(), threads.clone(), tx.clone())?;
     servidor_http.iniciar_servidor()?;
@@ -35,16 +35,16 @@ fn correr_servidor(
     while let Ok(error_servidor) = rx.recv() {
         match error_servidor {
             MensajeServidor::GirErrorFatal => {
-                intentos_restantes_gir -= 1;
+                intentos_gir += 1;
                 servidor_gir.reiniciar_servidor()?;
             }
             MensajeServidor::HttpErrorFatal => {
-                intentos_restantes_http -= 1;
+                intentos_http += 1;
                 servidor_http.reiniciar_servidor()?;
             }
         };
 
-        if intentos_restantes_gir == 0 || intentos_restantes_http == 0 {
+        if intentos_gir >= MAX_INTENTOS_REINICIO || intentos_http >= MAX_INTENTOS_REINICIO {
             return Err("No se pudo reiniciar el servidor".to_owned());
         }
     }
