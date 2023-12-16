@@ -406,7 +406,7 @@ mod test {
             },
         },
     };
-    use std::{env::args, fs::remove_file, sync::Mutex};
+    use std::{env::args, fs::remove_file, net::TcpListener, sync::Mutex};
 
     fn crear_repo_para_pr(logger: Arc<Logger>) {
         let mut init = Init::from(vec![], logger.clone()).unwrap();
@@ -1106,117 +1106,144 @@ mod test {
         assert!(!pr_3.filtrar(&body));
     }
 
-    // #[test]
-    // #[serial]
-    // fn test_14_crear_un_pull_request_y_pushear_commits_obteiene_commits_correctos() {
-    //     let logger = Arc::new(Logger::new(PathBuf::from("tmp/pr_test_14")).unwrap());
+    #[test]
+    #[serial]
+    fn test_14_crear_un_pull_request_y_pushear_commits_obteiene_commits_correctos() {
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/pr_test_14")).unwrap());
 
-    //     let logger_clone = logger.clone();
-    //     std::thread::spawn(move || {
-    //         let threads = Arc::new(Mutex::new(Vec::new()));
-    //         args().pu;
-    //         let mut servidor_gir = ServidorGir::new(logger_clone, threads).unwrap();
-    //         servidor_gir.iniciar_servidor().unwrap();
-    //     });
+        let logger_clone = logger.clone();
+        let (tx, _) = std::sync::mpsc::channel();
 
-    //     std::thread::sleep(std::time::Duration::from_secs(1));
+        let handle = std::thread::spawn(move || {
+            let threads = Arc::new(Mutex::new(Vec::new()));
+            let listener = TcpListener::bind("127.0.0.1:9933").unwrap();
 
-    //     let _ = io::rm_directorio("tmp/pr_test_14_dir");
-    //     let _ = io::rm_directorio("srv/repo/");
-    //     io::crear_directorio("tmp/pr_test_14_dir").unwrap();
-    //     io::cambiar_directorio("tmp/pr_test_14_dir").unwrap();
+            let mut servidor_gir = ServidorGir {
+                listener,
+                threads,
+                logger: logger_clone,
+                main: None,
+                tx,
+            };
+            servidor_gir.iniciar_servidor().unwrap();
+        });
 
-    //     crear_repo_para_pr(logger.clone());
-    //     std::thread::sleep(std::time::Duration::from_secs(1));
+        if handle.is_finished() {
+            panic!("No se pudo iniciar el servidor");
+        }
 
-    //     let pr = {
-    //         let numero = 1;
-    //         let titulo = None;
-    //         let descripcion = None;
-    //         let estado = String::from("close");
-    //         let autor = String::from("Juapi");
-    //         let rama_head = String::from("master");
-    //         let rama_base = String::from("rama");
-    //         let fecha_creacion = String::from("Fecha creacion");
-    //         let fecha_modificacion = String::from("Fecha modificacion");
-    //         PullRequest {
-    //             numero,
-    //             titulo,
-    //             descripcion,
-    //             estado,
-    //             rama_head,
-    //             rama_base,
-    //             fecha_creacion,
-    //             fecha_modificacion,
-    //             autor,
-    //         }
-    //     };
+        std::thread::sleep(std::time::Duration::from_secs(1));
 
-    //     io::cambiar_directorio("../../").unwrap();
+        let _ = io::rm_directorio("tmp/pr_test_14_dir");
+        let _ = io::rm_directorio("srv/repo/");
+        io::crear_directorio("tmp/pr_test_14_dir").unwrap();
+        io::cambiar_directorio("tmp/pr_test_14_dir").unwrap();
 
-    //     let commits = pr.obtener_commits("repo", logger.clone()).unwrap();
-    //     assert!(commits.len() == 1);
-    //     io::rm_directorio("tmp/pr_test_14_dir").unwrap();
-    // }
+        crear_repo_para_pr(logger.clone());
+        std::thread::sleep(std::time::Duration::from_secs(1));
 
-    // #[test]
-    // #[serial]
-    // fn test_15_crear_un_pull_request_y_pushear_commits_cambia_los_commits() {
-    //     let logger = Arc::new(Logger::new(PathBuf::from("tmp/pr_test_15")).unwrap());
+        let pr = {
+            let numero = 1;
+            let titulo = None;
+            let descripcion = None;
+            let estado = String::from("close");
+            let autor = String::from("Juapi");
+            let rama_head = String::from("master");
+            let rama_base = String::from("rama");
+            let fecha_creacion = String::from("Fecha creacion");
+            let fecha_modificacion = String::from("Fecha modificacion");
+            PullRequest {
+                numero,
+                titulo,
+                descripcion,
+                estado,
+                rama_head,
+                rama_base,
+                fecha_creacion,
+                fecha_modificacion,
+                autor,
+            }
+        };
 
-    //     let logger_clone = logger.clone();
-    //     std::thread::spawn(move || {
-    //         let threads = Arc::new(Mutex::new(Vec::new()));
-    //         let mut servidor_gir = ServidorGir::new(logger_clone, threads).unwrap();
-    //         servidor_gir.iniciar_servidor().unwrap();
-    //     });
+        io::cambiar_directorio("../../").unwrap();
 
-    //     std::thread::sleep(std::time::Duration::from_secs(1));
+        let commits = pr.obtener_commits("repo", logger.clone()).unwrap();
+        assert!(commits.len() == 1);
+        io::rm_directorio("tmp/pr_test_14_dir").unwrap();
+    }
 
-    //     let _ = io::rm_directorio("tmp/pr_test_15_dir");
-    //     let _ = io::rm_directorio("srv/repo/");
-    //     io::crear_directorio("tmp/pr_test_15_dir").unwrap();
-    //     io::cambiar_directorio("tmp/pr_test_15_dir").unwrap();
+    #[test]
+    #[serial]
+    fn test_15_crear_un_pull_request_y_pushear_commits_cambia_los_commits() {
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/pr_test_15")).unwrap());
 
-    //     crear_repo_para_pr(logger.clone());
-    //     std::thread::sleep(std::time::Duration::from_secs(1));
+        let logger_clone = logger.clone();
+        let (tx, _) = std::sync::mpsc::channel();
 
-    //     let pr = {
-    //         let numero = 1;
-    //         let titulo = None;
-    //         let descripcion = None;
-    //         let estado = String::from("close");
-    //         let autor = String::from("Juapi");
-    //         let rama_head = String::from("master");
-    //         let rama_base = String::from("rama");
-    //         let fecha_creacion = String::from("Fecha creacion");
-    //         let fecha_modificacion = String::from("Fecha modificacion");
-    //         PullRequest {
-    //             numero,
-    //             titulo,
-    //             descripcion,
-    //             estado,
-    //             rama_head,
-    //             rama_base,
-    //             fecha_creacion,
-    //             fecha_modificacion,
-    //             autor,
-    //         }
-    //     };
+        let handle = std::thread::spawn(move || {
+            let threads = Arc::new(Mutex::new(Vec::new()));
+            let listener = TcpListener::bind("127.0.0.1:9933").unwrap();
 
-    //     io::cambiar_directorio("../../").unwrap();
+            let mut servidor_gir = ServidorGir {
+                listener,
+                threads,
+                logger: logger_clone,
+                main: None,
+                tx,
+            };
+            servidor_gir.iniciar_servidor().unwrap();
+        });
 
-    //     let commits = pr.obtener_commits("repo", logger.clone()).unwrap();
-    //     assert!(commits.len() == 1);
+        if handle.is_finished() {
+            panic!("No se pudo iniciar el servidor");
+        }
 
-    //     io::cambiar_directorio("tmp/pr_test_15_dir").unwrap();
-    //     agregar_commit_a_repo(logger.clone());
-    //     std::thread::sleep(std::time::Duration::from_secs(1));
+        std::thread::sleep(std::time::Duration::from_secs(1));
 
-    //     io::cambiar_directorio("../../").unwrap();
-    //     let commits = pr.obtener_commits("repo", logger.clone()).unwrap();
-    //     assert!(commits.len() == 2);
+        let _ = io::rm_directorio("tmp/pr_test_15_dir");
+        let _ = io::rm_directorio("srv/repo/");
+        io::crear_directorio("tmp/pr_test_15_dir").unwrap();
+        io::cambiar_directorio("tmp/pr_test_15_dir").unwrap();
 
-    //     io::rm_directorio("tmp/pr_test_15_dir").unwrap();
-    // }
+        crear_repo_para_pr(logger.clone());
+        std::thread::sleep(std::time::Duration::from_secs(1));
+
+        let pr = {
+            let numero = 1;
+            let titulo = None;
+            let descripcion = None;
+            let estado = String::from("close");
+            let autor = String::from("Juapi");
+            let rama_head = String::from("master");
+            let rama_base = String::from("rama");
+            let fecha_creacion = String::from("Fecha creacion");
+            let fecha_modificacion = String::from("Fecha modificacion");
+            PullRequest {
+                numero,
+                titulo,
+                descripcion,
+                estado,
+                rama_head,
+                rama_base,
+                fecha_creacion,
+                fecha_modificacion,
+                autor,
+            }
+        };
+
+        io::cambiar_directorio("../../").unwrap();
+
+        let commits = pr.obtener_commits("repo", logger.clone()).unwrap();
+        assert!(commits.len() == 1);
+
+        io::cambiar_directorio("tmp/pr_test_15_dir").unwrap();
+        agregar_commit_a_repo(logger.clone());
+        std::thread::sleep(std::time::Duration::from_secs(1));
+
+        io::cambiar_directorio("../../").unwrap();
+        let commits = pr.obtener_commits("repo", logger.clone()).unwrap();
+        assert!(commits.len() == 2);
+
+        io::rm_directorio("tmp/pr_test_15_dir").unwrap();
+    }
 }

@@ -30,7 +30,7 @@ fn correr_servidor(
     let mut servidor_http = ServidorHttp::new(logger.clone(), threads.clone(), tx.clone())?;
     servidor_http.iniciar_servidor()?;
 
-    let mut servidor_gir = ServidorGir::new(logger.clone(), threads.clone())?;
+    let mut servidor_gir = ServidorGir::new(logger.clone(), threads.clone(), tx.clone())?;
     servidor_gir.iniciar_servidor()?;
 
     let error = rx.recv().unwrap();
