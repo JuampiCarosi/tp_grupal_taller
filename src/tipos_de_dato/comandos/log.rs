@@ -105,6 +105,12 @@ mod tests {
     use serial_test::serial;
     use std::path::PathBuf;
 
+    use crate::utils::{
+        self,
+        gir_config::{conseguir_mail_config, conseguir_nombre_config},
+        testing::addear_archivos_y_comittear,
+    };
+
     use super::*;
 
     #[test]
@@ -142,5 +148,30 @@ mod tests {
         let mut args = vec!["rama".to_string()];
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/log_test04")).unwrap());
         let _ = Log::from(&mut args, logger).unwrap();
+    }
+
+    #[test]
+    #[serial]
+    fn test05_log_muestra_commits_con_contenido_correcto() {
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/log_test05")).unwrap());
+        utils::testing::limpiar_archivo_gir(logger.clone());
+        let mut args = vec![];
+        let mut log = Log::from(&mut args, logger.clone()).unwrap();
+        addear_archivos_y_comittear(vec!["test_file.txt".to_string()], logger);
+        let resultado = log.ejecutar().unwrap();
+        let nombre_original = conseguir_nombre_config().unwrap();
+        let mail_original = conseguir_mail_config().unwrap();
+        let hash_original = io::leer_a_string(".gir/refs/heads/master").unwrap();
+
+        let resultado_lineas = resultado.split('\n').collect::<Vec<&str>>();
+        let hash_commit = resultado_lineas[0].split(' ').collect::<Vec<&str>>()[1];
+        let nombre_commit = resultado_lineas[1].split(' ').collect::<Vec<&str>>()[1];
+        let mail_commit = resultado_lineas[1].split(' ').collect::<Vec<&str>>()[2];
+        let mensaje_commit = resultado_lineas[4].trim();
+
+        assert_eq!(hash_commit, hash_original);
+        assert_eq!(nombre_commit, nombre_original);
+        assert_eq!(mail_commit, format!("<{}>", mail_original));
+        assert_eq!(mensaje_commit, "mensaje");
     }
 }

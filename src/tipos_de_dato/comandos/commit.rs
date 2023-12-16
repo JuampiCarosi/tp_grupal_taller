@@ -184,12 +184,13 @@ mod tests {
     use crate::{
         tipos_de_dato::{
             comando::Ejecutar,
-            comandos::{add::Add, hash_object::HashObject, init::Init},
+            comandos::{add::Add, hash_object::HashObject},
             logger::Logger,
         },
         utils::{
             compresion::{descomprimir_objeto, descomprimir_objeto_gir},
             io,
+            testing::{addear_archivos_y_comittear, limpiar_archivo_gir},
         },
     };
 
@@ -200,17 +201,6 @@ mod tests {
         let config_path = format!("{home}/.girconfig");
         let contenido = "nombre =aaaa\nmail =bbbb\n".to_string();
         io::escribir_bytes(config_path, contenido).unwrap();
-    }
-
-    fn limpiar_archivo_gir() {
-        io::rm_directorio(".gir").unwrap();
-        let logger = Arc::new(Logger::new(PathBuf::from("tmp/commit_init")).unwrap());
-        let mut init = Init {
-            path: "./.gir".to_string(),
-            logger,
-        };
-        init.ejecutar().unwrap();
-        craer_archivo_config_default();
     }
 
     fn conseguir_hash_padre(branch: &str) -> Result<String, String> {
@@ -237,19 +227,12 @@ mod tests {
         Ok(arbol_commit.to_string())
     }
 
-    fn addear_archivos_y_comittear(args: Vec<String>, logger: Arc<Logger>) {
-        let mut add = Add::from(args, logger.clone()).unwrap();
-        add.ejecutar().unwrap();
-        let mut commit =
-            Commit::from(&mut vec!["-m".to_string(), "mensaje".to_string()], logger).unwrap();
-        commit.ejecutar().unwrap();
-    }
-
     #[test]
     #[serial]
     fn test01_se_actualiza_el_head_ref_correspondiente_con_el_hash_del_commit() {
-        limpiar_archivo_gir();
+        craer_archivo_config_default();
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/commit_test01")).unwrap());
+        limpiar_archivo_gir(logger.clone());
         let mut add = Add::from(vec!["test_file.txt".to_string()], logger.clone()).unwrap();
         add.ejecutar().unwrap();
         let mut commit =
@@ -265,8 +248,8 @@ mod tests {
     #[test]
     #[serial]
     fn test02_al_hacer_dos_commits_el_primero_es_padre_del_segundo() {
-        limpiar_archivo_gir();
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/commit_test02")).unwrap());
+        limpiar_archivo_gir(logger.clone());
 
         addear_archivos_y_comittear(vec!["test_file.txt".to_string()], logger.clone());
 
@@ -280,8 +263,8 @@ mod tests {
     #[test]
     #[serial]
     fn test03_al_hacer_commit_apunta_al_arbol_correcto() {
-        limpiar_archivo_gir();
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/commit_test03")).unwrap());
+        limpiar_archivo_gir(logger.clone());
         addear_archivos_y_comittear(vec!["test_file.txt".to_string()], logger);
 
         let hash_arbol = conseguir_arbol_commit("master").unwrap();
@@ -297,8 +280,8 @@ mod tests {
     #[serial]
     fn test04_al_hacer_commit_de_un_archivo_y_luego_hacer_otro_commit_de_ese_archivo_modificado_el_hash_tree_es_correcto(
     ) {
-        limpiar_archivo_gir();
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/commit_test04")).unwrap());
+        limpiar_archivo_gir(logger.clone());
         addear_archivos_y_comittear(vec!["test_file.txt".to_string()], logger.clone());
 
         io::escribir_bytes("test_file.txt", "hola").unwrap();
@@ -323,8 +306,8 @@ mod tests {
     #[serial]
     fn test05_al_hacer_commit_de_un_directorio_y_luego_hacer_otro_commit_de_ese_directorio_modificado_el_hash_tree_es_correcto(
     ) {
-        limpiar_archivo_gir();
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/commit_test05")).unwrap());
+        limpiar_archivo_gir(logger.clone());
         addear_archivos_y_comittear(vec!["test_dir/muchos_objetos".to_string()], logger.clone());
 
         io::escribir_bytes("test_dir/muchos_objetos/archivo.txt", "hola").unwrap();

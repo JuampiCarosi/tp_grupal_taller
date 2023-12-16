@@ -6,7 +6,7 @@ use std::{
 
 use crate::tipos_de_dato::{
     comando::Ejecutar,
-    comandos::{branch::Branch, init::Init, remote::Remote},
+    comandos::{add::Add, branch::Branch, commit::Commit, init::Init, remote::Remote},
     logger::Logger,
 };
 
@@ -79,4 +79,12 @@ pub fn elimar_archivo_gir() {
     if PathBuf::from("./.gir").exists() {
         io::rm_directorio("./.gir").unwrap();
     }
+}
+
+pub fn addear_archivos_y_comittear(args: Vec<String>, logger: Arc<Logger>) {
+    let mut add = Add::from(args, logger.clone()).unwrap();
+    add.ejecutar().unwrap();
+    let mut commit =
+        Commit::from(&mut vec!["-m".to_string(), "mensaje".to_string()], logger).unwrap();
+    commit.ejecutar().unwrap();
 }
