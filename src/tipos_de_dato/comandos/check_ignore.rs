@@ -60,8 +60,11 @@ impl Ejecutar for CheckIgnore {
             return Ok("".to_string());
         }
 
-        let archivos_ignorados_separados: Vec<PathBuf> =
-            archivos_ignorados.split('\n').map(PathBuf::from).collect();
+        let archivos_ignorados_separados: Vec<PathBuf> = archivos_ignorados
+            .split('\n')
+            .filter(|x| !x.is_empty())
+            .map(PathBuf::from)
+            .collect();
 
         let mut archivos_encontrados: Vec<String> = Vec::new();
 
