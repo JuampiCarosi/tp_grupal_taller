@@ -173,6 +173,7 @@ fn mergear_pull_request_utilizando_rebase(
 
     let mut rebase = Rebase {
         logger: logger.clone(),
+        rama_actual: rama_base.clone(),
         rama: Some(rama_head),
         continue_: false,
         abort: false,
