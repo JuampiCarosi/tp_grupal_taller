@@ -406,7 +406,7 @@ mod test {
             },
         },
     };
-    use std::fs::remove_file;
+    use std::{fs::remove_file, net::TcpListener, sync::Mutex};
 
     fn crear_repo_para_pr(logger: Arc<Logger>) {
         let mut init = Init::from(vec![], logger.clone()).unwrap();
@@ -1112,10 +1112,25 @@ mod test {
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/pr_test_14")).unwrap());
 
         let logger_clone = logger.clone();
-        std::thread::spawn(move || {
-            let mut servidor_gir = ServidorGir::new("localhost:9933", logger_clone).unwrap();
+        let (tx, _) = std::sync::mpsc::channel();
+
+        let handle = std::thread::spawn(move || {
+            let threads = Arc::new(Mutex::new(Vec::new()));
+            let listener = TcpListener::bind("127.0.0.1:9933").unwrap();
+
+            let mut servidor_gir = ServidorGir {
+                listener,
+                threads,
+                logger: logger_clone,
+                main: None,
+                tx,
+            };
             servidor_gir.iniciar_servidor().unwrap();
         });
+
+        if handle.is_finished() {
+            panic!("No se pudo iniciar el servidor");
+        }
 
         std::thread::sleep(std::time::Duration::from_secs(1));
 
@@ -1163,10 +1178,25 @@ mod test {
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/pr_test_15")).unwrap());
 
         let logger_clone = logger.clone();
-        std::thread::spawn(move || {
-            let mut servidor_gir = ServidorGir::new("localhost:9933", logger_clone).unwrap();
+        let (tx, _) = std::sync::mpsc::channel();
+
+        let handle = std::thread::spawn(move || {
+            let threads = Arc::new(Mutex::new(Vec::new()));
+            let listener = TcpListener::bind("127.0.0.1:9933").unwrap();
+
+            let mut servidor_gir = ServidorGir {
+                listener,
+                threads,
+                logger: logger_clone,
+                main: None,
+                tx,
+            };
             servidor_gir.iniciar_servidor().unwrap();
         });
+
+        if handle.is_finished() {
+            panic!("No se pudo iniciar el servidor");
+        }
 
         std::thread::sleep(std::time::Duration::from_secs(1));
 

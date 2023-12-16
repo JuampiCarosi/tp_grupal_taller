@@ -1,36 +1,53 @@
-use std::{env::args, path::PathBuf, sync::Arc, thread};
-
-use gir::{
-    servidor::{gir_server::ServidorGir, http_server::ServidorHttp},
-    tipos_de_dato::logger::Logger,
-    utils::gir_config,
+use std::{
+    path::PathBuf,
+    sync::{
+        mpsc::{channel, Receiver, Sender},
+        Arc, Mutex,
+    },
 };
 
-static SERVER_ARGS: usize = 2;
+use gir::{
+    servidor::{
+        gir_server::ServidorGir, http_server::ServidorHttp,
+        rutas::mensaje_servidor::MensajeServidor,
+    },
+    tipos_de_dato::logger::Logger,
+};
 
-fn servidor_gir(logger: Arc<Logger>) -> Result<(), String> {
-    let argv = args().collect::<Vec<String>>();
-    if argv.len() != SERVER_ARGS {
-        println!("Cantidad de argumentos inválido");
-        let app_name = &argv[0];
-        println!("Usage:\n{:?} <puerto>", app_name);
-        return Err("Cantidad de argumentos inválido".to_string());
+const MAX_INTENTOS_REINICIO: u8 = 3;
+
+fn correr_servidor(
+    logger: Arc<Logger>,
+    channel: (Sender<MensajeServidor>, Receiver<MensajeServidor>),
+    threads: Arc<Mutex<Vec<std::thread::JoinHandle<Result<(), String>>>>>,
+) -> Result<(), String> {
+    let (tx, rx) = channel;
+
+    let mut intentos_gir = 0;
+    let mut intentos_http = 0;
+
+    let mut servidor_http = ServidorHttp::new(logger.clone(), threads.clone(), tx.clone())?;
+    servidor_http.iniciar_servidor()?;
+
+    let mut servidor_gir = ServidorGir::new(logger.clone(), threads.clone(), tx.clone())?;
+    servidor_gir.iniciar_servidor()?;
+
+    while let Ok(error_servidor) = rx.recv() {
+        match error_servidor {
+            MensajeServidor::GirErrorFatal => {
+                intentos_gir += 1;
+                servidor_gir.reiniciar_servidor()?;
+            }
+            MensajeServidor::HttpErrorFatal => {
+                intentos_http += 1;
+                servidor_http.reiniciar_servidor()?;
+            }
+        };
+
+        if intentos_gir >= MAX_INTENTOS_REINICIO || intentos_http >= MAX_INTENTOS_REINICIO {
+            return Err("No se pudo reiniciar el servidor".to_owned());
+        }
     }
-
-    let address = "127.0.0.1:".to_owned() + &argv[1];
-    let mut servidor = ServidorGir::new(&address, logger).map_err(|e| e.to_string())?;
-    servidor.iniciar_servidor()?;
-
-    Ok(())
-}
-
-fn servidor_http(logger: Arc<Logger>) -> Result<(), String> {
-    let puerto = gir_config::conseguir_puerto_http()
-        .ok_or("No se pudo conseguir el puerto http, revise el archivo config")?;
-
-    let address = "127.0.0.1:".to_owned() + &puerto;
-    let mut servidor = ServidorHttp::new(&address, logger).map_err(|e| e.to_string())?;
-    servidor.iniciar_servidor()?;
 
     Ok(())
 }
@@ -38,14 +55,18 @@ fn servidor_http(logger: Arc<Logger>) -> Result<(), String> {
 fn main() -> Result<(), String> {
     let logger = Arc::new(Logger::new(PathBuf::from("server_logger.txt"))?);
 
-    let logger_clone = logger.clone();
-    let gir_handle = thread::spawn(move || servidor_gir(logger_clone));
+    let channel = channel::<MensajeServidor>();
+    let threads = Arc::new(Mutex::new(Vec::new()));
 
-    let logger_clone = logger.clone();
-    let http_handle = thread::spawn(move || servidor_http(logger_clone));
+    correr_servidor(logger.clone(), channel, threads.clone())?;
 
-    gir_handle.join().expect("Gir thread panicked")?;
-    http_handle.join().expect("HTTP thread panicked")?;
+    if let Ok(mut threads) = threads.lock() {
+        for handle in threads.drain(..) {
+            let _ = handle.join();
+        }
+    } else {
+        logger.log("Error al obtener el lock de threads desde main");
+    }
 
     Ok(())
 }
