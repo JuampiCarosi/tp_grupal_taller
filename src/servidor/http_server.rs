@@ -1,5 +1,5 @@
 use std::{
-    io::BufReader,
+    io::{BufReader, Read, Write},
     net::{TcpListener, TcpStream},
     sync::{mpsc::Sender, Arc, Mutex},
     thread,
@@ -135,16 +135,16 @@ impl ServidorHttp {
         Ok(())
     }
 
-    fn manejar_cliente(
+    fn manejar_cliente<R: Read + Write>(
         logger: Arc<Logger>,
-        stream: &mut TcpStream,
+        stream: &mut R,
         endpoints: &Vec<Endpoint>,
     ) -> Result<Response, ErrorHttp> {
-        let mut stream_clone = stream
-            .try_clone()
-            .map_err(|e| ErrorHttp::InternalServerError(e.to_string()))?;
+        // let mut stream_clone = stream
+        //     .clone()
+        //     .map_err(|e| ErrorHttp::InternalServerError(e.to_string()))?;
 
-        let mut reader = BufReader::new(&mut stream_clone);
+        let mut reader = BufReader::new(stream);
         let request = Request::from(&mut reader, logger.clone())?;
 
         for endpoint in endpoints {
@@ -163,5 +163,28 @@ impl ServidorHttp {
 
         let response = Response::new(logger, EstadoHttp::NotFound, None);
         Ok(response)
+    }
+}
+
+
+#[cfg(test)]
+mod test {
+    use std::path::PathBuf;
+
+    use super::*;
+    use crate::utils::testing;
+    fn test01_se_obtiene_not_found_si_no_existe_el_repo() {
+        let contenido_mock = "GET /repos/{owner}/{repo}/pulls/{pull_number} HTTP/1.1\r\n\r\n";
+        let mut mock = testing::MockTcpStream {
+            lectura_data: contenido_mock.as_bytes().to_vec(),
+            escritura_data: vec![],
+        };
+        ServidorHttp::manejar_cliente(
+            Arc::new(Logger::new(PathBuf::from("server_logger.txt")).unwrap()),
+            &mut mock,
+            &vec![],
+        ).unwrap();
+        let respuesta = String::from_utf8(mock.escritura_data).unwrap();
+        assert!(respuesta.contains("404 Not Found"));
     }
 }
