@@ -406,7 +406,7 @@ mod test {
             },
         },
     };
-    use std::{env::args, fs::remove_file, net::TcpListener, sync::Mutex};
+    use std::{fs::remove_file, net::TcpListener, sync::Mutex};
 
     fn crear_repo_para_pr(logger: Arc<Logger>) {
         let mut init = Init::from(vec![], logger.clone()).unwrap();

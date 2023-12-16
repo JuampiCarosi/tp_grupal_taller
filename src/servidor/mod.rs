@@ -14,18 +14,17 @@ use gir::{
     tipos_de_dato::logger::Logger,
 };
 
+const INTENTOS_REINICIO: u8 = 3;
+
 fn correr_servidor(
-    intentos_restantes_gir: u8,
-    intentos_restantes_http: u8,
     logger: Arc<Logger>,
     channel: (Sender<MensajeServidor>, Receiver<MensajeServidor>),
     threads: Arc<Mutex<Vec<std::thread::JoinHandle<Result<(), String>>>>>,
 ) -> Result<(), String> {
-    if intentos_restantes_gir == 0 || intentos_restantes_http == 0 {
-        return Err("No se pudo reiniciar el servidor".to_owned());
-    }
-
     let (tx, rx) = channel;
+
+    let mut intentos_restantes_gir = INTENTOS_REINICIO;
+    let mut intentos_restantes_http = INTENTOS_REINICIO;
 
     let mut servidor_http = ServidorHttp::new(logger.clone(), threads.clone(), tx.clone())?;
     servidor_http.iniciar_servidor()?;
@@ -33,27 +32,22 @@ fn correr_servidor(
     let mut servidor_gir = ServidorGir::new(logger.clone(), threads.clone(), tx.clone())?;
     servidor_gir.iniciar_servidor()?;
 
-    let error = rx.recv().unwrap();
+    while let Ok(error_servidor) = rx.recv() {
+        match error_servidor {
+            MensajeServidor::GirErrorFatal => {
+                intentos_restantes_gir -= 1;
+                servidor_gir.reiniciar_servidor()?;
+            }
+            MensajeServidor::HttpErrorFatal => {
+                intentos_restantes_http -= 1;
+                servidor_http.reiniciar_servidor()?;
+            }
+        };
 
-    drop(servidor_gir);
-    drop(servidor_http);
-
-    match error {
-        MensajeServidor::GirErrorFatal => correr_servidor(
-            intentos_restantes_gir - 1,
-            intentos_restantes_http,
-            logger,
-            (tx, rx),
-            threads,
-        ),
-        MensajeServidor::HttpErrorFatal => correr_servidor(
-            intentos_restantes_gir,
-            intentos_restantes_http - 1,
-            logger,
-            (tx, rx),
-            threads,
-        ),
-    }?;
+        if intentos_restantes_gir == 0 || intentos_restantes_http == 0 {
+            return Err("No se pudo reiniciar el servidor".to_owned());
+        }
+    }
 
     Ok(())
 }
@@ -64,12 +58,14 @@ fn main() -> Result<(), String> {
     let channel = channel::<MensajeServidor>();
     let threads = Arc::new(Mutex::new(Vec::new()));
 
-    correr_servidor(3, 3, logger, channel, threads.clone())?;
+    correr_servidor(logger.clone(), channel, threads.clone())?;
 
-    let mut threads = threads.lock().unwrap();
-
-    for thread in threads.drain(..) {
-        thread.join().unwrap()?;
+    if let Ok(mut threads) = threads.lock() {
+        for handle in threads.drain(..) {
+            let _ = handle.join();
+        }
+    } else {
+        logger.log("Error al obtener el lock de threads desde main");
     }
 
     Ok(())

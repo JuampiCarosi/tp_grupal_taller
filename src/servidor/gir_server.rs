@@ -70,6 +70,12 @@ impl ServidorGir {
         })
     }
 
+    pub fn reiniciar_servidor(&mut self) -> Result<(), String> {
+        self.logger.log("Reiniciando servidor gir");
+        self.main.take();
+        self.iniciar_servidor()
+    }
+
     fn aceptar_conexiones(
         listener: Arc<TcpListener>,
         threads: Arc<Mutex<Vec<thread::JoinHandle<Result<(), String>>>>>,
@@ -77,21 +83,26 @@ impl ServidorGir {
     ) {
         while let Ok((stream, socket)) = listener.accept() {
             logger.log(&format!("Se conecto un cliente a gir desde {}", socket));
-            let logge_clone = logger.clone();
-            let logger = logger.clone();
+            let logger_clone = logger.clone();
             let handle = thread::spawn(move || -> Result<(), String> {
                 let stream_clonado = stream.try_clone().map_err(|e| e.to_string())?;
-                let mut comunicacion =
-                    Comunicacion::<TcpStream>::new_para_server(stream_clonado, logge_clone);
+                let mut comunicacion = Comunicacion::<TcpStream>::new_para_server(
+                    stream_clonado,
+                    logger_clone.clone(),
+                );
                 Self::manejar_cliente(
                     &mut comunicacion,
                     &(env!("CARGO_MANIFEST_DIR").to_string() + DIR),
-                    logger,
+                    logger_clone.clone(),
                 )?;
                 Ok(())
             });
-            let mut threads = threads.lock().unwrap();
-            threads.push(handle);
+
+            if let Ok(mut threads) = threads.lock() {
+                threads.push(handle);
+            } else {
+                logger.log("Error al obtener el lock de threads");
+            }
         }
         logger.log("Se cerro el servidor");
     }

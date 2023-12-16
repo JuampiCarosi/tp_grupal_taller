@@ -101,9 +101,20 @@ impl ServidorHttp {
                 return Ok(());
             });
 
-            let mut threads = threads.lock().unwrap();
-            threads.push(handle);
+            let threads = threads.lock();
+
+            if let Ok(mut threads) = threads {
+                threads.push(handle);
+            } else {
+                logger.log("Error al obtener el lock de threads");
+            }
         }
+    }
+
+    pub fn reiniciar_servidor(&mut self) -> Result<(), String> {
+        self.logger.log("Reiniciando servidor http");
+        self.main.take();
+        self.iniciar_servidor()
     }
 
     /// Pone en funcionamiento el servidor, spawneando un thread por cada cliente que se conecte al mismo.
@@ -154,17 +165,3 @@ impl ServidorHttp {
         Ok(response)
     }
 }
-
-// impl Drop for ServidorHttp {
-//     fn drop(&mut self) {
-//         for handle in self.threads.iter_mut() {
-//             if let Some(handle) = handle.take() {
-//                 match handle.join() {
-//                     Ok(_) => (),
-//                     Err(_) => self.logger.log("Error en un thread"),
-//                 };
-//             }
-//         }
-//         self.logger.log("Cerrando servidor");
-//     }
-// }
