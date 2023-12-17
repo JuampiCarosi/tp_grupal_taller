@@ -35,7 +35,10 @@ impl Tag {
     /// Devuelve un vector con los nombres de los tags existentes dentro del repositorio.
     /// Si no hay tags, devuelve un vector vacio.
     fn obtener_tags(&self) -> Result<Vec<String>, String> {
-        utils::tags::obtener_tags()
+        let mut tags = utils::tags::obtener_tags()?;
+        tags.sort();
+        println!("Tags: {:?}", tags);
+        Ok(tags)
     }
 
     /// Crea un tag con el nombre ingresado por el usuario.
