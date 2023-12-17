@@ -70,3 +70,21 @@ fn main() -> Result<(), String> {
 
     Ok(())
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use std::sync::mpsc::channel;
+
+    #[test]
+    fn test01_correr_servidor_rompe_luego_de_3_intentos() {
+        let logger = Arc::new(Logger::new(PathBuf::from("server_logger.txt")).unwrap());
+
+        let channel = channel::<MensajeServidor>();
+        let threads = Arc::new(Mutex::new(Vec::new()));
+
+        let result = correr_servidor(logger.clone(), channel, threads.clone());
+        
+        assert!(result.is_err());
+    }
+}

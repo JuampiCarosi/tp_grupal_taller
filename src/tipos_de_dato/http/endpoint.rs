@@ -3,7 +3,6 @@ use std::{collections::HashMap, sync::Arc};
 use crate::tipos_de_dato::logger::Logger;
 
 use super::{error::ErrorHttp, metodos::MetodoHttp, request::Request, response::Response};
-
 pub struct Endpoint {
     pub metodo: MetodoHttp,
     pub patron: String,
