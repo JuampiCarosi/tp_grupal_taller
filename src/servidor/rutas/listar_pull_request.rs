@@ -5,7 +5,7 @@ use crate::{
     tipos_de_dato::{
         http::{
             endpoint::Endpoint, error::ErrorHttp, estado::EstadoHttp, metodos::MetodoHttp,
-            request::Request, response::Response,
+            request::Request, response::Response, tipo_contenido::TipoContenido,
         },
         logger::Logger,
     },
@@ -31,7 +31,7 @@ fn listar_pull_request(
     lista_pull_request = filtrar_pull_requests(request, lista_pull_request);
 
     if lista_pull_request.is_empty() {
-        let response = Response::new(logger, EstadoHttp::NoContent, None);
+        let response = Response::new(logger, EstadoHttp::NoContent, None, TipoContenido::Json)?;
         return Ok(response);
     }
 
@@ -42,7 +42,12 @@ fn listar_pull_request(
         ))
     })?;
 
-    let response = Response::new(logger, EstadoHttp::Ok, Some(&body_respuesta));
+    let response = Response::new(
+        logger,
+        EstadoHttp::Ok,
+        Some(&body_respuesta),
+        TipoContenido::Json,
+    )?;
     Ok(response)
 }
 

@@ -7,7 +7,7 @@ use crate::{
         comandos::merge::Merge,
         http::{
             endpoint::Endpoint, error::ErrorHttp, estado::EstadoHttp, metodos::MetodoHttp,
-            request::Request, response::Response,
+            request::Request, response::Response, tipo_contenido::TipoContenido,
         },
         logger::Logger,
     },
@@ -88,7 +88,12 @@ fn merge_ejecutado_con_exito(
     let body_merge = armar_body_merge(hash_merge);
     pull_request.estado = "closed".to_string();
     pull_request.guardar_pr(&dir_pull_request)?;
-    let response = Response::new(logger, EstadoHttp::Ok, Some(&body_merge));
+    let response = Response::new(
+        logger,
+        EstadoHttp::Ok,
+        Some(&body_merge),
+        TipoContenido::Json,
+    )?;
     Ok(response)
 }
 
@@ -112,7 +117,12 @@ fn merge_ejecutado_con_fallos(logger: Arc<Logger>, error: String) -> Result<Resp
     volver_a_estado_previo_al_merge()?;
 
     if index::hay_archivos_con_conflictos(logger.clone()) {
-        let response = Response::new(logger, EstadoHttp::MethodNotAllowed, None);
+        let response = Response::new(
+            logger,
+            EstadoHttp::MethodNotAllowed,
+            None,
+            TipoContenido::Json,
+        )?;
         Ok(response)
     } else {
         Err(ErrorHttp::InternalServerError(format!(
@@ -156,14 +166,19 @@ fn mergear_pull_request(
     let mut pull_request = obtener_pull_request_de_params(&params)?;
 
     if pull_request.estado != "open" {
-        let response = Response::new(logger, EstadoHttp::ValidationFailed, None);
+        let response = Response::new(
+            logger,
+            EstadoHttp::ValidationFailed,
+            None,
+            TipoContenido::Json,
+        )?;
         return Ok(response);
     }
 
     let (es_posible_mergear, merge_method) = obtener_params_body(request, &pull_request.rama_base)?;
 
     if !es_posible_mergear {
-        let response = Response::new(logger, EstadoHttp::Conflict, None);
+        let response = Response::new(logger, EstadoHttp::Conflict, None, TipoContenido::Json)?;
         return Ok(response);
     }
 

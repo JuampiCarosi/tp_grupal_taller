@@ -5,7 +5,7 @@ use crate::{
     tipos_de_dato::{
         http::{
             endpoint::Endpoint, error::ErrorHttp, estado::EstadoHttp, metodos::MetodoHttp,
-            request::Request, response::Response,
+            request::Request, response::Response, tipo_contenido::TipoContenido,
         },
         logger::Logger,
     },
@@ -62,6 +62,11 @@ pub fn responder_pull_request_en_formato_json(
     let body_respuesta = serde_json::to_string(&pull_request).map_err(|e| {
         ErrorHttp::InternalServerError(format!("No se ha podido serializar el pull request: {}", e))
     })?;
-    let respuesta = Response::new(logger, EstadoHttp::Created, Some(&body_respuesta));
+    let respuesta = Response::new(
+        logger,
+        EstadoHttp::Created,
+        Some(&body_respuesta),
+        TipoContenido::Json,
+    )?;
     Ok(respuesta)
 }

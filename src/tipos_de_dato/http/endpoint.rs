@@ -60,7 +60,7 @@ impl Endpoint {
 #[cfg(test)]
 
 mod tests {
-    use crate::tipos_de_dato::http::estado::EstadoHttp;
+    use crate::tipos_de_dato::http::{estado::EstadoHttp, tipo_contenido::TipoContenido};
 
     use super::*;
 
@@ -74,7 +74,8 @@ mod tests {
                     Arc::new(Logger::new(std::path::PathBuf::from("server_logger.txt")).unwrap()),
                     EstadoHttp::Ok,
                     None,
-                ))
+                    TipoContenido::Json,
+                ))?
             },
         );
 
@@ -101,7 +102,8 @@ mod tests {
                     Arc::new(Logger::new(std::path::PathBuf::from("server_logger.txt")).unwrap()),
                     EstadoHttp::Ok,
                     None,
-                ))
+                    TipoContenido::Json,
+                )?)
             },
         );
 
