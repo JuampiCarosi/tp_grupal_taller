@@ -199,7 +199,7 @@ mod tests {
     fn craer_archivo_config_default() {
         let home = std::env::var("HOME").unwrap();
         let config_path = format!("{home}/.girconfig");
-        let contenido = "nombre =aaaa\nmail =bbbb\n".to_string();
+        let contenido = "nombre = ejemplo_nombre\nmail = ejemplo_mail\n".to_string();
         io::escribir_bytes(config_path, contenido).unwrap();
     }
 
