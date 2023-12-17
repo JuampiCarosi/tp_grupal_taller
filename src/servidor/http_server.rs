@@ -86,14 +86,13 @@ impl ServidorHttp {
             let endpoints = endpoints.clone();
             let tx = tx.clone();
             let handle = thread::spawn(move || -> Result<(), String> {
-                let response = Self::manejar_cliente(logger_clone.clone(), &mut stream, &endpoints);
+                let response =
+                    Self::manejar_cliente(logger_clone.clone(), &mut stream, &endpoints, tx);
                 match response {
                     Ok(response) => response.enviar(&mut stream).map_err(|e| e.to_string()),
                     Err(error_http) => {
                         logger_clone.log(&format!("Error procesando request: {:?}", error_http));
                         let response = Response::from_error(logger_clone.clone(), error_http);
-                        tx.send(MensajeServidor::HttpErrorFatal)
-                            .map_err(|e| e.to_string())?;
                         response.enviar(&mut stream).map_err(|e| e.to_string())
                     }
                 }?;
@@ -109,6 +108,9 @@ impl ServidorHttp {
                 logger.log("Error al obtener el lock de threads");
             }
         }
+
+        tx.send(MensajeServidor::HttpErrorFatal)
+            .expect("Error al enviar mensaje de error fatal al servidor");
     }
 
     pub fn reiniciar_servidor(&mut self) -> Result<(), String> {
@@ -139,10 +141,19 @@ impl ServidorHttp {
         logger: Arc<Logger>,
         stream: &mut TcpStream,
         endpoints: &Vec<Endpoint>,
+        tx: Sender<MensajeServidor>,
     ) -> Result<Response, ErrorHttp> {
-        let mut stream_clone = stream
-            .try_clone()
-            .map_err(|e| ErrorHttp::InternalServerError(e.to_string()))?;
+        let mut stream_clone = match stream.try_clone() {
+            Ok(stream) => stream,
+            Err(e) => {
+                tx.send(MensajeServidor::HttpErrorFatal)
+                    .expect("Error al enviar mensaje de error fatal al servidor");
+                logger.log(&format!("Error al clonar el stream en http server: {e}"));
+                return Err(ErrorHttp::InternalServerError(format!(
+                    "Error al clonar el stream en http server: {e}"
+                )));
+            }
+        };
 
         let mut reader = BufReader::new(&mut stream_clone);
         let request = Request::from(&mut reader, logger.clone())?;
