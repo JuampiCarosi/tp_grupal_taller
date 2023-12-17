@@ -146,7 +146,6 @@ impl ServidorHttp {
 
         let mut reader = BufReader::new(stream);
         let request = Request::from(&mut reader, logger.clone())?;
-
         for endpoint in endpoints {
             if endpoint.metodo != request.metodo {
                 continue;
@@ -173,18 +172,22 @@ mod test {
 
     use super::*;
     use crate::utils::testing;
-    fn test01_se_obtiene_not_found_si_no_existe_el_repo() {
+    #[test]
+    fn test01_se_obtiene_not_found_si_no_existe_el_repositorio() {
         let contenido_mock = "GET /repos/{owner}/{repo}/pulls/{pull_number} HTTP/1.1\r\n\r\n";
+        let logger = Arc::new(Logger::new(PathBuf::from("server_logger.txt")).unwrap());
         let mut mock = testing::MockTcpStream {
             lectura_data: contenido_mock.as_bytes().to_vec(),
             escritura_data: vec![],
         };
-        ServidorHttp::manejar_cliente(
-            Arc::new(Logger::new(PathBuf::from("server_logger.txt")).unwrap()),
+
+        let respuesta = ServidorHttp::manejar_cliente(
+            logger.clone(),
             &mut mock,
             &vec![],
         ).unwrap();
-        let respuesta = String::from_utf8(mock.escritura_data).unwrap();
-        assert!(respuesta.contains("404 Not Found"));
+
+        assert_eq!(404, respuesta.estado);
+        assert_eq!("Not Found", respuesta.mensaje_estado);
     }
 }
