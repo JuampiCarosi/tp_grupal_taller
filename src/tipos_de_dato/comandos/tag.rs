@@ -71,3 +71,50 @@ impl Ejecutar for Tag {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::{path::PathBuf, sync::Arc};
+
+    use serial_test::serial;
+
+    use crate::{
+        tipos_de_dato::{comando::Ejecutar, comandos::tag::Tag, logger::Logger},
+        utils::{tags::existe_tag, testing::limpiar_archivo_gir},
+    };
+
+    #[test]
+    #[serial]
+    fn test01_crear_tag() {
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/tag_test01")).unwrap());
+        limpiar_archivo_gir(logger.clone());
+        let mut tag = Tag::from(vec!["mi_tag".to_string()], logger.clone()).unwrap();
+
+        let _ = tag.ejecutar();
+
+        assert!(existe_tag("mi_tag"));
+    }
+
+    #[test]
+    #[serial]
+    #[should_panic(expected = "El tag mi_tag ya existe")]
+    fn test02_crear_tag_existente() {
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/tag_test02")).unwrap());
+        let mut tag = Tag::from(vec!["mi_tag".to_string()], logger.clone()).unwrap();
+
+        let _ = tag.ejecutar().unwrap();
+    }
+
+    #[test]
+    #[serial]
+    fn test03_obtener_tags() {
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/tag_test03")).unwrap());
+        let mut crear_tag = Tag::from(vec!["otro_tag".to_string()], logger.clone()).unwrap();
+        let _ = crear_tag.ejecutar();
+
+        let mut mostrar_tags = Tag::from(vec![], logger.clone()).unwrap();
+        let tags = mostrar_tags.ejecutar().unwrap();
+
+        assert_eq!(tags, "mi_tag\notro_tag");
+    }
+}
