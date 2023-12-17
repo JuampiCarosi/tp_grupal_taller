@@ -4,6 +4,7 @@ use std::{
         mpsc::{channel, Receiver, Sender},
         Arc, Mutex,
     },
+    time::{Duration, Instant},
 };
 
 use gir::{
@@ -14,7 +15,8 @@ use gir::{
     tipos_de_dato::logger::Logger,
 };
 
-const MAX_INTENTOS_REINICIO: u8 = 3;
+const MAX_INTENTOS_REINICIO: u8 = 5;
+static MINIMO_TIEMPO_DE_FUNCIONAMIENTO: u64 = 60;
 
 fn correr_servidor(
     logger: Arc<Logger>,
@@ -32,15 +34,24 @@ fn correr_servidor(
     let mut servidor_gir = ServidorGir::new(logger.clone(), threads.clone(), tx.clone())?;
     servidor_gir.iniciar_servidor()?;
 
+    let mut ultimo_gir = Instant::now();
+    let mut ultimo_http = Instant::now();
+
     while let Ok(error_servidor) = rx.recv() {
         match error_servidor {
             MensajeServidor::GirErrorFatal => {
-                intentos_gir += 1;
                 servidor_gir.reiniciar_servidor()?;
+                if ultimo_gir.elapsed() < Duration::from_secs(MINIMO_TIEMPO_DE_FUNCIONAMIENTO) {
+                    ultimo_gir = Instant::now();
+                    intentos_gir += 1;
+                }
             }
             MensajeServidor::HttpErrorFatal => {
-                intentos_http += 1;
                 servidor_http.reiniciar_servidor()?;
+                if ultimo_http.elapsed() < Duration::from_secs(MINIMO_TIEMPO_DE_FUNCIONAMIENTO) {
+                    ultimo_http = Instant::now();
+                    intentos_http += 1;
+                }
             }
         };
 
