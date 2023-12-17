@@ -2,7 +2,7 @@ use std::{collections::HashMap, io::Write, net::TcpStream, sync::Arc};
 
 use super::{error::ErrorHttp, estado::EstadoHttp};
 use crate::tipos_de_dato::logger::Logger;
-
+#[derive(Debug)]
 pub struct Response {
     pub estado: usize,
     pub mensaje_estado: String,

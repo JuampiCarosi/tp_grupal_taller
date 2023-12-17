@@ -1,5 +1,5 @@
 use std::{
-    io::BufReader,
+    io::{BufReader, Read, Write},
     net::{TcpListener, TcpStream},
     sync::{mpsc::Sender, Arc, Mutex},
     thread,
@@ -137,12 +137,13 @@ impl ServidorHttp {
         Ok(())
     }
 
-    fn manejar_cliente(
+    fn manejar_cliente<R: Read + Write>(
         logger: Arc<Logger>,
-        stream: &mut TcpStream,
+        stream: &mut R,
         endpoints: &Vec<Endpoint>,
         tx: Sender<MensajeServidor>,
     ) -> Result<Response, ErrorHttp> {
+
         let mut stream_clone = match stream.try_clone() {
             Ok(stream) => stream,
             Err(e) => {
@@ -155,9 +156,8 @@ impl ServidorHttp {
             }
         };
 
-        let mut reader = BufReader::new(&mut stream_clone);
+        let mut reader = BufReader::new(stream);
         let request = Request::from(&mut reader, logger.clone())?;
-
         for endpoint in endpoints {
             if endpoint.metodo != request.metodo {
                 continue;
@@ -167,12 +167,116 @@ impl ServidorHttp {
                 Some(params) => params,
                 None => continue,
             };
-
             let response = (endpoint.handler)(request, params, logger.clone())?;
+
             return Ok(response);
         }
 
         let response = Response::new(logger, EstadoHttp::NotFound, None);
         Ok(response)
     }
+}
+
+
+#[cfg(test)]
+mod test {
+    use std::path::PathBuf;
+
+    use super::*;
+    use crate::{utils::{testing::{self, crear_repo_para_pr}, io}, servidor::gir_server::ServidorGir};
+    #[test]
+    fn test01_se_obtiene_not_found_si_no_existe_el_repositorio() {
+        let contenido_mock = "GET /repos/{owner}/{repo}/pulls/{pull_number} HTTP/1.1\r\n\r\n";
+        let logger = Arc::new(Logger::new(PathBuf::from("server_logger.txt")).unwrap());
+        let mut mock = testing::MockTcpStream {
+            lectura_data: contenido_mock.as_bytes().to_vec(),
+            escritura_data: vec![],
+        };
+
+        let respuesta = ServidorHttp::manejar_cliente(
+            logger.clone(),
+            &mut mock,
+            &vec![],
+        ).unwrap();
+
+        assert_eq!(404, respuesta.estado);
+        assert_eq!("Not Found", respuesta.mensaje_estado);
+    }
+
+    #[test]
+    fn test02_crear_pr_en_repo_devuelve_status_201() {
+        
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/servidor_http_test02")).unwrap());
+
+        let logger_clone = logger.clone();
+        let (tx, _) = std::sync::mpsc::channel();
+
+        let handle = std::thread::spawn(move || {
+            let threads = Arc::new(Mutex::new(Vec::new()));
+            let listener = TcpListener::bind("127.0.0.1:9933").unwrap();
+
+            let mut servidor_gir = ServidorGir {
+                listener,
+                threads,
+                logger: logger_clone,
+                main: None,
+                tx,
+            };
+            servidor_gir.iniciar_servidor().unwrap();
+        });
+
+        if handle.is_finished() {
+            panic!("No se pudo iniciar el servidor");
+        }
+        std::thread::sleep(std::time::Duration::from_secs(1));
+
+        let _ = io::rm_directorio("tmp/servidor_http_test02_dir");
+        let _ = io::rm_directorio("srv/repo/");
+        io::crear_directorio("tmp/servidor_http_test02_dir").unwrap();
+        io::cambiar_directorio("tmp/servidor_http_test02_dir").unwrap();
+
+        crear_repo_para_pr(logger.clone());
+        std::thread::sleep(std::time::Duration::from_secs(1));
+        
+        let repo = "repo";
+        let body = r#"{
+            "title": "Feature X: Implement new functionality",
+            "head": "juani:master",
+            "base": "rama",
+            "body": "This is the description of the pull request."
+        }"#;
+        let content_length = body.len();
+
+        let request_string = format!(
+            "POST /repos/{}/pulls HTTP/1.1\r\n\
+            Host: localhost:9933\r\n\
+            Accept: application/vnd.github+json\r\n\
+            Content-Type: application/json\r\n\
+            Content-Length: {}\r\n\
+            \r\n\
+            {}",
+            repo,
+            content_length,
+            body
+        );
+
+        let mut mock = testing::MockTcpStream {
+            lectura_data: request_string.as_bytes().to_vec(),
+            escritura_data: vec![],
+        };
+        io::cambiar_directorio("../../").unwrap();
+        let mut endpoints = Vec::new();
+        ServidorHttp::agregar_endpoints(&mut endpoints);
+
+        let respuesta = ServidorHttp::manejar_cliente(
+            logger.clone(),
+            &mut mock,
+            &endpoints,
+        ).unwrap();
+        io::rm_directorio("tmp/servidor_http_test02_dir").unwrap();
+        io::rm_directorio("srv/repo/").unwrap();
+        assert_eq!(201, respuesta.estado);
+        assert_eq!("Created", respuesta.mensaje_estado);  
+    }
+
 }
