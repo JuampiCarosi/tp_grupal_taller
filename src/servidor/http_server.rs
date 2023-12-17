@@ -84,16 +84,14 @@ impl ServidorHttp {
 
             let logger_clone = logger.clone();
             let endpoints = endpoints.clone();
-            let tx = tx.clone();
             let handle = thread::spawn(move || -> Result<(), String> {
-                let response = Self::manejar_cliente(logger_clone.clone(), &mut stream, &endpoints);
+                let response =
+                    Self::manejar_cliente(logger_clone.clone(), &mut stream, &endpoints);
                 match response {
                     Ok(response) => response.enviar(&mut stream).map_err(|e| e.to_string()),
                     Err(error_http) => {
                         logger_clone.log(&format!("Error procesando request: {:?}", error_http));
                         let response = Response::from_error(logger_clone.clone(), error_http);
-                        tx.send(MensajeServidor::HttpErrorFatal)
-                            .map_err(|e| e.to_string())?;
                         response.enviar(&mut stream).map_err(|e| e.to_string())
                     }
                 }?;
@@ -109,6 +107,9 @@ impl ServidorHttp {
                 logger.log("Error al obtener el lock de threads");
             }
         }
+
+        tx.send(MensajeServidor::HttpErrorFatal)
+            .expect("Error al enviar mensaje de error fatal al servidor");
     }
 
     pub fn reiniciar_servidor(&mut self) -> Result<(), String> {
@@ -178,7 +179,6 @@ mod test {
             lectura_data: contenido_mock.as_bytes().to_vec(),
             escritura_data: vec![],
         };
-
         let respuesta = ServidorHttp::manejar_cliente(
             logger.clone(),
             &mut mock,

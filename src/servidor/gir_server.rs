@@ -80,12 +80,22 @@ impl ServidorGir {
         listener: Arc<TcpListener>,
         threads: Arc<Mutex<Vec<thread::JoinHandle<Result<(), String>>>>>,
         logger: Arc<Logger>,
+        tx: Sender<MensajeServidor>,
     ) {
         while let Ok((stream, socket)) = listener.accept() {
             logger.log(&format!("Se conecto un cliente a gir desde {}", socket));
             let logger_clone = logger.clone();
+            let tx = tx.clone();
             let handle = thread::spawn(move || -> Result<(), String> {
-                let stream_clonado = stream.try_clone().map_err(|e| e.to_string())?;
+                let stream_clonado = match stream.try_clone() {
+                    Ok(stream) => stream,
+                    Err(e) => {
+                        tx.send(MensajeServidor::HttpErrorFatal)
+                            .expect("Error al enviar mensaje de error fatal al servidor");
+                        logger_clone.log(&format!("Error al clonar el stream en http server: {e}"));
+                        return Err(format!("Error al clonar el stream en http server: {e}"));
+                    }
+                };
                 let mut comunicacion = Comunicacion::<TcpStream>::new_para_server(
                     stream_clonado,
                     logger_clone.clone(),
@@ -104,6 +114,9 @@ impl ServidorGir {
                 logger.log("Error al obtener el lock de threads");
             }
         }
+
+        tx.send(MensajeServidor::GirErrorFatal)
+            .expect("Error al enviar mensaje de error fatal al servidor");
         logger.log("Se cerro el servidor");
     }
 
@@ -113,8 +126,9 @@ impl ServidorGir {
         let listener = Arc::new(self.listener.try_clone().map_err(|e| e.to_string())?);
         let threads = self.threads.clone();
         let logger = self.logger.clone();
+        let tx = self.tx.clone();
         let handle = thread::spawn(move || {
-            Self::aceptar_conexiones(listener, threads, logger);
+            Self::aceptar_conexiones(listener, threads, logger, tx);
         });
         self.main = Some(handle);
         Ok(())
