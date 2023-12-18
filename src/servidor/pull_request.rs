@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
 const OPEN: &str = "open";
-const CLOSED: &str = "closedd";
+const CLOSED: &str = "closed";
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct PullRequest {
