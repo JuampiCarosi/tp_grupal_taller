@@ -58,7 +58,7 @@ pub fn guadar_pull_request_acorde_al_numero(
 pub fn responder_pull_request_en_formato_json(
     pull_request: PullRequest,
     logger: Arc<Logger>,
-    estado: EstadoHttp
+    estado: EstadoHttp,
 ) -> Result<Response, ErrorHttp> {
     let body_respuesta = serde_json::to_string(&pull_request).map_err(|e| {
         ErrorHttp::InternalServerError(format!("No se ha podido serializar el pull request: {}", e))

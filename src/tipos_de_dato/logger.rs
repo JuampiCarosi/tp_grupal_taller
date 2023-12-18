@@ -113,10 +113,7 @@ impl Drop for Logger {
 impl Default for Logger {
     fn default() -> Self {
         let (tx, _) = mpsc::channel();
-        Self {
-            tx,
-            handle: None,
-        }
+        Self { tx, handle: None }
     }
 }
 

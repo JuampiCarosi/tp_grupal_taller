@@ -95,7 +95,7 @@ mod test {
         let threads = Arc::new(Mutex::new(Vec::new()));
 
         let result = correr_servidor(logger.clone(), channel, threads.clone());
-        
+
         assert!(result.is_err());
     }
 }

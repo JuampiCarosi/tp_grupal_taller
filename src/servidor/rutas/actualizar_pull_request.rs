@@ -2,8 +2,8 @@ use std::{collections::HashMap, sync::Arc};
 
 use crate::tipos_de_dato::{
     http::{
-        endpoint::Endpoint, error::ErrorHttp, metodos::MetodoHttp, request::Request,
-        response::Response, estado::EstadoHttp,
+        endpoint::Endpoint, error::ErrorHttp, estado::EstadoHttp, metodos::MetodoHttp,
+        request::Request, response::Response,
     },
     logger::Logger,
 };
