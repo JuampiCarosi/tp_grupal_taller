@@ -19,7 +19,7 @@ use super::obtener_pull_request::{self, obtener_pull_request_de_params};
 pub fn agregar_a_router(rutas: &mut Vec<Endpoint>) {
     let endpoint = Endpoint::new(
         MetodoHttp::Post,
-        "/repos/{owner}/{repo}/pulls/{pull_number}/merge".to_string(),
+        "/repos/{repo}/pulls/{pull_number}/merge".to_string(),
         mergear_pull_request,
     );
     rutas.push(endpoint)
