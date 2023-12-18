@@ -6,7 +6,7 @@ use std::{
 
 use crate::tipos_de_dato::{
     comando::Ejecutar,
-    comandos::{branch::Branch, init::Init, remote::Remote, add::Add, commit::Commit, push::Push},
+    comandos::{add::Add, branch::Branch, commit::Commit, init::Init, push::Push, remote::Remote},
     logger::Logger,
 };
 
@@ -37,7 +37,7 @@ impl Write for MockTcpStream {
 }
 
 pub fn limpiar_archivo_gir(logger: Arc<Logger>) {
-    elimar_archivo_gir();
+    eliminar_archivo_gir();
 
     let mut init = Init {
         path: "./.gir".to_string(),
@@ -75,12 +75,19 @@ pub fn escribir_rama_local(rama: &str, logger: Arc<Logger>) {
         .unwrap();
 }
 
-pub fn elimar_archivo_gir() {
+pub fn eliminar_archivo_gir() {
     if PathBuf::from("./.gir").exists() {
         io::rm_directorio("./.gir").unwrap();
     }
 }
 
+pub fn addear_archivos_y_comittear(args: Vec<String>, logger: Arc<Logger>) {
+    let mut add = Add::from(args, logger.clone()).unwrap();
+    add.ejecutar().unwrap();
+    let mut commit =
+        Commit::from(&mut vec!["-m".to_string(), "mensaje".to_string()], logger).unwrap();
+    commit.ejecutar().unwrap();
+}
 
 pub fn crear_repo_para_pr(logger: Arc<Logger>) {
     let mut init = Init::from(vec![], logger.clone()).unwrap();

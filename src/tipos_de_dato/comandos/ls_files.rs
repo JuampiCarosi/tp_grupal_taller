@@ -137,10 +137,10 @@ mod tests {
     use crate::{
         tipos_de_dato::{
             comando::Ejecutar,
-            comandos::{add::Add, commit::Commit, init::Init},
+            comandos::{add::Add, commit::Commit},
             logger::Logger,
         },
-        utils::{index::limpiar_archivo_index, io},
+        utils::testing::limpiar_archivo_gir,
     };
 
     use super::LsFiles;
@@ -153,21 +153,11 @@ mod tests {
         commit.ejecutar().unwrap();
     }
 
-    fn limpiar_archivo_gir() {
-        io::rm_directorio(".gir").unwrap();
-        let logger = Arc::new(Logger::new(PathBuf::from("tmp/ls_files_init")).unwrap());
-        let mut init = Init {
-            path: "./.gir".to_string(),
-            logger,
-        };
-        init.ejecutar().unwrap();
-    }
-
     #[test]
     #[serial]
     fn test01_ls_files_muestra_los_archivos_en_staging() {
-        limpiar_archivo_index().unwrap();
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/ls_files_test01")).unwrap());
+        limpiar_archivo_gir(logger.clone());
         let mut args = vec!["test_dir/objetos/archivo.txt".to_string()];
         let mut add = Add::from(args.clone(), logger.clone()).unwrap();
         add.ejecutar().unwrap();
@@ -179,8 +169,8 @@ mod tests {
     #[test]
     #[serial]
     fn test02_ls_files_muestra_los_archivos_trackeados() {
-        limpiar_archivo_gir();
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/ls_files_test02")).unwrap());
+        limpiar_archivo_gir(logger.clone());
         addear_archivos_y_comittear(vec!["test_dir".to_string()], logger.clone());
         let mut args = vec![];
         let mut ls_files = LsFiles::from(logger.clone(), &mut args).unwrap();
@@ -214,8 +204,8 @@ mod tests {
     #[test]
     #[serial]
     fn test05_ls_files_de_un_archivo_no_trackeado_devuelve_string_vacio() {
-        limpiar_archivo_gir();
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/ls_files_test05")).unwrap());
+        limpiar_archivo_gir(logger.clone());
         let mut args = vec!["test_dir/objetos/archivo.txt".to_string()];
         let mut ls_files = LsFiles::from(logger.clone(), &mut args).unwrap();
         let resultado = ls_files.ejecutar().unwrap();
