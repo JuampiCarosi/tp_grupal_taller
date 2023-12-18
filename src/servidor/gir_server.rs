@@ -5,7 +5,6 @@ use crate::tipos_de_dato::{comunicacion::Comunicacion, logger::Logger};
 use crate::utils::{self, io as gir_io};
 use std::env::args;
 use std::sync::mpsc::Sender;
-use std::sync::Mutex;
 use std::{
     env,
     net::{TcpListener, TcpStream},
@@ -16,6 +15,7 @@ use std::{
 };
 
 use super::rutas::mensaje_servidor::MensajeServidor;
+use super::vector_threads::VectorThreads;
 
 const VERSION: &str = "version 1\n";
 const CAPABILITIES: &str = "ofs-delta symref=HEAD:refs/heads/master agent=git/2.17.1";
@@ -28,7 +28,7 @@ pub struct ServidorGir {
     pub listener: TcpListener,
 
     /// Threads que se spawnean para atender a los clientes
-    pub threads: Arc<Mutex<Vec<thread::JoinHandle<Result<(), String>>>>>,
+    pub threads: VectorThreads,
 
     /// Logger para registrar los eventos del servidor
     pub logger: Arc<Logger>,
@@ -44,7 +44,7 @@ impl ServidorGir {
     /// * `logger` - Logger para registrar los eventos del servidor
     pub fn new(
         logger: Arc<Logger>,
-        threads: Arc<Mutex<Vec<thread::JoinHandle<Result<(), String>>>>>,
+        threads: VectorThreads,
         tx: Sender<MensajeServidor>,
     ) -> Result<ServidorGir, String> {
         let argv = args().collect::<Vec<String>>();
@@ -78,7 +78,7 @@ impl ServidorGir {
 
     fn aceptar_conexiones(
         listener: Arc<TcpListener>,
-        threads: Arc<Mutex<Vec<thread::JoinHandle<Result<(), String>>>>>,
+        threads: VectorThreads,
         logger: Arc<Logger>,
         tx: Sender<MensajeServidor>,
     ) {

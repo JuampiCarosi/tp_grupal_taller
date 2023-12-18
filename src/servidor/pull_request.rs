@@ -391,7 +391,7 @@ mod test {
     use serial_test::serial;
 
     use crate::{
-        servidor::gir_server::ServidorGir,
+        servidor::{gir_server::ServidorGir, vector_threads::VectorThreads},
         tipos_de_dato::{
             comando::Ejecutar,
             comandos::{add::Add, commit::Commit, push::Push},
@@ -1074,7 +1074,7 @@ mod test {
         let (tx, _) = std::sync::mpsc::channel();
 
         let handle = std::thread::spawn(move || {
-            let threads = Arc::new(Mutex::new(Vec::new()));
+            let threads: VectorThreads = Arc::new(Mutex::new(Vec::new()));
             let listener = TcpListener::bind("127.0.0.1:9933").unwrap();
 
             let mut servidor_gir = ServidorGir {
@@ -1141,7 +1141,7 @@ mod test {
         let (tx, _) = std::sync::mpsc::channel();
 
         let handle = std::thread::spawn(move || {
-            let threads = Arc::new(Mutex::new(Vec::new()));
+            let threads: VectorThreads = Arc::new(Mutex::new(Vec::new()));
             let listener = TcpListener::bind("127.0.0.1:9933").unwrap();
 
             let mut servidor_gir = ServidorGir {

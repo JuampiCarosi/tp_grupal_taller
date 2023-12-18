@@ -1,21 +1,16 @@
-use std::{collections::HashMap, sync::Arc};
+use std::collections::HashMap;
 
-use crate::tipos_de_dato::logger::Logger;
-
-use super::{error::ErrorHttp, metodos::MetodoHttp, request::Request, response::Response};
+use super::{endpoint_handler::EndpointHandler, metodos::MetodoHttp};
 #[derive(Debug)]
+
 pub struct Endpoint {
     pub metodo: MetodoHttp,
     pub patron: String,
-    pub handler: fn(Request, HashMap<String, String>, Arc<Logger>) -> Result<Response, ErrorHttp>,
+    pub handler: EndpointHandler,
 }
 
 impl Endpoint {
-    pub fn new(
-        metodo: MetodoHttp,
-        patron: String,
-        handler: fn(Request, HashMap<String, String>, Arc<Logger>) -> Result<Response, ErrorHttp>,
-    ) -> Self {
+    pub fn new(metodo: MetodoHttp, patron: String, handler: EndpointHandler) -> Self {
         Self {
             metodo,
             patron,
@@ -60,7 +55,12 @@ impl Endpoint {
 #[cfg(test)]
 
 mod tests {
-    use crate::tipos_de_dato::http::estado::EstadoHttp;
+    use std::sync::Arc;
+
+    use crate::tipos_de_dato::{
+        http::{estado::EstadoHttp, response::Response},
+        logger::Logger,
+    };
 
     use super::*;
 
