@@ -5,7 +5,7 @@ use crate::{
     tipos_de_dato::{
         http::{
             endpoint::Endpoint, error::ErrorHttp, metodos::MetodoHttp, request::Request,
-            response::Response,
+            response::Response, estado::EstadoHttp,
         },
         logger::Logger,
     },
@@ -29,7 +29,7 @@ fn obtener_pull_request(
 ) -> Result<Response, ErrorHttp> {
     let pull_request = obtener_pull_request_de_params(&params)?;
 
-    responder_pull_request_en_formato_json(pull_request, logger)
+    responder_pull_request_en_formato_json(pull_request, logger, EstadoHttp::Ok)
 }
 
 ///Obtiene el objeto pull request desde los parametros. Para ello en los parametros tiene que estar
@@ -38,7 +38,7 @@ fn obtener_pull_request(
 /// ## Argumuntos
 /// - params: los parametros obtenidos de la ruta del pedido. Debe contener `repo` y `pull_number`   
 ///
-/// ## Reusultado
+/// ## Resultado
 /// - el pull request guardado en el directorio `./srv/{repo}/pulls/{pull_number}`
 ///
 /// ## Errores

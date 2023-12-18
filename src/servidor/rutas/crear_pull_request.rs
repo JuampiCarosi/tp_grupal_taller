@@ -41,7 +41,7 @@ fn crear_pull_request(
     let pull_request = PullRequest::crear_pr(repo, body)?;
     guadar_pull_request_acorde_al_numero(&pull_request, &repo)?;
 
-    responder_pull_request_en_formato_json(pull_request, logger)
+    responder_pull_request_en_formato_json(pull_request, logger, EstadoHttp::Created)
 }
 
 pub fn guadar_pull_request_acorde_al_numero(
@@ -58,10 +58,11 @@ pub fn guadar_pull_request_acorde_al_numero(
 pub fn responder_pull_request_en_formato_json(
     pull_request: PullRequest,
     logger: Arc<Logger>,
+    estado: EstadoHttp
 ) -> Result<Response, ErrorHttp> {
     let body_respuesta = serde_json::to_string(&pull_request).map_err(|e| {
         ErrorHttp::InternalServerError(format!("No se ha podido serializar el pull request: {}", e))
     })?;
-    let respuesta = Response::new(logger, EstadoHttp::Created, Some(&body_respuesta));
+    let respuesta = Response::new(logger, estado, Some(&body_respuesta));
     Ok(respuesta)
 }

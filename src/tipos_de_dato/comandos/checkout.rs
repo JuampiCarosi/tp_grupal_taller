@@ -256,10 +256,8 @@ impl Ejecutar for Checkout {
             let tree_viejo = Self::obtener_arbol_commit_actual(self.logger.clone())?;
             self.cambiar_rama()?;
             let tree_futuro = Self::obtener_arbol_commit_actual(self.logger.clone())?;
-
             let objetos_a_eliminar = Self::obtener_objetos_eliminados(&tree_viejo, &tree_futuro);
             self.eliminar_objetos(&objetos_a_eliminar)?;
-
             tree_futuro.escribir_en_directorio()?;
         };
         Ok(format!("Cambiado a rama {}", self.rama_a_cambiar))
@@ -274,12 +272,15 @@ mod tests {
     use crate::{
         tipos_de_dato::{
             comando::Ejecutar,
-            comandos::{add::Add, branch::Branch, commit::Commit, init::Init},
+            comandos::branch::Branch,
             logger::Logger,
             objeto::Objeto,
             objetos::{blob::Blob, tree::Tree},
         },
-        utils::io,
+        utils::{
+            io,
+            testing::{addear_archivos_y_comittear, limpiar_archivo_gir},
+        },
     };
 
     use super::*;
@@ -287,122 +288,8 @@ mod tests {
     fn craer_archivo_config_default() {
         let home = std::env::var("HOME").unwrap();
         let config_path = format!("{home}/.girconfig");
-        let contenido = "nombre = aaaa\nmail = bbbb\n".to_string();
+        let contenido = "nombre = ejemplo_nombre\nmail = ejemplo_mail\n".to_string();
         io::escribir_bytes(config_path, contenido).unwrap();
-    }
-
-    fn limpiar_archivo_gir() {
-        io::rm_directorio(".gir").unwrap();
-        let logger = Arc::new(Logger::new(PathBuf::from("tmp/branch_init")).unwrap());
-        let mut init = Init {
-            path: "./.gir".to_string(),
-            logger,
-        };
-        init.ejecutar().unwrap();
-        craer_archivo_config_default();
-    }
-
-    fn addear_archivos_y_comittear(args: Vec<String>, logger: Arc<Logger>) {
-        let mut add = Add::from(args, logger.clone()).unwrap();
-        add.ejecutar().unwrap();
-        let mut commit =
-            Commit::from(&mut vec!["-m".to_string(), "mensaje".to_string()], logger).unwrap();
-        commit.ejecutar().unwrap();
-    }
-
-    #[test]
-    #[serial]
-    fn test01_checkout_cambia_de_rama() {
-        limpiar_archivo_gir();
-        let logger = Arc::new(Logger::new(PathBuf::from("tmp/checkout_test02")).unwrap());
-        let args = vec!["test_dir/objetos/archivo.txt".to_string()];
-        addear_archivos_y_comittear(args, logger.clone());
-
-        Branch::from(&mut vec!["una_rama".to_string()], logger.clone())
-            .unwrap()
-            .ejecutar()
-            .unwrap();
-
-        let mut checkout = Checkout::from(vec!["una_rama".to_string()], logger.clone()).unwrap();
-        checkout.ejecutar().unwrap();
-
-        let contenido_head = std::fs::read_to_string(".gir/HEAD").unwrap();
-        assert_eq!(contenido_head, "ref: refs/heads/una_rama".to_string());
-    }
-
-    #[test]
-    #[serial]
-
-    fn test02_checkout_crea_y_cambia_de_rama() {
-        limpiar_archivo_gir();
-        let logger = Arc::new(Logger::new(PathBuf::from("tmp/checkout_test02")).unwrap());
-        let args = vec!["test_dir/objetos/archivo.txt".to_string()];
-        addear_archivos_y_comittear(args, logger.clone());
-
-        let mut checkout = Checkout::from(
-            vec!["-b".to_string(), "una_rama".to_string()],
-            logger.clone(),
-        )
-        .unwrap();
-        checkout.ejecutar().unwrap();
-
-        let contenido_head = std::fs::read_to_string(".gir/HEAD").unwrap();
-        assert_eq!(contenido_head, "ref: refs/heads/una_rama".to_string());
-    }
-
-    #[test]
-    #[serial]
-    fn test03_al_hacer_checkout_actualiza_contenido() {
-        limpiar_archivo_gir();
-        let logger = Arc::new(Logger::new(PathBuf::from("tmp/checkout_test03")).unwrap());
-        io::escribir_bytes("tmp/checkout_test03_test", "contenido").unwrap();
-        let args = vec!["tmp/checkout_test03_test".to_string()];
-        addear_archivos_y_comittear(args, logger.clone());
-
-        let mut checkout = Checkout::from(
-            vec!["-b".to_string(), "una_rama".to_string()],
-            logger.clone(),
-        )
-        .unwrap();
-        checkout.ejecutar().unwrap();
-
-        io::escribir_bytes("tmp/checkout_test03_test", "contenido 2").unwrap();
-        let args = vec!["tmp/checkout_test03_test".to_string()];
-        addear_archivos_y_comittear(args, logger.clone());
-
-        let mut checkout = Checkout::from(vec!["master".to_string()], logger.clone()).unwrap();
-        checkout.ejecutar().unwrap();
-
-        let contenido_archivo = io::leer_a_string("tmp/checkout_test03_test").unwrap();
-
-        assert_eq!(contenido_archivo, "contenido".to_string());
-    }
-
-    #[test]
-    #[serial]
-    fn test04_al_hacer_checkout_se_eliminan_no_trackeados() {
-        limpiar_archivo_gir();
-        let logger = Arc::new(Logger::new(PathBuf::from("tmp/checkout_test03")).unwrap());
-        io::escribir_bytes("tmp/checkout_test04_test", "contenido").unwrap();
-        let args = vec!["tmp/checkout_test04_test".to_string()];
-        addear_archivos_y_comittear(args, logger.clone());
-
-        let mut checkout = Checkout::from(
-            vec!["-b".to_string(), "una_rama".to_string()],
-            logger.clone(),
-        )
-        .unwrap();
-        checkout.ejecutar().unwrap();
-
-        io::escribir_bytes("tmp/checkout_test04_test_2", "contenido 2").unwrap();
-        let args = vec!["tmp/checkout_test04_test_2".to_string()];
-        addear_archivos_y_comittear(args, logger.clone());
-
-        let mut checkout = Checkout::from(vec!["master".to_string()], logger.clone()).unwrap();
-        checkout.ejecutar().unwrap();
-
-        assert!(!PathBuf::from("tmp/checkout_test04_test_2").exists());
-        assert!(PathBuf::from("tmp/checkout_test04_test").exists());
     }
 
     fn tree_con_un_tree_y_un_objeto(logger: Arc<Logger>) -> Tree {
@@ -449,6 +336,101 @@ mod tests {
 
     #[test]
     #[serial]
+    fn test01_checkout_cambia_de_rama() {
+        craer_archivo_config_default();
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/checkout_test02")).unwrap());
+        limpiar_archivo_gir(logger.clone());
+        let args = vec!["test_dir/objetos/archivo.txt".to_string()];
+        addear_archivos_y_comittear(args, logger.clone());
+
+        Branch::from(&mut vec!["una_rama".to_string()], logger.clone())
+            .unwrap()
+            .ejecutar()
+            .unwrap();
+
+        let mut checkout = Checkout::from(vec!["una_rama".to_string()], logger.clone()).unwrap();
+        checkout.ejecutar().unwrap();
+
+        let contenido_head = std::fs::read_to_string(".gir/HEAD").unwrap();
+        assert_eq!(contenido_head, "ref: refs/heads/una_rama".to_string());
+    }
+
+    #[test]
+    #[serial]
+    fn test02_checkout_crea_y_cambia_de_rama() {
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/checkout_test02")).unwrap());
+        limpiar_archivo_gir(logger.clone());
+        let args = vec!["test_dir/objetos/archivo.txt".to_string()];
+        addear_archivos_y_comittear(args, logger.clone());
+
+        let mut checkout = Checkout::from(
+            vec!["-b".to_string(), "una_rama".to_string()],
+            logger.clone(),
+        )
+        .unwrap();
+        checkout.ejecutar().unwrap();
+
+        let contenido_head = std::fs::read_to_string(".gir/HEAD").unwrap();
+        assert_eq!(contenido_head, "ref: refs/heads/una_rama".to_string());
+    }
+
+    #[test]
+    #[serial]
+    fn test03_al_hacer_checkout_actualiza_contenido() {
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/checkout_test03")).unwrap());
+        limpiar_archivo_gir(logger.clone());
+        io::escribir_bytes("tmp/checkout_test03_test", "contenido").unwrap();
+        let args = vec!["tmp/checkout_test03_test".to_string()];
+        addear_archivos_y_comittear(args, logger.clone());
+
+        let mut checkout = Checkout::from(
+            vec!["-b".to_string(), "una_rama".to_string()],
+            logger.clone(),
+        )
+        .unwrap();
+        checkout.ejecutar().unwrap();
+
+        io::escribir_bytes("tmp/checkout_test03_test", "contenido 2").unwrap();
+        let args = vec!["tmp/checkout_test03_test".to_string()];
+        addear_archivos_y_comittear(args, logger.clone());
+
+        let mut checkout = Checkout::from(vec!["master".to_string()], logger.clone()).unwrap();
+        checkout.ejecutar().unwrap();
+
+        let contenido_archivo = io::leer_a_string("tmp/checkout_test03_test").unwrap();
+
+        assert_eq!(contenido_archivo, "contenido".to_string());
+    }
+
+    #[test]
+    #[serial]
+    fn test04_al_hacer_checkout_se_eliminan_no_trackeados() {
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/checkout_test03")).unwrap());
+        limpiar_archivo_gir(logger.clone());
+        io::escribir_bytes("tmp/checkout_test04_test", "contenido").unwrap();
+        let args = vec!["tmp/checkout_test04_test".to_string()];
+        addear_archivos_y_comittear(args, logger.clone());
+
+        let mut checkout = Checkout::from(
+            vec!["-b".to_string(), "una_rama".to_string()],
+            logger.clone(),
+        )
+        .unwrap();
+        checkout.ejecutar().unwrap();
+
+        io::escribir_bytes("tmp/checkout_test04_test_2", "contenido 2").unwrap();
+        let args = vec!["tmp/checkout_test04_test_2".to_string()];
+        addear_archivos_y_comittear(args, logger.clone());
+
+        let mut checkout = Checkout::from(vec!["master".to_string()], logger.clone()).unwrap();
+        checkout.ejecutar().unwrap();
+
+        assert!(!PathBuf::from("tmp/checkout_test04_test_2").exists());
+        assert!(PathBuf::from("tmp/checkout_test04_test").exists());
+    }
+
+    #[test]
+    #[serial]
     fn test05_obtener_objetos_eliminados() {
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/checkout_test04")).unwrap());
 
@@ -464,5 +446,27 @@ mod tests {
         } else {
             unreachable!();
         }
+    }
+
+    #[test]
+    #[serial]
+    fn test06_se_puede_checkoutear_a_una_rama_remota() {
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/checkout_test06")).unwrap());
+        addear_archivos_y_comittear(vec!["test_file.txt".to_string()], logger.clone());
+        let last_hash = io::leer_a_string(".gir/refs/heads/master").unwrap();
+        io::crear_carpeta(".gir/refs/remotes/origin").unwrap();
+        io::crear_archivo(".gir/refs/remotes/origin/remota").unwrap();
+        io::escribir_bytes(".gir/refs/remotes/origin/remota", last_hash.clone()).unwrap();
+
+        let mut checkout = Checkout::from(vec!["remota".to_string()], logger.clone()).unwrap();
+        checkout.ejecutar().unwrap();
+
+        let contenido_head = std::fs::read_to_string(".gir/HEAD").unwrap();
+        assert_eq!(contenido_head, "ref: refs/heads/remota".to_string());
+        assert_eq!(
+            io::leer_a_string(".gir/refs/heads/remota").unwrap(),
+            last_hash
+        );
+        assert!(PathBuf::from("test_file.txt").exists());
     }
 }

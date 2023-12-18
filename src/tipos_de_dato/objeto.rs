@@ -107,7 +107,7 @@ impl Objeto {
 mod tests {
     use serial_test::serial;
 
-    use crate::tipos_de_dato::logger;
+    use crate::tipos_de_dato::{comando::Ejecutar, comandos::add::Add, logger};
 
     use super::*;
 
@@ -235,5 +235,26 @@ mod tests {
                 logger: logger.clone(),
             })
         );
+    }
+
+    #[test]
+    #[serial]
+    fn test05_obtener_tamanio_blob() {
+        let logger = Arc::new(logger::Logger::new(PathBuf::from("tmp/objeto_test05")).unwrap());
+        let objeto = Objeto::from_directorio(
+            PathBuf::from("test_dir/objetos/archivo.txt"),
+            None,
+            logger.clone(),
+        )
+        .unwrap();
+        Add::from(
+            vec!["test_dir/objetos/archivo.txt".to_string()],
+            logger.clone(),
+        )
+        .unwrap()
+        .ejecutar()
+        .unwrap();
+
+        assert_eq!(objeto.obtener_tamanio().unwrap(), 23);
     }
 }

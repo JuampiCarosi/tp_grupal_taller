@@ -7,7 +7,7 @@ use std::{
 
 use super::{error::ErrorHttp, estado::EstadoHttp, tipo_contenido::TipoContenido};
 use crate::tipos_de_dato::logger::Logger;
-
+#[derive(Debug)]
 pub struct Response {
     pub estado: usize,
     pub mensaje_estado: String,

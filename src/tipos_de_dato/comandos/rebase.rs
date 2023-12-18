@@ -18,6 +18,8 @@ use super::{commit::Commit, log::Log, merge::Merge};
 
 pub struct Rebase {
     pub rama: Option<String>,
+    /// Guarda la rama actual.
+    pub rama_actual: String,
     /// Logger para imprimir mensajes en el archivo log.
     pub logger: Arc<Logger>,
     /// Indica si se debe abortar el rebase.
@@ -33,23 +35,26 @@ impl Rebase {
         if args.len() != 1 {
             return Err("Se esperaba un argumento".to_string());
         }
-
+        let rama_actual = ramas::obtener_rama_actual()?;
         let arg = args.get(0).ok_or("Se esperaba un argumento")?;
         match arg.as_str() {
             "--abort" => Ok(Rebase {
                 rama: None,
+                rama_actual,
                 logger,
                 abort: true,
                 continue_: false,
             }),
             "--continue" => Ok(Rebase {
                 rama: None,
+                rama_actual,
                 logger,
                 abort: false,
                 continue_: true,
             }),
             _ => Ok(Rebase {
                 rama: Some(arg.clone()),
+                rama_actual,
                 logger,
                 abort: false,
                 continue_: false,
@@ -200,7 +205,7 @@ impl Rebase {
         let tip_nuevo = io::leer_a_string(format!(".gir/refs/heads/{}", rama))?;
         self.crear_carpeta_rebase(&commits_a_aplicar, &tip_nuevo)?;
 
-        let branch_actual = ramas::obtener_rama_actual()?;
+        let branch_actual = self.rama_actual.clone();
         io::escribir_bytes(format!(".gir/refs/heads/{branch_actual}"), &tip_nuevo)?;
 
         let hash_arbol_commit = conseguir_arbol_en_directorio(&tip_nuevo, ".gir/objects/")?;
@@ -213,8 +218,7 @@ impl Rebase {
 
         Ok(format!(
             "Se aplicaron los commits de la rama {} a la rama {}",
-            rama,
-            ramas::obtener_rama_actual()?
+            rama, self.rama_actual
         ))
     }
 

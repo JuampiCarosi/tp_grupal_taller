@@ -2,15 +2,9 @@ use std::{path::PathBuf, sync::Arc};
 
 use gir::{
     tipos_de_dato::{comando::Comando, logger::Logger},
-    utils::io,
+    utils::{io, testing::eliminar_archivo_gir},
 };
 use serial_test::serial;
-
-fn limpiar_archivo_gir() {
-    if PathBuf::from("./.gir").exists() {
-        io::rm_directorio(".gir").unwrap();
-    }
-}
 
 const VERDE: &str = "\x1B[32m";
 const RESET: &str = "\x1B[0m";
@@ -18,7 +12,7 @@ const RESET: &str = "\x1B[0m";
 #[test]
 #[serial]
 fn init_addear_committear_log() {
-    limpiar_archivo_gir();
+    eliminar_archivo_gir();
     let logger = Arc::new(Logger::new(PathBuf::from("tmp/init_addear_committear_log")).unwrap());
     let args_init = vec!["init".to_string()];
     Comando::new(args_init, logger.clone())
@@ -54,8 +48,6 @@ fn init_addear_committear_log() {
 
     let mensaje = log.split("\n\n").collect::<Vec<&str>>();
 
-    println!("{:?}", mensaje);
-
     assert_eq!(mensaje.len(), 3);
     assert_eq!(mensaje[1], "     mensaje");
 }
@@ -63,7 +55,7 @@ fn init_addear_committear_log() {
 #[test]
 #[serial]
 fn init_addear_status() {
-    limpiar_archivo_gir();
+    eliminar_archivo_gir();
     let logger = Arc::new(Logger::new(PathBuf::from("tmp/init_addear_status")).unwrap());
     let args_init = vec!["init".to_string()];
     Comando::new(args_init, logger.clone())
@@ -98,3 +90,7 @@ fn init_addear_status() {
     assert_eq!(mensaje[6], "");
     assert_eq!(mensaje[7], "Cambios no trackeados:");
 }
+
+#[test]
+#[serial]
+fn crear_pr_() {}

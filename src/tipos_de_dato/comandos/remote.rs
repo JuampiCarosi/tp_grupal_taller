@@ -222,3 +222,115 @@ impl Ejecutar for Remote {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::path::PathBuf;
+
+    use serial_test::serial;
+
+    use super::*;
+    use crate::{
+        tipos_de_dato::comandos::set_upstream::SetUpstream,
+        utils::{self, testing::limpiar_archivo_gir},
+    };
+
+    #[test]
+    #[serial]
+    fn test01_agregar_remote() {
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/remote_test01")).unwrap());
+        limpiar_archivo_gir(logger.clone());
+
+        let mut args = vec![
+            "add".to_string(),
+            "origin".to_string(),
+            "ip:puerto/remoto/".to_string(),
+        ];
+        let mut remote = Remote::from(&mut args, logger.clone()).unwrap();
+
+        let _ = remote.ejecutar().unwrap();
+        let config = Config::leer_config().unwrap();
+        assert!(config.existe_remote("origin"));
+    }
+
+    #[test]
+    #[serial]
+    fn test02_mostrar_remote() {
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/remote_test02")).unwrap());
+
+        let mut args = vec![];
+        let mut remote = Remote::from(&mut args, logger.clone()).unwrap();
+        let remoto = "origin".to_string();
+        let rama_remota = "trabajo".to_string();
+        let rama_local = "master".to_string();
+
+        utils::testing::escribir_rama_remota(&remoto, &rama_remota);
+
+        SetUpstream::new(
+            remoto.clone(),
+            rama_remota.clone(),
+            rama_local.clone(),
+            logger,
+        )
+        .unwrap()
+        .ejecutar()
+        .unwrap();
+
+        let remoto = remote.ejecutar().unwrap();
+        assert_eq!(remoto, "origin");
+    }
+
+    #[test]
+    #[serial]
+    fn test03_mostrar_url_remote() {
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/remote_test03")).unwrap());
+
+        let mut args = vec!["show-url".to_string(), "origin".to_string()];
+        let mut remote = Remote::from(&mut args, logger.clone()).unwrap();
+
+        let url = remote.ejecutar().unwrap();
+        assert_eq!(url, "La url del remote origin es ip:puerto/remoto/");
+    }
+
+    #[test]
+    #[serial]
+    fn test04_cambiar_url_remote() {
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/remote_test04")).unwrap());
+
+        let mut args = vec![
+            "set-url".to_string(),
+            "origin".to_string(),
+            "ip:puerto/remoto/nueva/".to_string(),
+        ];
+        let mut remote = Remote::from(&mut args, logger.clone()).unwrap();
+
+        let _ = remote.ejecutar().unwrap();
+        let config = Config::leer_config().unwrap();
+        assert_eq!(config.remotos[0].url, "ip:puerto/remoto/nueva/".to_string());
+    }
+
+    #[test]
+    #[serial]
+    fn test05_mostrar_url_remote() {
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/remote_test05")).unwrap());
+
+        let mut args = vec!["show-url".to_string(), "origin".to_string()];
+        let mut remote = Remote::from(&mut args, logger.clone()).unwrap();
+
+        let url = remote.ejecutar().unwrap();
+        assert_eq!(url, "La url del remote origin es ip:puerto/remoto/nueva/");
+    }
+
+    #[test]
+    #[serial]
+    fn test06_eliminar_remote() {
+        let logger = Arc::new(Logger::new(PathBuf::from("tmp/remote_test06")).unwrap());
+
+        let mut args = vec!["delete".to_string(), "origin".to_string()];
+        let mut remote = Remote::from(&mut args, logger.clone()).unwrap();
+
+        let _ = remote.ejecutar().unwrap();
+        let config = Config::leer_config().unwrap();
+        assert!(!config.existe_remote("origin"));
+    }
+}

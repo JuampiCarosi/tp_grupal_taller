@@ -1,14 +1,11 @@
 use std::{collections::HashMap, sync::Arc};
 
-use crate::{
-    servidor::pull_request,
-    tipos_de_dato::{
-        http::{
-            endpoint::Endpoint, error::ErrorHttp, metodos::MetodoHttp, request::Request,
-            response::Response,
-        },
-        logger::Logger,
+use crate::tipos_de_dato::{
+    http::{
+        endpoint::Endpoint, error::ErrorHttp, metodos::MetodoHttp, request::Request,
+        response::Response, estado::EstadoHttp,
     },
+    logger::Logger,
 };
 
 use super::{
@@ -39,9 +36,8 @@ fn actualizar_pull_request(
     })?;
 
     if let Some(body) = request.body {
-        pull_request.actualizar(body, &repo)?;
+        pull_request.actualizar(body)?;
     }
-    println!("{:?}", pull_request);
     guadar_pull_request_acorde_al_numero(&pull_request, &repo)?;
-    responder_pull_request_en_formato_json(pull_request, logger)
+    responder_pull_request_en_formato_json(pull_request, logger, EstadoHttp::Ok)
 }
