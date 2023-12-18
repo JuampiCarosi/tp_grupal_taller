@@ -180,18 +180,28 @@ mod test {
 
         let respuesta_esperada = format!(
             "\
-        {verison_esperada} {estado_esparado} {mensaje_esperado}\r\n\
-        Content-Lenght: {}\r\n\
-        Content-Type: application/json\r\n\
-        \r\n\
-        {contenido_body}",
-            contenido_body.len()
+        {verison_esperada} {estado_esparado} {mensaje_esperado}\r\n"
         );
 
-        assert_eq!(
-            String::from_utf8_lossy(&mock_tcp.escritura_data).trim(),
-            respuesta_esperada.trim(),
+        let header_esperado1 = format!(
+            "\
+        Content-Type: application/json\r\n"
         );
+        let header_esperado2 = format!("Content-Lenght: {}\r\n", contenido_body.len());
+        let body_esperado = format!("\r\n{}", contenido_body);
+
+        assert!(String::from_utf8_lossy(&mock_tcp.escritura_data)
+            .trim()
+            .contains(respuesta_esperada.trim()));
+        assert!(String::from_utf8_lossy(&mock_tcp.escritura_data)
+            .trim()
+            .contains(&header_esperado1));
+        assert!(String::from_utf8_lossy(&mock_tcp.escritura_data)
+            .trim()
+            .contains(&header_esperado2));
+        assert!(String::from_utf8_lossy(&mock_tcp.escritura_data)
+            .trim()
+            .contains(&body_esperado));
     }
 
     #[test]

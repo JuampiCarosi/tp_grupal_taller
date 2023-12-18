@@ -173,15 +173,19 @@ mod test {
         servidor::gir_server::ServidorGir,
         utils::{
             io,
-            testing::{self, crear_repo_para_pr, MockTcpStream},
+            testing::{self, crear_repo_para_pr},
         },
     };
     const RUTA_RAIZ: &str = env!("CARGO_MANIFEST_DIR");
     const NOMBRE_REPOSITORIO: &str = "repo";
     const RUTA_REPOSITORIO: &str = "/srv/repo/";
 
-    fn iniciar_servidor_pushear_pr_y_obtener_respuesta_final(logger: Arc<Logger>, ruta_especifica: &str, request: &str) -> Response {
-        let (tx, _) = std::sync::mpsc::channel();   
+    fn iniciar_servidor_pushear_pr_y_obtener_respuesta_final(
+        logger: Arc<Logger>,
+        ruta_especifica: &str,
+        request: &str,
+    ) -> Response {
+        let (tx, _) = std::sync::mpsc::channel();
         let logger_clone = logger.clone();
         let handle = std::thread::spawn(move || {
             let threads: VectorThreads = Arc::new(Mutex::new(Vec::new()));
@@ -347,7 +351,7 @@ mod test {
             ))
             .unwrap(),
         );
-        
+
         let get_request_string = format!(
             "GET /repos/{}/pulls HTTP/1.1\r\n\
             Host: localhost:9933\r\n\
@@ -356,9 +360,13 @@ mod test {
             NOMBRE_REPOSITORIO,
         );
 
-        let respuesta = iniciar_servidor_pushear_pr_y_obtener_respuesta_final(logger, "/tmp/servidor_http_test03_dir", &get_request_string);
+        let respuesta = iniciar_servidor_pushear_pr_y_obtener_respuesta_final(
+            logger,
+            "/tmp/servidor_http_test03_dir",
+            &get_request_string,
+        );
         assert_eq!(200, respuesta.estado);
-        // assert_eq!("OK", respuesta_get.mensaje_estado);
+        assert_eq!("OK", respuesta.mensaje_estado);
     }
 
     #[test]
@@ -376,11 +384,15 @@ mod test {
             Accept: application/vnd.github+json\r\n\
             \r\n",
             NOMBRE_REPOSITORIO,
-        );  
-        let respuesta = iniciar_servidor_pushear_pr_y_obtener_respuesta_final(logger, "/tmp/servidor_http_test04_dir", &get_request_string);
+        );
+        let respuesta = iniciar_servidor_pushear_pr_y_obtener_respuesta_final(
+            logger,
+            "/tmp/servidor_http_test04_dir",
+            &get_request_string,
+        );
 
         assert_eq!(200, respuesta.estado);
-        // assert_eq!("OK", respuesta_get.mensaje_estado);
+        assert_eq!("OK", respuesta.mensaje_estado);
     }
 
     #[test]
@@ -391,7 +403,7 @@ mod test {
             ))
             .unwrap(),
         );
-       
+
         let get_request_string = format!(
             "GET /repos/{}/pulls/1/commits HTTP/1.1\r\n\
             Host: localhost:9933\r\n\
@@ -399,9 +411,13 @@ mod test {
             \r\n",
             NOMBRE_REPOSITORIO,
         );
-        let respuesta = iniciar_servidor_pushear_pr_y_obtener_respuesta_final(logger, "/tmp/servidor_http_test05_dir", &get_request_string);
+        let respuesta = iniciar_servidor_pushear_pr_y_obtener_respuesta_final(
+            logger,
+            "/tmp/servidor_http_test05_dir",
+            &get_request_string,
+        );
         assert_eq!(200, respuesta.estado);
-        // assert_eq!("OK", respuesta_get.mensaje_estado);
+        assert_eq!("OK", respuesta.mensaje_estado);
     }
 
     #[test]
@@ -412,7 +428,7 @@ mod test {
             ))
             .unwrap(),
         );
-   
+
         let get_request_string = format!(
             "PUT /repos/{}/pulls/1/merge HTTP/1.1\r\n\
             Host: localhost:9933\r\n\
@@ -421,8 +437,13 @@ mod test {
             NOMBRE_REPOSITORIO,
         );
 
-        let respuesta = iniciar_servidor_pushear_pr_y_obtener_respuesta_final(logger, "/tmp/servidor_http_test06_dir", &get_request_string);
+        let respuesta = iniciar_servidor_pushear_pr_y_obtener_respuesta_final(
+            logger,
+            "/tmp/servidor_http_test06_dir",
+            &get_request_string,
+        );
         assert_eq!(200, respuesta.estado);
+        assert_eq!("OK", respuesta.mensaje_estado);
     }
 
     #[test]
@@ -433,7 +454,7 @@ mod test {
             ))
             .unwrap(),
         );
-      
+
         let get_request_string = format!(
             "PATCH /repos/{}/pulls/1 HTTP/1.1\r\n\
             Host: localhost:9933\r\n\
@@ -442,8 +463,13 @@ mod test {
             NOMBRE_REPOSITORIO,
         );
 
-        let respuesta = iniciar_servidor_pushear_pr_y_obtener_respuesta_final(logger, "/tmp/servidor_http_test07_dir", &get_request_string);
-        
+        let respuesta = iniciar_servidor_pushear_pr_y_obtener_respuesta_final(
+            logger,
+            "/tmp/servidor_http_test07_dir",
+            &get_request_string,
+        );
+
         assert_eq!(200, respuesta.estado);
+        assert_eq!("OK", respuesta.mensaje_estado);
     }
 }
