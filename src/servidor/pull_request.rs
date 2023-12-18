@@ -313,6 +313,7 @@ impl PullRequest {
     //Comprueba si existe en
     fn validar_rama(rama: &str, repositorio: &str) -> Result<(), ErrorHttp> {
         let direccion = PathBuf::from(format!("./srv/{repositorio}/.gir/refs/heads/{rama}"));
+        println!("direccion: {:?}", direccion);
         if !direccion.exists() {
             Err(ErrorHttp::ValidationFailed(format!(
                 "No existe la rama {rama} en el repositorio {repositorio}"
@@ -449,7 +450,7 @@ mod test {
                 fecha_creacion,
                 fecha_modificacion,
                 autor,
-                repositorio: "repo".to_string(),
+                repositorio: "test01_guardar_pr".to_string(),
             }
         };
         let direccion = PathBuf::from("tmp/test01.json");
@@ -485,7 +486,9 @@ mod test {
                 fecha_creacion,
                 fecha_modificacion,
                 autor,
-                repositorio: "repo".to_string(),
+                repositorio:
+                    "test02_se_puede_guardar_y_cargar_un_pr_con_un_campo_que_no_se_seriliza"
+                        .to_string(),
             }
         };
         let direccion = PathBuf::from("tmp/test02.json");
@@ -521,7 +524,7 @@ mod test {
                 fecha_creacion,
                 fecha_modificacion,
                 autor,
-                repositorio: "repo".to_string(),
+                repositorio: "test03_se_puede_actualizar_el_titulo".to_string(),
             }
         };
 
@@ -555,7 +558,7 @@ mod test {
                 fecha_creacion,
                 fecha_modificacion,
                 autor,
-                repositorio: "repo".to_string(),
+                repositorio: "test04_se_puede_actualizar_la_descripcion".to_string(),
             }
         };
 
@@ -589,7 +592,7 @@ mod test {
                 fecha_creacion,
                 fecha_modificacion,
                 autor,
-                repositorio: "repo".to_string(),
+                repositorio: "test05_se_puede_actualizar_el_estado".to_string(),
             }
         };
 
@@ -624,7 +627,8 @@ mod test {
                 fecha_creacion,
                 fecha_modificacion,
                 autor,
-                repositorio: "repo".to_string(),
+                repositorio: "test06_se_el_estado_no_puede_cambiar_a_algo_que_no_se_open_o_closed"
+                    .to_string(),
             }
         };
 
@@ -656,13 +660,14 @@ mod test {
                 fecha_creacion,
                 fecha_modificacion,
                 autor,
-                repositorio: "repo".to_string(),
+                repositorio: "repo_test_07_pull_request".to_string(),
             }
         };
 
         let rama_base_actualizar = "bombastic_fantastic".to_string();
-        let repositorio = "repo_test_07_pull_request";
-        let test_repo = format!("./srv/{repositorio}/.gir/refs/heads/{rama_base_actualizar}");
+        let test_repo = format!(
+            "./srv/test07_se_puede_actualizar_la_rama_base/.gir/refs/heads/{rama_base_actualizar}"
+        );
 
         utils::io::crear_archivo(&test_repo).unwrap();
         let mut body = HashMap::new();
@@ -697,14 +702,14 @@ mod test {
                 fecha_creacion,
                 fecha_modificacion,
                 autor,
-                repositorio: "repo".to_string(),
+                repositorio: "test08_no_se_puede_actualizar_la_rama_base_con_una_rama_inexistente"
+                    .to_string(),
             }
         };
 
         let rama_base_actualizar = "bombastic_fantastic".to_string();
-        let repositorio = "repo_test_08_pull_request";
         //creo el repositorio pero no la rama
-        let test_repo = format!("./srv/{repositorio}/.gir/refs/heads");
+        let test_repo = format!("./srv/test08_no_se_puede_actualizar_la_rama_base_con_una_rama_inexistente/.gir/refs/heads");
         utils::io::crear_directorio(&test_repo).unwrap();
 
         let mut body = HashMap::new();
@@ -737,14 +742,14 @@ mod test {
                 fecha_creacion,
                 fecha_modificacion,
                 autor,
-                repositorio: "repo".to_string(),
+                repositorio: "test09_no_se_puede_actualizar_la_rama_base_a_la_rama_head"
+                    .to_string(),
             }
         };
 
         let rama_base_actualizar = "master".to_string();
-        let repositorio = "repo_test_09_pull_request";
 
-        let test_repo = format!("./srv/{repositorio}/.gir/refs/heads/{rama_base_actualizar}");
+        let test_repo = format!("./srv/test09_no_se_puede_actualizar_la_rama_base_a_la_rama_head/.gir/refs/heads/{rama_base_actualizar}");
         utils::io::crear_directorio(&test_repo).unwrap();
 
         let mut body = HashMap::new();
@@ -776,7 +781,7 @@ mod test {
                 fecha_creacion,
                 fecha_modificacion,
                 autor,
-                repositorio: "repo".to_string(),
+                repositorio: "test_10_se_puede_filtrar_el_pr_acorde_a_su_estado".to_string(),
             }
         };
 
@@ -800,7 +805,7 @@ mod test {
                 fecha_creacion,
                 fecha_modificacion,
                 autor,
-                repositorio: "repo".to_string(),
+                repositorio: "test_10_se_puede_filtrar_el_pr_acorde_a_su_estado".to_string(),
             }
         };
 
@@ -838,7 +843,7 @@ mod test {
                 fecha_creacion,
                 fecha_modificacion,
                 autor,
-                repositorio: "repo".to_string(),
+                repositorio: "test_11_se_puede_filtrar_el_pr_acorde_a_su_rama_base".to_string(),
             }
         };
 
@@ -862,7 +867,7 @@ mod test {
                 fecha_creacion,
                 fecha_modificacion,
                 autor,
-                repositorio: "repo".to_string(),
+                repositorio: "test_11_se_puede_filtrar_el_pr_acorde_a_su_rama_base".to_string(),
             }
         };
 
@@ -895,7 +900,8 @@ mod test {
                 fecha_creacion,
                 fecha_modificacion,
                 autor,
-                repositorio: "repo".to_string(),
+                repositorio: "test_12_se_puede_filtrar_el_pr_acorde_a_su_autor_y_rama_head"
+                    .to_string(),
             }
         };
 
@@ -919,7 +925,8 @@ mod test {
                 fecha_creacion,
                 fecha_modificacion,
                 autor,
-                repositorio: "repo".to_string(),
+                repositorio: "test_12_se_puede_filtrar_el_pr_acorde_a_su_autor_y_rama_head"
+                    .to_string(),
             }
         };
 
@@ -967,7 +974,8 @@ mod test {
                 fecha_creacion,
                 fecha_modificacion,
                 autor,
-                repositorio: "repo".to_string(),
+                repositorio: "test_12_se_puede_filtrar_el_pr_acorde_a_su_autor_y_rama_head"
+                    .to_string(),
             }
         };
 
@@ -1002,7 +1010,7 @@ mod test {
                 fecha_creacion,
                 fecha_modificacion,
                 autor,
-                repositorio: "repo".to_string(),
+                repositorio: "test_13_se_puede_filtrar_el_pr_con_varios_filtros".to_string(),
             }
         };
 
@@ -1026,7 +1034,7 @@ mod test {
                 fecha_creacion,
                 fecha_modificacion,
                 autor,
-                repositorio: "repo".to_string(),
+                repositorio: "test_13_se_puede_filtrar_el_pr_con_varios_filtros".to_string(),
             }
         };
 
@@ -1050,7 +1058,7 @@ mod test {
                 fecha_creacion,
                 fecha_modificacion,
                 autor,
-                repositorio: "repo".to_string(),
+                repositorio: "test_13_se_puede_filtrar_el_pr_con_varios_filtros".to_string(),
             }
         };
 
@@ -1119,7 +1127,9 @@ mod test {
                 fecha_creacion,
                 fecha_modificacion,
                 autor,
-                repositorio: "repo".to_string(),
+                repositorio:
+                    "test_14_crear_un_pull_request_y_pushear_commits_obteiene_commits_correctos"
+                        .to_string(),
             }
         };
 
@@ -1186,7 +1196,8 @@ mod test {
                 fecha_creacion,
                 fecha_modificacion,
                 autor,
-                repositorio: "repo".to_string(),
+                repositorio: "test_15_crear_un_pull_request_y_pushear_commits_cambia_los_commits"
+                    .to_string(),
             }
         };
 
