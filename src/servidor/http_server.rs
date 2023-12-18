@@ -148,7 +148,6 @@ impl ServidorHttp {
             if endpoint.metodo != request.metodo {
                 continue;
             }
-
             let params = match endpoint.matchea_con_patron(&request.ruta) {
                 Some(params) => params,
                 None => continue,
@@ -170,10 +169,11 @@ mod test {
 
     use super::*;
     use crate::{utils::{testing::{self, crear_repo_para_pr}, io}, servidor::gir_server::ServidorGir};
+    const RUTA_RAIZ: &str = env!("CARGO_MANIFEST_DIR");
     #[test]
     fn test01_se_obtiene_not_found_si_no_existe_el_repositorio() {
         let contenido_mock = "GET /repos/repo_inexistente/pulls HTTP/1.1\r\n\r\n";
-        let logger = Arc::new(Logger::new(PathBuf::from("server_logger.txt")).unwrap());
+        let logger = Arc::new(Logger::new(PathBuf::from(RUTA_RAIZ.to_string() + "server_logger.txt")).unwrap());
         let mut mock = testing::MockTcpStream {
             lectura_data: contenido_mock.as_bytes().to_vec(),
             escritura_data: vec![],
@@ -191,7 +191,7 @@ mod test {
     #[test]
     fn test02_crear_pr_en_repo_devuelve_status_201() {
         
-        let logger = Arc::new(Logger::new(PathBuf::from("tmp/servidor_http_test02")).unwrap());
+        let logger = Arc::new(Logger::new(PathBuf::from(RUTA_RAIZ.to_string() + "/tmp/servidor_http_test02")).unwrap());
 
         let logger_clone = logger.clone();
         let (tx, _) = std::sync::mpsc::channel();
@@ -215,10 +215,10 @@ mod test {
         }
         std::thread::sleep(std::time::Duration::from_secs(1));
 
-        let _ = io::rm_directorio("tmp/servidor_http_test02_dir");
-        let _ = io::rm_directorio("srv/repo/");
-        io::crear_directorio("tmp/servidor_http_test02_dir").unwrap();
-        io::cambiar_directorio("tmp/servidor_http_test02_dir").unwrap();
+        let _ = io::rm_directorio(RUTA_RAIZ.to_string() + "/tmp/servidor_http_test02_dir");
+        let _ = io::rm_directorio(RUTA_RAIZ.to_string() + "/srv/repo/");
+        io::crear_directorio(RUTA_RAIZ.to_string() + "/tmp/servidor_http_test02_dir").unwrap();
+        io::cambiar_directorio(RUTA_RAIZ.to_string() + "/tmp/servidor_http_test02_dir").unwrap();
 
         crear_repo_para_pr(logger.clone());
         std::thread::sleep(std::time::Duration::from_secs(1));
@@ -249,7 +249,7 @@ mod test {
             lectura_data: request_string.as_bytes().to_vec(),
             escritura_data: vec![],
         };
-        io::cambiar_directorio("../../").unwrap();
+        io::cambiar_directorio(RUTA_RAIZ).unwrap();
         let mut endpoints = Vec::new();
         ServidorHttp::agregar_endpoints(&mut endpoints);
 
@@ -258,15 +258,15 @@ mod test {
             &mut mock,
             &endpoints,
         ).unwrap();
-        io::rm_directorio("tmp/servidor_http_test02_dir").unwrap();
-        io::rm_directorio("srv/repo/").unwrap();
+        io::rm_directorio(RUTA_RAIZ.to_string() + "/tmp/servidor_http_test02_dir").unwrap();
+        io::rm_directorio(RUTA_RAIZ.to_string() + "/srv/repo/").unwrap();
         assert_eq!(201, respuesta.estado);
         assert_eq!("Created", respuesta.mensaje_estado);  
     }
 
     #[test]
     fn test03_get_prs_exitoso_devuelve_status_200() {
-        let logger = Arc::new(Logger::new(PathBuf::from("tmp/servidor_http_test03")).unwrap());
+        let logger = Arc::new(Logger::new(PathBuf::from(RUTA_RAIZ.to_string() + "/tmp/servidor_http_test03")).unwrap());
         let logger_clone = logger.clone();
         let (tx, _) = std::sync::mpsc::channel();
 
@@ -289,10 +289,10 @@ mod test {
         }
         std::thread::sleep(std::time::Duration::from_secs(1));
         
-        let _ = io::rm_directorio("tmp/servidor_http_test03_dir");
-        let _ = io::rm_directorio("srv/repo/");
-        io::crear_directorio("tmp/servidor_http_test03_dir").unwrap();
-        io::cambiar_directorio("tmp/servidor_http_test03_dir").unwrap();
+        let _ = io::rm_directorio(RUTA_RAIZ.to_string() + "/tmp/servidor_http_test03_dir");
+        let _ = io::rm_directorio(RUTA_RAIZ.to_string() + "/srv/repo/");
+        io::crear_directorio(RUTA_RAIZ.to_string() + "/tmp/servidor_http_test03_dir").unwrap();
+        io::cambiar_directorio(RUTA_RAIZ.to_string() + "/tmp/servidor_http_test03_dir").unwrap();
 
         crear_repo_para_pr(logger.clone());
         std::thread::sleep(std::time::Duration::from_secs(1));
@@ -323,7 +323,7 @@ mod test {
             lectura_data: request_string.as_bytes().to_vec(),
             escritura_data: vec![],
         };
-        io::cambiar_directorio("../../").unwrap();
+        io::cambiar_directorio(RUTA_RAIZ).unwrap();
         let mut endpoints = Vec::new();
         ServidorHttp::agregar_endpoints(&mut endpoints);
 
@@ -349,15 +349,15 @@ mod test {
             &endpoints,
         ).unwrap();
 
-        io::rm_directorio("tmp/servidor_http_test03_dir").unwrap();
-        io::rm_directorio("srv/repo/").unwrap();
+        io::rm_directorio(RUTA_RAIZ.to_string() + "/tmp/servidor_http_test03_dir").unwrap();
+        io::rm_directorio(RUTA_RAIZ.to_string() + "/srv/repo/").unwrap();
         assert_eq!(200, respuesta_get.estado);
         // assert_eq!("OK", respuesta_get.mensaje_estado);
     }
 
     #[test]
     fn test04_get_pr_exitoso_devuelve_status_200() {
-        let logger = Arc::new(Logger::new(PathBuf::from("tmp/servidor_http_test04")).unwrap());
+        let logger = Arc::new(Logger::new(PathBuf::from(RUTA_RAIZ.to_string() + "/tmp/servidor_http_test04")).unwrap());
         let logger_clone = logger.clone();
         let (tx, _) = std::sync::mpsc::channel();
 
@@ -380,10 +380,10 @@ mod test {
         }
         std::thread::sleep(std::time::Duration::from_secs(1));
         
-        let _ = io::rm_directorio("tmp/servidor_http_test04_dir");
-        let _ = io::rm_directorio("srv/repo/");
-        io::crear_directorio("tmp/servidor_http_test04_dir").unwrap();
-        io::cambiar_directorio("tmp/servidor_http_test04_dir").unwrap();
+        let _ = io::rm_directorio(RUTA_RAIZ.to_string() + "/tmp/servidor_http_test04_dir");
+        let _ = io::rm_directorio(RUTA_RAIZ.to_string() + "/srv/repo/");
+        io::crear_directorio(RUTA_RAIZ.to_string() + "/tmp/servidor_http_test04_dir").unwrap();
+        io::cambiar_directorio(RUTA_RAIZ.to_string() + "/tmp/servidor_http_test04_dir").unwrap();
 
         crear_repo_para_pr(logger.clone());
         std::thread::sleep(std::time::Duration::from_secs(1));
@@ -414,7 +414,7 @@ mod test {
             lectura_data: request_string.as_bytes().to_vec(),
             escritura_data: vec![],
         };
-        io::cambiar_directorio("../../").unwrap();
+        io::cambiar_directorio(RUTA_RAIZ).unwrap();
         let mut endpoints = Vec::new();
         ServidorHttp::agregar_endpoints(&mut endpoints);
 
@@ -440,15 +440,15 @@ mod test {
             &endpoints,
         ).unwrap();
 
-        io::rm_directorio("tmp/servidor_http_test04_dir").unwrap();
-        io::rm_directorio("srv/repo/").unwrap();
+        io::rm_directorio(RUTA_RAIZ.to_string() + "/tmp/servidor_http_test04_dir").unwrap();
+        io::rm_directorio(RUTA_RAIZ.to_string() + "/srv/repo/").unwrap();
         assert_eq!(200, respuesta_get.estado);
         // assert_eq!("OK", respuesta_get.mensaje_estado);
     }
 
     #[test]
     fn test05_get_commits_exitoso_devuelve_status_200() {
-        let logger = Arc::new(Logger::new(PathBuf::from("tmp/servidor_http_test05")).unwrap());
+        let logger = Arc::new(Logger::new(PathBuf::from(RUTA_RAIZ.to_string() + "/tmp/servidor_http_test05")).unwrap());
         let logger_clone = logger.clone();
         let (tx, _) = std::sync::mpsc::channel();
 
@@ -471,10 +471,10 @@ mod test {
         }
         std::thread::sleep(std::time::Duration::from_secs(1));
         
-        let _ = io::rm_directorio("tmp/servidor_http_test05_dir");
-        let _ = io::rm_directorio("srv/repo/");
-        io::crear_directorio("tmp/servidor_http_test05_dir").unwrap();
-        io::cambiar_directorio("tmp/servidor_http_test05_dir").unwrap();
+        let _ = io::rm_directorio(RUTA_RAIZ.to_string() + "/tmp/servidor_http_test05_dir");
+        let _ = io::rm_directorio(RUTA_RAIZ.to_string() + "/srv/repo/");
+        io::crear_directorio(RUTA_RAIZ.to_string() + "/tmp/servidor_http_test05_dir").unwrap();
+        io::cambiar_directorio(RUTA_RAIZ.to_string() + "/tmp/servidor_http_test05_dir").unwrap();
 
         crear_repo_para_pr(logger.clone());
         std::thread::sleep(std::time::Duration::from_secs(1));
@@ -505,7 +505,7 @@ mod test {
             lectura_data: request_string.as_bytes().to_vec(),
             escritura_data: vec![],
         };
-        io::cambiar_directorio("../../").unwrap();
+        io::cambiar_directorio(RUTA_RAIZ).unwrap();
         let mut endpoints = Vec::new();
         ServidorHttp::agregar_endpoints(&mut endpoints);
 
@@ -531,15 +531,15 @@ mod test {
             &endpoints,
         ).unwrap();
 
-        io::rm_directorio("tmp/servidor_http_test05_dir").unwrap();
-        io::rm_directorio("srv/repo/").unwrap();
+        io::rm_directorio(RUTA_RAIZ.to_string() + "/tmp/servidor_http_test05_dir").unwrap();
+        io::rm_directorio(RUTA_RAIZ.to_string() + "/srv/repo/").unwrap();
         assert_eq!(200, respuesta_get.estado);
         // assert_eq!("OK", respuesta_get.mensaje_estado);
     }
 
     #[test]
     fn tes06_merge_pr_exitoso_devuelve_status_200() {
-        let logger = Arc::new(Logger::new(PathBuf::from("tmp/servidor_http_test06")).unwrap());
+        let logger = Arc::new(Logger::new(PathBuf::from(RUTA_RAIZ.to_string() + "/tmp/servidor_http_test06")).unwrap());
         let logger_clone = logger.clone();
         let (tx, _) = std::sync::mpsc::channel();
 
@@ -562,10 +562,10 @@ mod test {
         }
         std::thread::sleep(std::time::Duration::from_secs(1));
         
-        let _ = io::rm_directorio("tmp/servidor_http_test06_dir");
-        let _ = io::rm_directorio("srv/repo/");
-        io::crear_directorio("tmp/servidor_http_test06_dir").unwrap();
-        io::cambiar_directorio("tmp/servidor_http_test06_dir").unwrap();
+        let _ = io::rm_directorio(RUTA_RAIZ.to_string() + "/tmp/servidor_http_test06_dir");
+        let _ = io::rm_directorio(RUTA_RAIZ.to_string() + "/srv/repo/");
+        io::crear_directorio(RUTA_RAIZ.to_string() + "/tmp/servidor_http_test06_dir").unwrap();
+        io::cambiar_directorio(RUTA_RAIZ.to_string() + "/tmp/servidor_http_test06_dir").unwrap();
 
         crear_repo_para_pr(logger.clone());
         std::thread::sleep(std::time::Duration::from_secs(1));
@@ -596,7 +596,7 @@ mod test {
             lectura_data: request_string.as_bytes().to_vec(),
             escritura_data: vec![],
         };
-        io::cambiar_directorio("../../").unwrap();
+        io::cambiar_directorio(RUTA_RAIZ).unwrap();
         let mut endpoints = Vec::new();
         ServidorHttp::agregar_endpoints(&mut endpoints);
 
@@ -622,15 +622,15 @@ mod test {
             &endpoints,
         ).unwrap();
 
-        io::rm_directorio("tmp/servidor_http_test06_dir").unwrap();
-        io::rm_directorio("srv/repo/").unwrap();
+        io::rm_directorio(RUTA_RAIZ.to_string() + "/tmp/servidor_http_test06_dir").unwrap();
+        io::rm_directorio(RUTA_RAIZ.to_string() + "/srv/repo/").unwrap();
         assert_eq!(200, respuesta_get.estado);
     }
 
 
     #[test]
     fn test07_patch_exitoso_devuelve_status_200() {
-        let logger = Arc::new(Logger::new(PathBuf::from("tmp/servidor_http_test07")).unwrap());
+        let logger = Arc::new(Logger::new(PathBuf::from(RUTA_RAIZ.to_string() + "/tmp/servidor_http_test07")).unwrap());
         let logger_clone = logger.clone();
         let (tx, _) = std::sync::mpsc::channel();
 
@@ -653,10 +653,10 @@ mod test {
         }
         std::thread::sleep(std::time::Duration::from_secs(1));
         
-        let _ = io::rm_directorio("tmp/servidor_http_test07_dir");
-        let _ = io::rm_directorio("srv/repo/");
-        io::crear_directorio("tmp/servidor_http_test07_dir").unwrap();
-        io::cambiar_directorio("tmp/servidor_http_test07_dir").unwrap();
+        let _ = io::rm_directorio(RUTA_RAIZ.to_string() + "/tmp/servidor_http_test07_dir");
+        let _ = io::rm_directorio(RUTA_RAIZ.to_string() + "/srv/repo/");
+        io::crear_directorio(RUTA_RAIZ.to_string() + "/tmp/servidor_http_test07_dir").unwrap();
+        io::cambiar_directorio(RUTA_RAIZ.to_string() + "/tmp/servidor_http_test07_dir").unwrap();
 
         crear_repo_para_pr(logger.clone());
         std::thread::sleep(std::time::Duration::from_secs(1));
@@ -687,7 +687,7 @@ mod test {
             lectura_data: request_string.as_bytes().to_vec(),
             escritura_data: vec![],
         };
-        io::cambiar_directorio("../../").unwrap();
+        io::cambiar_directorio(RUTA_RAIZ).unwrap();
         let mut endpoints = Vec::new();
         ServidorHttp::agregar_endpoints(&mut endpoints);
 
@@ -713,8 +713,8 @@ mod test {
             &endpoints,
         ).unwrap();
 
-        io::rm_directorio("tmp/servidor_http_test07_dir").unwrap();
-        io::rm_directorio("srv/repo/").unwrap();
+        io::rm_directorio(RUTA_RAIZ.to_string() + "/tmp/servidor_http_test07_dir").unwrap();
+        io::rm_directorio(RUTA_RAIZ.to_string() + "/srv/repo/").unwrap();
         assert_eq!(200, respuesta_get.estado);
     }
 }

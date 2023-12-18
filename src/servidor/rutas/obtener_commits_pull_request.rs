@@ -39,6 +39,6 @@ fn obtener_commits_pull_request(
         ErrorHttp::InternalServerError(format!("No se ha podido serializar el pull request: {}", e))
     })?;
 
-    let response = Response::new(logger, EstadoHttp::Created, Some(&body_response));
+    let response = Response::new(logger, EstadoHttp::Ok, Some(&body_response));
     Ok(response)
 }
