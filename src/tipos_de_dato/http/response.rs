@@ -1,5 +1,6 @@
 use std::{
     collections::HashMap,
+    fmt::format,
     io::{Read, Write},
     sync::Arc,
 };
@@ -17,45 +18,31 @@ pub struct Response {
 }
 
 impl Response {
-    pub fn from_error(logger: Arc<Logger>, error: ErrorHttp) -> Result<Self, ErrorHttp> {
+    pub fn from_error(logger: Arc<Logger>, error: ErrorHttp) -> Self {
         let msj_error = error.obtener_mensaje();
-        let body = match !msj_error.is_empty() {
-            true => Some(msj_error),
-            false => None,
-        };
+        let body = format!(r#"{{"message":"{}"}}"#, msj_error);
 
-        Response::new(
-            logger.clone(),
-            error.obtener_estado(),
-            body.as_deref(),
-            TipoContenido::TextPlain,
-        )
+        Response::new(logger.clone(), error.obtener_estado(), Some(&body))
     }
 
-    pub fn new(
-        logger: Arc<Logger>,
-        estado: EstadoHttp,
-        body: Option<&str>,
-        tipo_contenido: TipoContenido,
-    ) -> Result<Self, ErrorHttp> {
+    pub fn new(logger: Arc<Logger>, estado: EstadoHttp, body: Option<&str>) -> Self {
         let mut headers: HashMap<String, String> = HashMap::new();
 
         if let Some(body) = &body {
             headers.insert("Content-Lenght".to_string(), body.len().to_string());
-            let contenido = Self::obtener_tipo_contenido(tipo_contenido)?;
-            headers.insert("Content-Type".to_string(), contenido);
+            headers.insert("Content-Type".to_string(), "application/json".to_string());
         }
 
         let (estado, mensaje_estado) = estado.obtener_estado_y_mensaje();
 
-        Ok(Self {
+        Self {
             estado,
             mensaje_estado,
             version: "HTTP/1.1".to_string(),
             headers,
             body: body.map(|s| s.to_string()),
             logger,
-        })
+        }
     }
 
     fn obtener_tipo_contenido(tipo_contenido: TipoContenido) -> Result<String, ErrorHttp> {
@@ -115,7 +102,7 @@ mod test {
         let (estado_esparado, mensaje_esperado) = estado.obtener_estado_y_mensaje();
         let verison_esperada = "HTTP/1.1".to_string();
 
-        let response = Response::new(logger, estado, None, TipoContenido::Json).unwrap();
+        let response = Response::new(logger, estado, None);
 
         assert_eq!(response.estado, estado_esparado);
         assert_eq!(response.mensaje_estado, mensaje_esperado);
@@ -141,7 +128,7 @@ mod test {
         );
         header_esperado.insert("Content-Type".to_string(), "application/json".to_string());
 
-        let response = Response::new(logger, estado, body, TipoContenido::Json).unwrap();
+        let response = Response::new(logger, estado, body);
 
         assert_eq!(response.estado, estado_esparado);
         assert_eq!(response.mensaje_estado, mensaje_esperado);
@@ -163,8 +150,7 @@ mod test {
         let (estado_esparado, mensaje_esperado) = estado.obtener_estado_y_mensaje();
         let verison_esperada = "HTTP/1.1".to_string();
 
-        Response::new(logger, estado, None, TipoContenido::Json)
-            .unwrap()
+        Response::new(logger, estado, None)
             .enviar(&mut mock_tcp)
             .unwrap();
 
@@ -194,8 +180,7 @@ mod test {
         let (estado_esparado, mensaje_esperado) = estado.obtener_estado_y_mensaje();
         let verison_esperada = "HTTP/1.1".to_string();
 
-        Response::new(logger, estado, body, TipoContenido::Json)
-            .unwrap()
+        Response::new(logger, estado, body)
             .enviar(&mut mock_tcp)
             .unwrap();
 
@@ -221,37 +206,22 @@ mod test {
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/response_test03")).unwrap());
         let msj_err = "Que rompimos".to_string();
         let error = ErrorHttp::BadRequest(msj_err.clone());
-
+        let body_esperado = format!(r#"{{"message":"{}"}}"#, msj_err);
         let (estado_esparado, mensaje_esperado) = error.obtener_estado().obtener_estado_y_mensaje();
         let verison_esperada = "HTTP/1.1".to_string();
         let mut header_esperado = HashMap::new();
-        header_esperado.insert("Content-Lenght".to_string(), msj_err.len().to_string());
-        header_esperado.insert("Content-Type".to_string(), "text/plain".to_string());
+        header_esperado.insert(
+            "Content-Lenght".to_string(),
+            body_esperado.len().to_string(),
+        );
+        header_esperado.insert("Content-Type".to_string(), "application/json".to_string());
 
-        let response = Response::from_error(logger, error).unwrap();
-
-        assert_eq!(response.estado, estado_esparado);
-        assert_eq!(response.mensaje_estado, mensaje_esperado);
-        assert_eq!(response.version, verison_esperada);
-        assert_eq!(response.headers, header_esperado);
-        assert_eq!(response.body, Some(msj_err.to_string()));
-    }
-
-    #[test]
-
-    fn test_06_new_desde_error_sin_msj() {
-        let logger = Arc::new(Logger::new(PathBuf::from("tmp/response_test03")).unwrap());
-        let error = ErrorHttp::BadRequest("".to_string());
-
-        let (estado_esparado, mensaje_esperado) = error.obtener_estado().obtener_estado_y_mensaje();
-        let verison_esperada = "HTTP/1.1".to_string();
-        let header_esperado = HashMap::new();
-        let response = Response::from_error(logger, error).unwrap();
+        let response = Response::from_error(logger, error);
 
         assert_eq!(response.estado, estado_esparado);
         assert_eq!(response.mensaje_estado, mensaje_esperado);
         assert_eq!(response.version, verison_esperada);
         assert_eq!(response.headers, header_esperado);
-        assert_eq!(response.body, None);
+        assert_eq!(response.body, Some(body_esperado));
     }
 }

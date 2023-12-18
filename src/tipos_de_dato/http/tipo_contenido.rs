@@ -4,7 +4,6 @@ use super::error::ErrorHttp;
 
 pub enum TipoContenido {
     Json,
-    TextPlain,
 }
 
 impl TipoContenido {
@@ -18,7 +17,6 @@ impl TipoContenido {
     pub fn to_string(&self) -> Result<String, String> {
         match self {
             TipoContenido::Json => Ok("application/json".to_string()),
-            TipoContenido::TextPlain => Ok("text/plain".to_string()),
         }
     }
 
@@ -32,9 +30,6 @@ impl TipoContenido {
                     .map_err(|e| ErrorHttp::BadRequest(e.to_string()))?;
                 Ok(comando)
             }
-            Self::TextPlain => Err(ErrorHttp::InternalServerError(format!(
-                "No se puede parsear Texto planoen conido"
-            ))),
         }
     }
 }

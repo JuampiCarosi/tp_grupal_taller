@@ -74,8 +74,7 @@ mod tests {
                     Arc::new(Logger::new(std::path::PathBuf::from("server_logger.txt")).unwrap()),
                     EstadoHttp::Ok,
                     None,
-                    TipoContenido::Json,
-                ))?
+                ))
             },
         );
 
@@ -102,8 +101,7 @@ mod tests {
                     Arc::new(Logger::new(std::path::PathBuf::from("server_logger.txt")).unwrap()),
                     EstadoHttp::Ok,
                     None,
-                    TipoContenido::Json,
-                )?)
+                ))
             },
         );
 

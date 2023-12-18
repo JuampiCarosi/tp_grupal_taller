@@ -88,12 +88,7 @@ fn merge_ejecutado_con_exito(
     let body_merge = armar_body_merge(hash_merge);
     pull_request.estado = "closed".to_string();
     pull_request.guardar_pr(&dir_pull_request)?;
-    let response = Response::new(
-        logger,
-        EstadoHttp::Ok,
-        Some(&body_merge),
-        TipoContenido::Json,
-    )?;
+    let response = Response::new(logger, EstadoHttp::Ok, Some(&body_merge));
     Ok(response)
 }
 
@@ -117,12 +112,7 @@ fn merge_ejecutado_con_fallos(logger: Arc<Logger>, error: String) -> Result<Resp
     volver_a_estado_previo_al_merge()?;
 
     if index::hay_archivos_con_conflictos(logger.clone()) {
-        let response = Response::new(
-            logger,
-            EstadoHttp::MethodNotAllowed,
-            None,
-            TipoContenido::Json,
-        )?;
+        let response = Response::new(logger, EstadoHttp::MethodNotAllowed, None);
         Ok(response)
     } else {
         Err(ErrorHttp::InternalServerError(format!(
@@ -166,19 +156,14 @@ fn mergear_pull_request(
     let mut pull_request = obtener_pull_request_de_params(&params)?;
 
     if pull_request.estado != "open" {
-        let response = Response::new(
-            logger,
-            EstadoHttp::ValidationFailed,
-            None,
-            TipoContenido::Json,
-        )?;
+        let response = Response::new(logger, EstadoHttp::ValidationFailed, None);
         return Ok(response);
     }
 
     let (es_posible_mergear, merge_method) = obtener_params_body(request, &pull_request.rama_base)?;
 
     if !es_posible_mergear {
-        let response = Response::new(logger, EstadoHttp::Conflict, None, TipoContenido::Json)?;
+        let response = Response::new(logger, EstadoHttp::Conflict, None);
         return Ok(response);
     }
 

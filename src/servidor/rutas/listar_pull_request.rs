@@ -31,7 +31,7 @@ fn listar_pull_request(
     lista_pull_request = filtrar_pull_requests(request, lista_pull_request);
 
     if lista_pull_request.is_empty() {
-        let response = Response::new(logger, EstadoHttp::NoContent, None, TipoContenido::Json)?;
+        let response = Response::new(logger, EstadoHttp::NoContent, None);
         return Ok(response);
     }
 
@@ -42,12 +42,7 @@ fn listar_pull_request(
         ))
     })?;
 
-    let response = Response::new(
-        logger,
-        EstadoHttp::Ok,
-        Some(&body_respuesta),
-        TipoContenido::Json,
-    )?;
+    let response = Response::new(logger, EstadoHttp::Ok, Some(&body_respuesta));
     Ok(response)
 }
 

@@ -73,8 +73,7 @@ impl ServidorHttp {
                     Ok(response) => response.enviar(&mut stream).map_err(|e| e.to_string()),
                     Err(error_http) => {
                         logger_clone.log(&format!("Error procesando request: {:?}", error_http));
-                        let response = Response::from_error(logger_clone.clone(), error_http)
-                            .map_err(|e| e.to_string())?;
+                        let response = Response::from_error(logger_clone.clone(), error_http);
                         response.enviar(&mut stream).map_err(|e| e.to_string())
                     }
                 }?;
@@ -112,7 +111,7 @@ impl ServidorHttp {
             return Ok(response);
         }
 
-        let response = Response::new(logger, EstadoHttp::NotFound, None, TipoContenido::Json)?;
+        let response = Response::new(logger, EstadoHttp::NotFound, None);
         Ok(response)
     }
 }

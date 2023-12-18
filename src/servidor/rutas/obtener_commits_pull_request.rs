@@ -3,7 +3,7 @@ use std::{collections::HashMap, sync::Arc};
 use crate::tipos_de_dato::{
     http::{
         endpoint::Endpoint, error::ErrorHttp, estado::EstadoHttp, metodos::MetodoHttp,
-        request::Request, response::Response, tipo_contenido::TipoContenido,
+        request::Request, response::Response,
     },
     logger::Logger,
 };
@@ -31,7 +31,7 @@ fn obtener_commits_pull_request(
     let commits = pull_request.obtener_commits(repo, logger.clone())?;
 
     if commits.is_empty() {
-        let response = Response::new(logger, EstadoHttp::NoContent, None, TipoContenido::Json)?;
+        let response = Response::new(logger, EstadoHttp::NoContent, None);
         return Ok(response);
     }
 
@@ -39,11 +39,6 @@ fn obtener_commits_pull_request(
         ErrorHttp::InternalServerError(format!("No se ha podido serializar el pull request: {}", e))
     })?;
 
-    let response = Response::new(
-        logger,
-        EstadoHttp::Created,
-        Some(&body_response),
-        TipoContenido::Json,
-    )?;
+    let response = Response::new(logger, EstadoHttp::Created, Some(&body_response));
     Ok(response)
 }

@@ -62,11 +62,6 @@ pub fn responder_pull_request_en_formato_json(
     let body_respuesta = serde_json::to_string(&pull_request).map_err(|e| {
         ErrorHttp::InternalServerError(format!("No se ha podido serializar el pull request: {}", e))
     })?;
-    let respuesta = Response::new(
-        logger,
-        EstadoHttp::Created,
-        Some(&body_respuesta),
-        TipoContenido::Json,
-    )?;
+    let respuesta = Response::new(logger, EstadoHttp::Created, Some(&body_respuesta));
     Ok(respuesta)
 }

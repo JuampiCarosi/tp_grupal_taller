@@ -286,12 +286,14 @@ impl PullRequest {
     fn obtener_numero(repositorio: &str) -> Result<u64, ErrorHttp> {
         let direccion = PathBuf::from(format!("./srv/{repositorio}/pulls"));
         if !direccion.exists() {
-            return Ok(0);
+            return Ok(1);
         }
 
-        utils::io::cantidad_entradas_dir(&direccion).map_err(|_| {
+        let numero = utils::io::cantidad_entradas_dir(&direccion).map_err(|_| {
             ErrorHttp::InternalServerError("Fallo al obtener el numero del pr".to_string())
-        })
+        })? + 1;
+
+        Ok(numero)
     }
 
     fn obtener_rama_base(
