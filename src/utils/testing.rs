@@ -6,7 +6,11 @@ use std::{
 
 use crate::tipos_de_dato::{
     comando::Ejecutar,
+<<<<<<< HEAD
     comandos::{add::Add, branch::Branch, commit::Commit, init::Init, remote::Remote},
+=======
+    comandos::{branch::Branch, init::Init, remote::Remote, add::Add, commit::Commit, push::Push},
+>>>>>>> main
     logger::Logger,
 };
 
@@ -81,6 +85,7 @@ pub fn eliminar_archivo_gir() {
     }
 }
 
+<<<<<<< HEAD
 pub fn addear_archivos_y_comittear(args: Vec<String>, logger: Arc<Logger>) {
     let mut add = Add::from(args, logger.clone()).unwrap();
     add.ejecutar().unwrap();
@@ -88,3 +93,65 @@ pub fn addear_archivos_y_comittear(args: Vec<String>, logger: Arc<Logger>) {
         Commit::from(&mut vec!["-m".to_string(), "mensaje".to_string()], logger).unwrap();
     commit.ejecutar().unwrap();
 }
+=======
+
+pub fn crear_repo_para_pr(logger: Arc<Logger>) {
+    let mut init = Init::from(vec![], logger.clone()).unwrap();
+    init.ejecutar().unwrap();
+
+    io::escribir_bytes("archivo", "contenido").unwrap();
+    let mut add = Add::from(vec!["archivo".to_string()], logger.clone()).unwrap();
+    add.ejecutar().unwrap();
+
+    let mut commit = Commit::from(
+        &mut ["-m".to_string(), "commit".to_string()].to_vec(),
+        logger.clone(),
+    )
+    .unwrap();
+    commit.ejecutar().unwrap();
+
+    let mut branch = Branch::from(&mut ["rama".to_string()].to_vec(), logger.clone()).unwrap();
+    branch.ejecutar().unwrap();
+
+    io::escribir_bytes("archivo", "contenido2").unwrap();
+    let mut add = Add::from(vec!["archivo".to_string()], logger.clone()).unwrap();
+    add.ejecutar().unwrap();
+
+    std::thread::sleep(std::time::Duration::from_secs(1));
+
+    let mut commit = Commit::from(
+        &mut ["-m".to_string(), "commit".to_string()].to_vec(),
+        logger.clone(),
+    )
+    .unwrap();
+    commit.ejecutar().unwrap();
+
+    let mut remote = Remote::from(
+        &mut vec![
+            "add".to_string(),
+            "origin".to_string(),
+            "localhost:9933/repo/".to_string(),
+        ],
+        logger.clone(),
+    )
+    .unwrap();
+
+    remote.ejecutar().unwrap();
+
+    let mut push = Push::new(
+        &mut vec!["-u".to_string(), "origin".to_string(), "rama".to_string()],
+        logger.clone(),
+    )
+    .unwrap();
+
+    push.ejecutar().unwrap();
+
+    let mut push = Push::new(
+        &mut vec!["-u".to_string(), "origin".to_string(), "master".to_string()],
+        logger.clone(),
+    )
+    .unwrap();
+
+    push.ejecutar().unwrap();
+}
+>>>>>>> main

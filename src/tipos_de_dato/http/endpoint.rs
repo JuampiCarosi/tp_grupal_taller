@@ -3,7 +3,6 @@ use std::{collections::HashMap, sync::Arc};
 use crate::tipos_de_dato::logger::Logger;
 
 use super::{error::ErrorHttp, metodos::MetodoHttp, request::Request, response::Response};
-
 pub struct Endpoint {
     pub metodo: MetodoHttp,
     pub patron: String,
@@ -18,7 +17,7 @@ impl Endpoint {
     ) -> Self {
         Self {
             metodo,
-            patron: patron,
+            patron,
             handler,
         }
     }
@@ -41,14 +40,14 @@ impl Endpoint {
 
         let mut params = HashMap::new();
 
-        for (ruta_endpoint, ruta_request) in ruta_endpoint.iter().zip(ruta_request.iter()) {
-            if ruta_endpoint.starts_with("{") && ruta_endpoint.ends_with("}") {
-                let key = ruta_endpoint[1..ruta_endpoint.len() - 1].to_string();
-                params.insert(key, ruta_request.to_string());
+        for (entrada_endpoint, entrada_request) in ruta_endpoint.iter().zip(ruta_request.iter()) {
+            if entrada_endpoint.starts_with("{") && entrada_endpoint.ends_with("}") {
+                let key = entrada_endpoint[1..entrada_endpoint.len() - 1].to_string();
+                params.insert(key, entrada_request.to_string());
                 continue;
             }
 
-            if ruta_endpoint != ruta_request {
+            if entrada_endpoint != entrada_request {
                 return None;
             }
         }

@@ -7,7 +7,6 @@ use std::{
 
 use super::{error::ErrorHttp, metodos::MetodoHttp, tipo_contenido::TipoContenido};
 use crate::tipos_de_dato::logger::Logger;
-
 pub struct Request {
     pub metodo: MetodoHttp,
     pub ruta: String,
@@ -48,7 +47,6 @@ impl Request {
     ) -> Result<Option<(usize, TipoContenido)>, ErrorHttp> {
         let option_largo = headers.get("Content-Length");
         let option_tipo = headers.get("Content-Type");
-
         if option_largo.is_none() && option_tipo.is_none() {
             return Ok(None);
         }
@@ -68,7 +66,7 @@ impl Request {
         T: Read + Write,
     {
         let (metodo, ruta, version) = Self::obtener_primera_linea(reader)?;
-
+   
         let metodo = MetodoHttp::from_string(&metodo)?;
 
         let headers = Self::obtener_headers(reader)?;
@@ -124,7 +122,6 @@ impl Request {
                 "No se pudo leer las lineas envias al server {e}"
             ))
         })?;
-
         let splitted = line.split_whitespace().collect::<Vec<&str>>();
         if splitted.len() != 3 {
             return Err(ErrorHttp::BadRequest(
@@ -154,9 +151,16 @@ impl Request {
         };
 
         let mut body_buf = vec![0; largo];
-        reader
+        let leidos = reader
             .read(&mut body_buf)
-            .map_err(|e| ErrorHttp::BadRequest(e.to_string()))?;
+            .map_err(|e| ErrorHttp::InternalServerError(e.to_string()))?;
+
+        if leidos != largo {
+            return Err(ErrorHttp::BadRequest(
+                "No se pudo leer el body completo".to_string(),
+            ));
+        }
+
         let body = tipo.parsear_contenido(&body_buf)?;
 
         Ok(Some(body))
