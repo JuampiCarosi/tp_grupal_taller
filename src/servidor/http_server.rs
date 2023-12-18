@@ -423,7 +423,7 @@ mod test {
             ServidorHttp::manejar_cliente(logger.clone(), &mut mock, &endpoints).unwrap();
 
         let get_request_string = format!(
-            "GET /repos/{}/pulls/0 HTTP/1.1\r\n\
+            "GET /repos/{}/pulls/1 HTTP/1.1\r\n\
             Host: localhost:9933\r\n\
             Accept: application/vnd.github+json\r\n\
             \r\n",
@@ -511,7 +511,7 @@ mod test {
             ServidorHttp::manejar_cliente(logger.clone(), &mut mock, &endpoints).unwrap();
 
         let get_request_string = format!(
-            "GET /repos/{}/pulls/0/commits HTTP/1.1\r\n\
+            "GET /repos/{}/pulls/1/commits HTTP/1.1\r\n\
             Host: localhost:9933\r\n\
             Accept: application/vnd.github+json\r\n\
             \r\n",
@@ -599,7 +599,7 @@ mod test {
             ServidorHttp::manejar_cliente(logger.clone(), &mut mock, &endpoints).unwrap();
 
         let get_request_string = format!(
-            "PUT /repos/{}/pulls/0/merge HTTP/1.1\r\n\
+            "PUT /repos/{}/pulls/1/merge HTTP/1.1\r\n\
             Host: localhost:9933\r\n\
             Accept: application/vnd.github+json\r\n\
             \r\n",
@@ -686,7 +686,7 @@ mod test {
             ServidorHttp::manejar_cliente(logger.clone(), &mut mock, &endpoints).unwrap();
 
         let get_request_string = format!(
-            "PATCH /repos/{}/pulls/0 HTTP/1.1\r\n\
+            "PATCH /repos/{}/pulls/1 HTTP/1.1\r\n\
             Host: localhost:9933\r\n\
             Accept: application/vnd.github+json\r\n\
             \r\n",
