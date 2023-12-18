@@ -114,7 +114,7 @@ impl Default for Logger {
     fn default() -> Self {
         let (tx, _) = mpsc::channel();
         Self {
-            tx: tx,
+            tx,
             handle: None,
         }
     }

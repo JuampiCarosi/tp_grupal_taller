@@ -39,7 +39,7 @@ pub fn obtener_hash_commit_asociado_rama_actual() -> Result<String, String> {
 }
 
 pub fn obtener_hash_commit_asociado_rama(rama: &str) -> Result<String, String> {
-    if !existe_la_rama(&rama) {
+    if !existe_la_rama(rama) {
         return Err(format!("No existe la rama {}", rama));
     }
     let ruta = format!("./.gir/refs/heads/{}", rama);

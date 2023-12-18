@@ -38,6 +38,6 @@ fn actualizar_pull_request(
     if let Some(body) = request.body {
         pull_request.actualizar(body)?;
     }
-    guadar_pull_request_acorde_al_numero(&pull_request, &repo)?;
+    guadar_pull_request_acorde_al_numero(&pull_request, repo)?;
     responder_pull_request_en_formato_json(pull_request, logger, EstadoHttp::Ok)
 }

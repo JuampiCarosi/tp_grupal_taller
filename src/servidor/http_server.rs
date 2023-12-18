@@ -96,7 +96,7 @@ impl ServidorHttp {
                     }
                 }?;
 
-                return Ok(());
+                Ok(())
             });
 
             let threads = threads.lock();

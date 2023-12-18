@@ -7,7 +7,7 @@ use crate::{
         comandos::{merge::Merge, rebase::Rebase},
         http::{
             endpoint::Endpoint, error::ErrorHttp, estado::EstadoHttp, metodos::MetodoHttp,
-            request::Request, response::Response, tipo_contenido::TipoContenido,
+            request::Request, response::Response,
         },
         logger::Logger,
     },
@@ -87,7 +87,7 @@ fn obtener_params_body(
             }
         }
     };
-    return Ok(MetodoMerge::Merge);
+    Ok(MetodoMerge::Merge)
 }
 
 fn pr_mergeado_con_exito(
@@ -95,7 +95,7 @@ fn pr_mergeado_con_exito(
     pull_request: &mut PullRequest,
     logger: Arc<Logger>,
 ) -> Result<Response, ErrorHttp> {
-    let hash_merge = ramas::obtener_hash_commit_asociado_rama(&rama_base).map_err(|error| {
+    let hash_merge = ramas::obtener_hash_commit_asociado_rama(rama_base).map_err(|error| {
         ErrorHttp::InternalServerError(format!(
             "No se ha podido obtener el hash del commit de la rama {}: {}",
             rama_base, error

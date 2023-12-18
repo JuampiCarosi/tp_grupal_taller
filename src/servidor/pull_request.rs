@@ -142,7 +142,7 @@ impl PullRequest {
     /// - Si no existe la rama base de `base`
     /// - Si `state` no es `"open"` o `"closed"`    
     pub fn actualizar(&mut self, body: HashMap<String, String>) -> Result<bool, ErrorHttp> {
-        if self.estado == CLOSED.to_string() {
+        if self.estado == *CLOSED {
             return Ok(false);
         }
 
@@ -243,7 +243,7 @@ impl PullRequest {
 
     pub fn obtener_commits(&self, logger: Arc<Logger>) -> Result<Vec<CommitObj>, ErrorHttp> {
         self._obtener_commits(logger)
-            .map_err(|e| ErrorHttp::InternalServerError(e))
+            .map_err(ErrorHttp::InternalServerError)
     }
 
     fn _obtener_commits(&self, logger: Arc<Logger>) -> Result<Vec<CommitObj>, String> {
@@ -336,29 +336,21 @@ impl PullRequest {
     }
 
     fn obtener_titulo(body: &HashMap<String, String>) -> Option<String> {
-        if let Some(titulo) = body.get("title") {
-            Some(titulo.to_owned())
-        } else {
-            None
-        }
+        body.get("title").map(|titulo| titulo.to_owned())
     }
 
     fn obtener_descripcion(body: &HashMap<String, String>) -> Option<String> {
-        if let Some(descripcion) = body.get("body") {
-            Some(descripcion.to_owned())
-        } else {
-            None
-        }
+        body.get("body").map(|descripcion| descripcion.to_owned())
     }
 
     pub fn entrar_a_repositorio(&self) -> Result<(), ErrorHttp> {
         let direccion = format!("srv/{}", self.repositorio);
-        utils::io::cambiar_directorio(direccion).map_err(|e| ErrorHttp::InternalServerError(e))?;
+        utils::io::cambiar_directorio(direccion).map_err(ErrorHttp::InternalServerError)?;
         Ok(())
     }
 
     pub fn salir_del_repositorio(&self) -> Result<(), ErrorHttp> {
-        utils::io::cambiar_directorio("../../").map_err(|e| ErrorHttp::InternalServerError(e))?;
+        utils::io::cambiar_directorio("../../").map_err(ErrorHttp::InternalServerError)?;
         Ok(())
     }
 
@@ -711,7 +703,7 @@ mod test {
 
         let rama_base_actualizar = "bombastic_fantastic".to_string();
         //creo el repositorio pero no la rama
-        let test_repo = format!("./srv/test08_no_se_puede_actualizar_la_rama_base_con_una_rama_inexistente/.gir/refs/heads");
+        let test_repo = "./srv/test08_no_se_puede_actualizar_la_rama_base_con_una_rama_inexistente/.gir/refs/heads".to_string();
         utils::io::crear_directorio(&test_repo).unwrap();
 
         let mut body = HashMap::new();

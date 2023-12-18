@@ -1,11 +1,10 @@
 use std::{
     collections::{hash_map::RandomState, HashMap},
-    fmt::format,
     io::{Read, Write},
     sync::Arc,
 };
 
-use super::{error::ErrorHttp, estado::EstadoHttp, tipo_contenido::TipoContenido};
+use super::{error::ErrorHttp, estado::EstadoHttp};
 use crate::tipos_de_dato::logger::Logger;
 #[derive(Debug)]
 pub struct Response {
@@ -80,7 +79,7 @@ mod test {
 
     use crate::{
         tipos_de_dato::{
-            http::{error::ErrorHttp, estado::EstadoHttp, tipo_contenido::TipoContenido},
+            http::{error::ErrorHttp, estado::EstadoHttp},
             logger::Logger,
         },
         utils::testing::MockTcpStream,

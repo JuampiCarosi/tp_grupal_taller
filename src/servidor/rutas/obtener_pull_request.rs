@@ -46,7 +46,7 @@ fn obtener_pull_request(
 pub fn obtener_pull_request_de_params(
     params: &HashMap<String, String>,
 ) -> Result<PullRequest, ErrorHttp> {
-    let dir_pull_request = obtener_dir_pull_request(&params)?;
+    let dir_pull_request = obtener_dir_pull_request(params)?;
     let pull_request = PullRequest::cargar_pr(&dir_pull_request)?;
     Ok(pull_request)
 }
