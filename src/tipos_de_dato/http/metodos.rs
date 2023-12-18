@@ -15,10 +15,9 @@ impl MetodoHttp {
             "POST" => Ok(MetodoHttp::Post),
             "PUT" => Ok(MetodoHttp::Put),
             "PATCH" => Ok(MetodoHttp::Patch),
-            _ => Err(ErrorHttp::BadRequest(format!(
-                "Metodo {} no soportado",
-                metodo
-            ))),
+            _ => Err(ErrorHttp::Forbidden(
+                "El acceso ha sido denegado".to_string(),
+            )),
         }
     }
 }

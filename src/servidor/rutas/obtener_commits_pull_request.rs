@@ -35,10 +35,10 @@ fn obtener_commits_pull_request(
         return Ok(response);
     }
 
-    let body_response = serde_json::to_string(&pull_request).map_err(|e| {
+    let body_response = serde_json::to_string(&commits).map_err(|e| {
         ErrorHttp::InternalServerError(format!("No se ha podido serializar el pull request: {}", e))
     })?;
 
-    let response = Response::new(logger, EstadoHttp::Created, Some(&body_response));
+    let response = Response::new(logger, EstadoHttp::Ok, Some(&body_response));
     Ok(response)
 }

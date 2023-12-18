@@ -617,7 +617,7 @@ impl Ejecutar for Merge {
             index::limpiar_archivo_index()?;
         }
 
-        let commit_actual = ramas::obtener_hash_commit_asociado_rama_actual()?;
+        let commit_actual = Self::obtener_commit_de_branch(&self.branch_actual)?;
         let commit_a_mergear = Self::obtener_commit_de_branch(&self.branch_a_mergear)?;
         let commit_base = Self::obtener_commit_base_entre_dos_branches(
             &self.branch_actual,
