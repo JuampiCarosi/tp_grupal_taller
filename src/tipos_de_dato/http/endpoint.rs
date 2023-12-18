@@ -60,7 +60,7 @@ impl Endpoint {
 #[cfg(test)]
 
 mod tests {
-    use crate::tipos_de_dato::http::estado::EstadoHttp;
+    use crate::tipos_de_dato::http::{estado::EstadoHttp, tipo_contenido::TipoContenido};
 
     use super::*;
 

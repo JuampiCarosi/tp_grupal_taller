@@ -7,7 +7,7 @@ use crate::{
         comandos::{merge::Merge, rebase::Rebase},
         http::{
             endpoint::Endpoint, error::ErrorHttp, estado::EstadoHttp, metodos::MetodoHttp,
-            request::Request, response::Response,
+            request::Request, response::Response, tipo_contenido::TipoContenido,
         },
         logger::Logger,
     },
