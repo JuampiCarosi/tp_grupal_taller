@@ -1,7 +1,7 @@
 use std::{
     io::{BufReader, Read, Write},
     net::TcpListener,
-    sync::{mpsc::Sender, Arc, Mutex},
+    sync::{mpsc::Sender, Arc},
     thread,
 };
 
@@ -16,10 +16,13 @@ use crate::{
     utils::gir_config,
 };
 
-use super::rutas::{
-    actualizar_pull_request, crear_pull_request, listar_pull_request,
-    mensaje_servidor::MensajeServidor, mergear_pull_request, obtener_commits_pull_request,
-    obtener_pull_request,
+use super::{
+    rutas::{
+        actualizar_pull_request, crear_pull_request, listar_pull_request,
+        mensaje_servidor::MensajeServidor, mergear_pull_request, obtener_commits_pull_request,
+        obtener_pull_request,
+    },
+    vector_threads::VectorThreads,
 };
 
 pub struct ServidorHttp {
@@ -31,7 +34,7 @@ pub struct ServidorHttp {
 
     main: Option<thread::JoinHandle<()>>,
 
-    threads: Arc<Mutex<Vec<thread::JoinHandle<Result<(), String>>>>>,
+    threads: VectorThreads,
 
     tx: Sender<MensajeServidor>,
 }
@@ -42,7 +45,7 @@ impl ServidorHttp {
     /// * `logger` - Logger para registrar los eventos del servidor
     pub fn new(
         logger: Arc<Logger>,
-        threads: Arc<Mutex<Vec<thread::JoinHandle<Result<(), String>>>>>,
+        threads: VectorThreads,
         tx: Sender<MensajeServidor>,
     ) -> Result<Self, String> {
         let puerto = gir_config::conseguir_puerto_http()
@@ -75,7 +78,7 @@ impl ServidorHttp {
     fn aceptar_conexiones(
         endpoints: Arc<Vec<Endpoint>>,
         listener: TcpListener,
-        threads: Arc<Mutex<Vec<thread::JoinHandle<Result<(), String>>>>>,
+        threads: VectorThreads,
         logger: Arc<Logger>,
         tx: Sender<MensajeServidor>,
     ) {
@@ -96,7 +99,7 @@ impl ServidorHttp {
                     }
                 }?;
 
-                return Ok(());
+                Ok(())
             });
 
             let threads = threads.lock();
@@ -163,7 +166,7 @@ impl ServidorHttp {
 
 #[cfg(test)]
 mod test {
-    use std::path::PathBuf;
+    use std::{path::PathBuf, sync::Mutex};
 
     use super::*;
     use crate::{
@@ -203,7 +206,7 @@ mod test {
         let (tx, _) = std::sync::mpsc::channel();
 
         let handle = std::thread::spawn(move || {
-            let threads = Arc::new(Mutex::new(Vec::new()));
+            let threads: VectorThreads = Arc::new(Mutex::new(Vec::new()));
             let listener = TcpListener::bind("127.0.0.1:9933").unwrap();
 
             let mut servidor_gir = ServidorGir {
@@ -277,7 +280,7 @@ mod test {
         let (tx, _) = std::sync::mpsc::channel();
 
         let handle = std::thread::spawn(move || {
-            let threads = Arc::new(Mutex::new(Vec::new()));
+            let threads: VectorThreads = Arc::new(Mutex::new(Vec::new()));
             let listener = TcpListener::bind("127.0.0.1:9933").unwrap();
 
             let mut servidor_gir = ServidorGir {
@@ -365,7 +368,7 @@ mod test {
         let (tx, _) = std::sync::mpsc::channel();
 
         let handle = std::thread::spawn(move || {
-            let threads = Arc::new(Mutex::new(Vec::new()));
+            let threads: VectorThreads = Arc::new(Mutex::new(Vec::new()));
             let listener = TcpListener::bind("127.0.0.1:9933").unwrap();
 
             let mut servidor_gir = ServidorGir {
@@ -453,7 +456,7 @@ mod test {
         let (tx, _) = std::sync::mpsc::channel();
 
         let handle = std::thread::spawn(move || {
-            let threads = Arc::new(Mutex::new(Vec::new()));
+            let threads: VectorThreads = Arc::new(Mutex::new(Vec::new()));
             let listener = TcpListener::bind("127.0.0.1:9933").unwrap();
 
             let mut servidor_gir = ServidorGir {
@@ -541,7 +544,7 @@ mod test {
         let (tx, _) = std::sync::mpsc::channel();
 
         let handle = std::thread::spawn(move || {
-            let threads = Arc::new(Mutex::new(Vec::new()));
+            let threads: VectorThreads = Arc::new(Mutex::new(Vec::new()));
             let listener = TcpListener::bind("127.0.0.1:9933").unwrap();
 
             let mut servidor_gir = ServidorGir {
@@ -628,7 +631,7 @@ mod test {
         let (tx, _) = std::sync::mpsc::channel();
 
         let handle = std::thread::spawn(move || {
-            let threads = Arc::new(Mutex::new(Vec::new()));
+            let threads: VectorThreads = Arc::new(Mutex::new(Vec::new()));
             let listener = TcpListener::bind("127.0.0.1:9933").unwrap();
 
             let mut servidor_gir = ServidorGir {

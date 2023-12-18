@@ -4,8 +4,8 @@ use crate::{
     servidor::pull_request::PullRequest,
     tipos_de_dato::{
         http::{
-            endpoint::Endpoint, error::ErrorHttp, metodos::MetodoHttp, request::Request,
-            response::Response, estado::EstadoHttp,
+            endpoint::Endpoint, error::ErrorHttp, estado::EstadoHttp, metodos::MetodoHttp,
+            request::Request, response::Response,
         },
         logger::Logger,
     },
@@ -46,7 +46,7 @@ fn obtener_pull_request(
 pub fn obtener_pull_request_de_params(
     params: &HashMap<String, String>,
 ) -> Result<PullRequest, ErrorHttp> {
-    let dir_pull_request = obtener_dir_pull_request(&params)?;
+    let dir_pull_request = obtener_dir_pull_request(params)?;
     let pull_request = PullRequest::cargar_pr(&dir_pull_request)?;
     Ok(pull_request)
 }

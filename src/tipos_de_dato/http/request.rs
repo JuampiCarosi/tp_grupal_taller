@@ -66,7 +66,7 @@ impl Request {
         T: Read + Write,
     {
         let (metodo, ruta, version) = Self::obtener_primera_linea(reader)?;
-   
+
         let metodo = MetodoHttp::from_string(&metodo)?;
 
         let headers = Self::obtener_headers(reader)?;
@@ -96,7 +96,7 @@ impl Request {
             if line == "\r\n" {
                 break;
             }
-            let splitted = line.splitn(2, ":").collect::<Vec<&str>>();
+            let splitted = line.splitn(2, ':').collect::<Vec<&str>>();
             if splitted.len() != 2 {
                 return Err(ErrorHttp::BadRequest("Error parseando headers".to_string()));
             }
@@ -143,7 +143,7 @@ impl Request {
     where
         T: Read + Write,
     {
-        let headers = Self::obtener_headers_contenido(&headers)?;
+        let headers = Self::obtener_headers_contenido(headers)?;
 
         let (largo, tipo) = match headers {
             Some((largo, tipo)) => (largo, tipo),
