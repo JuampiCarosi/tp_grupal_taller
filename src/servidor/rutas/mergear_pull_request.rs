@@ -43,25 +43,31 @@ fn armar_body_merge(hash_merge: String) -> String {
     body_merge
 }
 
-fn verificar_sha_head(sha: &str, rama_head: &str) -> Result<bool, ErrorHttp> {
-    let hash_head_previo_merge =
-        ramas::obtener_hash_commit_asociado_rama(&rama_head).map_err(|error| {
+fn verificar_sha_head(sha: &str, pull_request: &PullRequest) -> Result<bool, ErrorHttp> {
+    pull_request.entrar_a_repositorio()?;
+    let hash_head_previo_merge = ramas::obtener_hash_commit_asociado_rama(&pull_request.rama_head)
+        .map_err(|error| {
             ErrorHttp::InternalServerError(format!(
                 "No se ha podido obtener el hash del commit de la rama {}: {}",
-                rama_head, error
+                pull_request.rama_head, error
             ))
         })?;
+    pull_request.salir_del_repositorio()?;
+
     Ok(sha == hash_head_previo_merge)
 }
 
-fn obtener_params_body(request: Request, rama_base: &str) -> Result<MetodoMerge, ErrorHttp> {
+fn obtener_params_body(
+    request: Request,
+    pull_request: &PullRequest,
+) -> Result<MetodoMerge, ErrorHttp> {
     let body = match request.body {
         Some(body) => body,
         None => return Ok(MetodoMerge::Merge),
     };
 
     if let Some(sha) = body.get("sha") {
-        if !verificar_sha_head(sha, rama_base)? {
+        if !verificar_sha_head(sha, pull_request)? {
             return Err(ErrorHttp::Conflict(
                 "El sha del head no coincide con el sha del pull request".to_string(),
             ));
@@ -149,24 +155,14 @@ fn mergear_pull_request_utilizando_merge(
         abort: false,
     };
 
-    io::cambiar_directorio(format!("srv/{}", pull_request.repositorio)).map_err(|error| {
-        ErrorHttp::InternalServerError(format!(
-            "No se ha podido cambiar al directorio del repositorio: {}",
-            error
-        ))
-    })?;
+    pull_request.entrar_a_repositorio()?;
 
     let resultado = match merge.ejecutar() {
         Ok(_) => merge_ejecutado_con_exito(&rama_base, pull_request, logger),
         Err(error) => merge_ejecutado_con_fallos(logger, error.to_string()),
     };
 
-    io::cambiar_directorio(format!("../../")).map_err(|error| {
-        ErrorHttp::InternalServerError(format!(
-            "No se ha podido cambiar al directorio del repositorio: {}",
-            error
-        ))
-    })?;
+    pull_request.salir_del_repositorio()?;
 
     resultado
 }
@@ -181,13 +177,14 @@ fn mergear_pull_request(
     logger: Arc<Logger>,
 ) -> Result<Response, ErrorHttp> {
     let mut pull_request = obtener_pull_request_de_params(&params)?;
+    println!("{:?}", pull_request);
 
     if pull_request.estado != "open" {
         let response = Response::new(logger, EstadoHttp::ValidationFailed, None);
         return Ok(response);
     }
 
-    let merge_method = obtener_params_body(request, &pull_request.rama_base)?;
+    let merge_method = obtener_params_body(request, &pull_request)?;
 
     match merge_method {
         MetodoMerge::Merge => mergear_pull_request_utilizando_merge(&mut pull_request, logger),

@@ -241,22 +241,14 @@ impl PullRequest {
         }
     }
 
-    pub fn obtener_commits(
-        &self,
-        repositorio: &str,
-        logger: Arc<Logger>,
-    ) -> Result<Vec<CommitObj>, ErrorHttp> {
-        self._obtener_commits(repositorio, logger)
+    pub fn obtener_commits(&self, logger: Arc<Logger>) -> Result<Vec<CommitObj>, ErrorHttp> {
+        self._obtener_commits(logger)
             .map_err(|e| ErrorHttp::InternalServerError(e))
     }
 
-    fn _obtener_commits(
-        &self,
-        repositorio: &str,
-        logger: Arc<Logger>,
-    ) -> Result<Vec<CommitObj>, String> {
-        utils::io::cambiar_directorio(format!("srv/{repositorio}"))?;
-
+    fn _obtener_commits(&self, logger: Arc<Logger>) -> Result<Vec<CommitObj>, String> {
+        self.entrar_a_repositorio()
+            .map_err(|e| e.obtener_mensaje())?;
         let hash_ultimo_commit = Merge::obtener_commit_de_branch(&self.rama_head)?;
         let ultimo_commit = CommitObj::from_hash(hash_ultimo_commit, logger.clone())?;
         let commits = Log::obtener_listas_de_commits(ultimo_commit, logger.clone())?;
@@ -265,7 +257,8 @@ impl PullRequest {
             &self.rama_head,
             logger.clone(),
         )?;
-        utils::io::cambiar_directorio(format!("../../"))?;
+        self.salir_del_repositorio()
+            .map_err(|e| e.obtener_mensaje())?;
 
         let commits_spliteados: Vec<&[CommitObj]> = commits
             .split(|commit| commit.hash == hash_commit_base)
@@ -353,6 +346,17 @@ impl PullRequest {
         } else {
             None
         }
+    }
+
+    pub fn entrar_a_repositorio(&self) -> Result<(), ErrorHttp> {
+        let direccion = format!("srv/{}", self.repositorio);
+        utils::io::cambiar_directorio(direccion).map_err(|e| ErrorHttp::InternalServerError(e))?;
+        Ok(())
+    }
+
+    pub fn salir_del_repositorio(&self) -> Result<(), ErrorHttp> {
+        utils::io::cambiar_directorio("../../").map_err(|e| ErrorHttp::InternalServerError(e))?;
+        Ok(())
     }
 
     pub fn guardar_pr(&self, direccion: &PathBuf) -> Result<(), ErrorHttp> {
@@ -1182,7 +1186,7 @@ mod test {
 
         io::cambiar_directorio("../../").unwrap();
 
-        let commits = pr.obtener_commits("repo", logger.clone()).unwrap();
+        let commits = pr.obtener_commits(logger.clone()).unwrap();
         assert!(commits.len() == 1);
         io::rm_directorio("tmp/pr_test_14_dir").unwrap();
     }
@@ -1249,7 +1253,7 @@ mod test {
 
         io::cambiar_directorio("../../").unwrap();
 
-        let commits = pr.obtener_commits("repo", logger.clone()).unwrap();
+        let commits = pr.obtener_commits(logger.clone()).unwrap();
         assert!(commits.len() == 1);
 
         io::cambiar_directorio("tmp/pr_test_15_dir").unwrap();
@@ -1257,7 +1261,7 @@ mod test {
         std::thread::sleep(std::time::Duration::from_secs(1));
 
         io::cambiar_directorio("../../").unwrap();
-        let commits = pr.obtener_commits("repo", logger.clone()).unwrap();
+        let commits = pr.obtener_commits(logger.clone()).unwrap();
         assert!(commits.len() == 2);
 
         io::rm_directorio("tmp/pr_test_15_dir").unwrap();
