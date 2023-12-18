@@ -1,5 +1,5 @@
 use std::{
-    collections::HashMap,
+    collections::{hash_map::RandomState, HashMap},
     fmt::format,
     io::{Read, Write},
     sync::Arc,
@@ -26,7 +26,8 @@ impl Response {
     }
 
     pub fn new(logger: Arc<Logger>, estado: EstadoHttp, body: Option<&str>) -> Self {
-        let mut headers: HashMap<String, String> = HashMap::new();
+        let s = RandomState::new();
+        let mut headers: HashMap<String, String> = HashMap::with_hasher(s);
 
         if let Some(body) = &body {
             headers.insert("Content-Lenght".to_string(), body.len().to_string());

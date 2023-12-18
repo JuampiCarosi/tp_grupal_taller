@@ -1129,9 +1129,7 @@ mod test {
                 fecha_creacion,
                 fecha_modificacion,
                 autor,
-                repositorio:
-                    "test_14_crear_un_pull_request_y_pushear_commits_obteiene_commits_correctos"
-                        .to_string(),
+                repositorio: "repo".to_string(),
             }
         };
 
@@ -1198,8 +1196,7 @@ mod test {
                 fecha_creacion,
                 fecha_modificacion,
                 autor,
-                repositorio: "test_15_crear_un_pull_request_y_pushear_commits_cambia_los_commits"
-                    .to_string(),
+                repositorio: "repo".to_string(),
             }
         };
 
