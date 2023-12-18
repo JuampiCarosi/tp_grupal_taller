@@ -454,8 +454,9 @@ mod tests {
         let logger = Arc::new(Logger::new(PathBuf::from("tmp/checkout_test06")).unwrap());
         addear_archivos_y_comittear(vec!["test_file.txt".to_string()], logger.clone());
         let last_hash = io::leer_a_string(".gir/refs/heads/master").unwrap();
-        io::crear_archivo(".gir/refs/remotes/remota").unwrap();
-        io::escribir_bytes(".gir/refs/remotes/remota", last_hash.clone()).unwrap();
+        io::crear_carpeta(".gir/refs/remotes/origin").unwrap();
+        io::crear_archivo(".gir/refs/remotes/origin/remota").unwrap();
+        io::escribir_bytes(".gir/refs/remotes/origin/remota", last_hash.clone()).unwrap();
 
         let mut checkout = Checkout::from(vec!["remota".to_string()], logger.clone()).unwrap();
         checkout.ejecutar().unwrap();

@@ -168,11 +168,12 @@ mod tests {
     };
 
     fn crear_referencias() -> io::Result<()> {
+        std::fs::create_dir_all(".gir/refs/remotes/origin")?;
         let _ = std::fs::write(".gir/refs/heads/master", "hash0")?;
         let _ = std::fs::write(".gir/refs/heads/rama1", "hash1")?;
         let _ = std::fs::write(".gir/refs/heads/rama2", "hash2")?;
-        let _ = std::fs::write(".gir/refs/remotes/rama1", "hash3")?;
-        let _ = std::fs::write(".gir/refs/remotes/rama2", "hash4")?;
+        let _ = std::fs::write(".gir/refs/remotes/origin/rama1", "hash3")?;
+        let _ = std::fs::write(".gir/refs/remotes/origin/rama2", "hash4")?;
         let _ = std::fs::write(".gir/refs/tags/tag1", "hash5")?;
         let _ = std::fs::write(".gir/refs/tags/tag2", "hash6")?;
         Ok(())
@@ -190,7 +191,7 @@ mod tests {
 
         assert_eq!(
             resultado,
-            "hash0 refs/heads/master\nhash1 refs/heads/rama1\nhash2 refs/heads/rama2\nhash3 refs/remotes/rama1\nhash4 refs/remotes/rama2\nhash5 refs/tags/tag1\nhash6 refs/tags/tag2\n"
+            "hash0 refs/heads/master\nhash1 refs/heads/rama1\nhash2 refs/heads/rama2\nhash3 refs/remotes/origin/rama1\nhash4 refs/remotes/origin/rama2\nhash5 refs/tags/tag1\nhash6 refs/tags/tag2\n"
         );
     }
 
@@ -227,6 +228,6 @@ mod tests {
 
         let resultado = show_ref.ejecutar().unwrap();
 
-        assert_eq!(resultado, "hash0 HEAD\nhash0 refs/heads/master\nhash1 refs/heads/rama1\nhash2 refs/heads/rama2\nhash3 refs/remotes/rama1\nhash4 refs/remotes/rama2\nhash5 refs/tags/tag1\nhash6 refs/tags/tag2\n");
+        assert_eq!(resultado, "hash0 HEAD\nhash0 refs/heads/master\nhash1 refs/heads/rama1\nhash2 refs/heads/rama2\nhash3 refs/remotes/origin/rama1\nhash4 refs/remotes/origin/rama2\nhash5 refs/tags/tag1\nhash6 refs/tags/tag2\n");
     }
 }
