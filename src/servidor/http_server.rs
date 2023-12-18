@@ -533,7 +533,7 @@ mod test {
     }
 
     #[test]
-    fn tes06_merge_pr_exitoso_devuelve_status_200() {
+    fn test06_merge_pr_exitoso_devuelve_status_200() {
         let logger = Arc::new(
             Logger::new(PathBuf::from(
                 RUTA_RAIZ.to_string() + "/tmp/servidor_http_test06",
