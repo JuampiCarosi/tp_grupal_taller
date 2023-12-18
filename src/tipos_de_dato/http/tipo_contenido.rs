@@ -22,24 +22,15 @@ impl TipoContenido {
         &self,
         contenido: &[u8],
     ) -> Result<HashMap<String, String>, ErrorHttp> {
-        match self {
-            Self::Json => {
-                let comando: HashMap<String, String> = serde_json::from_slice(contenido)
-                    .map_err(|e| ErrorHttp::BadRequest(e.to_string()))?;
-                Ok(comando)
-            }
-            Self::Xml => {
-                let comando: HashMap<String, String> = serde_xml_rs::from_reader(contenido)
-                    .map_err(|e| ErrorHttp::BadRequest(e.to_string()))?;
-                Ok(comando)
-            }
+        let resultado = match self {
+            Self::Json => serde_json::from_slice(contenido).ok(),
+            Self::UrlEncoded => serde_urlencoded::from_bytes(contenido).ok(),
+            Self::Xml => serde_xml_rs::from_reader(contenido).ok(),
+        };
 
-            Self::UrlEncoded => {
-                let comando: HashMap<String, String> = serde_urlencoded::from_bytes(contenido)
-                    .map_err(|e| ErrorHttp::BadRequest(e.to_string()))?;
-                Ok(comando)
-            }
-        }
+        resultado.ok_or(ErrorHttp::BadRequest(
+            "No se ha podido parsear el contenido de la solicitud".to_string(),
+        ))
     }
 }
 

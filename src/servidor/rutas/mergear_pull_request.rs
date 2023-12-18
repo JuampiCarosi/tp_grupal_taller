@@ -14,12 +14,18 @@ use crate::{
     utils::{index, io, ramas},
 };
 
-use super::obtener_pull_request::{self, obtener_pull_request_de_params};
+use super::obtener_pull_request::obtener_pull_request_de_params;
+
+enum MetodoMerge {
+    Merge,
+    Rebase,
+    Squash,
+}
 
 pub fn agregar_a_router(rutas: &mut Vec<Endpoint>) {
     let endpoint = Endpoint::new(
-        MetodoHttp::Post,
-        "/repos/{owner}/{repo}/pulls/{pull_number}/merge".to_string(),
+        MetodoHttp::Put,
+        "/repos/{repo}/pulls/{pull_number}/merge".to_string(),
         mergear_pull_request,
     );
     rutas.push(endpoint)
@@ -37,47 +43,56 @@ fn armar_body_merge(hash_merge: String) -> String {
     body_merge
 }
 
-fn verificar_sha_head(sha: &str, rama_head: &str) -> Result<bool, ErrorHttp> {
-    let hash_head_previo_merge =
-        ramas::obtener_hash_commit_asociado_rama(&rama_head).map_err(|error| {
+fn verificar_sha_head(sha: &str, pull_request: &PullRequest) -> Result<bool, ErrorHttp> {
+    pull_request.entrar_a_repositorio()?;
+    let hash_head_previo_merge = ramas::obtener_hash_commit_asociado_rama(&pull_request.rama_head)
+        .map_err(|error| {
             ErrorHttp::InternalServerError(format!(
                 "No se ha podido obtener el hash del commit de la rama {}: {}",
-                rama_head, error
+                pull_request.rama_head, error
             ))
         })?;
+    pull_request.salir_del_repositorio()?;
+
     Ok(sha == hash_head_previo_merge)
 }
 
 fn obtener_params_body(
     request: Request,
-    rama_base: &str,
-) -> Result<(bool, Option<&str>), ErrorHttp> {
+    pull_request: &PullRequest,
+) -> Result<MetodoMerge, ErrorHttp> {
     let body = match request.body {
         Some(body) => body,
-        None => return Ok((false, None)),
+        None => return Ok(MetodoMerge::Merge),
     };
 
     if let Some(sha) = body.get("sha") {
-        if !verificar_sha_head(sha, rama_base)? {
-            return Ok((false, None));
+        if !verificar_sha_head(sha, pull_request)? {
+            return Err(ErrorHttp::Conflict(
+                "El sha del head no coincide con el sha del pull request".to_string(),
+            ));
         }
     }
 
     if let Some(merge_method) = body.get("merge_method") {
         match merge_method.as_str() {
-            "squash" | "merge" => return Ok((true, Some("merge"))),
-            "rebase" => return Ok((true, Some("rebase"))),
-            _ => return Ok((false, None)),
+            "merge" => return Ok(MetodoMerge::Merge),
+            "rebase" => return Ok(MetodoMerge::Rebase),
+            "squash" => return Ok(MetodoMerge::Squash),
+            _ => {
+                return Err(ErrorHttp::ValidationFailed(
+                    "merge_method invalido".to_string(),
+                ))
+            }
         }
     };
-    return Ok((true, Some("merge")));
+    return Ok(MetodoMerge::Merge);
 }
 
 fn merge_ejecutado_con_exito(
     rama_base: &str,
     pull_request: &mut PullRequest,
     logger: Arc<Logger>,
-    dir_pull_request: &PathBuf,
 ) -> Result<Response, ErrorHttp> {
     let hash_merge = ramas::obtener_hash_commit_asociado_rama(&rama_base).map_err(|error| {
         ErrorHttp::InternalServerError(format!(
@@ -87,7 +102,10 @@ fn merge_ejecutado_con_exito(
     })?;
     let body_merge = armar_body_merge(hash_merge);
     pull_request.estado = "closed".to_string();
+
+    let dir_pull_request = PathBuf::from(format!("pulls/{}", pull_request.numero));
     pull_request.guardar_pr(&dir_pull_request)?;
+
     let response = Response::new(logger, EstadoHttp::Ok, Some(&body_merge));
     Ok(response)
 }
@@ -109,6 +127,7 @@ fn volver_a_estado_previo_al_merge() -> Result<(), ErrorHttp> {
 }
 
 fn merge_ejecutado_con_fallos(logger: Arc<Logger>, error: String) -> Result<Response, ErrorHttp> {
+    println!("Error al mergear: {}", error);
     volver_a_estado_previo_al_merge()?;
 
     if index::hay_archivos_con_conflictos(logger.clone()) {
@@ -125,7 +144,6 @@ fn merge_ejecutado_con_fallos(logger: Arc<Logger>, error: String) -> Result<Resp
 fn mergear_pull_request_utilizando_merge(
     pull_request: &mut PullRequest,
     logger: Arc<Logger>,
-    dir_pull_request: &PathBuf,
 ) -> Result<Response, ErrorHttp> {
     let rama_base = pull_request.rama_base.clone();
     let rama_head = pull_request.rama_head.clone();
@@ -137,10 +155,16 @@ fn mergear_pull_request_utilizando_merge(
         abort: false,
     };
 
-    match merge.ejecutar() {
-        Ok(_) => merge_ejecutado_con_exito(&rama_base, pull_request, logger, &dir_pull_request),
+    pull_request.entrar_a_repositorio()?;
+
+    let resultado = match merge.ejecutar() {
+        Ok(_) => merge_ejecutado_con_exito(&rama_base, pull_request, logger),
         Err(error) => merge_ejecutado_con_fallos(logger, error.to_string()),
-    }
+    };
+
+    pull_request.salir_del_repositorio()?;
+
+    resultado
 }
 
 fn mergear_pull_request_utilizando_rebase() -> Result<Response, ErrorHttp> {
@@ -152,28 +176,21 @@ fn mergear_pull_request(
     params: HashMap<String, String>,
     logger: Arc<Logger>,
 ) -> Result<Response, ErrorHttp> {
-    let dir_pull_request = obtener_pull_request::obtener_dir_pull_request(&params)?;
     let mut pull_request = obtener_pull_request_de_params(&params)?;
+    println!("{:?}", pull_request);
 
     if pull_request.estado != "open" {
         let response = Response::new(logger, EstadoHttp::ValidationFailed, None);
         return Ok(response);
     }
 
-    let (es_posible_mergear, merge_method) = obtener_params_body(request, &pull_request.rama_base)?;
-
-    if !es_posible_mergear {
-        let response = Response::new(logger, EstadoHttp::Conflict, None);
-        return Ok(response);
-    }
+    let merge_method = obtener_params_body(request, &pull_request)?;
 
     match merge_method {
-        Some("merge") | Some("squash") => {
-            mergear_pull_request_utilizando_merge(&mut pull_request, logger, &dir_pull_request)
-        }
-        Some("rebase") => mergear_pull_request_utilizando_rebase(),
-        _ => Err(ErrorHttp::InternalServerError(
-            "No se ha podido mergear el pull request".to_string(),
+        MetodoMerge::Merge => mergear_pull_request_utilizando_merge(&mut pull_request, logger),
+        MetodoMerge::Rebase => mergear_pull_request_utilizando_rebase(),
+        MetodoMerge::Squash => Err(ErrorHttp::NotImplemented(
+            "Metodo squash no implementado".to_string(),
         )),
     }
 }
