@@ -1,6 +1,6 @@
 use std::{
     io::{BufReader, Read, Write},
-    net::{TcpListener, TcpStream},
+    net::TcpListener,
     sync::{mpsc::Sender, Arc, Mutex},
     thread,
 };
@@ -85,8 +85,9 @@ impl ServidorHttp {
             let logger_clone = logger.clone();
             let endpoints = endpoints.clone();
             let handle = thread::spawn(move || -> Result<(), String> {
-                let response =
+            let response =
                     Self::manejar_cliente(logger_clone.clone(), &mut stream, &endpoints);
+
                 match response {
                     Ok(response) => response.enviar(&mut stream).map_err(|e| e.to_string()),
                     Err(error_http) => {
@@ -162,7 +163,6 @@ impl ServidorHttp {
     }
 }
 
-
 #[cfg(test)]
 mod test {
     use std::path::PathBuf;
@@ -183,6 +183,7 @@ mod test {
             &mut mock,
             &vec![],
         ).unwrap();
+
 
         assert_eq!(404, respuesta.estado);
         assert_eq!("Not Found", respuesta.mensaje_estado);
@@ -222,7 +223,7 @@ mod test {
 
         crear_repo_para_pr(logger.clone());
         std::thread::sleep(std::time::Duration::from_secs(1));
-        
+
         let repo = "repo";
         let body = r#"{
             "title": "Feature X: Implement new functionality",
@@ -240,9 +241,7 @@ mod test {
             Content-Length: {}\r\n\
             \r\n\
             {}",
-            repo,
-            content_length,
-            body
+            repo, content_length, body
         );
 
         let mut mock = testing::MockTcpStream {
@@ -261,7 +260,7 @@ mod test {
         io::rm_directorio(RUTA_RAIZ.to_string() + "/tmp/servidor_http_test02_dir").unwrap();
         io::rm_directorio(RUTA_RAIZ.to_string() + "/srv/repo/").unwrap();
         assert_eq!(201, respuesta.estado);
-        assert_eq!("Created", respuesta.mensaje_estado);  
+        assert_eq!("Created", respuesta.mensaje_estado);
     }
 
     #[test]
@@ -718,3 +717,4 @@ mod test {
         assert_eq!(200, respuesta_get.estado);
     }
 }
+

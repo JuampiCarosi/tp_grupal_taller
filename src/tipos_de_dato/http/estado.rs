@@ -10,6 +10,7 @@ pub enum EstadoHttp {
     Created,
     Conflict,
     ValidationFailed,
+    Forbidden,
 }
 
 impl EstadoHttp {
@@ -24,6 +25,7 @@ impl EstadoHttp {
             EstadoHttp::BadRequest => (400, "Bad Request".to_string()),
             EstadoHttp::Created => (201, "Created".to_string()),
             EstadoHttp::ValidationFailed => (422, "Validacion Failed".to_string()),
+            EstadoHttp::Forbidden => (403, "Forbidden".to_string()),
         }
     }
 }

@@ -9,7 +9,7 @@ use crate::{
         },
         logger::Logger,
     },
-    utils,
+    utils::{self},
 };
 
 pub fn agregar_a_router(rutas: &mut Vec<Endpoint>) {
@@ -29,11 +29,6 @@ fn listar_pull_request(
     let mut lista_pull_request = obtener_pull_request_del_repositorio(params)?;
 
     lista_pull_request = filtrar_pull_requests(request, lista_pull_request);
-
-    if lista_pull_request.is_empty() {
-        let response = Response::new(logger, EstadoHttp::NoContent, None);
-        return Ok(response);
-    }
 
     let body_respuesta = serde_json::to_string(&lista_pull_request).map_err(|e| {
         ErrorHttp::InternalServerError(format!(
@@ -71,6 +66,9 @@ fn obtener_pull_request_del_repositorio(
     params: HashMap<String, String>,
 ) -> Result<Vec<PullRequest>, ErrorHttp> {
     let dir_repositorio = obtener_y_verificar_repositorio_de_los_parametros(&params)?;
+    if !dir_repositorio.exists() {
+        return Ok(Vec::new());
+    }
     let iterador_repo_dir = utils::io::leer_directorio(&dir_repositorio).map_err(|e| {
         ErrorHttp::InternalServerError(format!(
             "Fallo al leer el directorio {:?}: {e}",
@@ -82,6 +80,10 @@ fn obtener_pull_request_del_repositorio(
     for entrada_repo_dir in iterador_repo_dir {
         match entrada_repo_dir {
             Ok(archivo_pull_request) => {
+                if archivo_pull_request.file_name() == ".DS_Store" {
+                    continue;
+                }
+
                 let pull_request = PullRequest::cargar_pr(&archivo_pull_request.path())?;
                 lista_pull_request.push(pull_request);
             }
@@ -109,10 +111,10 @@ fn obtener_y_verificar_repositorio_de_los_parametros(
         ErrorHttp::InternalServerError("No se ha encontrado el nombre del repositorio".to_string())
     })?;
 
-    let dir_repositorio = PathBuf::from(format!("./srv/{repo}/pulls"));
+    let dir_repositorio = PathBuf::from(format!("./srv/{repo}"));
 
     if dir_repositorio.exists() {
-        Ok(dir_repositorio)
+        Ok(dir_repositorio.join("pulls"))
     } else {
         Err(ErrorHttp::ValidationFailed(format!(
             "No existe en el server el repositorio {repo}"

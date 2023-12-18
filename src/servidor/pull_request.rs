@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
 const OPEN: &str = "open";
-const CLOSE: &str = "close";
+const CLOSED: &str = "closedd";
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct PullRequest {
@@ -28,13 +28,14 @@ pub struct PullRequest {
         default = "default_valor_opcional"
     )]
     pub descripcion: Option<String>,
-    ///representa el estado del pr: solo puede ser `open` o `closed`
+    ///representa el estado del pr: solo puede ser `open` o `closedd`
     pub estado: String,
     pub autor: String,
     pub rama_head: String,
     pub rama_base: String,
     pub fecha_creacion: String,
     pub fecha_modificacion: String,
+    pub repositorio: String,
 }
 
 fn default_valor_opcional() -> Option<String> {
@@ -84,6 +85,7 @@ impl PullRequest {
             rama_base,
             fecha_creacion: fecha_actual.clone(),
             fecha_modificacion: fecha_actual,
+            repositorio: repositorio.to_string(),
         })
     }
 
@@ -124,13 +126,13 @@ impl PullRequest {
     }
 
     ///Actualiza los campos de un pull request con los parametros del body recibido
-    /// Si el pr ya esta cerrado(`estado = "close"`) no se puede actualizar. Devuelve
+    /// Si el pr ya esta cerrado(`estado = "closed"`) no se puede actualizar. Devuelve
     /// si algun campo fue actualizado
     ///
     /// ## Argumentos
     /// - body: el cuerpo del request recivido. Los campos a actualizar pueden ser:
     ///     `state`, `title`, `body` o `base`. En caso de ser `base`, tiene que existir la
-    ///     rama base. En caso de ser `state`, tiene ser `"open"` o `"close"`.
+    ///     rama base. En caso de ser `state`, tiene ser `"open"` o `"closed"`.
     /// - repositorio: el repositorio al cual pertenece el pr. Tiene que existir
     ///
     /// ## Resultado
@@ -138,20 +140,16 @@ impl PullRequest {
     ///
     /// ## Errores
     /// - Si no existe la rama base de `base`
-    /// - Si `state` no es `"open"` o `"close"`    
-    pub fn actualizar(
-        &mut self,
-        body: HashMap<String, String>,
-        repositorio: &str,
-    ) -> Result<bool, ErrorHttp> {
-        if self.estado == CLOSE.to_string() {
+    /// - Si `state` no es `"open"` o `"closed"`    
+    pub fn actualizar(&mut self, body: HashMap<String, String>) -> Result<bool, ErrorHttp> {
+        if self.estado == CLOSED.to_string() {
             return Ok(false);
         }
 
         let se_actualizo_titulo = self.actualizar_titulo(&body);
         let se_actualizo_descripcion = self.actualizar_descripcion(&body);
         let se_actulizo_estado = self.actualizar_estado(&body)?;
-        let se_actualiza_rama_base = self.actualizar_rama_base(&body, repositorio)?;
+        let se_actualiza_rama_base = self.actualizar_rama_base(&body)?;
 
         let se_actualizo_el_pull_request = se_actualiza_rama_base
             || se_actualizo_descripcion
@@ -165,13 +163,9 @@ impl PullRequest {
         Ok(se_actualizo_el_pull_request)
     }
 
-    fn actualizar_rama_base(
-        &mut self,
-        body: &HashMap<String, String>,
-        repositorio: &str,
-    ) -> Result<bool, ErrorHttp> {
+    fn actualizar_rama_base(&mut self, body: &HashMap<String, String>) -> Result<bool, ErrorHttp> {
         if let Some(nueva_rama_base) = body.get("base") {
-            Self::validar_rama(nueva_rama_base, repositorio)?;
+            Self::validar_rama(nueva_rama_base, &self.repositorio)?;
             Self::verificar_rama_base_distinta_de_head(&self.rama_head, nueva_rama_base)?;
 
             let se_actualizo_rama_base = self.rama_base != *nueva_rama_base;
@@ -198,14 +192,14 @@ impl PullRequest {
     fn actualizar_estado(&mut self, body: &HashMap<String, String>) -> Result<bool, ErrorHttp> {
         if let Some(estado) = body.get("state") {
             //verifico que el estado solo pueda ser de los posibles
-            if estado == OPEN || estado == CLOSE {
+            if estado == OPEN || estado == CLOSED {
                 let se_cambio_estado = self.estado != *estado;
                 self.estado = estado.to_owned();
                 return Ok(se_cambio_estado);
             }
 
             Err(ErrorHttp::ValidationFailed(format!(
-                "El status {estado} no coincide con ninguno de los posibles: `open` o `close`"
+                "El status {estado} no coincide con ninguno de los posibles: `open` o `closed`"
             )))
         } else {
             Ok(false)
@@ -247,22 +241,14 @@ impl PullRequest {
         }
     }
 
-    pub fn obtener_commits(
-        &self,
-        repositorio: &str,
-        logger: Arc<Logger>,
-    ) -> Result<Vec<CommitObj>, ErrorHttp> {
-        self._obtener_commits(repositorio, logger)
+    pub fn obtener_commits(&self, logger: Arc<Logger>) -> Result<Vec<CommitObj>, ErrorHttp> {
+        self._obtener_commits(logger)
             .map_err(|e| ErrorHttp::InternalServerError(e))
     }
 
-    fn _obtener_commits(
-        &self,
-        repositorio: &str,
-        logger: Arc<Logger>,
-    ) -> Result<Vec<CommitObj>, String> {
-        utils::io::cambiar_directorio(format!("srv/{repositorio}"))?;
-
+    fn _obtener_commits(&self, logger: Arc<Logger>) -> Result<Vec<CommitObj>, String> {
+        self.entrar_a_repositorio()
+            .map_err(|e| e.obtener_mensaje())?;
         let hash_ultimo_commit = Merge::obtener_commit_de_branch(&self.rama_head)?;
         let ultimo_commit = CommitObj::from_hash(hash_ultimo_commit, logger.clone())?;
         let commits = Log::obtener_listas_de_commits(ultimo_commit, logger.clone())?;
@@ -271,7 +257,8 @@ impl PullRequest {
             &self.rama_head,
             logger.clone(),
         )?;
-        utils::io::cambiar_directorio(format!("../../"))?;
+        self.salir_del_repositorio()
+            .map_err(|e| e.obtener_mensaje())?;
 
         let commits_spliteados: Vec<&[CommitObj]> = commits
             .split(|commit| commit.hash == hash_commit_base)
@@ -361,6 +348,17 @@ impl PullRequest {
         }
     }
 
+    pub fn entrar_a_repositorio(&self) -> Result<(), ErrorHttp> {
+        let direccion = format!("srv/{}", self.repositorio);
+        utils::io::cambiar_directorio(direccion).map_err(|e| ErrorHttp::InternalServerError(e))?;
+        Ok(())
+    }
+
+    pub fn salir_del_repositorio(&self) -> Result<(), ErrorHttp> {
+        utils::io::cambiar_directorio("../../").map_err(|e| ErrorHttp::InternalServerError(e))?;
+        Ok(())
+    }
+
     pub fn guardar_pr(&self, direccion: &PathBuf) -> Result<(), ErrorHttp> {
         let pr_serializado = serde_json::to_string(&self).map_err(|e| {
             ErrorHttp::InternalServerError(format!(
@@ -399,13 +397,11 @@ mod test {
 
     use crate::{
         servidor::gir_server::ServidorGir,
-        utils::testing::crear_repo_para_pr,
         tipos_de_dato::{
             comando::Ejecutar,
-            comandos::{
-                add::Add, branch::Branch, commit::Commit, init::Init, push::Push, remote::Remote,
-            },
+            comandos::{add::Add, commit::Commit, push::Push},
         },
+        utils::testing::crear_repo_para_pr,
     };
     use std::{fs::remove_file, net::TcpListener, sync::Mutex};
 
@@ -453,6 +449,7 @@ mod test {
                 fecha_creacion,
                 fecha_modificacion,
                 autor,
+                repositorio: "repo".to_string(),
             }
         };
         let direccion = PathBuf::from("tmp/test01.json");
@@ -488,6 +485,7 @@ mod test {
                 fecha_creacion,
                 fecha_modificacion,
                 autor,
+                repositorio: "repo".to_string(),
             }
         };
         let direccion = PathBuf::from("tmp/test02.json");
@@ -523,6 +521,7 @@ mod test {
                 fecha_creacion,
                 fecha_modificacion,
                 autor,
+                repositorio: "repo".to_string(),
             }
         };
 
@@ -556,6 +555,7 @@ mod test {
                 fecha_creacion,
                 fecha_modificacion,
                 autor,
+                repositorio: "repo".to_string(),
             }
         };
 
@@ -589,10 +589,11 @@ mod test {
                 fecha_creacion,
                 fecha_modificacion,
                 autor,
+                repositorio: "repo".to_string(),
             }
         };
 
-        let estado_actulizar = "close".to_string();
+        let estado_actulizar = "closed".to_string();
         let mut body = HashMap::new();
         body.insert("state".to_string(), estado_actulizar.clone());
         pr.actualizar_estado(&body).unwrap();
@@ -602,7 +603,7 @@ mod test {
 
     #[test]
     #[should_panic]
-    fn test06_se_el_estado_no_puede_cambiar_a_algo_que_no_se_open_o_close() {
+    fn test06_se_el_estado_no_puede_cambiar_a_algo_que_no_se_open_o_closed() {
         let mut pr = {
             let numero = 1;
             let titulo = None;
@@ -623,6 +624,7 @@ mod test {
                 fecha_creacion,
                 fecha_modificacion,
                 autor,
+                repositorio: "repo".to_string(),
             }
         };
 
@@ -654,6 +656,7 @@ mod test {
                 fecha_creacion,
                 fecha_modificacion,
                 autor,
+                repositorio: "repo".to_string(),
             }
         };
 
@@ -664,7 +667,7 @@ mod test {
         utils::io::crear_archivo(&test_repo).unwrap();
         let mut body = HashMap::new();
         body.insert("base".to_string(), rama_base_actualizar.clone());
-        pr.actualizar_rama_base(&body, repositorio).unwrap();
+        pr.actualizar_rama_base(&body).unwrap();
 
         assert_eq!(pr.rama_base, rama_base_actualizar);
 
@@ -694,6 +697,7 @@ mod test {
                 fecha_creacion,
                 fecha_modificacion,
                 autor,
+                repositorio: "repo".to_string(),
             }
         };
 
@@ -706,7 +710,7 @@ mod test {
         let mut body = HashMap::new();
         body.insert("base".to_string(), rama_base_actualizar.clone());
 
-        pr.actualizar_rama_base(&body, repositorio).unwrap();
+        pr.actualizar_rama_base(&body).unwrap();
         remove_file(test_repo).unwrap();
     }
 
@@ -733,6 +737,7 @@ mod test {
                 fecha_creacion,
                 fecha_modificacion,
                 autor,
+                repositorio: "repo".to_string(),
             }
         };
 
@@ -745,7 +750,7 @@ mod test {
         let mut body = HashMap::new();
         body.insert("base".to_string(), rama_base_actualizar.clone());
 
-        pr.actualizar_rama_base(&body, repositorio).unwrap();
+        pr.actualizar_rama_base(&body).unwrap();
         remove_file(test_repo).unwrap();
     }
 
@@ -771,6 +776,7 @@ mod test {
                 fecha_creacion,
                 fecha_modificacion,
                 autor,
+                repositorio: "repo".to_string(),
             }
         };
 
@@ -778,7 +784,7 @@ mod test {
             let numero = 1;
             let titulo = None;
             let descripcion = None;
-            let estado = String::from("close");
+            let estado = String::from("closed");
             let autor = String::from("Autor");
             let rama_head = String::from("trabajo");
             let rama_base = String::from("master");
@@ -794,11 +800,12 @@ mod test {
                 fecha_creacion,
                 fecha_modificacion,
                 autor,
+                repositorio: "repo".to_string(),
             }
         };
 
         let mut body = HashMap::new();
-        body.insert("state".to_string(), "close".to_string());
+        body.insert("state".to_string(), "closed".to_string());
 
         assert!(!pr_1.filtrar(&body));
         assert!(pr_2.filtrar(&body));
@@ -831,6 +838,7 @@ mod test {
                 fecha_creacion,
                 fecha_modificacion,
                 autor,
+                repositorio: "repo".to_string(),
             }
         };
 
@@ -838,7 +846,7 @@ mod test {
             let numero = 1;
             let titulo = None;
             let descripcion = None;
-            let estado = String::from("close");
+            let estado = String::from("closed");
             let autor = String::from("Autor");
             let rama_head = String::from("trabajo");
             let rama_base = String::from("Motomami");
@@ -854,6 +862,7 @@ mod test {
                 fecha_creacion,
                 fecha_modificacion,
                 autor,
+                repositorio: "repo".to_string(),
             }
         };
 
@@ -886,6 +895,7 @@ mod test {
                 fecha_creacion,
                 fecha_modificacion,
                 autor,
+                repositorio: "repo".to_string(),
             }
         };
 
@@ -893,7 +903,7 @@ mod test {
             let numero = 1;
             let titulo = None;
             let descripcion = None;
-            let estado = String::from("close");
+            let estado = String::from("closed");
             let autor = String::from("siro");
             let rama_head = String::from("server");
             let rama_base = String::from("master");
@@ -909,6 +919,7 @@ mod test {
                 fecha_creacion,
                 fecha_modificacion,
                 autor,
+                repositorio: "repo".to_string(),
             }
         };
 
@@ -916,7 +927,7 @@ mod test {
             let numero = 1;
             let titulo = None;
             let descripcion = None;
-            let estado = String::from("close");
+            let estado = String::from("closed");
             let autor = String::from("Juapi");
             let rama_head = String::from("trabajo");
             let rama_base = String::from("master");
@@ -932,6 +943,7 @@ mod test {
                 fecha_creacion,
                 fecha_modificacion,
                 autor,
+                repositorio: "repo".to_string(),
             }
         };
 
@@ -939,7 +951,7 @@ mod test {
             let numero = 1;
             let titulo = None;
             let descripcion = None;
-            let estado = String::from("close");
+            let estado = String::from("closed");
             let autor = String::from("Mateo");
             let rama_head = String::from("GUI");
             let rama_base = String::from("master");
@@ -955,6 +967,7 @@ mod test {
                 fecha_creacion,
                 fecha_modificacion,
                 autor,
+                repositorio: "repo".to_string(),
             }
         };
 
@@ -989,6 +1002,7 @@ mod test {
                 fecha_creacion,
                 fecha_modificacion,
                 autor,
+                repositorio: "repo".to_string(),
             }
         };
 
@@ -996,7 +1010,7 @@ mod test {
             let numero = 1;
             let titulo = None;
             let descripcion = None;
-            let estado = String::from("close");
+            let estado = String::from("closed");
             let autor = String::from("siro");
             let rama_head = String::from("server");
             let rama_base = String::from("master");
@@ -1012,6 +1026,7 @@ mod test {
                 fecha_creacion,
                 fecha_modificacion,
                 autor,
+                repositorio: "repo".to_string(),
             }
         };
 
@@ -1019,7 +1034,7 @@ mod test {
             let numero = 1;
             let titulo = None;
             let descripcion = None;
-            let estado = String::from("close");
+            let estado = String::from("closed");
             let autor = String::from("Juapi");
             let rama_head = String::from("trabajo");
             let rama_base = String::from("GUI");
@@ -1035,6 +1050,7 @@ mod test {
                 fecha_creacion,
                 fecha_modificacion,
                 autor,
+                repositorio: "repo".to_string(),
             }
         };
 
@@ -1087,7 +1103,7 @@ mod test {
             let numero = 1;
             let titulo = None;
             let descripcion = None;
-            let estado = String::from("close");
+            let estado = String::from("closed");
             let autor = String::from("Juapi");
             let rama_head = String::from("master");
             let rama_base = String::from("rama");
@@ -1103,12 +1119,13 @@ mod test {
                 fecha_creacion,
                 fecha_modificacion,
                 autor,
+                repositorio: "repo".to_string(),
             }
         };
 
         io::cambiar_directorio("../../").unwrap();
 
-        let commits = pr.obtener_commits("repo", logger.clone()).unwrap();
+        let commits = pr.obtener_commits(logger.clone()).unwrap();
         assert!(commits.len() == 1);
         io::rm_directorio("tmp/pr_test_14_dir").unwrap();
     }
@@ -1153,7 +1170,7 @@ mod test {
             let numero = 1;
             let titulo = None;
             let descripcion = None;
-            let estado = String::from("close");
+            let estado = String::from("closed");
             let autor = String::from("Juapi");
             let rama_head = String::from("master");
             let rama_base = String::from("rama");
@@ -1169,12 +1186,13 @@ mod test {
                 fecha_creacion,
                 fecha_modificacion,
                 autor,
+                repositorio: "repo".to_string(),
             }
         };
 
         io::cambiar_directorio("../../").unwrap();
 
-        let commits = pr.obtener_commits("repo", logger.clone()).unwrap();
+        let commits = pr.obtener_commits(logger.clone()).unwrap();
         assert!(commits.len() == 1);
 
         io::cambiar_directorio("tmp/pr_test_15_dir").unwrap();
@@ -1182,7 +1200,7 @@ mod test {
         std::thread::sleep(std::time::Duration::from_secs(1));
 
         io::cambiar_directorio("../../").unwrap();
-        let commits = pr.obtener_commits("repo", logger.clone()).unwrap();
+        let commits = pr.obtener_commits(logger.clone()).unwrap();
         assert!(commits.len() == 2);
 
         io::rm_directorio("tmp/pr_test_15_dir").unwrap();

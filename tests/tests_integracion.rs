@@ -90,3 +90,7 @@ fn init_addear_status() {
     assert_eq!(mensaje[6], "");
     assert_eq!(mensaje[7], "Cambios no trackeados:");
 }
+
+#[test]
+#[serial]
+fn crear_pr_() {}

@@ -38,7 +38,7 @@ fn obtener_pull_request(
 /// ## Argumuntos
 /// - params: los parametros obtenidos de la ruta del pedido. Debe contener `repo` y `pull_number`   
 ///
-/// ## Reusultado
+/// ## Resultado
 /// - el pull request guardado en el directorio `./srv/{repo}/pulls/{pull_number}`
 ///
 /// ## Errores
