@@ -397,75 +397,13 @@ mod test {
 
     use crate::{
         servidor::gir_server::ServidorGir,
-        utils::testing::crear_repo_para_pr,
         tipos_de_dato::{
             comando::Ejecutar,
-            comandos::{
-                add::Add, branch::Branch, commit::Commit, init::Init, push::Push, remote::Remote,
-            },
+            comandos::{add::Add, commit::Commit, push::Push},
         },
+        utils::testing::crear_repo_para_pr,
     };
     use std::{fs::remove_file, net::TcpListener, sync::Mutex};
-
-    // fn crear_repo_para_pr(logger: Arc<Logger>) {
-    //     let mut init = Init::from(vec![], logger.clone()).unwrap();
-    //     init.ejecutar().unwrap();
-
-    //     io::escribir_bytes("archivo", "contenido").unwrap();
-    //     let mut add = Add::from(vec!["archivo".to_string()], logger.clone()).unwrap();
-    //     add.ejecutar().unwrap();
-
-    //     let mut commit = Commit::from(
-    //         &mut ["-m".to_string(), "commit".to_string()].to_vec(),
-    //         logger.clone(),
-    //     )
-    //     .unwrap();
-    //     commit.ejecutar().unwrap();
-
-    //     let mut branch = Branch::from(&mut ["rama".to_string()].to_vec(), logger.clone()).unwrap();
-    //     branch.ejecutar().unwrap();
-
-    //     io::escribir_bytes("archivo", "contenido2").unwrap();
-    //     let mut add = Add::from(vec!["archivo".to_string()], logger.clone()).unwrap();
-    //     add.ejecutar().unwrap();
-
-    //     std::thread::sleep(std::time::Duration::from_secs(1));
-
-    //     let mut commit = Commit::from(
-    //         &mut ["-m".to_string(), "commit".to_string()].to_vec(),
-    //         logger.clone(),
-    //     )
-    //     .unwrap();
-    //     commit.ejecutar().unwrap();
-
-    //     let mut remote = Remote::from(
-    //         &mut vec![
-    //             "add".to_string(),
-    //             "origin".to_string(),
-    //             "localhost:9933/repo/".to_string(),
-    //         ],
-    //         logger.clone(),
-    //     )
-    //     .unwrap();
-
-    //     remote.ejecutar().unwrap();
-
-    //     let mut push = Push::new(
-    //         &mut vec!["-u".to_string(), "origin".to_string(), "rama".to_string()],
-    //         logger.clone(),
-    //     )
-    //     .unwrap();
-
-    //     push.ejecutar().unwrap();
-
-    //     let mut push = Push::new(
-    //         &mut vec!["-u".to_string(), "origin".to_string(), "master".to_string()],
-    //         logger.clone(),
-    //     )
-    //     .unwrap();
-
-    //     push.ejecutar().unwrap();
-    // }
 
     fn agregar_commit_a_repo(logger: Arc<Logger>) {
         io::escribir_bytes("archivo", "contenido3").unwrap();
