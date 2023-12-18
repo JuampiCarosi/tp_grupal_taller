@@ -191,7 +191,6 @@ fn mergear_pull_request_utilizando_rebase(
     pull_request: &mut PullRequest,
     logger: Arc<Logger>,
 ) -> Result<Response, ErrorHttp> {
-    volver_a_estado_previo_al_rebase(logger.clone())?;
     let rama_base = pull_request.rama_base.clone();
     let rama_head = pull_request.rama_head.clone();
 
@@ -203,12 +202,18 @@ fn mergear_pull_request_utilizando_rebase(
         abort: false,
     };
 
-    match rebase.ejecutar() {
+    pull_request.entrar_a_repositorio()?;
+
+    let resultado = match rebase.ejecutar() {
         Ok(_) => pr_mergeado_con_exito(&rama_base, pull_request, logger),
         Err(error) => {
             mergear_pr_ejecutado_con_fallos(logger, error.to_string(), MetodoMerge::Rebase)
         }
-    }
+    };
+
+    pull_request.salir_del_repositorio()?;
+
+    resultado
 }
 
 fn mergear_pull_request(
@@ -217,7 +222,6 @@ fn mergear_pull_request(
     logger: Arc<Logger>,
 ) -> Result<Response, ErrorHttp> {
     let mut pull_request = obtener_pull_request_de_params(&params)?;
-    println!("{:?}", pull_request);
 
     if pull_request.estado != "open" {
         let response = Response::new(logger, EstadoHttp::ValidationFailed, None);
