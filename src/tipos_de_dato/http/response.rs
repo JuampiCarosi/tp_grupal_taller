@@ -45,12 +45,6 @@ impl Response {
         }
     }
 
-    fn obtener_tipo_contenido(tipo_contenido: TipoContenido) -> Result<String, ErrorHttp> {
-        tipo_contenido
-            .to_string()
-            .map_err(|e| ErrorHttp::InternalServerError(e))
-    }
-
     pub fn enviar<T>(&self, stream: &mut T) -> Result<(), ErrorHttp>
     where
         T: Read + Write,
