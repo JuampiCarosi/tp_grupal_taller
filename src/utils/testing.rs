@@ -37,7 +37,7 @@ impl Write for MockTcpStream {
 }
 
 pub fn limpiar_archivo_gir(logger: Arc<Logger>) {
-    elimar_archivo_gir();
+    eliminar_archivo_gir();
 
     let mut init = Init {
         path: "./.gir".to_string(),
@@ -75,7 +75,7 @@ pub fn escribir_rama_local(rama: &str, logger: Arc<Logger>) {
         .unwrap();
 }
 
-pub fn elimar_archivo_gir() {
+pub fn eliminar_archivo_gir() {
     if PathBuf::from("./.gir").exists() {
         io::rm_directorio("./.gir").unwrap();
     }

@@ -1,14 +1,11 @@
 use std::{collections::HashMap, sync::Arc};
 
-use crate::{
-    servidor::pull_request,
-    tipos_de_dato::{
-        http::{
-            endpoint::Endpoint, error::ErrorHttp, metodos::MetodoHttp, request::Request,
-            response::Response, estado::EstadoHttp,
-        },
-        logger::Logger,
+use crate::tipos_de_dato::{
+    http::{
+        endpoint::Endpoint, error::ErrorHttp, metodos::MetodoHttp, request::Request,
+        response::Response, estado::EstadoHttp,
     },
+    logger::Logger,
 };
 
 use super::{

@@ -4,7 +4,7 @@ use crate::{
     servidor::pull_request::PullRequest,
     tipos_de_dato::{
         comando::Ejecutar,
-        comandos::merge::Merge,
+        comandos::{merge::Merge, rebase::Rebase},
         http::{
             endpoint::Endpoint, error::ErrorHttp, estado::EstadoHttp, metodos::MetodoHttp,
             request::Request, response::Response,
@@ -19,7 +19,7 @@ use super::obtener_pull_request::{self, obtener_pull_request_de_params};
 pub fn agregar_a_router(rutas: &mut Vec<Endpoint>) {
     let endpoint = Endpoint::new(
         MetodoHttp::Post,
-        "/repos/{owner}/{repo}/pulls/{pull_number}/merge".to_string(),
+        "/repos/{repo}/pulls/{pull_number}/merge".to_string(),
         mergear_pull_request,
     );
     rutas.push(endpoint)
@@ -54,7 +54,7 @@ fn obtener_params_body(
 ) -> Result<(bool, Option<&str>), ErrorHttp> {
     let body = match request.body {
         Some(body) => body,
-        None => return Ok((false, None)),
+        None => return Ok((true, Some("merge"))),
     };
 
     if let Some(sha) = body.get("sha") {
@@ -73,7 +73,7 @@ fn obtener_params_body(
     return Ok((true, Some("merge")));
 }
 
-fn merge_ejecutado_con_exito(
+fn pr_mergeado_con_exito(
     rama_base: &str,
     pull_request: &mut PullRequest,
     logger: Arc<Logger>,
@@ -85,18 +85,18 @@ fn merge_ejecutado_con_exito(
             rama_base, error
         ))
     })?;
-    let body_merge = armar_body_merge(hash_merge);
+    let body_response = armar_body_merge(hash_merge);
     pull_request.estado = "closed".to_string();
     pull_request.guardar_pr(&dir_pull_request)?;
-    let response = Response::new(logger, EstadoHttp::Ok, Some(&body_merge));
+    let response = Response::new(logger, EstadoHttp::Ok, Some(&body_response));
     Ok(response)
 }
 
 fn volver_a_estado_previo_al_merge() -> Result<(), ErrorHttp> {
-    io::rm_directorio(".gir/MERGE_HEAD").map_err(|e| {
+    io::rm_directorio(".gir/MERGE_HEAD").map_err(|error| {
         ErrorHttp::InternalServerError(format!(
             "No se ha podido eliminar el archivo MERGE_HEAD: {}",
-            e
+            error
         ))
     })?;
     index::limpiar_archivo_index().map_err(|error| {
@@ -108,10 +108,19 @@ fn volver_a_estado_previo_al_merge() -> Result<(), ErrorHttp> {
     Ok(())
 }
 
-fn merge_ejecutado_con_fallos(logger: Arc<Logger>, error: String) -> Result<Response, ErrorHttp> {
-    volver_a_estado_previo_al_merge()?;
+fn mergear_pr_ejecutado_con_fallos(
+    logger: Arc<Logger>,
+    error: String,
+    merge_method: &str,
+) -> Result<Response, ErrorHttp> {
+    let hay_conflictos = index::hay_archivos_con_conflictos(logger.clone());
+    if merge_method == "merge" {
+        volver_a_estado_previo_al_merge()?;
+    } else {
+        volver_a_estado_previo_al_rebase(logger.clone())?;
+    }
 
-    if index::hay_archivos_con_conflictos(logger.clone()) {
+    if hay_conflictos {
         let response = Response::new(logger, EstadoHttp::MethodNotAllowed, None);
         Ok(response)
     } else {
@@ -138,13 +147,42 @@ fn mergear_pull_request_utilizando_merge(
     };
 
     match merge.ejecutar() {
-        Ok(_) => merge_ejecutado_con_exito(&rama_base, pull_request, logger, &dir_pull_request),
-        Err(error) => merge_ejecutado_con_fallos(logger, error.to_string()),
+        Ok(_) => pr_mergeado_con_exito(&rama_base, pull_request, logger, &dir_pull_request),
+        Err(error) => mergear_pr_ejecutado_con_fallos(logger, error.to_string(), "merge"),
     }
 }
 
-fn mergear_pull_request_utilizando_rebase() -> Result<Response, ErrorHttp> {
-    unimplemented!()
+fn volver_a_estado_previo_al_rebase(logger: Arc<Logger>) -> Result<(), ErrorHttp> {
+    let mut rebase = Rebase::from(vec!["--abort".to_string()], logger).map_err(|error| {
+        ErrorHttp::InternalServerError(format!("No se ha podido abortar el rebase: {}", error))
+    })?;
+    rebase.ejecutar().map_err(|error| {
+        ErrorHttp::InternalServerError(format!("No se ha podido abortar el rebase: {}", error))
+    })?;
+    Ok(())
+}
+
+fn mergear_pull_request_utilizando_rebase(
+    pull_request: &mut PullRequest,
+    logger: Arc<Logger>,
+    dir_pull_request: &PathBuf,
+) -> Result<Response, ErrorHttp> {
+    volver_a_estado_previo_al_rebase(logger.clone())?;
+    let rama_base = pull_request.rama_base.clone();
+    let rama_head = pull_request.rama_head.clone();
+
+    let mut rebase = Rebase {
+        logger: logger.clone(),
+        rama_actual: rama_base.clone(),
+        rama: Some(rama_head),
+        continue_: false,
+        abort: false,
+    };
+
+    match rebase.ejecutar() {
+        Ok(_) => pr_mergeado_con_exito(&rama_base, pull_request, logger, &dir_pull_request),
+        Err(error) => mergear_pr_ejecutado_con_fallos(logger, error.to_string(), "rebase"),
+    }
 }
 
 fn mergear_pull_request(
@@ -168,10 +206,16 @@ fn mergear_pull_request(
     }
 
     match merge_method {
-        Some("merge") | Some("squash") => {
+        Some("merge") => {
             mergear_pull_request_utilizando_merge(&mut pull_request, logger, &dir_pull_request)
         }
-        Some("rebase") => mergear_pull_request_utilizando_rebase(),
+        Some("rebase") => {
+            mergear_pull_request_utilizando_rebase(&mut pull_request, logger, &dir_pull_request)
+        }
+        Some("squash") => {
+            let response = Response::new(logger, EstadoHttp::MethodNotAllowed, None);
+            Ok(response)
+        }
         _ => Err(ErrorHttp::InternalServerError(
             "No se ha podido mergear el pull request".to_string(),
         )),
