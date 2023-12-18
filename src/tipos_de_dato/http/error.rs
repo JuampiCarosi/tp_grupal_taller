@@ -7,6 +7,8 @@ pub enum ErrorHttp {
     ValidationFailed(String),
     Forbidden(String),
     BadRequest(String),
+    Conflict(String),
+    NotImplemented(String),
 }
 
 impl ToString for ErrorHttp {
@@ -17,6 +19,8 @@ impl ToString for ErrorHttp {
             Self::ValidationFailed(mensaje) => format!("422 Validation Failed: {}", mensaje),
             Self::Forbidden(mensaje) => format!("403 Forbidden: {}", mensaje),
             Self::BadRequest(mensaje) => format!("400 Bad Request: {}", mensaje),
+            Self::Conflict(mensaje) => format!("409 Conflict: {}", mensaje),
+            Self::NotImplemented(mensaje) => format!("501 Not Implemented: {}", mensaje),
         }
     }
 }
@@ -29,6 +33,8 @@ impl ErrorHttp {
             Self::ValidationFailed(_) => EstadoHttp::ValidationFailed,
             Self::Forbidden(_) => EstadoHttp::Forbidden,
             Self::BadRequest(_) => EstadoHttp::BadRequest,
+            Self::Conflict(_) => EstadoHttp::Conflict,
+            Self::NotImplemented(_) => EstadoHttp::MethodNotAllowed,
         }
     }
 
@@ -39,6 +45,8 @@ impl ErrorHttp {
             Self::ValidationFailed(mensaje) => mensaje.to_string(),
             Self::Forbidden(mensaje) => mensaje.to_string(),
             Self::BadRequest(mensaje) => mensaje.to_string(),
+            Self::Conflict(mensaje) => mensaje.to_string(),
+            Self::NotImplemented(mensaje) => mensaje.to_string(),
         }
     }
 }

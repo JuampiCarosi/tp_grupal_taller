@@ -127,7 +127,7 @@ impl Request {
 
         let splitted = line.split_whitespace().collect::<Vec<&str>>();
         if splitted.len() != 3 {
-            return Err(ErrorHttp::ValidationFailed(
+            return Err(ErrorHttp::BadRequest(
                 "Error parseando primera linea".to_string(),
             ));
         }
