@@ -6,11 +6,7 @@ use std::{
 
 use crate::tipos_de_dato::{
     comando::Ejecutar,
-<<<<<<< HEAD
-    comandos::{add::Add, branch::Branch, commit::Commit, init::Init, remote::Remote},
-=======
-    comandos::{branch::Branch, init::Init, remote::Remote, add::Add, commit::Commit, push::Push},
->>>>>>> main
+    comandos::{add::Add, branch::Branch, commit::Commit, init::Init, push::Push, remote::Remote},
     logger::Logger,
 };
 
@@ -85,7 +81,6 @@ pub fn eliminar_archivo_gir() {
     }
 }
 
-<<<<<<< HEAD
 pub fn addear_archivos_y_comittear(args: Vec<String>, logger: Arc<Logger>) {
     let mut add = Add::from(args, logger.clone()).unwrap();
     add.ejecutar().unwrap();
@@ -93,7 +88,6 @@ pub fn addear_archivos_y_comittear(args: Vec<String>, logger: Arc<Logger>) {
         Commit::from(&mut vec!["-m".to_string(), "mensaje".to_string()], logger).unwrap();
     commit.ejecutar().unwrap();
 }
-=======
 
 pub fn crear_repo_para_pr(logger: Arc<Logger>) {
     let mut init = Init::from(vec![], logger.clone()).unwrap();
@@ -154,4 +148,3 @@ pub fn crear_repo_para_pr(logger: Arc<Logger>) {
 
     push.ejecutar().unwrap();
 }
->>>>>>> main

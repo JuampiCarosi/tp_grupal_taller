@@ -16,6 +16,7 @@ use crate::{
 
 use super::obtener_pull_request::obtener_pull_request_de_params;
 
+#[derive(Debug, PartialEq, Eq)]
 enum MetodoMerge {
     Merge,
     Rebase,
@@ -128,10 +129,10 @@ fn volver_a_estado_previo_al_merge() -> Result<(), ErrorHttp> {
 fn mergear_pr_ejecutado_con_fallos(
     logger: Arc<Logger>,
     error: String,
-    merge_method: &str,
+    merge_method: MetodoMerge,
 ) -> Result<Response, ErrorHttp> {
     let hay_conflictos = index::hay_archivos_con_conflictos(logger.clone());
-    if merge_method == "merge" {
+    if merge_method == MetodoMerge::Merge {
         volver_a_estado_previo_al_merge()?;
     } else {
         volver_a_estado_previo_al_rebase(logger.clone())?;
@@ -165,8 +166,10 @@ fn mergear_pull_request_utilizando_merge(
     pull_request.entrar_a_repositorio()?;
 
     let resultado = match merge.ejecutar() {
-        Ok(_) => merge_ejecutado_con_exito(&rama_base, pull_request, logger),
-        Err(error) => merge_ejecutado_con_fallos(logger, error.to_string()),
+        Ok(_) => pr_mergeado_con_exito(&rama_base, pull_request, logger),
+        Err(error) => {
+            mergear_pr_ejecutado_con_fallos(logger, error.to_string(), MetodoMerge::Merge)
+        }
     };
 
     pull_request.salir_del_repositorio()?;
@@ -202,7 +205,9 @@ fn mergear_pull_request_utilizando_rebase(
 
     match rebase.ejecutar() {
         Ok(_) => pr_mergeado_con_exito(&rama_base, pull_request, logger),
-        Err(error) => mergear_pr_ejecutado_con_fallos(logger, error.to_string(), "rebase"),
+        Err(error) => {
+            mergear_pr_ejecutado_con_fallos(logger, error.to_string(), MetodoMerge::Rebase)
+        }
     }
 }
 
