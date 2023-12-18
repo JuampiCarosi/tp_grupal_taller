@@ -5,6 +5,7 @@ pub mod servidor {
     pub mod pull_request;
     pub mod receive_pack;
     pub mod upload_pack;
+    pub mod vector_threads;
     pub mod rutas {
         pub mod actualizar_pull_request;
         pub mod crear_pull_request;
@@ -44,6 +45,7 @@ pub mod tipos_de_dato {
 
     pub mod http {
         pub mod endpoint;
+        pub mod endpoint_handler;
         pub mod error;
         pub mod estado;
         pub mod metodos;

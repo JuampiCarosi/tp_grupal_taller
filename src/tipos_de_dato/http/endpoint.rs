@@ -1,21 +1,16 @@
-use std::{collections::HashMap, sync::Arc};
+use std::collections::HashMap;
 
-use crate::tipos_de_dato::logger::Logger;
-
-use super::{error::ErrorHttp, metodos::MetodoHttp, request::Request, response::Response};
+use super::{endpoint_handler::EndpointHandler, metodos::MetodoHttp};
 #[derive(Debug)]
+
 pub struct Endpoint {
     pub metodo: MetodoHttp,
     pub patron: String,
-    pub handler: fn(Request, HashMap<String, String>, Arc<Logger>) -> Result<Response, ErrorHttp>,
+    pub handler: EndpointHandler,
 }
 
 impl Endpoint {
-    pub fn new(
-        metodo: MetodoHttp,
-        patron: String,
-        handler: fn(Request, HashMap<String, String>, Arc<Logger>) -> Result<Response, ErrorHttp>,
-    ) -> Self {
+    pub fn new(metodo: MetodoHttp, patron: String, handler: EndpointHandler) -> Self {
         Self {
             metodo,
             patron,
@@ -24,8 +19,8 @@ impl Endpoint {
     }
 
     pub fn matchea_con_patron(&self, ruta: &str) -> Option<HashMap<String, String>> {
-        let ruta_endpoint = self.patron.split("/").collect::<Vec<&str>>();
-        let ruta_request = ruta.split("/").collect::<Vec<&str>>();
+        let ruta_endpoint = self.patron.split('/').collect::<Vec<&str>>();
+        let ruta_request = ruta.split('/').collect::<Vec<&str>>();
 
         if ruta_endpoint.len() != ruta_request.len() {
             return None;
@@ -42,7 +37,7 @@ impl Endpoint {
         let mut params = HashMap::new();
 
         for (entrada_endpoint, entrada_request) in ruta_endpoint.iter().zip(ruta_request.iter()) {
-            if entrada_endpoint.starts_with("{") && entrada_endpoint.ends_with("}") {
+            if entrada_endpoint.starts_with('{') && entrada_endpoint.ends_with('}') {
                 let key = entrada_endpoint[1..entrada_endpoint.len() - 1].to_string();
                 params.insert(key, entrada_request.to_string());
                 continue;
@@ -60,7 +55,12 @@ impl Endpoint {
 #[cfg(test)]
 
 mod tests {
-    use crate::tipos_de_dato::http::estado::EstadoHttp;
+    use std::sync::Arc;
+
+    use crate::tipos_de_dato::{
+        http::{estado::EstadoHttp, response::Response},
+        logger::Logger,
+    };
 
     use super::*;
 

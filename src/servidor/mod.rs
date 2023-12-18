@@ -10,7 +10,7 @@ use std::{
 use gir::{
     servidor::{
         gir_server::ServidorGir, http_server::ServidorHttp,
-        rutas::mensaje_servidor::MensajeServidor,
+        rutas::mensaje_servidor::MensajeServidor, vector_threads::VectorThreads,
     },
     tipos_de_dato::logger::Logger,
 };
@@ -21,7 +21,7 @@ static MINIMO_TIEMPO_DE_FUNCIONAMIENTO: u64 = 60;
 fn correr_servidor(
     logger: Arc<Logger>,
     channel: (Sender<MensajeServidor>, Receiver<MensajeServidor>),
-    threads: Arc<Mutex<Vec<std::thread::JoinHandle<Result<(), String>>>>>,
+    threads: VectorThreads,
 ) -> Result<(), String> {
     let (tx, rx) = channel;
 
@@ -95,7 +95,7 @@ mod test {
         let threads = Arc::new(Mutex::new(Vec::new()));
 
         let result = correr_servidor(logger.clone(), channel, threads.clone());
-        
+
         assert!(result.is_err());
     }
 }

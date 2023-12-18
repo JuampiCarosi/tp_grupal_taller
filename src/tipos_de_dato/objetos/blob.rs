@@ -43,7 +43,7 @@ impl Blob {
             .split('\0')
             .next()
             .ok_or("No se pudo leer el header")?;
-        let tamanio_blob = conseguir_tamanio(&header)?;
+        let tamanio_blob = conseguir_tamanio(header)?;
 
         match tamanio_blob.parse::<usize>() {
             Ok(tamanio) => Ok(tamanio),

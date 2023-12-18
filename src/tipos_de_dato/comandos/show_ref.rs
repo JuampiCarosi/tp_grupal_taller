@@ -169,13 +169,13 @@ mod tests {
 
     fn crear_referencias() -> io::Result<()> {
         std::fs::create_dir_all(".gir/refs/remotes/origin")?;
-        let _ = std::fs::write(".gir/refs/heads/master", "hash0")?;
-        let _ = std::fs::write(".gir/refs/heads/rama1", "hash1")?;
-        let _ = std::fs::write(".gir/refs/heads/rama2", "hash2")?;
-        let _ = std::fs::write(".gir/refs/remotes/origin/rama1", "hash3")?;
-        let _ = std::fs::write(".gir/refs/remotes/origin/rama2", "hash4")?;
-        let _ = std::fs::write(".gir/refs/tags/tag1", "hash5")?;
-        let _ = std::fs::write(".gir/refs/tags/tag2", "hash6")?;
+        std::fs::write(".gir/refs/heads/master", "hash0")?;
+        std::fs::write(".gir/refs/heads/rama1", "hash1")?;
+        std::fs::write(".gir/refs/heads/rama2", "hash2")?;
+        std::fs::write(".gir/refs/remotes/origin/rama1", "hash3")?;
+        std::fs::write(".gir/refs/remotes/origin/rama2", "hash4")?;
+        std::fs::write(".gir/refs/tags/tag1", "hash5")?;
+        std::fs::write(".gir/refs/tags/tag2", "hash6")?;
         Ok(())
     }
 
