@@ -3,7 +3,7 @@ use std::{collections::HashMap, sync::Arc};
 use crate::tipos_de_dato::{
     http::{
         endpoint::Endpoint, error::ErrorHttp, metodos::MetodoHttp, request::Request,
-        response::Response,
+        response::Response, estado::EstadoHttp,
     },
     logger::Logger,
 };
@@ -40,5 +40,5 @@ fn actualizar_pull_request(
     }
     println!("{:?}", pull_request);
     guadar_pull_request_acorde_al_numero(&pull_request, &repo)?;
-    responder_pull_request_en_formato_json(pull_request, logger)
+    responder_pull_request_en_formato_json(pull_request, logger, EstadoHttp::Ok)
 }
