@@ -44,6 +44,7 @@ pub struct Merge {
     pub branch_actual: String,
     pub branch_a_mergear: String,
     pub abort: bool,
+    pub no_fast_forward: bool,
 }
 
 impl Merge {
@@ -58,6 +59,7 @@ impl Merge {
                 branch_actual: "".to_string(),
                 branch_a_mergear: "".to_string(),
                 abort: true,
+                no_fast_forward: false,
             });
         }
 
@@ -73,6 +75,7 @@ impl Merge {
             branch_actual,
             branch_a_mergear,
             abort: false,
+            no_fast_forward: false,
         })
     }
 
@@ -480,7 +483,7 @@ impl Merge {
                 paths_con_conflictos
             ))
         } else {
-            let mut commit = Commit::from_merge(self.logger.clone())?;
+            let mut commit = Commit::from_merge(self.logger.clone(), &self.branch_actual)?;
             commit.ejecutar()?;
             Ok("Merge completado".to_string())
         }
@@ -629,7 +632,7 @@ impl Ejecutar for Merge {
             return Ok("No hay nada para mergear".to_string());
         }
 
-        let mensaje = if commit_base == commit_actual {
+        let mensaje = if commit_base == commit_actual && !self.no_fast_forward {
             self.logger.log("Haciendo fast-forward");
             self.fast_forward()
         } else {

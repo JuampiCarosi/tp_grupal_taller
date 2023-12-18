@@ -254,6 +254,7 @@ impl Rebase {
             let mut comando_commit = Commit {
                 mensaje: commit.mensaje,
                 logger: self.logger.clone(),
+                rama_actual: self.rama_actual.clone(),
             };
             comando_commit.ejecutar()?;
         }

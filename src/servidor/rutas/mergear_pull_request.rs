@@ -161,6 +161,7 @@ fn mergear_pull_request_utilizando_merge(
         branch_actual: rama_base.clone(),
         branch_a_mergear: rama_head,
         abort: false,
+        no_fast_forward: true,
     };
 
     pull_request.entrar_a_repositorio()?;

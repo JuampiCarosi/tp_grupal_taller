@@ -19,6 +19,7 @@ pub struct Commit {
     pub logger: Arc<Logger>,
     /// Mensaje del commit.
     pub mensaje: String,
+    pub rama_actual: String,
 }
 
 /// Arma el timestamp del commit en formato unix.
@@ -54,7 +55,8 @@ impl Commit {
             if Merge::hay_archivos_sin_mergear(logger.clone())? {
                 return Err("Hay archivos sin mergear".to_string());
             }
-            return Commit::from_merge(logger);
+            let rama_actual = ramas::obtener_rama_actual()?;
+            return Commit::from_merge(logger, &rama_actual);
         }
 
         if args.len() != 2 {
@@ -69,13 +71,23 @@ impl Commit {
         if flag != "-m" {
             return Err(format!("Flag desconocido {}", flag));
         }
-        Ok(Commit { mensaje, logger })
+
+        let rama_actual = ramas::obtener_rama_actual()?;
+        Ok(Commit {
+            mensaje,
+            logger,
+            rama_actual,
+        })
     }
 
     /// Crea un commit a partir del mensaje en el archivo COMMIT_EDITMSG.
-    pub fn from_merge(logger: Arc<Logger>) -> Result<Commit, String> {
+    pub fn from_merge(logger: Arc<Logger>, rama_actual: &str) -> Result<Commit, String> {
         let mensaje = io::leer_a_string(path::Path::new(".gir/COMMIT_EDITMSG"))?;
-        Ok(Commit { mensaje, logger })
+        Ok(Commit {
+            mensaje,
+            logger,
+            rama_actual: rama_actual.to_string(),
+        })
     }
 
     /// Formatea el contenido del commit.
@@ -107,15 +119,15 @@ impl Commit {
 
     /// Crea el contenido del commit.
     /// Devuelve el hash del arbol y el contenido total del commit.
-    fn crear_contenido_commit(&self, hash_padre_commit: &str) -> Result<(String, String), String> {
-        let hash_arbol = match hash_padre_commit {
+    fn crear_contenido_commit(&self) -> Result<(String, String), String> {
+        let hash_commit = Merge::obtener_commit_de_branch(&self.rama_actual)?;
+        let hash_arbol = match hash_commit.as_str() {
             "" => write_tree::crear_arbol_commit(None, self.logger.clone())?,
-            _ => write_tree::crear_arbol_commit(
-                Some(hash_padre_commit.to_string()),
-                self.logger.clone(),
-            )?,
+            _ => {
+                write_tree::crear_arbol_commit(Some(hash_commit.to_string()), self.logger.clone())?
+            }
         };
-        let contenido_commit = self.formatear_contenido_commit(&hash_arbol, hash_padre_commit)?;
+        let contenido_commit = self.formatear_contenido_commit(&hash_arbol, &hash_commit)?;
         let header = format!("commit {}\0", contenido_commit.len());
         let contenido_total = format!("{}{}", header, contenido_commit);
         Ok((hash_arbol, contenido_total))
@@ -132,7 +144,7 @@ impl Commit {
     /// Actualiza el archivo head/ref de la branch actual con el hash del commit creado.
     /// En caso de no poder abrir o escribir en el archivo devuelve un error.
     fn updatear_ref_head(&self, hash: &str) -> Result<(), String> {
-        let ruta = format!("{}", ramas::obtener_gir_dir_rama_actual()?.display());
+        let ruta = format!(".gir/refs/heads/{}", self.rama_actual);
         io::escribir_bytes(ruta, hash)?;
         Ok(())
     }
@@ -158,8 +170,7 @@ impl Ejecutar for Commit {
     /// Utiliza un ejecutar wrapper para que en caso de error limpiar los archivos creados.
     fn ejecutar(&mut self) -> Result<String, String> {
         armar_config_con_mail_y_nombre()?;
-        let hash_padre_commit = ramas::obtener_hash_commit_asociado_rama_actual()?;
-        let (hash_arbol, contenido_total) = self.crear_contenido_commit(&hash_padre_commit)?;
+        let (hash_arbol, contenido_total) = self.crear_contenido_commit()?;
         match self.ejecutar_wrapper(&contenido_total) {
             Ok(_) => (),
             Err(_) => {
