@@ -1,11 +1,13 @@
 use std::{collections::HashMap, sync::Arc};
 
-use crate::tipos_de_dato::{
-    http::{
-        endpoint::Endpoint, error::ErrorHttp, estado::EstadoHttp, metodos::MetodoHttp,
-        request::Request, response::Response,
+use crate::{
+    tipos_de_dato::{
+        http::{
+            endpoint::Endpoint, error::ErrorHttp, estado::EstadoHttp, metodos::MetodoHttp,
+            request::Request, response::Response,
+        },
+        logger::Logger,
     },
-    logger::Logger,
 };
 
 use super::obtener_pull_request::obtener_pull_request_de_params;

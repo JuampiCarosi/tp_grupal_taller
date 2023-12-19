@@ -5,6 +5,7 @@ use crate::tipos_de_dato::{comunicacion::Comunicacion, logger::Logger};
 use crate::utils::{self, io as gir_io};
 use std::env::args;
 use std::sync::mpsc::Sender;
+use std::sync::Mutex;
 use std::{
     env,
     net::{TcpListener, TcpStream},
@@ -14,6 +15,7 @@ use std::{
     thread,
 };
 
+use super::repo_storage::{RepoStorage};
 use super::rutas::mensaje_servidor::MensajeServidor;
 use super::vector_threads::VectorThreads;
 
@@ -36,6 +38,8 @@ pub struct ServidorGir {
     pub main: Option<thread::JoinHandle<()>>,
 
     pub tx: Sender<MensajeServidor>,
+
+    pub repo_storage: RepoStorage,
 }
 
 impl ServidorGir {
@@ -46,6 +50,7 @@ impl ServidorGir {
         logger: Arc<Logger>,
         threads: VectorThreads,
         tx: Sender<MensajeServidor>,
+        repo_storage: RepoStorage,
     ) -> Result<ServidorGir, String> {
         let argv = args().collect::<Vec<String>>();
         if argv.len() != SERVER_ARGS {
@@ -67,6 +72,7 @@ impl ServidorGir {
             logger,
             main: None,
             tx,
+            repo_storage,
         })
     }
 
@@ -81,11 +87,13 @@ impl ServidorGir {
         threads: VectorThreads,
         logger: Arc<Logger>,
         tx: Sender<MensajeServidor>,
+        repo_storage: RepoStorage,
     ) {
         while let Ok((stream, socket)) = listener.accept() {
             logger.log(&format!("Se conecto un cliente a gir desde {}", socket));
             let logger_clone = logger.clone();
             let tx = tx.clone();
+            let repo_storage = repo_storage.clone();
             let handle = thread::spawn(move || -> Result<(), String> {
                 let stream_clonado = match stream.try_clone() {
                     Ok(stream) => stream,
@@ -104,6 +112,7 @@ impl ServidorGir {
                     &mut comunicacion,
                     &(env!("CARGO_MANIFEST_DIR").to_string() + DIR),
                     logger_clone.clone(),
+                    repo_storage,
                 )?;
                 Ok(())
             });
@@ -127,8 +136,9 @@ impl ServidorGir {
         let threads = self.threads.clone();
         let logger = self.logger.clone();
         let tx = self.tx.clone();
+        let repo_storage = self.repo_storage.clone();
         let handle = thread::spawn(move || {
-            Self::aceptar_conexiones(listener, threads, logger, tx);
+            Self::aceptar_conexiones(listener, threads, logger, tx, repo_storage);
         });
         self.main = Some(handle);
         Ok(())
@@ -139,12 +149,13 @@ impl ServidorGir {
         comunicacion: &mut Comunicacion<TcpStream>,
         dir: &str,
         logger: Arc<Logger>,
+        repo_storage: RepoStorage,
     ) -> Result<(), String> {
         let pedido = match comunicacion.aceptar_pedido()? {
             RespuestaDePedido::Mensaje(mensaje) => mensaje,
             RespuestaDePedido::Terminate => return Ok(()),
         }; // acepto la primera linea
-        Self::procesar_pedido(&pedido, comunicacion, dir, logger)?; // parse de la liena para ver que se pide
+        Self::procesar_pedido(&pedido, comunicacion, dir, logger, repo_storage)?; // parse de la liena para ver que se pide
         Ok(())
     }
 
@@ -171,12 +182,24 @@ impl ServidorGir {
         comunicacion: &mut Comunicacion<TcpStream>,
         dir: &str,
         logger: Arc<Logger>,
+        repo_storage: RepoStorage,
     ) -> Result<(), String> {
         let (pedido, repo, dir_repo) =
             Self::parsear_linea_pedido_y_responder_con_version(linea, dir)?;
+
+        let mutex = repo_storage
+            .repo_mutexes
+            .lock()
+            .map_err(|e| e.to_string())?
+            .entry(repo.to_string())
+            .or_insert_with(|| Arc::new(Mutex::new(())))
+            .clone();
+
+        // Bloquea el mutex para la escritura en el repo específico
+        let _lock = mutex.lock().map_err(|e| e.to_string())?;
+
         let refs: Vec<String>;
-        let resultado_de_ejecucion: Result<(), String>;
-        match pedido.as_str() {
+        let resultado_ejecucion = match pedido.as_str() {
             "git-upload-pack" => {
                 if !PathBuf::from(&dir_repo).exists() {
                     let error = ErrorDeComunicacion::ErrorRepositorioNoExiste(repo).to_string();
@@ -188,14 +211,11 @@ impl ServidorGir {
                 println!("upload-pack recibido, ejecutando");
                 refs = server_utils::obtener_refs_de(PathBuf::from(&dir_repo))?;
                 comunicacion.responder(&refs)?;
-                resultado_de_ejecucion = upload_pack(dir_repo, comunicacion, &refs, logger.clone());
-                if let Err(e) = &resultado_de_ejecucion {
-                    logger.log(e);
-                }
-                resultado_de_ejecucion
+                upload_pack(dir_repo, comunicacion, &refs, logger.clone())
             }
             "git-receive-pack" => {
                 println!("receive-pack recibido, ejecutando");
+
                 let path = PathBuf::from(&dir_repo);
 
                 if !path.exists() {
@@ -204,15 +224,11 @@ impl ServidorGir {
                     gir_io::crear_directorio(path.join("refs/tags/"))?;
                     gir_io::crear_directorio(path.join("pulls"))?;
                 }
+
                 comunicacion.enviar(&utils::strings::obtener_linea_con_largo_hex(VERSION))?;
                 refs = server_utils::obtener_refs_de(path)?;
                 comunicacion.responder(&refs)?;
-                resultado_de_ejecucion =
-                    receive_pack(dir_repo.to_string(), comunicacion, logger.clone());
-                if let Err(e) = &resultado_de_ejecucion {
-                    logger.log(e);
-                }
-                resultado_de_ejecucion
+                receive_pack(dir_repo.to_string(), comunicacion, logger.clone())
             }
             _ => {
                 comunicacion.enviar(&utils::strings::obtener_linea_con_largo_hex(
@@ -221,7 +237,13 @@ impl ServidorGir {
                 logger.log(&format!("No existe el comando {}", pedido));
                 Err("No existe el comando".to_string())
             }
+        };
+
+        if let Err(e) = &resultado_ejecucion {
+            logger.log(e);
         }
+
+        resultado_ejecucion
     }
 }
 

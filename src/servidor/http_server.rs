@@ -1,7 +1,7 @@
 use std::{
     io::{BufReader, Read, Write},
     net::TcpListener,
-    sync::{mpsc::Sender, Arc},
+    sync::{mpsc::Sender, Arc, Mutex},
     thread,
 };
 
@@ -17,6 +17,7 @@ use crate::{
 };
 
 use super::{
+    repo_storage::{RepoStorage},
     rutas::{
         actualizar_pull_request, crear_pull_request, listar_pull_request,
         mensaje_servidor::MensajeServidor, mergear_pull_request, obtener_commits_pull_request,
@@ -37,6 +38,8 @@ pub struct ServidorHttp {
     threads: VectorThreads,
 
     tx: Sender<MensajeServidor>,
+
+    repo_storage: RepoStorage,
 }
 
 impl ServidorHttp {
@@ -47,6 +50,7 @@ impl ServidorHttp {
         logger: Arc<Logger>,
         threads: VectorThreads,
         tx: Sender<MensajeServidor>,
+        repo_storage: RepoStorage,
     ) -> Result<Self, String> {
         let puerto = gir_config::conseguir_puerto_http()
             .ok_or("No se pudo conseguir el puerto http, revise el archivo config")?;
@@ -63,6 +67,7 @@ impl ServidorHttp {
             threads,
             main: None,
             tx,
+            repo_storage,
         })
     }
 
@@ -81,14 +86,21 @@ impl ServidorHttp {
         threads: VectorThreads,
         logger: Arc<Logger>,
         tx: Sender<MensajeServidor>,
+        repo_storage: RepoStorage,
     ) {
         while let Ok((mut stream, socket)) = listener.accept() {
             logger.log(&format!("Se conecto un cliente por http desde {}", socket));
 
             let logger_clone = logger.clone();
             let endpoints = endpoints.clone();
+            let repo_storage = repo_storage.clone();
             let handle = thread::spawn(move || -> Result<(), String> {
-                let response = Self::manejar_cliente(logger_clone.clone(), &mut stream, &endpoints);
+                let response = Self::manejar_cliente(
+                    logger_clone.clone(),
+                    &mut stream,
+                    &endpoints,
+                    repo_storage,
+                );
 
                 match response {
                     Ok(response) => response.enviar(&mut stream).map_err(|e| e.to_string()),
@@ -128,11 +140,12 @@ impl ServidorHttp {
         let listener = self.listener.try_clone().map_err(|e| e.to_string())?;
         let threads = self.threads.clone();
         let tx = self.tx.clone();
+        let repo_storage = self.repo_storage.clone();
         let main = thread::spawn(|| {
             let mut endpoints = Vec::new();
             Self::agregar_endpoints(&mut endpoints);
             let endpoints = Arc::new(endpoints);
-            Self::aceptar_conexiones(endpoints, listener, threads, logger, tx);
+            Self::aceptar_conexiones(endpoints, listener, threads, logger, tx, repo_storage);
         });
 
         self.main.replace(main);
@@ -143,6 +156,7 @@ impl ServidorHttp {
         logger: Arc<Logger>,
         stream: &mut R,
         endpoints: &Vec<Endpoint>,
+        repo_storage: RepoStorage,
     ) -> Result<Response, ErrorHttp> {
         let mut reader = BufReader::new(stream);
         let request = Request::from(&mut reader, logger.clone())?;
@@ -154,6 +168,26 @@ impl ServidorHttp {
                 Some(params) => params,
                 None => continue,
             };
+
+            let repo = params.get("repo").ok_or_else(|| {
+                ErrorHttp::InternalServerError(
+                    "No se ha encontrado el nombre del repositorio".to_string(),
+                )
+            })?;
+
+            let mutex = repo_storage
+                .repo_mutexes
+                .lock()
+                .map_err(|e| ErrorHttp::InternalServerError(e.to_string()))?
+                .entry(repo.to_string())
+                .or_insert_with(|| Arc::new(Mutex::new(())))
+                .clone();
+
+            // Bloquea el mutex para la escritura en el repo específico
+            let _lock = mutex
+                .lock()
+                .map_err(|e| ErrorHttp::InternalServerError(e.to_string()))?;
+
             let response = (endpoint.handler)(request, params, logger.clone())?;
 
             return Ok(response);
@@ -187,6 +221,8 @@ mod test {
     ) -> Response {
         let (tx, _) = std::sync::mpsc::channel();
         let logger_clone = logger.clone();
+        let repo_storage = RepoStorage::new();
+        let repo_storage_clone = repo_storage.clone();
         let handle = std::thread::spawn(move || {
             let threads: VectorThreads = Arc::new(Mutex::new(Vec::new()));
             let listener = TcpListener::bind("127.0.0.1:9933").unwrap();
@@ -197,6 +233,7 @@ mod test {
                 logger: logger_clone,
                 main: None,
                 tx,
+                repo_storage: repo_storage_clone,
             };
             servidor_gir.iniciar_servidor().unwrap();
         });
@@ -241,11 +278,22 @@ mod test {
         io::cambiar_directorio(RUTA_RAIZ).unwrap();
         let mut endpoints = Vec::new();
         ServidorHttp::agregar_endpoints(&mut endpoints);
-        let _ = ServidorHttp::manejar_cliente(logger.clone(), &mut mock, &endpoints).unwrap();
+        let _ = ServidorHttp::manejar_cliente(
+            logger.clone(),
+            &mut mock,
+            &endpoints,
+            repo_storage.clone(),
+        )
+        .unwrap();
         mock.lectura_data = request.as_bytes().to_vec();
 
-        let respuesta =
-            ServidorHttp::manejar_cliente(logger.clone(), &mut mock, &endpoints).unwrap();
+        let respuesta = ServidorHttp::manejar_cliente(
+            logger.clone(),
+            &mut mock,
+            &endpoints,
+            repo_storage.clone(),
+        )
+        .unwrap();
 
         io::rm_directorio(RUTA_RAIZ.to_string() + ruta_especifica).unwrap();
         io::rm_directorio(RUTA_RAIZ.to_string() + RUTA_REPOSITORIO).unwrap();
@@ -258,11 +306,14 @@ mod test {
         let logger = Arc::new(
             Logger::new(PathBuf::from(RUTA_RAIZ.to_string() + "server_logger.txt")).unwrap(),
         );
+        let repo_storage = RepoStorage::new();
         let mut mock = testing::MockTcpStream {
             lectura_data: contenido_mock.as_bytes().to_vec(),
             escritura_data: vec![],
         };
-        let respuesta = ServidorHttp::manejar_cliente(logger.clone(), &mut mock, &vec![]).unwrap();
+        let respuesta =
+            ServidorHttp::manejar_cliente(logger.clone(), &mut mock, &vec![], repo_storage)
+                .unwrap();
 
         assert_eq!(404, respuesta.estado);
         assert_eq!("Not Found", respuesta.mensaje_estado);
@@ -279,6 +330,8 @@ mod test {
 
         let logger_clone = logger.clone();
         let (tx, _) = std::sync::mpsc::channel();
+        let repo_storage = RepoStorage::new();
+        let repo_storage_clone = repo_storage.clone();
 
         let handle = std::thread::spawn(move || {
             let threads: VectorThreads = Arc::new(Mutex::new(Vec::new()));
@@ -290,6 +343,7 @@ mod test {
                 logger: logger_clone,
                 main: None,
                 tx,
+                repo_storage: repo_storage_clone,
             };
             servidor_gir.iniciar_servidor().unwrap();
         });
@@ -335,8 +389,13 @@ mod test {
         let mut endpoints = Vec::new();
         ServidorHttp::agregar_endpoints(&mut endpoints);
 
-        let respuesta =
-            ServidorHttp::manejar_cliente(logger.clone(), &mut mock, &endpoints).unwrap();
+        let respuesta = ServidorHttp::manejar_cliente(
+            logger.clone(),
+            &mut mock,
+            &endpoints,
+            repo_storage.clone(),
+        )
+        .unwrap();
         io::rm_directorio(RUTA_RAIZ.to_string() + "/tmp/servidor_http_test02_dir").unwrap();
         io::rm_directorio(RUTA_RAIZ.to_string() + RUTA_REPOSITORIO).unwrap();
         assert_eq!(201, respuesta.estado);
