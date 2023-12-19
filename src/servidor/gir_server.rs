@@ -196,7 +196,7 @@ impl ServidorGir {
             .clone();
 
         // Bloquea el mutex para la escritura en el repo específico
-        let _lock = mutex.lock().unwrap();
+        let _lock = mutex.lock().map_err(|e| e.to_string())?;
 
         let refs: Vec<String>;
         let resultado_ejecucion = match pedido.as_str() {

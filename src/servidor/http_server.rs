@@ -184,7 +184,9 @@ impl ServidorHttp {
                 .clone();
 
             // Bloquea el mutex para la escritura en el repo específico
-            let _lock = mutex.lock().unwrap();
+            let _lock = mutex
+                .lock()
+                .map_err(|e| ErrorHttp::InternalServerError(e.to_string()))?;
 
             let response = (endpoint.handler)(request, params, logger.clone())?;
 
