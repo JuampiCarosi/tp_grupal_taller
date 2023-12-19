@@ -1,6 +1,4 @@
 use std::{
-    collections::HashMap,
-    io,
     path::PathBuf,
     sync::{
         mpsc::{channel, Receiver, Sender},

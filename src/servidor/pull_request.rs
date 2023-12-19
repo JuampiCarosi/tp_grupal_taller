@@ -393,7 +393,7 @@ mod test {
     use crate::{
         servidor::{
             gir_server::ServidorGir,
-            repo_storage::{self, RepoStorage},
+            repo_storage::{RepoStorage},
             vector_threads::VectorThreads,
         },
         tipos_de_dato::{
@@ -405,7 +405,7 @@ mod test {
     use std::{
         fs::remove_file,
         net::TcpListener,
-        sync::{Mutex, RwLock},
+        sync::{Mutex},
     };
 
     fn agregar_commit_a_repo(logger: Arc<Logger>) {

@@ -1,11 +1,11 @@
 use std::{
     collections::HashMap,
     path::PathBuf,
-    sync::{Arc, Mutex},
+    sync::{Arc},
 };
 
 use crate::{
-    servidor::{pull_request::PullRequest, repo_storage::RepoStorage},
+    servidor::{pull_request::PullRequest},
     tipos_de_dato::{
         comando::Ejecutar,
         comandos::{merge::Merge, rebase::Rebase},

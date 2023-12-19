@@ -15,3 +15,9 @@ impl RepoStorage {
         }
     }
 }
+
+impl Default for RepoStorage {
+    fn default() -> Self {
+        Self::new()
+    }
+}
