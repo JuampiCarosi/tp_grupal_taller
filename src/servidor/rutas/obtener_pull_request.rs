@@ -1,7 +1,10 @@
 use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
 use crate::{
-    servidor::pull_request::PullRequest,
+    servidor::{
+        pull_request::PullRequest,
+        repo_storage::{self, RepoStorage},
+    },
     tipos_de_dato::{
         http::{
             endpoint::Endpoint, error::ErrorHttp, estado::EstadoHttp, metodos::MetodoHttp,
@@ -26,6 +29,7 @@ fn obtener_pull_request(
     _request: Request,
     params: HashMap<String, String>,
     logger: Arc<Logger>,
+    _repo_storage: RepoStorage,
 ) -> Result<Response, ErrorHttp> {
     let pull_request = obtener_pull_request_de_params(&params)?;
 

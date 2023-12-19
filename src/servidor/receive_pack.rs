@@ -24,6 +24,7 @@ where
     let packfile = comunicacion.obtener_packfile()?;
 
     Packfile::leer_packfile_y_escribir(&packfile, dir.clone() + "objects/")?;
+
     for actualizacion in &actualizaciones {
         let mut partes = actualizacion.split(' ');
         let viejo_hash_ref = partes.next().unwrap_or("");

@@ -1,7 +1,7 @@
 use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
 use crate::{
-    servidor::pull_request::PullRequest,
+    servidor::{pull_request::PullRequest, repo_storage::RepoStorage},
     tipos_de_dato::{
         http::{
             endpoint::Endpoint, error::ErrorHttp, estado::EstadoHttp, metodos::MetodoHttp,
@@ -24,6 +24,7 @@ fn crear_pull_request(
     request: Request,
     params: HashMap<String, String>,
     logger: Arc<Logger>,
+    _repo_storage: RepoStorage,
 ) -> Result<Response, ErrorHttp> {
     let repo = params.get("repo").ok_or_else(|| {
         ErrorHttp::InternalServerError("No se ha encontrado el nombre del repositorio".to_string())

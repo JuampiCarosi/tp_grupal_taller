@@ -1,7 +1,11 @@
-use std::{collections::HashMap, path::PathBuf, sync::Arc};
+use std::{
+    collections::HashMap,
+    path::PathBuf,
+    sync::{Arc, Mutex},
+};
 
 use crate::{
-    servidor::pull_request::PullRequest,
+    servidor::{pull_request::PullRequest, repo_storage::RepoStorage},
     tipos_de_dato::{
         comando::Ejecutar,
         comandos::{merge::Merge, rebase::Rebase},
@@ -221,6 +225,7 @@ fn mergear_pull_request(
     request: Request,
     params: HashMap<String, String>,
     logger: Arc<Logger>,
+    repo_storage: RepoStorage,
 ) -> Result<Response, ErrorHttp> {
     let mut pull_request = obtener_pull_request_de_params(&params)?;
 
@@ -230,6 +235,20 @@ fn mergear_pull_request(
     }
 
     let merge_method = obtener_params_body(request, &pull_request)?;
+    let repo = params.get("repo").ok_or_else(|| {
+        ErrorHttp::InternalServerError("No se ha encontrado el nombre del repositorio".to_string())
+    })?;
+
+    let mutex = repo_storage
+        .repo_mutexes
+        .lock()
+        .map_err(|e| ErrorHttp::InternalServerError(e.to_string()))?
+        .entry(repo.to_string())
+        .or_insert_with(|| Arc::new(Mutex::new(())))
+        .clone();
+
+    // Bloquea el mutex para la escritura en el archivo específico
+    let _lock = mutex.lock().unwrap();
 
     match merge_method {
         MetodoMerge::Merge => mergear_pull_request_utilizando_merge(&mut pull_request, logger),

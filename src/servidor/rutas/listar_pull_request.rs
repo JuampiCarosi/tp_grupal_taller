@@ -1,7 +1,7 @@
 use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
 use crate::{
-    servidor::pull_request::PullRequest,
+    servidor::{pull_request::PullRequest, repo_storage::RepoStorage},
     tipos_de_dato::{
         http::{
             endpoint::Endpoint, error::ErrorHttp, estado::EstadoHttp, metodos::MetodoHttp,
@@ -25,6 +25,7 @@ fn listar_pull_request(
     request: Request,
     params: HashMap<String, String>,
     logger: Arc<Logger>,
+    _repo_storage: RepoStorage,
 ) -> Result<Response, ErrorHttp> {
     let mut lista_pull_request = obtener_pull_request_del_repositorio(params)?;
 

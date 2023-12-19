@@ -1,4 +1,6 @@
 use std::{
+    collections::HashMap,
+    io,
     path::PathBuf,
     sync::{
         mpsc::{channel, Receiver, Sender},
@@ -7,10 +9,11 @@ use std::{
     time::{Duration, Instant},
 };
 
+use gir::servidor::vector_threads::VectorThreads;
 use gir::{
     servidor::{
-        gir_server::ServidorGir, http_server::ServidorHttp,
-        rutas::mensaje_servidor::MensajeServidor, vector_threads::VectorThreads,
+        gir_server::ServidorGir, http_server::ServidorHttp, repo_storage::RepoStorage,
+        rutas::mensaje_servidor::MensajeServidor,
     },
     tipos_de_dato::logger::Logger,
 };
@@ -24,14 +27,25 @@ fn correr_servidor(
     threads: VectorThreads,
 ) -> Result<(), String> {
     let (tx, rx) = channel;
+    let repo_storage = RepoStorage::new();
 
     let mut intentos_gir = 0;
     let mut intentos_http = 0;
 
-    let mut servidor_http = ServidorHttp::new(logger.clone(), threads.clone(), tx.clone())?;
+    let mut servidor_http = ServidorHttp::new(
+        logger.clone(),
+        threads.clone(),
+        tx.clone(),
+        repo_storage.clone(),
+    )?;
     servidor_http.iniciar_servidor()?;
 
-    let mut servidor_gir = ServidorGir::new(logger.clone(), threads.clone(), tx.clone())?;
+    let mut servidor_gir = ServidorGir::new(
+        logger.clone(),
+        threads.clone(),
+        tx.clone(),
+        repo_storage.clone(),
+    )?;
     servidor_gir.iniciar_servidor()?;
 
     let mut ultimo_gir = Instant::now();

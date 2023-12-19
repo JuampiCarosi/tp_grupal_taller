@@ -1,11 +1,14 @@
 use std::{collections::HashMap, sync::Arc};
 
-use crate::tipos_de_dato::{
-    http::{
-        endpoint::Endpoint, error::ErrorHttp, estado::EstadoHttp, metodos::MetodoHttp,
-        request::Request, response::Response,
+use crate::{
+    servidor::repo_storage::RepoStorage,
+    tipos_de_dato::{
+        http::{
+            endpoint::Endpoint, error::ErrorHttp, estado::EstadoHttp, metodos::MetodoHttp,
+            request::Request, response::Response,
+        },
+        logger::Logger,
     },
-    logger::Logger,
 };
 
 use super::obtener_pull_request::obtener_pull_request_de_params;
@@ -23,6 +26,7 @@ fn obtener_commits_pull_request(
     _request: Request,
     params: HashMap<String, String>,
     logger: Arc<Logger>,
+    _repo_storage: RepoStorage,
 ) -> Result<Response, ErrorHttp> {
     let pull_request = obtener_pull_request_de_params(&params)?;
     let commits = pull_request.obtener_commits(logger.clone())?;
