@@ -26,7 +26,6 @@ fn obtener_commits_pull_request(
     _request: Request,
     params: HashMap<String, String>,
     logger: Arc<Logger>,
-    _repo_storage: RepoStorage,
 ) -> Result<Response, ErrorHttp> {
     let pull_request = obtener_pull_request_de_params(&params)?;
     let commits = pull_request.obtener_commits(logger.clone())?;

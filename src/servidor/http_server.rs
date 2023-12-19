@@ -1,7 +1,7 @@
 use std::{
     io::{BufReader, Read, Write},
     net::TcpListener,
-    sync::{mpsc::Sender, Arc},
+    sync::{mpsc::Sender, Arc, Mutex},
     thread,
 };
 
@@ -168,7 +168,25 @@ impl ServidorHttp {
                 Some(params) => params,
                 None => continue,
             };
-            let response = (endpoint.handler)(request, params, logger.clone(), repo_storage)?;
+
+            let repo = params.get("repo").ok_or_else(|| {
+                ErrorHttp::InternalServerError(
+                    "No se ha encontrado el nombre del repositorio".to_string(),
+                )
+            })?;
+
+            let mutex = repo_storage
+                .repo_mutexes
+                .lock()
+                .map_err(|e| ErrorHttp::InternalServerError(e.to_string()))?
+                .entry(repo.to_string())
+                .or_insert_with(|| Arc::new(Mutex::new(())))
+                .clone();
+
+            // Bloquea el mutex para la escritura en el repo específico
+            let _lock = mutex.lock().unwrap();
+
+            let response = (endpoint.handler)(request, params, logger.clone())?;
 
             return Ok(response);
         }

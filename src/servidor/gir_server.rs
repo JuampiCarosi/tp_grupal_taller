@@ -186,6 +186,18 @@ impl ServidorGir {
     ) -> Result<(), String> {
         let (pedido, repo, dir_repo) =
             Self::parsear_linea_pedido_y_responder_con_version(linea, dir)?;
+
+        let mutex = repo_storage
+            .repo_mutexes
+            .lock()
+            .map_err(|e| e.to_string())?
+            .entry(repo.to_string())
+            .or_insert_with(|| Arc::new(Mutex::new(())))
+            .clone();
+
+        // Bloquea el mutex para la escritura en el repo específico
+        let _lock = mutex.lock().unwrap();
+
         let refs: Vec<String>;
         let resultado_ejecucion = match pedido.as_str() {
             "git-upload-pack" => {
@@ -212,17 +224,6 @@ impl ServidorGir {
                     gir_io::crear_directorio(path.join("refs/tags/"))?;
                     gir_io::crear_directorio(path.join("pulls"))?;
                 }
-
-                let mutex = repo_storage
-                    .repo_mutexes
-                    .lock()
-                    .map_err(|e| e.to_string())?
-                    .entry(repo.to_string())
-                    .or_insert_with(|| Arc::new(Mutex::new(())))
-                    .clone();
-
-                // Bloquea el mutex para la escritura en el repo específico
-                let _lock = mutex.lock().unwrap();
 
                 comunicacion.enviar(&utils::strings::obtener_linea_con_largo_hex(VERSION))?;
                 refs = server_utils::obtener_refs_de(path)?;

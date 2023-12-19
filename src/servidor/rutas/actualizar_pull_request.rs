@@ -31,7 +31,6 @@ fn actualizar_pull_request(
     request: Request,
     params: HashMap<String, String>,
     logger: Arc<Logger>,
-    _repo_storage: RepoStorage,
 ) -> Result<Response, ErrorHttp> {
     let mut pull_request = obtener_pull_request_de_params(&params.clone())?;
 

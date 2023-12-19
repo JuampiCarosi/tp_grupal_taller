@@ -25,7 +25,6 @@ fn listar_pull_request(
     request: Request,
     params: HashMap<String, String>,
     logger: Arc<Logger>,
-    _repo_storage: RepoStorage,
 ) -> Result<Response, ErrorHttp> {
     let mut lista_pull_request = obtener_pull_request_del_repositorio(params)?;
 

@@ -69,7 +69,7 @@ mod tests {
         let endpoint = Endpoint::new(
             MetodoHttp::Get,
             "/repos/{repo}/pulls".to_string(),
-            |_, _, _, _| {
+            |_, _, _| {
                 Ok(Response::new(
                     Arc::new(Logger::new(std::path::PathBuf::from("server_logger.txt")).unwrap()),
                     EstadoHttp::Ok,
@@ -96,7 +96,7 @@ mod tests {
         let endpoint = Endpoint::new(
             MetodoHttp::Get,
             "/repos/{repo}/pulls/{pull}".to_string(),
-            |_, _, _, _| {
+            |_, _, _| {
                 Ok(Response::new(
                     Arc::new(Logger::new(std::path::PathBuf::from("server_logger.txt")).unwrap()),
                     EstadoHttp::Ok,
