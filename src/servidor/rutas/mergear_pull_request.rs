@@ -247,7 +247,7 @@ fn mergear_pull_request(
         .or_insert_with(|| Arc::new(Mutex::new(())))
         .clone();
 
-    // Bloquea el mutex para la escritura en el archivo específico
+    // Bloquea el mutex para la escritura en el repo específico
     let _lock = mutex.lock().unwrap();
 
     match merge_method {
