@@ -4,7 +4,7 @@ pub mod servidor {
     pub mod http_server;
     pub mod pull_request;
     pub mod receive_pack;
-    pub mod repo_storage;
+    pub mod repos_almacen;
     pub mod upload_pack;
     pub mod vector_threads;
     pub mod rutas {

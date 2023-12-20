@@ -392,9 +392,7 @@ mod test {
 
     use crate::{
         servidor::{
-            gir_server::ServidorGir,
-            repo_storage::{RepoStorage},
-            vector_threads::VectorThreads,
+            gir_server::ServidorGir, repos_almacen::ReposAlmacen, vector_threads::VectorThreads,
         },
         tipos_de_dato::{
             comando::Ejecutar,
@@ -402,11 +400,7 @@ mod test {
         },
         utils::testing::crear_repo_para_pr,
     };
-    use std::{
-        fs::remove_file,
-        net::TcpListener,
-        sync::{Mutex},
-    };
+    use std::{fs::remove_file, net::TcpListener, sync::Mutex};
 
     fn agregar_commit_a_repo(logger: Arc<Logger>) {
         io::escribir_bytes("archivo", "contenido3").unwrap();
@@ -1080,7 +1074,7 @@ mod test {
 
         let logger_clone = logger.clone();
         let (tx, _) = std::sync::mpsc::channel();
-        let repo_storage = RepoStorage::new();
+        let repos_almacen = ReposAlmacen::new();
 
         let handle = std::thread::spawn(move || {
             let threads: VectorThreads = Arc::new(Mutex::new(Vec::new()));
@@ -1092,7 +1086,7 @@ mod test {
                 logger: logger_clone,
                 main: None,
                 tx,
-                repo_storage,
+                repos_almacen,
             };
             servidor_gir.iniciar_servidor().unwrap();
         });
@@ -1160,7 +1154,7 @@ mod test {
                 logger: logger_clone,
                 main: None,
                 tx,
-                repo_storage: RepoStorage::new(),
+                repos_almacen: ReposAlmacen::new(),
             };
             servidor_gir.iniciar_servidor().unwrap();
         });

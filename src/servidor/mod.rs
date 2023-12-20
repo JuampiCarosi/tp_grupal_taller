@@ -10,7 +10,7 @@ use std::{
 use gir::servidor::vector_threads::VectorThreads;
 use gir::{
     servidor::{
-        gir_server::ServidorGir, http_server::ServidorHttp, repo_storage::RepoStorage,
+        gir_server::ServidorGir, http_server::ServidorHttp, repos_almacen::ReposAlmacen,
         rutas::mensaje_servidor::MensajeServidor,
     },
     tipos_de_dato::logger::Logger,
@@ -25,7 +25,7 @@ fn correr_servidor(
     threads: VectorThreads,
 ) -> Result<(), String> {
     let (tx, rx) = channel;
-    let repo_storage = RepoStorage::new();
+    let repos_almacen = ReposAlmacen::new();
 
     let mut intentos_gir = 0;
     let mut intentos_http = 0;
@@ -34,7 +34,7 @@ fn correr_servidor(
         logger.clone(),
         threads.clone(),
         tx.clone(),
-        repo_storage.clone(),
+        repos_almacen.clone(),
     )?;
     servidor_http.iniciar_servidor()?;
 
@@ -42,7 +42,7 @@ fn correr_servidor(
         logger.clone(),
         threads.clone(),
         tx.clone(),
-        repo_storage.clone(),
+        repos_almacen.clone(),
     )?;
     servidor_gir.iniciar_servidor()?;
 
