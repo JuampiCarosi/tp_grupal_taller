@@ -5,7 +5,7 @@ use crate::tipos_de_dato::{comunicacion::Comunicacion, logger::Logger};
 use crate::utils::{self, io as gir_io};
 use std::env::args;
 use std::sync::mpsc::Sender;
-use std::sync::Mutex;
+
 use std::{
     env,
     net::{TcpListener, TcpStream},
@@ -15,7 +15,7 @@ use std::{
     thread,
 };
 
-use super::repo_storage::{RepoStorage};
+use super::repos_almacen::ReposAlmacen;
 use super::rutas::mensaje_servidor::MensajeServidor;
 use super::vector_threads::VectorThreads;
 
@@ -39,7 +39,7 @@ pub struct ServidorGir {
 
     pub tx: Sender<MensajeServidor>,
 
-    pub repo_storage: RepoStorage,
+    pub repos_almacen: ReposAlmacen,
 }
 
 impl ServidorGir {
@@ -50,7 +50,7 @@ impl ServidorGir {
         logger: Arc<Logger>,
         threads: VectorThreads,
         tx: Sender<MensajeServidor>,
-        repo_storage: RepoStorage,
+        repos_almacen: ReposAlmacen,
     ) -> Result<ServidorGir, String> {
         let argv = args().collect::<Vec<String>>();
         if argv.len() != SERVER_ARGS {
@@ -72,7 +72,7 @@ impl ServidorGir {
             logger,
             main: None,
             tx,
-            repo_storage,
+            repos_almacen,
         })
     }
 
@@ -87,13 +87,13 @@ impl ServidorGir {
         threads: VectorThreads,
         logger: Arc<Logger>,
         tx: Sender<MensajeServidor>,
-        repo_storage: RepoStorage,
+        repos_almacen: ReposAlmacen,
     ) {
         while let Ok((stream, socket)) = listener.accept() {
             logger.log(&format!("Se conecto un cliente a gir desde {}", socket));
             let logger_clone = logger.clone();
             let tx = tx.clone();
-            let repo_storage = repo_storage.clone();
+            let repos_almacen = repos_almacen.clone();
             let handle = thread::spawn(move || -> Result<(), String> {
                 let stream_clonado = match stream.try_clone() {
                     Ok(stream) => stream,
@@ -112,7 +112,7 @@ impl ServidorGir {
                     &mut comunicacion,
                     &(env!("CARGO_MANIFEST_DIR").to_string() + DIR),
                     logger_clone.clone(),
-                    repo_storage,
+                    repos_almacen,
                 )?;
                 Ok(())
             });
@@ -136,9 +136,9 @@ impl ServidorGir {
         let threads = self.threads.clone();
         let logger = self.logger.clone();
         let tx = self.tx.clone();
-        let repo_storage = self.repo_storage.clone();
+        let repos_almacen = self.repos_almacen.clone();
         let handle = thread::spawn(move || {
-            Self::aceptar_conexiones(listener, threads, logger, tx, repo_storage);
+            Self::aceptar_conexiones(listener, threads, logger, tx, repos_almacen);
         });
         self.main = Some(handle);
         Ok(())
@@ -149,13 +149,13 @@ impl ServidorGir {
         comunicacion: &mut Comunicacion<TcpStream>,
         dir: &str,
         logger: Arc<Logger>,
-        repo_storage: RepoStorage,
+        repos_almacen: ReposAlmacen,
     ) -> Result<(), String> {
         let pedido = match comunicacion.aceptar_pedido()? {
             RespuestaDePedido::Mensaje(mensaje) => mensaje,
             RespuestaDePedido::Terminate => return Ok(()),
         }; // acepto la primera linea
-        Self::procesar_pedido(&pedido, comunicacion, dir, logger, repo_storage)?; // parse de la liena para ver que se pide
+        Self::procesar_pedido(&pedido, comunicacion, dir, logger, repos_almacen)?; // parse de la liena para ver que se pide
         Ok(())
     }
 
@@ -182,20 +182,13 @@ impl ServidorGir {
         comunicacion: &mut Comunicacion<TcpStream>,
         dir: &str,
         logger: Arc<Logger>,
-        repo_storage: RepoStorage,
+        repos_almacen: ReposAlmacen,
     ) -> Result<(), String> {
         let (pedido, repo, dir_repo) =
             Self::parsear_linea_pedido_y_responder_con_version(linea, dir)?;
 
-        let mutex = repo_storage
-            .repo_mutexes
-            .lock()
-            .map_err(|e| e.to_string())?
-            .entry(repo.to_string())
-            .or_insert_with(|| Arc::new(Mutex::new(())))
-            .clone();
+        let mutex = repos_almacen.obtener_mutex_del_repo(&repo)?;
 
-        // Bloquea el mutex para la escritura en el repo específico
         let _lock = mutex.lock().map_err(|e| e.to_string())?;
 
         let refs: Vec<String>;
